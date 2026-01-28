@@ -1,0 +1,29 @@
+:root {
+    /* === Modern Vibrant Palette === */
+    --primary-color: #6C5CE7;
+    /* Soft Purple-Blue */
+    --accent-color: #00CEC9;
+    /* Vibrant Cyan */
+    --bg-color: #F8F9FD;
+    --card-bg: rgba(255, 255, 255, 0.65);
+    /* Glass Effect Base */
+    --text-dark: #2D3436;
+    --text-light: #FFFFFF;
+    --nav-height: 80px;
+
+    --radius-lg: 32px;
+    --radius-md: 24px;
+    --radius-sm: 16px;
+
+    /* Mesh Gradient Header */
+    --header-gradient: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
+
+    /* Colored Shadows */
+    --shadow-sm: 0 4px 15px rgba(108, 92, 231, 0.1);
+    --shadow-md: 0 10px 30px rgba(108, 92, 231, 0.15);
+    --shadow-lg: 0 20px 40px rgba(108, 92, 231, 0.2);
+    --shadow-primary: 0 10px 25px rgba(108, 92, 231, 0.4);
+
+    /* Glass Borders */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+}

@@ -1,0 +1,21 @@
+/* === PGB MAIN STYLESHEET === */
+/* Refactored into modules for maintainability */
+
+/* 1. Core Variables & Config */
+@import 'css/variables.css';
+
+/* 2. Base Resets & Global Styles */
+@import 'css/base.css';
+
+/* 3. Layout Structure (Header, Nav, Wrappers) */
+@import 'css/layout.css';
+
+/* 4. Core UI Components (Buttons, Cards, Avatars) */
+@import 'css/components.css';
+
+/* 5. Modules (Screens & Features) */
+@import 'css/modules/lobby.css';
+@import 'css/modules/profile.css';
+@import 'css/modules/room.css';
+@import 'css/modules/modals.css';
+@import 'css/modules/blokus.css';

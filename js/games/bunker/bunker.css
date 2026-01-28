@@ -1,0 +1,347 @@
+/* === BUNKER LIGHT THEME (Neon-Frosted) === */
+:root {
+    --bunker-bg: transparent;
+    --bunker-bg-alt: rgba(255, 255, 255, 0.6);
+    --bunker-card-bg: rgba(255, 255, 255, 0.6);
+    --bunker-accent: #6C5CE7;
+    /* Indigo accent */
+    --bunker-danger: #EF4444;
+    --bunker-success: #10B981;
+    --bunker-border: #E2E8F0;
+    --bunker-text: #1E293B;
+    --bunker-text-muted: #64748B;
+}
+
+.bunker-theme-wrapper {
+    background: var(--bunker-bg);
+    min-height: 100dvh;
+    color: var(--bunker-text);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    position: relative;
+    box-sizing: border-box;
+    /* Eliminate white scroll gap */
+    box-shadow: 0 0 0 1000px var(--bunker-bg);
+    transition: background 0.3s ease;
+}
+
+/* Base layout */
+.bunker-main-layout {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.bunker-header-card {
+    background: var(--bunker-bg-alt);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 20px;
+    padding-top: calc(50px + env(safe-area-inset-top));
+    /* Increased clearance */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.bunker-round-badge {
+    background: #EEF2FF;
+    color: var(--bunker-accent);
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid #C7D2FE;
+}
+
+.bunker-places-badge {
+    background: #FEF2F2;
+    color: var(--bunker-danger);
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid #FECACA;
+}
+
+.catastrophe-section {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 15px;
+    background: #F8FAFC;
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid var(--bunker-border);
+}
+
+.cata-icon {
+    font-size: 28px;
+    margin-right: 15px;
+}
+
+.cata-title {
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--bunker-text);
+}
+
+.cata-desc {
+    font-size: 13px;
+    color: var(--bunker-text-muted);
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+/* Tabs */
+.bunker-tabs {
+    display: flex;
+    padding: 0 20px 15px 20px;
+    gap: 12px;
+    background: transparent;
+}
+
+.bunker-tab {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--bunker-border);
+    color: var(--bunker-text-muted);
+    padding: 12px;
+    border-radius: 16px;
+    font-weight: 700;
+    transition: all 0.2s;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.bunker-tab.active {
+    background: var(--bunker-accent);
+    color: white;
+    border-color: var(--bunker-accent);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Grid & Cards */
+.bunker-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 0 20px 40px 20px;
+}
+
+.bunker-trait-card {
+    background: var(--bunker-card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.bunker-trait-card.active:active {
+    transform: scale(0.97);
+    background: #FAFAFA;
+}
+
+.bunker-trait-card.revealed {
+    border-color: var(--bunker-success);
+    background: #F0FDF4;
+}
+
+.bunker-trait-card.locked {
+    background: #F1F5F9;
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+.trait-name {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--bunker-text-muted);
+    letter-spacing: 1px;
+    flex: 1;
+    font-weight: 700;
+}
+
+.trait-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--bunker-text);
+    line-height: 1.4;
+}
+
+.trait-sub {
+    font-size: 13px;
+    color: var(--bunker-text-muted);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* Footer Controls */
+.bunker-host-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 25px;
+    padding-bottom: calc(25px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, var(--bunker-bg) 70%, transparent 100%);
+    display: flex;
+    justify-content: center;
+    z-index: 100;
+}
+
+.btn-host-action {
+    background: var(--bunker-accent);
+    color: white;
+    border: none;
+    padding: 18px 30px;
+    border-radius: 20px;
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    width: 100%;
+    max-width: 340px;
+    font-size: 16px;
+}
+
+.bunker-footer-wait {
+    position: fixed;
+    bottom: calc(25px + env(safe-area-inset-bottom));
+    width: 100%;
+    text-align: center;
+    color: var(--bunker-text-muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Voting */
+.bunker-voting-screen {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    padding: 25px;
+    padding-top: calc(60px + env(safe-area-inset-top));
+    /* Increased clearance */
+    overflow-y: auto;
+}
+
+.voting-header h2 {
+    color: var(--bunker-text);
+    font-weight: 800;
+}
+
+.voting-target-btn {
+    background: #F8FAFC;
+    border: 1px solid var(--bunker-border);
+    border-radius: 20px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    color: var(--bunker-text);
+    margin-bottom: 12px;
+}
+
+/* Other components follow the same light-theme pattern */
+.survivor-item {
+    background: white;
+    border: 1px solid var(--bunker-border);
+    border-radius: 20px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.mini-trait {
+    background: #F1F5F9;
+    color: var(--bunker-text);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+.vote-status-msg {
+    color: var(--bunker-accent);
+    font-weight: 800;
+    text-align: center;
+    margin-top: 40px;
+}
+
+.kicked-card {
+    background: #FEF2F2;
+    border: 2px solid var(--bunker-danger);
+    border-radius: 32px;
+    padding: 40px;
+    text-align: center;
+}
+
+.kicked-name {
+    color: var(--bunker-danger);
+    font-weight: 900;
+    font-size: 28px;
+}
+
+/* Animations & Flicker Prevention */
+.pulse {
+    animation: bunkerPulse 2s infinite ease-in-out;
+}
+
+@keyframes bunkerPulse {
+    0% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.7;
+    }
+}
+
+.animate__fadeIn {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Fixed positioning helpers with Safe Area */
+.fixed-bottom-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, var(--bunker-bg) 70%, transparent 100%);
+    z-index: 1000;
+}
+
+.fixed-top-right-actions {
+    position: fixed;
+    top: calc(15px + env(safe-area-inset-top));
+    right: 20px;
+    z-index: 1000;
+}

@@ -1,0 +1,12 @@
+docs/
+logs/
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+composer.lock
+vendor/
+node_modules/
+server/config.php

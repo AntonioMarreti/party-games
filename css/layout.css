@@ -1,0 +1,373 @@
+/* === LAYOUT === */
+
+/* Wrapper */
+.device-wrapper {
+    /* Phone mockup styles handled in media query */
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.device-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.content-wrapper {
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.room-content-wrapper {
+    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 140px;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Fix for Safe Area in game wrapper */
+.game-custom-wrapper {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom)) !important;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* === HEADER === */
+.header-bg {
+    background: var(--header-gradient);
+    color: var(--text-light);
+    padding-top: calc(40px + env(safe-area-inset-top));
+    padding-bottom: 60px;
+    padding-left: 24px;
+    padding-right: 24px;
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+    margin-bottom: -35px;
+    position: relative;
+    z-index: 0;
+    box-shadow: 0 10px 40px rgba(46, 26, 91, 0.2);
+}
+
+.header-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 4px;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.header-subtitle {
+    opacity: 0.8;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* === NAVIGATION === */
+.bottom-nav {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 380px;
+    background: rgba(255, 255, 255, 0.85);
+    /* Slightly more transparent */
+    backdrop-filter: blur(20px) saturate(180%);
+    /* Enhanced glass effect */
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 32px;
+    padding: 4px 18px;
+    /* Adjusted padding */
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    /* Glass border */
+    z-index: 10000;
+    margin-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #A0A0B0;
+    font-weight: 600;
+    font-size: 10px;
+    gap: 4px;
+    padding: 2px 12px;
+    border-radius: 20px;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.nav-item i {
+    font-size: 24px;
+    margin-bottom: 2px;
+    transition: transform 0.2s;
+}
+
+.nav-item.active {
+    color: var(--primary-color);
+}
+
+/* === SCREENS === */
+.screen {
+    display: none;
+    min-height: 100%;
+}
+
+.active-screen {
+    display: block;
+    animation: screenEnter 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+@keyframes screenEnter {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.screen-exit {
+    animation: screenExit 0.3s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+
+@keyframes screenExit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
+#screen-profile-edit,
+#screen-room {
+    padding-top: calc(10px + env(safe-area-inset-top));
+    background: transparent;
+    min-height: 100%;
+    display: none;
+    flex-direction: column;
+    justify-content: flex-start !important;
+}
+
+#screen-profile-edit.active-screen,
+#screen-friends.active-screen,
+#screen-leaderboard.active-screen,
+#screen-room.active-screen {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+#screen-profile-edit .room-content-wrapper,
+#screen-friends .room-content-wrapper,
+#screen-leaderboard .room-content-wrapper,
+#screen-room .room-content-wrapper {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    flex: 1;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start !important;
+    /* FIXED: Force top alignment internally */
+    min-height: 0;
+    /* Allow scrolling content to shrink */
+    margin-bottom: auto !important;
+    /* Force packing to top */
+}
+
+/* === GLOBAL HELPERS & WRAPPERS === */
+
+/* Isolated wrapper for Friends screen (Mobile Default) */
+.friends-view-wrapper {
+    padding-top: calc(20px + env(safe-area-inset-top)) !important;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 20px;
+    margin-top: 0 !important;
+    width: 100%;
+    height: 100%;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+}
+
+#screen-friends {
+    padding: 0 !important;
+}
+
+/* === PHONE MOCKUP (Desktop) === */
+@media (min-width: 1024px) and (pointer: fine) {
+    body {
+        background: #0f0c29;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        overflow: hidden;
+        margin: 0;
+        padding: 0 !important;
+    }
+
+    .device-wrapper {
+        width: auto;
+        height: 90vh;
+        aspect-ratio: 400 / 860;
+        background: #1c1c1e;
+        border-radius: 64px;
+        border: 4px solid #4a4a4c;
+        box-shadow:
+            0 0 0 2px #2c2c2e,
+            0 50px 100px rgba(0, 0, 0, 0.6),
+            inset 0 0 0 2px #000;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        z-index: 2000;
+        transform: translate(0, 0);
+        padding: 12px;
+    }
+
+    .device-content {
+        flex: 1;
+        background: var(--bg-color);
+        border-radius: 50px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        position: relative;
+        mask-image: radial-gradient(white, black);
+        -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+
+    /* Notch / Dynamic Island (Attached to Content) */
+    .device-content::before {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px;
+        height: 36px;
+        background: #000;
+        border-radius: 18px;
+        z-index: 3000;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+    }
+
+    /* Left Side Buttons (Volume) */
+    .device-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 180px;
+        left: -8px;
+        width: 4px;
+        height: 50px;
+        background: #3a3a3c;
+        border-radius: 4px 0 0 4px;
+        box-shadow: 0 60px 0 #3a3a3c;
+    }
+
+    /* Right Side Button (Power) */
+    .device-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 140px;
+        right: -8px;
+        width: 4px;
+        height: 80px;
+        background: #3a3a3c;
+        border-radius: 0 4px 4px 0;
+    }
+
+    .container {
+        padding: 0;
+        max-width: 100%;
+    }
+
+    .device-content::-webkit-scrollbar {
+        width: 0px;
+    }
+
+    .device-content:has(#screen-game.active-screen .blokus-wrapper) {
+        overflow: hidden !important;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: radial-gradient(circle at 70% 30%, #2E1A5B, transparent 50%),
+            radial-gradient(circle at 30% 70%, #6C4AB6, transparent 50%);
+        filter: blur(100px);
+        opacity: 0.4;
+    }
+
+    /* ADDED: Specific padding for desktop mockup */
+    #screen-settings .room-content-wrapper,
+    #screen-profile-edit .room-content-wrapper,
+    .friends-view-wrapper {
+        padding-top: calc(60px + env(safe-area-inset-top)) !important;
+        justify-content: flex-start !important;
+    }
+
+    /* Leaderboard HEADER needs the padding, not wrapper (since wrapper is gone) */
+    #screen-leaderboard .header-bg {
+        padding-top: calc(60px + env(safe-area-inset-top)) !important;
+    }
+
+    /* Restore bottom padding lost from wrapper removal */
+    #screen-leaderboard .content-wrapper {
+        padding-bottom: 120px !important;
+    }
+}
+
+/* Ensure Leaderboard without wrapper behaves like a proper screen */
+#screen-leaderboard {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#screen-leaderboard.active-screen {
+    display: flex !important;
+}
+
+/* Ensure global mobile leaderboard has bottom padding too */
+#screen-leaderboard .content-wrapper {
+    padding-bottom: 120px;
+}
+/* Explicitly remove padding from Leaderboard screen wrapper */
+#screen-leaderboard {
+    padding-top: 0 !important;
+}
