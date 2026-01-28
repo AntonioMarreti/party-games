@@ -1,2 +1,19 @@
-RedirectMatch 403 ^/inc/.*$
-RedirectMatch 403 ^/sql/.*$
+# Disable directory browsing
+Options -Indexes
+
+# Block access to hidden files (.git, .env, etc)
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block access to sensitive config files
+<FilesMatch "^(config\.php|composer\.json|package\.json|package-lock\.json|README\.md|LICENSE|task\.md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Optional: Force HTTPS (uncomment if needed)
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
