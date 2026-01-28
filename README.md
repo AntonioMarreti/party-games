@@ -58,7 +58,7 @@
    nano server/config.php
    ```
 
-3. **Telegram Бот**
+3. **Telegram-бот**
    - Создайте бота через [@BotFather](https://t.me/BotFather).
    - Настройте кнопку "Menu Button" на запуск вашего Web App.
    - Добавьте токен бота в `server/config.php`.

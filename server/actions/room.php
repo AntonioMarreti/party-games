@@ -3,14 +3,14 @@
 function action_create_room($pdo, $user, $data) {
     global $currentUser; // Fallback if passed differently
 
+    // 0. Garbage Collection (Clean old rooms)
+    cleanupOldRooms($pdo);
+
     try {
         $pdo->beginTransaction();
 
         // 1. Сначала удаляем игрока из старых комнат
         clearUserRooms($pdo, $user['id']);
-
-        // 0. Garbage Collection (Clean old rooms)
-        cleanupOldRooms($pdo);
 
         $code = strtoupper(substr(md5(uniqid()), 0, 6)); // 6 chars
         $pass = !empty($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
@@ -108,14 +108,6 @@ function action_get_state($pdo, $user, $data) {
         $notifs = $nStmt->fetchAll(PDO::FETCH_COLUMN);
     } catch (Exception $e) {}
     
-    echo json_encode([
-        'status' => 'in_room', 
-        'user' => $user, 
-        'room' => $room, 
-        'players' => $players, 
-        'is_host' => $room['is_host'],
-        'notifications' => $notifs
-    ]);
     echo json_encode([
         'status' => 'in_room', 
         'user' => $user, 
