@@ -401,15 +401,15 @@ function action_invite_friends($pdo, $user, $data) {
                 // Determine user name
                 $senderName = !empty($user['custom_name']) ? $user['custom_name'] : $user['first_name'];
                 
-                $message = "🎮 <b>Приглашение в игру!</b>\n\n";
+                $message = "<tg-emoji emoji-id=\"6023852878597200124\">🎮</tg-emoji> <b>Приглашение в игру!</b>\n\n";
                 $message .= "$senderName зовет тебя поиграть!\n";
-                $message .= "Заходи, пока место не заняли! 🏃‍♂️";
+                $message .= "Заходи, пока место не заняли!";
 
                 $keyboard = [
                     'inline_keyboard' => [[
                         [
-                            'text' => '🚀 Влететь в комнату',
-                            'url' => "https://t.me/" . BOT_USERNAME . "?startapp=room_{$room['room_code']}"
+                            'text' => 'Зайти в комнату',
+                            'url' => "https://t.me/" . BOT_USERNAME . "/app?startapp={$room['room_code']}"
                         ]
                     ]]
                 ];

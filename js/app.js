@@ -229,14 +229,17 @@ async function initApp(tg) {
         }
 
         if (startParam) {
-            if (res && res.status === 'in_room' && res.room.room_code !== startParam) {
-                if (confirm(`Перейти в комнату ${startParam}?`)) {
+            // Support both "room_ABCD" and "ABCD"
+            const code = startParam.startsWith('room_') ? startParam.replace('room_', '') : startParam;
+
+            if (res && res.status === 'in_room' && res.room.room_code !== code) {
+                if (confirm(`Перейти в комнату ${code}?`)) {
                     await leaveRoom();
-                    await joinRoom(startParam);
+                    await joinRoom(code);
                 }
             }
             else if (res.status !== 'in_room') {
-                await joinRoom(startParam);
+                await joinRoom(code);
             }
         } else if (res && res.status === 'no_room') {
             // Если мы авторизованы, но не в комнате — идем в лобби
@@ -1357,7 +1360,7 @@ async function loadLeaderboardList(type = 'global') {
             if (index === 0) medal = '🥇';
             if (index === 1) medal = '🥈';
             if (index === 2) medal = '🥉';
-            if (index > 2) medal = `<span class="fw-bold text-muted" style="width:20px; display:inline-block; text-align:center;">${index + 1}</span>`;
+            if (index > 2) medal = `<span class="fw-bold text-muted">${index + 1}</span>`;
 
             const div = document.createElement('div');
             // Changed bg-white to slightly transparent glass style
@@ -1369,7 +1372,7 @@ async function loadLeaderboardList(type = 'global') {
             div.style.cursor = 'pointer';
 
             div.innerHTML = `
-                <div class="fs-4 me-3">${medal}</div>
+                <div class="fs-4 me-3 d-flex justify-content-center align-items-center" style="width: 40px; flex-shrink: 0;">${medal}</div>
                 <div class="me-3">
                      ${renderAvatar(u, 'md')}
                 </div>
@@ -1615,10 +1618,10 @@ function renderInviteList(friends) {
         div.onclick = () => toggleFriendInvite(f.id, div);
 
         div.innerHTML = `
-                < div class="invite-avatar-box" >
+                <div class="invite-avatar-box">
                     ${renderAvatar(f, 'sm')}
                 ${isSelected ? '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary border border-white"><i class="bi bi-check"></i></span>' : ''}
-            </div >
+            </div>
             <div class="flex-grow-1">
                 <div class="fw-bold small text-dark">${f.custom_name || f.first_name}</div>
             </div>

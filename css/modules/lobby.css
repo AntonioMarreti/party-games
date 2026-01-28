@@ -387,3 +387,49 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-size: 12px;
 }
+
+/* === DESKTOP ROOM EXIT BUTTON === */
+.desktop-room-exit-btn {
+    display: none !important;
+    /* Force hidden on Mobile */
+    align-items: center;
+    padding: 8px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    border: 1px solid rgba(255, 59, 48, 0.2);
+    transition: all 0.2s;
+    height: 40px;
+}
+
+.desktop-room-exit-btn:hover {
+    background: rgba(255, 59, 48, 0.2);
+    transform: translateY(-2px);
+}
+
+@media (min-width: 768px) {
+
+    /* Show direct Exit button on Desktop */
+    .desktop-room-exit-btn {
+        display: flex !important;
+    }
+
+    .room-header-dropdown-btn i {
+        display: none;
+        /* Hide chevron on desktop */
+    }
+
+    .room-header-dropdown-btn {
+        pointer-events: none;
+        /* Disable click on desktop */
+    }
+
+    /* Force space-between for header items on desktop to avoid notch area */
+    #screen-room .d-flex.justify-content-center.mb-3 {
+        justify-content: space-between !important;
+        align-items: center;
+        padding: 0 10px;
+    }
+}
