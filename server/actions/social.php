@@ -374,10 +374,12 @@ function action_invite_friends($pdo, $user, $data) {
     }
 
     $roomId = intval($data['room_id']);
-    // Check if room exists
-    $stmt = $pdo->prepare("SELECT id FROM rooms WHERE id = ?"); // Removed is_active
+    // Check if room exists AND get code
+    $stmt = $pdo->prepare("SELECT id, room_code FROM rooms WHERE id = ?"); 
     $stmt->execute([$roomId]);
-    if (!$stmt->fetch()) {
+    $room = $stmt->fetch();
+
+    if (!$room) {
         TelegramLogger::logError('invite_debug', ['message' => 'Room not found or inactive', 'room_id' => $roomId]);
         sendError('Комната не найдена (или закрыта)');
     }
@@ -407,7 +409,7 @@ function action_invite_friends($pdo, $user, $data) {
                     'inline_keyboard' => [[
                         [
                             'text' => '🚀 Влететь в комнату',
-                            'url' => "https://t.me/" . BOT_USERNAME . "?startapp=room_{$roomId}"
+                            'url' => "https://t.me/" . BOT_USERNAME . "?startapp=room_{$room['room_code']}"
                         ]
                     ]]
                 ];
