@@ -11,11 +11,17 @@
 - 👥 **Социальность**: Система друзей, пригласительные ссылки и вход по QR-коду.
 - 🏆 **Таблицы лидеров**: Глобальные и дружеские рейтинги.
 
-## Скриншоты 📸
-<p align="center">
-  <img src="docs/screen-desktop.png" width="45%" alt="Desktop View">
-  <img src="docs/screen-mobile.png" width="45%" alt="Mobile View">
-</p>
+<details>
+  <summary><b>📸 Скриншоты интерфейса (Нажмите чтобы открыть)</b></summary>
+  <br>
+  <p align="center">
+    <b>Desktop Версия</b><br>
+    <img src="docs/screen-desktop.png" width="80%" style="border-radius: 10px;">
+    <br><br>
+    <b>Mobile Версия</b><br>
+    <img src="docs/screen-mobile.png" width="80%" style="border-radius: 10px;">
+  </p>
+</details>
 
 ## Доступные игры 🎲
 - **Бункер**: Игра-дискуссия о выживании (WIP).
