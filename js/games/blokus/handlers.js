@@ -148,11 +148,11 @@ function getTransformedShape(pieceId) {
     });
 }
 
-function validatePlacementLocal(shape, startX, startY) {
+function validatePlacementLocal(shape, startX, startY, grid = null, color = null) {
     if (!blokusState.serverState || !blokusState.serverState.grid) return { valid: false, reason: 'NO_STATE' };
-    const boardGrid = blokusState.serverState.grid;
+    const boardGrid = grid || blokusState.serverState.grid;
     const boardSize = blokusState.serverState.boardSize || 20;
-    const myColor = blokusState.myColor;
+    const myColor = color || blokusState.myColor;
 
     // 1. Basic Bounds & Overlap Check
     for (const [px, py] of shape) {
@@ -231,7 +231,7 @@ async function blokusApplyMove() {
             const mockRes = { room: {}, players: [], user: { id: 0 } };
             render_blokus(mockRes);
         } catch (e) {
-            alert(e.message);
+            showAlert('Ошибка', e.message, 'error');
         }
     } else {
         try {
@@ -245,7 +245,7 @@ async function blokusApplyMove() {
             });
 
             if (res && res.status === 'error') {
-                alert(res.message); // Explicitly show server error
+                showAlert('Ошибка сервера', res.message, 'error');
                 return; // Do not clear selection
             }
 
@@ -257,13 +257,13 @@ async function blokusApplyMove() {
             checkState();
 
         } catch (e) {
-            alert(e.message || "Network Error");
+            showAlert('Ошибка сети', e.message || "Network Error", 'error');
         }
     }
 }
 
 async function blokusPassTurn() {
-    if (confirm('Пропустить ход?')) {
+    showConfirmation('Пропустить ход', 'Вы действительно хотите пропустить свой ход?', async () => {
         await apiRequest({
             action: 'game_action',
             game_action: 'pass_turn'
@@ -274,7 +274,7 @@ async function blokusPassTurn() {
         blokusState.hoverY = -1;
         triggerHaptic('impact', 'medium');
         checkState();
-    }
+    }, { confirmText: 'Пропустить' });
 }
 
 async function blokusStartMatch() {
@@ -297,9 +297,9 @@ function isMyTurn() {
 }
 
 function backToLobby() {
-    if (confirm('Выйти из игры?')) {
+    showConfirmation('Выйти в лобби', 'Вы действительно хотите выйти из игры?', () => {
         leaveRoom();
-    }
+    }, { isDanger: true, confirmText: 'Выйти' });
 }
 
 // Global exposure
@@ -315,7 +315,11 @@ window.blokusApplyMove = blokusApplyMove;
 window.blokusPassTurn = blokusPassTurn;
 window.backToLobby = backToLobby;
 window.blokusSuggestMove = function () {
-    if (!blokusState.serverState || !blokusState.myColor) return;
+    console.log("[Blokus] Helper Clicked. State:", blokusState.myColor, !!blokusState.serverState);
+    if (!blokusState.serverState || !blokusState.myColor) {
+        console.warn("[Blokus] Missing state/color for helper");
+        return;
+    }
 
     // Show loading?
     const btn = document.getElementById('btn-suggest-move');
@@ -327,13 +331,10 @@ window.blokusSuggestMove = function () {
             if (typeof BlokusBot === 'undefined') {
                 throw new Error("Бот не загружен. Перезагрузите страницу.");
             }
-            if (typeof getStartPointForColor === 'undefined') {
-                // Fallback if ui.js hasn't updated in cache yet?
-                throw new Error("Ошибка зависимостей (UI). Перезагрузите.");
-            }
-
+            console.log("[Blokus] Bot loaded, searching for best move...");
             const bot = new BlokusBot(blokusState.serverState, blokusState.myColor);
             const bestMove = bot.findBestMove();
+            console.log("[Blokus] Best move found:", bestMove);
 
             if (bestMove) {
                 // Apply to UI State
@@ -348,11 +349,11 @@ window.blokusSuggestMove = function () {
                 renderBoard();
                 triggerHaptic('notification', 'success');
             } else {
-                alert("Бог не видит подходящих ходов :(");
+                showAlert("Внимание", "Бог не видит подходящих ходов :(", 'warning');
             }
         } catch (e) {
             console.error(e);
-            alert("Ошибка бота: " + e.message);
+            showAlert("Ошибка бота", e.message, 'error');
         }
 
         if (btn) btn.innerHTML = '<i class="bi bi-magic"></i>';
@@ -367,7 +368,7 @@ window.returnToRoomLobby = async function () {
         await apiRequest({ action: 'stop_game' }); // Resets room to lobby mode
         checkState(); // Refresh UI to show lobby
     } catch (e) {
-        alert("Ошибка: " + e.message);
+        showAlert("Ошибка", e.message, 'error');
     }
 };
 

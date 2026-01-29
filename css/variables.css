@@ -17,6 +17,7 @@
 
     /* Mesh Gradient Header */
     --header-gradient: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
+    --primary-gradient: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
 
     /* Colored Shadows */
     --shadow-sm: 0 4px 15px rgba(108, 92, 231, 0.1);

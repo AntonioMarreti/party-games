@@ -1,4 +1,21 @@
 /* === MODALS === */
+/* Critical for Desktop Simulation: Lock modal to device width */
+/* Critical for Desktop Simulation: Lock modal CONTENT to device width */
+.modal {
+    max-width: var(--content-max-width, 480px);
+    margin: 0 auto;
+    left: 0;
+    right: 0;
+}
+
+/* Allow backdrop to cover entire screen */
+.modal-backdrop {
+    max-width: none;
+    width: 100vw;
+    height: 100vh;
+}
+
+
 
 .modal-dialog {
     margin: 20px !important;
@@ -153,11 +170,62 @@
     flex: 1;
     text-align: left;
 }
-/* Fix: Ensure Modals appear ABOVE the high-z-index navbar */
+
+/* Fix: Ensure Modals appear ABOVE the high-z-index navbar (10000) & desktop wrapper (2000) */
 .modal-backdrop {
     z-index: 10040 !important;
 }
 
 .modal {
     z-index: 10050 !important;
+}
+
+
+
+/* Custom Overlay Modal (Stats) */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 10060;
+    display: none;
+    /* Flex when active */
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.custom-modal-overlay.show {
+    opacity: 1;
+}
+
+.custom-modal-content {
+    background: rgba(255, 255, 255, 0.85);
+    /* Glass */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 32px;
+    /* Smoother corners */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 350px;
+    animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpFade {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }

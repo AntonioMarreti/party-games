@@ -388,6 +388,39 @@
     font-size: 12px;
 }
 
+/* Add Bot Button (Circle matching avatars) */
+.add-bot-avatar {
+    width: 44px;
+    /* Matched to .lb-avatar and other avatars */
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    /* Slightly more opaque background */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px dashed rgba(255, 255, 255, 0.8);
+    color: var(--primary-color);
+    /* Visible icon color */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.add-bot-avatar:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.08) rotate(90deg);
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.add-bot-avatar:active {
+    transform: scale(0.95);
+}
+
 /* === DESKTOP ROOM EXIT BUTTON === */
 .desktop-room-exit-btn {
     display: none !important;
@@ -432,4 +465,112 @@
         align-items: center;
         padding: 0 10px;
     }
+}
+
+/* === V1.2 LEADERBOARD STYLES === */
+.lb-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.lb-card:active {
+    transform: scale(0.98);
+}
+
+.lb-rank {
+    width: 30px;
+    font-weight: 900;
+    font-size: 16px;
+    color: #b2bec3;
+    text-align: center;
+    margin-right: 12px;
+}
+
+.lb-rank.top-1 {
+    color: #f1c40f;
+    font-size: 20px;
+}
+
+.lb-rank.top-2 {
+    color: #bdc3c7;
+    font-size: 19px;
+}
+
+.lb-rank.top-3 {
+    color: #e67e22;
+    font-size: 18px;
+}
+
+.lb-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background-color: #eee;
+    margin-right: 15px;
+    margin-right: 15px;
+    background-size: cover;
+    background-position: center;
+}
+
+/* Ensure standard avatar sizes */
+.avatar-md {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    /* Circle */
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.lb-info {
+    flex-grow: 1;
+}
+
+.lb-name {
+    font-weight: 700;
+    color: #2d3436;
+    font-size: 15px;
+    margin-bottom: 2px;
+    letter-spacing: -0.5px;
+}
+
+.lb-detail {
+    font-size: 12px;
+    color: #636e72;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.level-pill {
+    background: #eef2ff;
+    color: #667eea;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 10px;
+}
+
+.lb-score {
+    text-align: right;
+    font-weight: 800;
+    color: #2d3436;
+    font-size: 16px;
+}
+
+.lb-score small {
+    display: block;
+    font-size: 9px;
+    color: #b2bec3;
+    font-weight: 600;
 }

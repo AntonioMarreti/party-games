@@ -147,6 +147,7 @@ if ($action === 'dev_login') {
 }
 
 // === HELPER FUNCTIONS (Available to Actions) ===
+require_once 'lib/shared_helpers.php';
 
 function getUserByToken($token) {
     global $pdo;
@@ -206,6 +207,8 @@ $routes = [
     'leave_room'  => 'actions/room.php',
     'kick_player' => 'actions/room.php',
     'get_state'   => 'actions/room.php',
+    'add_bot'     => 'actions/room.php', // NEW
+    'remove_bot'  => 'actions/room.php', // NEW
     
     'start_game'          => 'actions/game.php',
     'stop_game'           => 'actions/game.php',
@@ -239,7 +242,14 @@ $routes = [
     'get_public_rooms' => 'actions/room.php',
     
     'admin_stats'      => 'actions/admin.php',
-    'reset_leaderboard' => 'actions/admin.php', // UPDATED
+    'reset_leaderboard' => 'actions/admin.php',
+    'seed_achievements' => 'actions/admin.php',
+    'setup_reactions'  => 'actions/admin.php', // NEW
+    'db_doctor'        => 'actions/admin.php', // NEW
+    'db_repair'        => 'actions/admin.php', // NEW
+
+    // REACTIONS
+    'send_reaction'    => 'actions/game.php', // NEW
 ];
 
 if (isset($routes[$action])) {

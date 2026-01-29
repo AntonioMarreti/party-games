@@ -32,11 +32,13 @@ if (typeof window.blokusState === 'undefined') {
         pieceSelectorOpen: false,
         pieceSizeFilter: 5,
         headerMenuOpen: false,
-        turnMenuOpen: false // New state for turn dropdown
+        turnMenuOpen: false, // New state for turn dropdown
+        lastBotTurnIndex: -1 // To prevent multi-firing
     };
 }
 
 function render_blokus(res) {
+    console.log("[Blokus] Starting Render...", res);
     // 0. Check Local Game Mode
     if (blokusState.isLocalGame) {
         if (!blokusState.game) {
@@ -68,7 +70,10 @@ function render_blokus(res) {
         blokusState.players = res.players; // Store player metadata (names, avatars)
 
         // 2. Determine My Color (Dynamic for 2/3 Player Modes)
-        if (!res.players || !res.user) return;
+        if (!res.players || !res.user) {
+            console.warn("[Blokus] Missing players or user in res", res);
+            return;
+        }
         const myIndex = res.players.findIndex(p => p.id == res.user.id);
         const colors = ['BLUE', 'YELLOW', 'RED', 'GREEN'];
         const myPrimaryColor = (myIndex >= 0 && myIndex < 4) ? colors[myIndex] : null; // "Seat" color
@@ -274,6 +279,106 @@ function render_blokus(res) {
     updateHeader();
     renderBoard();
     updateHandInteractionArea();
+
+    // Enable Global Reactions
+    if (window.renderReactionToolbar) window.renderReactionToolbar();
+
+    // 6. Check for Bot Turn
+    checkBotTurn();
+}
+
+async function checkBotTurn() {
+    if (!window.isHost) return;
+    const s = blokusState.serverState;
+    if (!s || s.status !== 'playing') return;
+
+    // Avoid reacting to same turn data twice
+    if (blokusState.lastBotTurnIndex === s.currentTurnIndex) return;
+
+    const currentColor = s.turnOrder[s.currentTurnIndex];
+    const roomPlayers = blokusState.players; // From res.players (DB info with is_bot)
+    if (!roomPlayers) return;
+
+    let activePlayer = null;
+    const colors = ['BLUE', 'YELLOW', 'RED', 'GREEN'];
+
+    // Map Color -> Player
+    const mode = s.mode || 'standard';
+
+    if (mode === 'standard') {
+        const idx = colors.indexOf(currentColor);
+        if (idx !== -1) activePlayer = roomPlayers[idx];
+    } else if (mode === '2player') {
+        // P1(0): Blue/Red, P2(1): Yellow/Green
+        if (currentColor === 'BLUE' || currentColor === 'RED') activePlayer = roomPlayers[0];
+        else activePlayer = roomPlayers[1];
+    } else if (mode === '3player') {
+        const idx = colors.indexOf(currentColor);
+        if (idx !== -1 && idx < 3) activePlayer = roomPlayers[idx]; // Blue, Yellow, Red
+        else if (currentColor === 'GREEN') {
+            activePlayer = roomPlayers[s.greenOwnerIndex];
+        }
+    } else if (mode === 'duo') {
+        // Duo: Blue(0), Yellow(1)
+        if (currentColor === 'BLUE') activePlayer = roomPlayers[0];
+        else if (currentColor === 'YELLOW') activePlayer = roomPlayers[1];
+    }
+
+    if (activePlayer && activePlayer.is_bot == 1) {
+        console.log(`[Bot] It is ${activePlayer.bot_difficulty} bot's turn (${currentColor}). Thinking...`);
+
+        // Set lock immediately to prevent double-scheduling in next poll
+        // But we MUST clear it if we fail to start the action
+        blokusState.lastBotTurnIndex = s.currentTurnIndex;
+
+        // Slight delay to simulate thinking and allow UI to render "Bot Turn"
+        setTimeout(async () => {
+            // Re-check state availability
+            if (!blokusState.serverState) return;
+
+            // Double check we are still on the same turn (game didn't advance while waiting)
+            if (blokusState.serverState.currentTurnIndex !== blokusState.lastBotTurnIndex) return;
+
+            try {
+                if (typeof BlokusBot === 'undefined') {
+                    throw new Error("BlokusBot class not found");
+                }
+
+                // Instantiate Bot
+                const bot = new BlokusBot(blokusState.serverState, currentColor, activePlayer.bot_difficulty || 'medium');
+                const bestMove = bot.findBestMove();
+
+                if (bestMove) {
+                    console.log("[Bot] Found move:", bestMove);
+                    // Send to Server
+                    await apiRequest({
+                        action: 'game_action',
+                        game_action: 'place_piece',
+                        piece_id: bestMove.pieceId,
+                        shape: JSON.stringify(bestMove.shape),
+                        x: bestMove.x,
+                        y: bestMove.y
+                    });
+                } else {
+                    console.log("[Bot] No move found. Passing.");
+                    await apiRequest({
+                        action: 'game_action',
+                        game_action: 'pass_turn'
+                    });
+                }
+
+                // We do NOT clear the lock here on success, because we want to wait for the
+                // server to process and change the currentTurnIndex, which will naturally release the lock.
+
+            } catch (e) {
+                console.error("[Bot] Error:", e);
+                // CRITICAL: If we failed, we might want to release the lock to try agin?
+                // Or maybe just log it. Retrying immediately might spam if it's a logic bug.
+                // Let's reset it so we retry on next poll (approx 1s later)
+                blokusState.lastBotTurnIndex = -1;
+            }
+        }, 1000 + Math.random() * 1000); // 1-2s thinking time
+    }
 }
 
 function renderResults(state) {

@@ -553,6 +553,7 @@ function updateHandInteractionArea() {
                 </button>
                 ` : ''
                 }
+
     <button class="btn modal-btn-close" onclick="togglePieceSelector(false)">
         <i class="bi bi-x-lg"></i>
         <span>Закрыть</span>

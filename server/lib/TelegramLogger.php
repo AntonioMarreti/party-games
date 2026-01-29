@@ -12,20 +12,21 @@ class TelegramLogger {
         'payment' => '💳',
         'game' => '🎮',
         'room' => '🚪',
+        'achievement' => '🏆',
+        'user' => '👤',
+        'social' => '🤝',
         'unknown' => '❌'
     ];
     
-    /**
-     * Универсальный метод логирования (старый)
-     * @deprecated Используйте logError() для более детального логирования
-     */
     public static function log($message, $data = []) {
-        if (!defined('BOT_TOKEN') || !defined('LOG_CHANNEL_ID') || empty(LOG_CHANNEL_ID)) {
-            error_log("TG LOG FAILED (No Config): $message");
-            return;
-        }
+        self::logEvent('unknown', $message, $data);
+    }
 
-        $text = "🚨 <b>Error Log</b>\n\n";
+    public static function logEvent($eventType, $message, $data = []) {
+        if (!defined('BOT_TOKEN') || !defined('LOG_CHANNEL_ID') || empty(LOG_CHANNEL_ID)) return;
+
+        $emoji = self::$emoji[$eventType] ?? 'ℹ️';
+        $text = "$emoji <b>" . strtoupper($eventType) . "</b>\n\n";
         $text .= "<b>Message:</b> " . htmlspecialchars($message) . "\n";
         
         if (!empty($data)) {
@@ -33,8 +34,6 @@ class TelegramLogger {
         }
 
         $text .= "\n<b>Time:</b> " . date('Y-m-d H:i:s');
-        if (isset($_SERVER['REMOTE_ADDR'])) $text .= "\n<b>IP:</b> " . $_SERVER['REMOTE_ADDR'];
-        if (isset($_SERVER['REQUEST_URI'])) $text .= "\n<b>URI:</b> " . $_SERVER['REQUEST_URI'];
 
         self::sendRequest('sendMessage', [
             'chat_id' => LOG_CHANNEL_ID,
@@ -43,12 +42,6 @@ class TelegramLogger {
         ]);
     }
     
-    /**
-     * Логировать ошибку с детальным контекстом
-     * @param string $errorType - тип ошибки (database|api|validation|auth|game|room)
-     * @param array $errorData - ['message' => string, 'code' => string, 'stack' => string]
-     * @param array $context - ['user_id', 'endpoint', 'method', 'action', 'environment']
-     */
     public static function logError($errorType, $errorData, $context = []) {
         if (!defined('BOT_TOKEN') || !defined('LOG_CHANNEL_ID') || empty(LOG_CHANNEL_ID)) {
             error_log("TG LOG FAILED (No Config): " . ($errorData['message'] ?? 'Unknown error'));
@@ -89,18 +82,11 @@ class TelegramLogger {
         ]);
     }
     
-    /**
-     * Отправить статистику/аналитику
-     */
     public static function sendAnalytics($title, $text, $chatId = null) {
-        if (!defined('BOT_TOKEN')) {
-            return;
-        }
+        if (!defined('BOT_TOKEN')) return;
         
         $targetChat = $chatId ?? LOG_CHANNEL_ID;
-        if (empty($targetChat)) {
-            return;
-        }
+        if (empty($targetChat)) return;
         
         $message = "<b>$title</b>\n\n$text";
         
@@ -111,13 +97,8 @@ class TelegramLogger {
         ]);
     }
     
-    /**
-     * Отправить уведомление (info-level)
-     */
     public static function info($message, $data = []) {
-        if (!defined('LOG_CHANNEL_ID') || empty(LOG_CHANNEL_ID)) {
-            return;
-        }
+        if (!defined('LOG_CHANNEL_ID') || empty(LOG_CHANNEL_ID)) return;
         
         $text = "ℹ️ <b>Info</b>\n\n";
         $text .= htmlspecialchars($message) . "\n";
@@ -137,9 +118,6 @@ class TelegramLogger {
 
     public static $lastError = null;
 
-    /**
-     * Отправить запрос в Telegram API (internal)
-     */
     public static function sendRequest($method, $params = []) {
         if (!defined('BOT_TOKEN')) {
             self::$lastError = "BOT_TOKEN not defined";

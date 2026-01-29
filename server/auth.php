@@ -101,6 +101,17 @@ function registerOrLoginUser($tg_user) {
     } else {
         $stmt = $pdo->prepare("INSERT INTO users (telegram_id, first_name, photo_url, auth_token) VALUES (?, ?, ?, ?)");
         $stmt->execute([$telegram_id, $first_name, $photo_url, $token]);
+        $newUserId = $pdo->lastInsertId();
+        
+        // AUTO-INIT STATS
+        $pdo->prepare("INSERT IGNORE INTO user_statistics (user_id) VALUES (?)")->execute([$newUserId]);
+
+        // LOG NEW USER
+        TelegramLogger::logEvent('user', "New User Registered", [
+            'id' => $newUserId,
+            'name' => $first_name,
+            'telegram_id' => $telegram_id
+        ]);
     }
     
     return $token;

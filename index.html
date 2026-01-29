@@ -15,9 +15,16 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/layout.css?v=2122">
-    <link rel="stylesheet" href="styles.css?v=2122">
-    <script src="js/app.js?v=2122"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2171">
+    <link rel="stylesheet" href="css/layout.css?v=2171">
+    <link rel="stylesheet" href="css/components.css?v=2171">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2171">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2171">
+    <link rel="stylesheet" href="css/modules/room.css?v=2171">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2171">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2171">
+    <link rel="stylesheet" href="styles.css?v=2171">
+    <script src="js/app.js?v=2171"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -157,73 +164,88 @@
 
                 <!-- ТАБ 3: ПРОФИЛЬ -->
                 <!-- 4. ПРОФИЛЬ (НОВЫЙ ДИЗАЙН) -->
+                <!-- ТАБ 3: ПРОФИЛЬ -->
                 <div id="tab-profile" class="tab-content" style="display: none;">
-                    <div class="profile-header-premium">
-                        <div class="header-title pt-4">Профиль</div>
+                    <!-- Modern Header -->
+                    <div class="profile-header-modern" style="padding-top: 60px;"> <!-- Added padding for notch -->
+                        <div class="profile-avatar-xl" id="profile-avatar-big">
+                            <div class="profile-level-badge-float" id="profile-level-badge">1</div>
+                        </div>
+                        <h2 class="fw-bold mb-0" id="profile-name-big">...</h2>
+                        <div class="small opacity-75 mt-1" id="profile-xp-text">0 XP</div>
                     </div>
 
-                    <div class="content-wrapper profile-content-push">
-                        <div class="profile-card-new text-center">
-                            <div class="profile-avatar-overlap">
-                                <div id="profile-avatar-big" class="avatar-xl-premium mx-auto"></div>
+                    <!-- Modern Stats Card (Overlapping) & Clickable -->
+                    <div class="stats-card-modern" onclick="openDetailedStatsModal()" style="cursor: pointer;">
+                        <div class="stat-box">
+                            <div class="value" id="profile-stat-achievements">0</div>
+                            <div class="label">Ачивок</div>
+                        </div>
+                        <div class="stat-divider-v"></div>
+                        <div class="stat-box">
+                            <div class="value" id="profile-stat-wins">0</div>
+                            <div class="label">Побед</div>
+                        </div>
+                        <div class="stat-divider-v"></div>
+                        <div class="stat-box">
+                            <div class="value" id="profile-stat-xp">0</div>
+                            <div class="label">XP</div>
+                        </div>
+                    </div>
+
+                    <div class="content-wrapper">
+
+
+                        <!-- Detailed Stats Modal -->
+                        <!-- Detailed Stats Modal REMOVED (Moved to root) -->
+
+                        <!-- Menu Actions (Grouped Glass Style) -->
+                        <div class="settings-group mb-3">
+                            <!-- Edit Profile -->
+                            <div class="settings-item clickable" onclick="openProfileEditor()">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-wrap text-primary me-3" style="width:32px; text-align:center;"><i
+                                            class="bi bi-pencil-square fs-5"></i></div>
+                                    <span class="fw-bold text-dark">Редактировать профиль</span>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
                             </div>
-                            <h2 class="fw-bold mb-0 mt-2" id="profile-name-big">...</h2>
-                            <div class="text-muted small">Pro Player ⚡</div>
+
+                            <!-- Friends -->
+                            <div class="settings-item clickable" onclick="openFriendsScreen()">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-wrap text-success me-3" style="width:32px; text-align:center;"><i
+                                            class="bi bi-people-fill fs-5"></i></div>
+                                    <span class="fw-bold text-dark">Друзья</span>
+                                    <span id="friends-count-badge" class="badge bg-danger rounded-pill ms-2"
+                                        style="display:none;">0</span>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
+                            </div>
+
+                            <!-- Settings -->
+                            <div class="settings-item clickable" onclick="openSettingsScreen()">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-wrap text-dark me-3" style="width:32px; text-align:center;"><i
+                                            class="bi bi-gear-fill fs-5"></i></div>
+                                    <span class="fw-bold text-dark">Настройки</span>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
+                            </div>
                         </div>
 
-                        <!-- Improved Stats Card -->
-                        <div class="profile-stats-card-premium mt-3">
-                            <div class="d-flex justify-content-around align-items-center w-100">
-                                <div class="stat-item-new">
-                                    <div class="stat-icon"><i class="bi bi-trophy-fill" style="color: #f1c40f;"></i>
-                                    </div>
-                                    <div class="stat-value" id="profile-stat-wins">0</div>
-                                    <div class="stat-label">Побед</div>
-                                </div>
-                                <div class="stat-divider-v"></div>
-                                <div class="stat-item-new">
-                                    <div class="stat-icon"><i class="bi bi-dpad-fill" style="color: #9b59b6;"></i>
-                                    </div>
-                                    <div class="stat-value" id="profile-stat-games">0</div>
-                                    <div class="stat-label">Игр</div>
-                                </div>
-                                <div class="stat-divider-v"></div>
-                                <div class="stat-item-new">
-                                    <div class="stat-icon"><i class="bi bi-star-fill" style="color: #3498db;"></i></div>
-                                    <div class="stat-value" id="profile-stat-rating">1000</div>
-                                    <div class="stat-label">Рейтинг</div>
+                        <!-- Logout Group -->
+                        <div class="settings-group mb-3" id="logout-menu-item-group" style="display:none;">
+                            <div class="settings-item clickable" onclick="logout()">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-wrap text-danger me-3" style="width:32px; text-align:center;"><i
+                                            class="bi bi-box-arrow-left fs-5"></i></div>
+                                    <span class="fw-bold text-danger">Выйти</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="menu-card-premium mt-3">
-                            <div class="menu-row" onclick="openProfileEditor()">
-                                <div class="menu-icon-wrap"><i class="bi bi-pencil-fill"></i></div>
-                                <span>Редактировать профиль</span>
-                                <i class="bi bi-chevron-right ms-auto opacity-50"></i>
-                            </div>
-                            <div class="menu-row" onclick="openFriendsScreen()">
-                                <div class="menu-icon-wrap"><i class="bi bi-people-fill"></i></div>
-                                <span>Список друзей</span>
-                                <span id="friends-count-badge" class="badge bg-primary rounded-pill ms-2"
-                                    style="display:none;">0</span>
-                                <i class="bi bi-chevron-right ms-auto opacity-50"></i>
-                            </div>
-                            <div class="menu-row" onclick="openSettingsScreen()">
-                                <div class="menu-icon-wrap"><i class="bi bi-gear-fill"></i></div>
-                                <span>Настройки</span>
-                                <i class="bi bi-chevron-right ms-auto opacity-50"></i>
-                            </div>
-                            <!-- LOGOUT (Web Only) inside the same card -->
-                            <div id="logout-menu-item" class="menu-row text-danger border-top-0" onclick="logout()"
-                                style="display: none;">
-                                <div class="menu-icon-wrap text-danger"><i class="bi bi-box-arrow-left"></i></div>
-                                <span>Выйти из аккаунта</span>
-                                <i class="bi bi-chevron-right ms-auto opacity-50"></i>
-                            </div>
-                        </div>
-
-
+                        <div style="height: 100px;"></div>
                     </div>
                 </div>
             </div>
@@ -233,7 +255,7 @@
             <div id="screen-leaderboard" class="screen">
                 <!-- Removed wrapper to fix padding -->
                 <div class="header-bg">
-                    <div class="header-title">Топ Игроков</div>
+                    <div class="header-title">Топ игроков</div>
                     <div class="header-subtitle">Лучшие из лучших</div>
                 </div>
 
@@ -577,133 +599,6 @@
                     class="bi bi-person-fill"></i><span>Профиль</span></button>
         </div>
 
-        <!-- === МОДАЛЬНЫЕ ОКНА === -->
-
-        <!-- 1. Модалка Входа -->
-        <div class="modal fade" id="joinModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold ps-2">Присоединиться к комнате</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body pt-2">
-                        <input type="text" id="join-room-code"
-                            class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold"
-                            placeholder="A1B2" maxlength="4"
-                            style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
-                        <input type="password" id="join-room-pass" class="form-control mb-3"
-                            placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
-                        <button class="btn btn-primary w-100 btn-lg" style="border-radius: 16px;"
-                            onclick="joinRoom(); bootstrap.Modal.getInstance(document.getElementById('joinModal')).hide();">Присоединиться</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. Модалка Создания -->
-        <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold ps-2">Новая комната</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body pt-2">
-                        <input type="text" id="create-room-title" class="form-control mb-3 fw-bold"
-                            placeholder="Название комнаты" style="border-radius: 16px;">
-
-                        <input type="password" id="create-room-pass" class="form-control mb-3"
-                            placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
-
-                        <div class="form-check form-switch mb-3 ps-5">
-                            <input class="form-check-input" type="checkbox" id="create-room-public"
-                                style="transform: scale(1.3);">
-                            <label class="form-check-label ms-2 fw-bold" for="create-room-public">Сделать
-                                публичной</label>
-                        </div>
-
-                        <button class="btn btn-primary w-100 btn-lg" style="border-radius: 16px;"
-                            onclick="createRoom(); bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();">Создать</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. Модалка QR-кода -->
-        <div class="modal fade" id="qrInviteModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: 32px; padding: 20px;">
-                    <div class="d-flex justify-content-center mb-2">
-                        <div style="width: 40px; height: 4px; background: #E0E0E0; border-radius: 2px;"></div>
-                    </div>
-                    <div class="text-center">
-                        <h5 class="fw-bold mb-4" style="color: var(--text-dark);">Комната <span
-                                id="modal-room-code-title">...</span></h5>
-                        <div class="d-flex justify-content-center mb-3">
-                            <div id="modal-qr-code"
-                                style="padding: 10px; border-radius: 20px; border: 2px solid #F0F0F0;">
-                            </div>
-                        </div>
-                        <h2 class="fw-bold mb-4"
-                            style="font-size: 32px; color: var(--primary-color); letter-spacing: 1px;"
-                            id="modal-room-code-text">...</h2>
-                        <div class="d-grid gap-3">
-                            <button class="btn btn-primary py-3 rounded-4 fw-bold shadow-sm"
-                                style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); border: none; font-size: 18px;"
-                                onclick="copyInviteLink()">
-                                <i class="bi bi-link-45deg me-2"></i> Скопировать ссылку
-                            </button>
-                            <button class="btn py-3 rounded-4 fw-bold shadow-sm"
-                                style="background: #24A1DE; color: white; border: none; font-size: 18px;"
-                                onclick="sendToTelegram()">
-                                <i class="bi bi-telegram me-2"></i> Отправить в чат
-                            </button>
-                            <button class="btn py-3 rounded-4 fw-bold shadow-sm"
-                                style="background: #fff; color: var(--primary-color); border: 1px solid #eee; font-size: 18px;"
-                                onclick="bootstrap.Modal.getInstance(document.getElementById('qrInviteModal')).hide(); openInviteModal()">
-                                <i class="bi bi-person-plus-fill me-2"></i> Позвать друга
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. Модалка Выбора игры -->
-        <div class="modal fade" id="gameSelectorModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-                    <div class="modal-header border-0">
-                        <h5 class="modal-title fw-bold ps-2">Выбрать игру</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-0">
-                        <div class="list-group list-group-flush" id="game-selector-list"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-
-        <!-- 4. Модалка Публичного Профиля (Одного стиля с модалкой друзей) -->
-        <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-                    <div class="modal-header border-0 pb-0">
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body text-center pt-0 pb-4">
-                        <div id="public-profile-content">
-                            <!-- JS injected content -->
-                            <div class="spinner-border text-primary"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- 5. ЭКРАН РЕДАКТОРА ПРОФИЛЯ (Отдельный экран) -->
 
 
@@ -720,7 +615,7 @@
                     <h5 class="modal-title fw-bold ps-2">Топ игроков</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body pt-2">
+                <div class="modal-body p-0 pt-2">
                     <ul class="nav nav-pills nav-fill mb-3 bg-light rounded-pill p-1">
                         <li class="nav-item">
                             <a class="nav-link active rounded-pill" data-bs-toggle="pill" href="#tab-lb-global"
@@ -732,7 +627,8 @@
                         </li>
                     </ul>
 
-                    <div id="leaderboard-container">
+                    <div id="leaderboard-screen-container" class="px-0">
+                        <!-- leaderboard list -->
                         <div class="text-center py-4">
                             <div class="spinner-border text-primary"></div>
                         </div>
@@ -784,68 +680,304 @@
         </div>
     </div>
 
-    <script src="libs/bootstrap.bundle.min.js"></script>
-    <script>
-        // Callback for the widget
-        async function onTelegramAuth(user) {
-            document.getElementById('browser-login-btn').style.display = 'none';
-            document.getElementById('login-loading').style.display = 'block';
-            const formData = new FormData();
-            formData.append('action', 'login_widget');
-            formData.append('user_data', JSON.stringify(user));
-            try {
-                const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
-                if (res.status === 'ok') {
-                    localStorage.setItem('pg_token', res.token);
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + res.message);
-                    document.getElementById('browser-login-btn').style.display = 'block';
+    <!-- 10. Модалка Детальной Статистики (Moved here) -->
+    <div id="modal-detailed-stats" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-content glass-panel p-3" style="max-width: 400px; width: 90%;">
+            <div class="position-relative mb-3 text-center">
+                <h5 class="fw-bold mb-0 text-dark">Статистика</h5>
+                <button class="btn-close position-absolute top-50 end-0 translate-middle-y"
+                    onclick="closeModal('modal-detailed-stats')" style="font-size: 0.8rem;"></button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="row g-2 mb-3">
+                <!-- Level (TOP) -->
+                <div class="col-12">
+                    <div class="p-2 bg-white bg-opacity-50 rounded-4 border border-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <div>
+                                <div class="text-muted"
+                                    style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Level &
+                                    Progress</div>
+                                <div class="fw-bold fs-5 text-primary"><span id="detail-level-val">1</span> LVL</div>
+                            </div>
+                            <div class="text-muted" style="font-size: 11px;" id="detail-xp-range">0 / 100 XP</div>
+                        </div>
+                        <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(0,0,0,0.05);">
+                            <div id="detail-xp-progress"
+                                class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                role="progressbar" style="width: 0%; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Basic Stats -->
+                <div class="col-6">
+                    <div class="p-2 bg-white bg-opacity-50 rounded-4 text-center border border-white shadow-sm">
+                        <i class="bi bi-controller text-primary mb-1 d-block" style="font-size: 1.1rem;"></i>
+                        <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Games</div>
+                        <div class="fw-bold fs-6 text-dark" id="detail-total-games">0</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 bg-white bg-opacity-50 rounded-4 text-center border border-white shadow-sm">
+                        <i class="bi bi-graph-up-arrow text-success mb-1 d-block" style="font-size: 1.1rem;"></i>
+                        <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Winrate</div>
+                        <div class="fw-bold fs-6 text-success" id="detail-winrate">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold mb-3 text-dark text-center" style="font-size: 14px;">Достижения</h6>
+            <div id="detail-achievements-list" class="overflow-auto" style="max-height: 280px; min-height: 60px;">
+                <!-- Injected via JS -->
+            </div>
+
+            <button class="btn btn-primary w-100 mt-4 rounded-pill py-3 fw-bold shadow-sm"
+                onclick="closeModal('modal-detailed-stats')">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- === МОДАЛЬНЫЕ ОКНА (RESTORED) === -->
+
+    <!-- 0. Модалка Подтверждения (Generic) -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 340px;">
+            <div class="modal-content border-0 shadow-lg"
+                style="border-radius: 30px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold w-100 text-center mt-2" id="confirm-modal-title">Подтвердите</h5>
+                </div>
+                <div class="modal-body pt-3 pb-4 px-4 text-center">
+                    <p class="text-muted mb-4" id="confirm-modal-text" style="font-size: 15px;">Вы уверены?</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary rounded-pill py-3 fw-bold shadow-sm"
+                            id="confirm-modal-yes-btn">Подтвердить</button>
+                        <button class="btn btn-light rounded-pill py-2 fw-bold text-muted"
+                            data-bs-dismiss="modal">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 0.1 Модалка Оповещения (Alert) -->
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+        <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 320px;">
+            <div class="modal-content border-0 shadow-lg"
+                style="border-radius: 30px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3" id="alert-modal-icon-container">
+                        <i class="bi bi-info-circle text-primary fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="alert-modal-title">Уведомление</h5>
+                    <p class="text-muted mb-4" id="alert-modal-text" style="font-size: 14px;">Сообщение</p>
+                    <button class="btn btn-dark w-100 rounded-pill py-3 fw-bold" data-bs-dismiss="modal">Хорошо</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 0.2 Модалка Кастомная (HTML Alert) -->
+    <div class="modal fade" id="customAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1075;">
+        <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 340px;">
+            <div class="modal-content border-0 shadow-lg"
+                style="border-radius: 30px; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); border: 1px solid rgba(255, 255, 255, 0.18);">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-robot text-primary"
+                            style="font-size: 3rem; text-shadow: 0 4px 10px rgba(0,0,0,0.1);"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3" id="customAPITitle" style="color: #2c3e50;">Уведомление</h5>
+                    <div id="customAPIBody" class="mb-4"></div>
+                    <button class="btn btn-dark w-100 rounded-pill py-3 fw-bold shadow-sm" data-bs-dismiss="modal"
+                        style="background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Модалка Входа -->
+    <div class="modal fade" id="joinModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold ps-2">Присоединиться к комнате</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <input type="text" id="join-room-code"
+                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold" placeholder="A1B2"
+                        style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
+                    <input type="password" id="join-room-pass" class="form-control mb-3"
+                        placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
+                    <button class="btn btn-primary w-100 btn-lg" style="border-radius: 16px;"
+                        onclick="joinRoom(); bootstrap.Modal.getInstance(document.getElementById('joinModal')).hide();">Присоединиться</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Модалка Создания -->
+    <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold ps-2">Новая комната</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <input type="text" id="create-room-title" class="form-control mb-3 fw-bold"
+                        placeholder="Название комнаты" style="border-radius: 16px;">
+
+                    <input type="password" id="create-room-pass" class="form-control mb-3"
+                        placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
+
+                    <div class="form-check form-switch mb-3 ps-5">
+                        <input class="form-check-input" type="checkbox" id="create-room-public"
+                            style="transform: scale(1.3);">
+                        <label class="form-check-label ms-2 fw-bold" for="create-room-public">Сделать
+                            публичной</label>
+                    </div>
+
+                    <button class="btn btn-primary w-100 btn-lg" style="border-radius: 16px;"
+                        onclick="createRoom()">Создать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Модалка QR-кода -->
+    <div class="modal fade" id="qrInviteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 32px; padding: 20px;">
+                <div class="d-flex justify-content-center mb-2">
+                    <div style="width: 40px; height: 4px; background: #E0E0E0; border-radius: 2px;"></div>
+                </div>
+                <div class="text-center">
+                    <h5 class="fw-bold mb-4" style="color: var(--text-dark);">Комната <span
+                            id="modal-room-code-title">...</span></h5>
+                    <div class="d-flex justify-content-center mb-3">
+                        <div id="modal-qr-code" style="padding: 10px; border-radius: 20px; border: 2px solid #F0F0F0;">
+                        </div>
+                    </div>
+                    <h2 class="fw-bold mb-4" style="font-size: 32px; color: var(--primary-color); letter-spacing: 1px;"
+                        id="modal-room-code-text">...</h2>
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-primary py-3 rounded-4 fw-bold shadow-sm"
+                            style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); border: none; font-size: 18px;"
+                            onclick="copyInviteLink()">
+                            <i class="bi bi-link-45deg me-2"></i> Скопировать ссылку
+                        </button>
+                        <button class="btn py-3 rounded-4 fw-bold shadow-sm"
+                            style="background: #24A1DE; color: white; border: none; font-size: 18px;"
+                            onclick="sendToTelegram()">
+                            <i class="bi bi-telegram me-2"></i> Отправить в чат
+                        </button>
+                        <button class="btn py-3 rounded-4 fw-bold shadow-sm"
+                            style="background: #fff; color: var(--primary-color); border: 1px solid #eee; font-size: 18px;"
+                            onclick="bootstrap.Modal.getInstance(document.getElementById('qrInviteModal')).hide(); openInviteModal()">
+                            <i class="bi bi-person-plus-fill me-2"></i> Позвать друга
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Модалка Выбора игры -->
+    <div class="modal fade" id="gameSelectorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold ps-2">Выбрать игру</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush" id="game-selector-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Модалка Публичного Профиля -->
+    <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center pt-0 pb-4">
+                    <div id="public-profile-content">
+                        <!-- JS injected content -->
+                        <div class="spinner-border text-primary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="libs/bootstrap.bundle.min.js"></script>
+        <script>
+            // Callback for the widget
+            async function onTelegramAuth(user) {
+                document.getElementById('browser-login-btn').style.display = 'none';
+                document.getElementById('login-loading').style.display = 'block';
+                const formData = new FormData();
+                formData.append('action', 'login_widget');
+                formData.append('user_data', JSON.stringify(user));
+                try {
+                    const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
+                    if (res.status === 'ok') {
+                        localStorage.setItem('pg_token', res.token);
+                        window.location.reload();
+                    } else {
+                        showAlert('Ошибка входа', res.message, 'error');
+                        document.getElementById('browser-login-btn').style.display = 'block';
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showAlert('Ошибка сети', e.message, 'error');
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Network Error');
             }
-        }
 
-        async function loginViaBot() {
-            try {
-                const res = await fetch('server/api.php', {
-                    method: 'POST',
-                    body: new URLSearchParams({ action: 'create_auth_session' })
-                }).then(r => r.json());
+            async function loginViaBot() {
+                try {
+                    const res = await fetch('server/api.php', {
+                        method: 'POST',
+                        body: new URLSearchParams({ action: 'create_auth_session' })
+                    }).then(r => r.json());
 
-                if (res.status === 'ok') {
-                    window.open(res.bot_url, '_blank');
+                    if (res.status === 'ok') {
+                        window.open(res.bot_url, '_blank');
 
-                    // Start polling
-                    const poll = setInterval(async () => {
-                        const check = await fetch('server/api.php', {
-                            method: 'POST',
-                            body: new URLSearchParams({
-                                action: 'poll_auth_session',
-                                temp_code: res.temp_code
-                            })
-                        }).then(r => r.json());
+                        // Start polling
+                        const poll = setInterval(async () => {
+                            const check = await fetch('server/api.php', {
+                                method: 'POST',
+                                body: new URLSearchParams({
+                                    action: 'poll_auth_session',
+                                    temp_code: res.temp_code
+                                })
+                            }).then(r => r.json());
 
-                        if (check.status === 'ok') {
-                            clearInterval(poll);
-                            localStorage.setItem('pg_token', check.token);
-                            window.location.reload();
-                        }
-                    }, 2000);
+                            if (check.status === 'ok') {
+                                clearInterval(poll);
+                                localStorage.setItem('pg_token', check.token);
+                                window.location.reload();
+                            }
+                        }, 2000);
 
-                    // Stop polling after 5 mins
-                    setTimeout(() => clearInterval(poll), 300000);
+                        // Stop polling after 5 mins
+                        setTimeout(() => clearInterval(poll), 300000);
 
-                } else {
-                    alert('Ошибка создания сессии');
+                    } else {
+                        showAlert('Ошибка', 'Не удалось создать сессию авторизации', 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
                 }
-            } catch (e) {
-                console.error(e);
             }
-        }
-    </script>
+        </script>
 </body>
 
 </html>

@@ -63,10 +63,18 @@ function recordGameStats($pdo, $room, $playersData, $duration) {
         updateUserStats($pdo, $pid, $rank, $dScore, $gameHistoryId);
     }
 
+    TelegramLogger::logEvent('game', "Game Finished", [
+        'id' => $gameHistoryId,
+        'type' => $room['game_type'],
+        'players' => count($playersData)
+    ]);
+
     // 5. Trigger Achievements for ALL players
     foreach ($playersData as $pData) {
         if (function_exists('check_achievements')) {
-            check_achievements($pdo, $pData['user_id']);
+            $context = $pData;
+            $context['game_type'] = $room['game_type'];
+            check_achievements($pdo, $pData['user_id'], $context);
         }
     }
 }
@@ -89,7 +97,10 @@ function updateUserStats($pdo, $userId, $rank, $score, $gameId) {
     $newLosses = $stats['total_losses'] + ($isWin ? 0 : 1);
     $newStreak = $isWin ? ($stats['win_streak'] + 1) : 0;
     $newMaxStreak = max($stats['longest_win_streak'], $newStreak);
-    $newPoints = $stats['total_points_earned'] + $score;
+    
+    // Use the balanced helper
+    $xpGained = calculateXP($rank, $score);
+    $newPoints = $stats['total_points_earned'] + $xpGained;
     
     // ELO CALCULATION (Simplified)
     // Real Elo needs opponent rating. Here we assume "Environment Rating" = 1200 or Average of room?
@@ -127,14 +138,17 @@ function action_get_leaderboard($pdo, $user, $data) {
     try {
         if ($type === 'global') {
             $sql = "
-                SELECT s.rating, s.total_wins, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+                SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
                 FROM user_statistics s
                 JOIN users u ON u.id = s.user_id
                 WHERE u.is_hidden_in_leaderboard = 0
-                ORDER BY s.rating DESC
+                ORDER BY s.total_points_earned DESC
                 LIMIT $limit
             ";
             $board = $pdo->query($sql)->fetchAll();
+            foreach ($board as &$entry) {
+                $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0); // Note: verify if total_points_earned is selected
+            }
         } 
         elseif ($type === 'friends') {
             // Get friends IDs first
@@ -152,16 +166,19 @@ function action_get_leaderboard($pdo, $user, $data) {
             $placeholders = implode(',', array_fill(0, count($fids), '?'));
             
             $sql = "
-                SELECT s.rating, s.total_wins, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+                SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
                 FROM user_statistics s
                 JOIN users u ON u.id = s.user_id
                 WHERE s.user_id IN ($placeholders)
-                ORDER BY s.rating DESC
+                ORDER BY s.total_points_earned DESC
                 LIMIT $limit
             ";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($fids);
             $board = $stmt->fetchAll();
+            foreach ($board as &$entry) {
+                $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0);
+            }
         }
         else {
             $board = [];
@@ -183,9 +200,28 @@ function action_get_stats($pdo, $user, $data) {
     $stats = $stmt->fetch();
     
     if (!$stats) {
-        // Return empty stats if not played yet
-        $stats = ['total_games_played' => 0, 'total_wins' => 0, 'rating' => 1000];
+        // Return empty stats if not played yet, but strictly formatted
+        $stats = [
+            'user_id' => $targetId,
+            'total_games_played' => 0,
+            'total_wins' => 0,
+            'total_losses' => 0,
+            'win_streak' => 0,
+            'longest_win_streak' => 0,
+            'rating' => 1000,
+            'total_points_earned' => 0
+        ];
     }
     
+    $stats['level'] = calculateLevel($stats['total_points_earned']);
+    
+    // Add Level
+    $stats['level'] = calculateLevel($stats['total_points_earned'] ?? 0);
+
+    // Add Achievements
+    $stmt = $pdo->prepare("SELECT a.*, ua.unlocked_at FROM achievements a JOIN user_achievements ua ON ua.achievement_id = a.id WHERE ua.user_id = ?");
+    $stmt->execute([$targetId]);
+    $stats['achievements'] = $stmt->fetchAll();
+
     echo json_encode(['status' => 'ok', 'stats' => $stats]);
 }

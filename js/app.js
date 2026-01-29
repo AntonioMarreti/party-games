@@ -11,6 +11,14 @@ let pollInterval = null;
 let loadedGames = {};
 let globalUser = null;
 
+function calculateLevel(xp) {
+    if (!xp || xp < 0) return 1;
+    return Math.floor(Math.sqrt(xp / 100)) + 1;
+}
+
+let seenReactionIds = new Set();
+let reactionTimeout = null;
+
 // ВАЖНО: Флаг для блокировки "гонки запросов"
 let isLeavingProcess = false;
 let isCheckingState = false; // Блокировка повторных вызовов во время загрузки или запроса
@@ -122,12 +130,12 @@ async function devLogin(index = 1) {
             showScreen('lobby');
             updateUserInfo(data.user);
             startPolling();
-            alert('✅ Вошли как ' + (data.user.custom_name || data.user.first_name));
+            showAlert('Успех', 'Вы вошли как ' + (data.user.custom_name || data.user.first_name), 'success');
         } else {
-            alert('❌ Ошибка: ' + data.message);
+            showAlert('Ошибка', data.message, 'error');
         }
     } catch (e) {
-        alert('❌ Ошибка сети: ' + e.message);
+        showAlert('Ошибка сети', e.message, 'error');
     }
 }
 
@@ -150,14 +158,16 @@ const AVAILABLE_GAMES = [
         name: 'Мозговая Битва',
         icon: 'bi-lightbulb-fill',
         color: '#9B59B6',
-        bgColor: '#F4ECF7'
+        bgColor: '#F4ECF7',
+        files: ['js/games/brainbattle.js']
     },
     {
         id: 'whoami',
         name: 'Кто из нас?',
         icon: 'bi-question-circle-fill',
         color: '#1ABC9C',
-        bgColor: '#E8F8F5'
+        bgColor: '#E8F8F5',
+        files: ['js/games/whoami.js']
     },
     {
         id: 'blokus',
@@ -182,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tg.setHeaderColor) tg.setHeaderColor('#2E1A5B');
         if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
         if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+        if (tg.ready) tg.ready(); // CRITICAL: Notify Telegram that app is initialized
     } catch (e) {
         console.warn("Telegram WebApp not found");
     }
@@ -208,54 +219,84 @@ document.addEventListener('DOMContentLoaded', () => {
         safeStyle('browser-login-btn', 'display', 'block');
     }
 
-    // Show logout button if NOT in Telegram
-    if (!tg || !tg.initData) {
-        safeStyle('logout-menu-item', 'display', 'flex');
+    // Show logout button logic - STRICT CHECK
+    const logoutGroup = document.getElementById('logout-menu-item-group');
+    if (logoutGroup) {
+        // If we have initData (Telegram), HIDE IT.
+        if (tg && tg.initData && tg.initData.length > 0) {
+            logoutGroup.style.display = 'none';
+        } else {
+            logoutGroup.style.display = 'block';
+        }
     }
+
+    // REMOVED TIMEOUT: Logic is now robust enough to guaranteed show a screen
 });
 
 async function initApp(tg) {
+    let screenShown = false;
     try {
-        const startParam = tg?.initDataUnsafe?.start_param;
-        console.log("Start Param:", startParam);
+        const currentStartParam = tg?.initDataUnsafe?.start_param;
+        console.log("Start Param:", currentStartParam);
 
         const res = await checkState();
 
-        // Если чекстейт вернул ошибку или пустой результат (проблема с токеном или API)
+        // 1. Auth/Network Error -> Login
         if (!res || res.status === 'error' || res.status === 'auth_error') {
             showScreen('login');
             safeStyle('browser-login-btn', 'display', 'block');
+            screenShown = true;
             return;
         }
 
+        // 2. Handle Start Params (Deep Links)
+        let startParam = tg?.initDataUnsafe?.start_param;
+        if (!startParam) {
+            const urlParams = new URLSearchParams(window.location.search);
+            startParam = urlParams.get('startapp');
+        }
+
         if (startParam) {
-            // Support both "room_ABCD" and "ABCD"
             const code = startParam.startsWith('room_') ? startParam.replace('room_', '') : startParam;
 
             if (res && res.status === 'in_room' && res.room.room_code !== code) {
-                if (confirm(`Перейти в комнату ${code}?`)) {
+                // User is in Room A, but clicked link for Room B
+                showConfirmation('Переход', `Перейти в комнату ${code}?`, async () => {
                     await leaveRoom();
                     await joinRoom(code);
-                }
-            }
-            else if (res.status !== 'in_room') {
+                }, { confirmText: 'Перейти' });
+            } else if (res.status !== 'in_room') {
                 await joinRoom(code);
             }
-        } else if (res && res.status === 'no_room') {
-            // Если мы авторизованы, но не в комнате — идем в лобби
-            showScreen('lobby');
         }
+
+        // 3. Fallback: If we are not in a room (or deep link failed logic?), show lobby
+        if (res && res.status === 'no_room') {
+            showScreen('lobby');
+            screenShown = true;
+        }
+
     } catch (e) {
         console.error("Init App failed:", e);
         showScreen('login');
         safeStyle('browser-login-btn', 'display', 'block');
+        screenShown = true;
+    } finally {
+        // ULTIMATE FAILSAFE: If after all logic, splash is still there (e.g. joinRoom failed silently), show Lobby
+        const splash = document.getElementById('screen-splash');
+        if (splash && splash.classList.contains('active-screen')) {
+            console.warn("Init finished but Splash still active. Fallback to Lobby/Login.");
+            if (localStorage.getItem('pg_token')) showScreen('lobby');
+            else showScreen('login');
+        }
     }
 }
 
 function logout() {
-    if (!confirm('Вы уверены, что хотите выйти?')) return;
-    localStorage.removeItem('pg_token');
-    window.location.reload();
+    showConfirmation('Выход', 'Вы уверены, что хотите выйти?', () => {
+        localStorage.removeItem('pg_token');
+        window.location.reload();
+    }, { isDanger: true, confirmText: 'Выйти' });
 }
 
 window.apiRequest = async function (data) {
@@ -284,7 +325,7 @@ window.apiRequest = async function (data) {
         if (data && data.action !== 'get_state') {
             // Only alert for non-polling actions, and avoid common cryptic pattern errors
             const msg = (e.message && e.message.includes("pattern")) ? "Communication Error (Invalid Format)" : e.message;
-            alert("Network/Server Error: " + msg);
+            showAlert("Ошибка сети/сервера", msg, 'error');
         }
         return { status: 'error' };
     }
@@ -297,13 +338,398 @@ async function loginTMA(tg) {
         localStorage.setItem('pg_token', authToken);
         initApp(tg);
     } else {
-        alert('Auth Error: ' + res.message);
+        showAlert('Ошибка авторизации', res.message, 'error');
     }
 }
 
 // === ЛОГИКА ===
+
+// Batching for reactions to prevent server spam
+let reactionBuffer = { emoji: null, count: 0 };
+let reactionThrottleTimer = null;
+const lastSourceShowTime = new Map(); // Track when we last showed a user's nameplate
+
+async function flushReactionBuffer() {
+    if (!reactionBuffer.emoji || reactionBuffer.count === 0) return;
+    const { emoji, count } = reactionBuffer;
+    reactionBuffer = { emoji: null, count: 0 };
+    reactionThrottleTimer = null;
+
+    try {
+        await apiRequest({
+            action: 'send_reaction',
+            type: 'emoji',
+            payload: JSON.stringify({ emoji, count })
+        });
+    } catch (e) { console.error("Flush reactions failed", e); }
+}
+
+// === GLOBAL REACTION SYSTEM ===
+window.handleReactions = function (events) {
+    if (!events || !Array.isArray(events)) return;
+
+    // NOTE: This usually runs in the context of the game.
+    // If we are in the lobby, we might still want to show them? 
+    // Yes, why not. But primarily for game screens.
+
+    events.forEach(ev => {
+        // Unique ID check. 
+        const key = ev.created_at + '_' + ev.user_id + '_' + ev.type;
+        if (seenReactionIds.has(key)) return;
+        seenReactionIds.add(key);
+
+        // Skip our own reactions (already shown locally and instantly)
+        if (window.globalUser && ev.user_id == window.globalUser.id) return;
+
+        const payload = JSON.parse(ev.payload || '{}');
+        const emoji = payload.emoji || '👍';
+        const count = payload.count || 1;
+
+        // Find player info for attribution
+        const players = window.currentGamePlayers || [];
+        const player = players.find(p => p.id == ev.user_id);
+        const name = player ? (player.custom_name || player.first_name) : 'Игрок';
+        const avatar = player ? (player.photo_url || player.avatar_emoji) : '👤';
+
+        // Rate limit the "Source Bubble" (nameplate) to avoid stacking during continuous bursts
+        const sourceKey = ev.user_id + '_' + emoji;
+        const lastTime = lastSourceShowTime.get(sourceKey) || 0;
+        const now = Date.now();
+        let showSource = false;
+
+        if (now - lastTime > 3000) {
+            showSource = true;
+            lastSourceShowTime.set(sourceKey, now);
+        }
+
+        const effectiveProducer = showSource ? { name, avatar } : null;
+
+        if (count > 1) {
+            showFloatingEmojiBurst(emoji, count, effectiveProducer);
+        } else {
+            showFloatingEmoji(emoji, effectiveProducer);
+        }
+    });
+}
+
+
+window.showFloatingEmoji = function (emoji, producer = null, isBurstMember = false) {
+    const el = document.createElement('div');
+    el.className = 'floating-emoji' + (isBurstMember ? ' burst-member' : '');
+
+    if (producer) {
+        let avatarHtml = '';
+        const isUrl = producer.avatar && (producer.avatar.startsWith('http') || producer.avatar.includes('/'));
+        if (isUrl) {
+            avatarHtml = `<img src="${producer.avatar}" class="reaction-avatar-img">`;
+        } else {
+            avatarHtml = producer.avatar || '👤';
+        }
+
+        el.innerHTML = `
+            <div class="reaction-bubble">
+                <span class="reaction-avatar">${avatarHtml}</span>
+                <span class="reaction-name">${producer.name}</span>
+                <span class="reaction-symbol">${emoji}</span>
+            </div>
+        `;
+    } else {
+        el.innerText = emoji;
+    }
+
+    const gameArea = document.getElementById('game-area');
+    let centerX = window.innerWidth / 2;
+    if (gameArea) {
+        const rect = gameArea.getBoundingClientRect();
+        if (rect.width > 0) centerX = rect.left + rect.width / 2;
+    }
+
+    const spread = isBurstMember ? Math.min(window.innerWidth * 0.45, 200) : Math.min(window.innerWidth * 0.35, 140);
+    let posX = centerX + (Math.random() * spread * 2 - spread);
+
+    const padding = 80;
+    posX = Math.max(padding, Math.min(window.innerWidth - padding, posX));
+
+    el.style.left = posX + 'px';
+    el.style.bottom = '140px';
+    el.style.bottom = '140px';
+    if (!producer) {
+        // Smaller size for burst particles
+        const sizeBase = isBurstMember ? 24 : 34; // 24px vs 34px base
+        el.style.fontSize = (Math.random() * (isBurstMember ? 8 : 10) + sizeBase) + 'px';
+    }
+
+    // Increased rotation for bursts
+    const rotBase = isBurstMember ? 70 : 40;
+    el.style.setProperty('--rotation', (Math.random() * rotBase - rotBase / 2) + 'deg');
+
+    document.body.appendChild(el);
+
+    // Standard duration 4s, bursts are faster (2.5s) to reduce clutter
+    const duration = isBurstMember ? 2500 : 4000;
+    setTimeout(() => el.remove(), duration);
+}
+
+window.showFloatingEmojiBurst = function (emoji, count, producer = null) {
+    // 1. Show the main "Source" bubble with text and avatar
+    showFloatingEmoji(emoji, producer);
+
+    // 2. Show the "Particles" (naked emojis without text/avatar)
+    const visualItems = Math.min(count, 12); // Slightly more particles since they are small
+    for (let i = 0; i < visualItems; i++) {
+        setTimeout(() => {
+            // Pass null as producer so it renders just the emoji char
+            showFloatingEmoji(emoji, null, true);
+        }, i * 80); // Tighter timing for explosion effect
+    }
+}
+
+window.sendReaction = async function (emoji, isLocalBurst = false) {
+    if (window.triggerHaptic) triggerHaptic(isLocalBurst ? 'impactLight' : 'selection');
+
+    // Show locally immediately (with attribution for consistency)
+    const u = window.globalUser;
+    const producer = u ? {
+        name: u.custom_name || u.first_name || 'Вы',
+        avatar: u.photo_url || u.avatar_emoji || '👤'
+    } : null;
+
+    if (isLocalBurst) {
+        showFloatingEmoji(emoji, producer, true);
+    } else {
+        showFloatingEmoji(emoji, producer);
+    }
+
+    // Batching logic
+    if (reactionBuffer.emoji !== emoji) {
+        flushReactionBuffer();
+        reactionBuffer.emoji = emoji;
+        reactionBuffer.count = 0;
+    }
+
+    reactionBuffer.count++;
+
+    if (!reactionThrottleTimer) {
+        reactionThrottleTimer = setTimeout(flushReactionBuffer, 500);
+    }
+}
+
+window.renderReactionToolbar = function () {
+    const screen = document.getElementById('screen-game');
+    if (!screen) return;
+
+    let container = document.getElementById('reaction-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'reaction-container';
+        container.className = 'reaction-floating-wrapper';
+
+        // 1. Trigger Button
+        const trigger = document.createElement('button');
+        trigger.className = 'reaction-trigger';
+        trigger.innerHTML = '😊';
+        trigger.onclick = (e) => {
+            e.stopPropagation();
+            container.classList.toggle('expanded');
+        };
+
+        // 2. Emoji Palette
+        const palette = document.createElement('div');
+        palette.className = 'reaction-palette';
+
+        // Palette: Approval, Fun, Wow, Shock, Thinking, Waiting/Hurry
+        const emojis = ['👍', '😂', '🔥', '😱', '🤔', '⏳'];
+        emojis.forEach(e => {
+            const btn = document.createElement('button');
+            btn.className = 'reaction-palette-btn';
+
+            let pressTimer = null;
+            let pressInterval = null;
+            let isHolding = false;
+
+            const startPress = (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                isHolding = false;
+
+                pressTimer = setTimeout(() => {
+                    isHolding = true;
+                    pressInterval = setInterval(() => {
+                        sendReaction(e, true);
+                        btn.style.transform = `scale(${1.2 + Math.random() * 0.1})`;
+                    }, 150);
+                }, 350);
+            };
+
+            const endPress = (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+                if (pressInterval) {
+                    clearInterval(pressInterval);
+                    pressInterval = null;
+                    btn.style.transform = '';
+                    container.classList.remove('expanded');
+                } else if (!isHolding) {
+                    // Just a regular tap
+                    sendReaction(e);
+                    container.classList.remove('expanded');
+                }
+            };
+
+            btn.addEventListener('mousedown', startPress);
+            btn.addEventListener('touchstart', startPress, { passive: false });
+
+            btn.addEventListener('mouseup', endPress);
+            btn.addEventListener('touchend', endPress, { passive: false });
+            btn.addEventListener('mouseleave', endPress);
+
+            btn.innerText = e;
+            palette.appendChild(btn);
+        });
+
+        // 3. Drag Logic (Vertical Only for edge reachability)
+        let isDragging = false;
+        let startY, startBottom;
+
+        const onStart = (e) => {
+            isDragging = true;
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
+            startBottom = parseInt(getComputedStyle(container).bottom);
+            container.classList.add('dragging');
+        };
+
+        const onMove = (e) => {
+            if (!isDragging) return;
+            const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+            const deltaY = startY - currentY; // Moving up reduces Y, so deltaY is positive
+            let newBottom = startBottom + deltaY;
+
+            // Constrain
+            const threshold = 80;
+            const max = window.innerHeight - 150;
+            newBottom = Math.max(threshold, Math.min(max, newBottom));
+
+            container.style.bottom = newBottom + 'px';
+        };
+
+        const onEnd = () => {
+            if (isDragging) {
+                isDragging = false;
+                container.classList.remove('dragging');
+                // Save position
+                localStorage.setItem('reaction_pos_bottom', container.style.bottom);
+            }
+        };
+
+        trigger.addEventListener('touchstart', onStart, { passive: true });
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onEnd);
+
+        trigger.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        container.appendChild(palette);
+        container.appendChild(trigger);
+        screen.appendChild(container);
+
+        // Restore position
+        const savedPos = localStorage.getItem('reaction_pos_bottom');
+        if (savedPos) container.style.bottom = savedPos;
+
+        // Close on outside click
+        document.addEventListener('click', () => {
+            container.classList.remove('expanded');
+        });
+    }
+
+    container.style.display = 'block';
+}
+
+window.hideReactionToolbar = function () {
+    const container = document.getElementById('reaction-container');
+    if (container) {
+        container.style.display = 'none';
+        container.classList.remove('expanded');
+    }
+}
+
+
 // UPDATE CREATE ROOM
 // UPDATE CREATE ROOM
+// Generic Confirmation Modal Helper
+window.showConfirmation = function (title, text, onConfirm, options = {}) {
+    const modalEl = document.getElementById('confirmationModal');
+    if (!modalEl) return;
+
+    document.getElementById('confirm-modal-title').innerText = title;
+    document.getElementById('confirm-modal-text').innerText = text;
+    const yesBtn = document.getElementById('confirm-modal-yes-btn');
+
+    // Dynamic Button Text & Style
+    yesBtn.innerText = options.confirmText || 'Подтвердить';
+    yesBtn.className = `btn rounded-pill py-3 fw-bold shadow-sm ${options.isDanger ? 'btn-danger' : 'btn-primary'}`;
+
+    // Remove old listeners to prevent stacking
+    const newBtn = yesBtn.cloneNode(true);
+    yesBtn.parentNode.replaceChild(newBtn, yesBtn);
+
+    newBtn.onclick = () => {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        if (typeof onConfirm === 'function') onConfirm();
+    };
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+/**
+ * Generic Alert Modal Helper
+ * @param {string} title 
+ * @param {string} text 
+ * @param {string} type - 'success', 'error', 'info', 'warning'
+ */
+window.showAlert = function (title, text, type = 'info') {
+    const modalEl = document.getElementById('alertModal');
+    if (!modalEl) return;
+
+    // Use Custom Alert Modal if present (for HTML support)
+    const customModalEl = document.getElementById('customAlertModal');
+    if (customModalEl) {
+        document.getElementById('customAPITitle').innerHTML = title; // Allow HTML in title? Why not.
+        document.getElementById('customAPIBody').innerHTML = text;
+        const modal = new bootstrap.Modal(customModalEl);
+        modal.show();
+        return;
+    }
+
+    document.getElementById('alert-modal-title').innerText = title;
+    document.getElementById('alert-modal-text').innerHTML = text; // Allow HTML
+
+    // Define icons and colors by type
+    const icons = {
+        success: { icon: 'bi-check-circle-fill', color: 'text-success' },
+        error: { icon: 'bi-x-circle-fill', color: 'text-danger' },
+        warning: { icon: 'bi-exclamation-triangle-fill', color: 'text-warning' },
+        info: { icon: 'bi-info-circle-fill', color: 'text-primary' }
+    };
+
+    const theme = icons[type] || icons.info;
+    const iconContainer = document.getElementById('alert-modal-icon-container');
+    if (iconContainer) {
+        iconContainer.innerHTML = `<i class="bi ${theme.icon} ${theme.color}" style="font-size: 3rem;"></i>`;
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
 async function createRoom() {
     const passInput = document.getElementById('create-room-pass');
     const titleInput = document.getElementById('create-room-title');
@@ -316,6 +742,20 @@ async function createRoom() {
 
     const res = await apiRequest({ action: 'create_room', password: passInput ? passInput.value : '' });
     if (res.status === 'ok') {
+        // Safe Modal Closing
+        const modalEl = document.getElementById('createModal');
+        if (modalEl && window.bootstrap) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.hide();
+
+            // Force cleanup of stuck backdrops
+            setTimeout(() => {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
         if (isPublic) {
             await apiRequest({
                 action: 'make_room_public',
@@ -333,61 +773,62 @@ async function joinRoom(code = null) {
         const input = document.getElementById('join-room-code');
         code = input ? input.value : '';
     }
-    if (!code) return alert("Введите код");
+    if (!code) return showAlert("Внимание", "Введите код", 'warning');
     const passInput = document.getElementById('join-room-pass');
     const res = await apiRequest({ action: 'join_room', room_code: code, password: passInput ? passInput.value : '' });
     if (res.status === 'ok') checkState();
-    else alert(res.message);
+    else showAlert("Ошибка", res.message, 'error');
 }
 
 // === ИСПРАВЛЕННАЯ ФУНКЦИЯ ВЫХОДА ===
 // js/app.js
 
-window.leaveRoom = async function () {
-    // 1. Используем надежную переменную window.isHost (которую мы сохраняем в checkState)
+window.leaveRoom = function () {
     const amIHost = window.isHost;
+    const title = 'Выход из комнаты';
+    const text = amIHost ? 'Вы Хост. Если вы выйдете, комната будет закрыта для всех. Продолжить?' : 'Вы уверены, что хотите покинуть комнату?';
 
-    if (!confirm(amIHost ? 'Вы Хост. Закрыть комнату для всех?' : 'Выйти из комнаты?')) return;
+    showConfirmation(title, text, async () => {
+        // 2. ВКЛЮЧАЕМ БЛОКИРОВКУ
+        isLeavingProcess = true;
+        stopPolling();
 
-    // 2. ВКЛЮЧАЕМ БЛОКИРОВКУ (чтобы checkState не мешал нам выходить)
-    isLeavingProcess = true;
-    stopPolling(); // На всякий случай останавливаем таймер
+        try {
+            // 3. Если я Хост — сначала «гасим» игру для всех (game_type = lobby)
+            if (amIHost) {
+                await apiRequest({ action: 'stop_game' });
+            }
 
-    try {
-        // 3. Если я Хост — сначала «гасим» игру для всех (game_type = lobby)
-        if (amIHost) {
-            await apiRequest({ action: 'stop_game' });
-        }
+            // 4. И Хост, и Гость ОБЯЗАТЕЛЬНО должны вызвать leave_room, 
+            // чтобы сервер удалил их из таблицы room_players
+            const res = await apiRequest({ action: 'leave_room' });
 
-        // 4. И Хост, и Гость ОБЯЗАТЕЛЬНО должны вызвать leave_room, 
-        // чтобы сервер удалил их из таблицы room_players
-        const res = await apiRequest({ action: 'leave_room' });
+            if (res.status === 'ok') {
+                // 5. Чистим локальные данные
+                window.currentRoomCode = null;
+                window.isHost = false;
 
-        if (res.status === 'ok') {
-            // 5. Чистим локальные данные
-            window.currentRoomCode = null;
-            window.isHost = false;
+                const gameArea = document.getElementById('game-area');
+                if (gameArea) gameArea.innerHTML = '';
 
-            const gameArea = document.getElementById('game-area');
-            if (gameArea) gameArea.innerHTML = '';
+                // 6. ВЫКЛЮЧАЕМ БЛОКИРОВКУ
+                isLeavingProcess = false;
 
-            // 6. ВЫКЛЮЧАЕМ БЛОКИРОВКУ
+                // 7. Обновляем состояние — теперь сервер скажет 'no_room' 
+                // и checkState сам покажет главный экран (lobby)
+                await checkState();
+            } else {
+                isLeavingProcess = false;
+                startPolling(); // Возвращаем поллинг, если сервер выдал ошибку
+                showAlert('Ошибка', res.message || "Ошибка выхода", 'error');
+            }
+        } catch (e) {
             isLeavingProcess = false;
-
-            // 7. Обновляем состояние — теперь сервер скажет 'no_room' 
-            // и checkState сам покажет главный экран (lobby)
-            await checkState();
-        } else {
-            isLeavingProcess = false;
-            startPolling(); // Возвращаем поллинг, если сервер выдал ошибку
-            alert(res.message || "Ошибка выхода");
+            startPolling();
+            console.error("Критическая ошибка при выходе:", e);
         }
-    } catch (e) {
-        isLeavingProcess = false;
-        startPolling();
-        console.error("Критическая ошибка при выходе:", e);
-    }
-}
+    });
+};
 
 // === STATE ===
 window.checkState = async function () {
@@ -406,7 +847,23 @@ window.checkState = async function () {
             return res;
         }
 
-        if (res.user) updateUserInfo(res.user);
+        // Notifications processed elsewhere or pass to custom handler
+        if (res.notifications && res.notifications.length > 0) {
+            // Handle notifications if needed
+        }
+
+        if (res.players) {
+            window.currentGamePlayers = res.players;
+        }
+
+        // Handle Reactions
+        if (res.events && res.events.length > 0) {
+            handleReactions(res.events);
+        }
+
+        if (res.user) {
+            updateUserInfo(res.user);
+        }
 
         if (res.status === 'in_room') {
             startPolling();
@@ -430,7 +887,16 @@ window.checkState = async function () {
                     await loadGameScripts(filesToLoad);
                     loadedGames[gameType] = true;
                 }
+
+                // Wait for renderer to be available (failsafe)
+                let attempts = 0;
+                while (!window[`render_${gameType}`] && attempts < 10) {
+                    await new Promise(r => setTimeout(r, 50));
+                    attempts++;
+                }
+
                 const renderFunc = window[`render_${gameType}`];
+                console.log(`[App] Trying to render ${gameType}, func exists?`, !!renderFunc);
                 if (typeof renderFunc === 'function') {
                     if (!isScreenActive('game')) showScreen('game');
                     try {
@@ -450,6 +916,7 @@ window.checkState = async function () {
             // Update Notification Badge
             const notifsCount = res.notifications ? res.notifications.length : 0;
             updateNotificationBadge(notifsCount);
+
 
         } else {
             // Если мы не в комнате — останавливаем опрос и идем на Главный экран
@@ -597,8 +1064,8 @@ let lastPlayersJson = '';
 
 function renderPlayerList(players, containerId) {
     // 1. Simple caching to stop re-rendering if data hasn't changed
-    // We sort by ID to ensure order doesn't affect cache key if array is shuffled (though usually SQL returns order)
-    const currentJson = JSON.stringify(players);
+    // We include selectedGameId because rendering logic depends on it (Bot button)
+    const currentJson = JSON.stringify(players) + selectedGameId;
     if (currentJson === lastPlayersJson) return;
     lastPlayersJson = currentJson;
 
@@ -611,7 +1078,12 @@ function renderPlayerList(players, containerId) {
 
     // Берем флаг хоста из глобального состояния приложения
     const amIHost = window.isHost;
+    const isBlokus = selectedGameId === 'blokus';
+    const MAX_SLOTS = isBlokus ? 4 : players.length;
+    // For other games, we just show list. For Blokus, we want fixed 4 slots visual if host?
+    // Actually, let's just append "Add Bot" button if slots < 4 and is Blokus.
 
+    // Render Actual Players
     players.forEach(p => {
         const div = document.createElement('div');
         div.className = 'player-grid-item';
@@ -622,10 +1094,18 @@ function renderPlayerList(players, containerId) {
         const crown = p.is_host == 1 ?
             `<div class="host-crown"><i class="bi bi-crown-fill"></i></div>` : '';
 
+        // Bot Difficulty Badge
+        let botBadge = '';
+        if (p.is_bot == 1) {
+            const diffColor = p.bot_difficulty === 'hard' ? 'danger' : (p.bot_difficulty === 'easy' ? 'success' : 'warning');
+            botBadge = `<span class="badge bg-${diffColor} position-absolute bottom-0 start-50 translate-middle-x" style="font-size: 10px; margin-bottom: -5px;">${p.bot_difficulty || 'AI'}</span>`;
+        }
+
         div.innerHTML = `
             <div class="position-relative">
                 ${avatarHtml}
                 ${crown}
+                ${botBadge}
             </div>
             <div class="player-name">${p.custom_name || p.first_name}</div>
         `;
@@ -633,11 +1113,30 @@ function renderPlayerList(players, containerId) {
         // Клик для кика (только если я хост и кликаю не по себе)
         if (amIHost && p.is_host != 1) {
             div.style.cursor = 'pointer';
-            div.onclick = () => kickPlayer(p.id, p.first_name);
+            if (p.is_bot == 1) {
+                div.onclick = () => removeBot(p.id);
+            } else {
+                div.onclick = () => kickPlayer(p.id, p.first_name);
+            }
         }
 
         list.appendChild(div);
     });
+
+    // Render Empty Slots / Add Bot Button (Only for Blokus & Host & < 4 players)
+    if (isBlokus && amIHost && players.length < 4) {
+        const div = document.createElement('div');
+        div.className = 'player-grid-item'; // Base layout class
+
+        div.innerHTML = `
+            <div class="add-bot-avatar">
+                <i class="bi bi-plus-lg"></i>
+            </div>
+            <div class="player-name text-muted mt-2" style="font-size: 11px;">Добавить<br>бота</div>
+        `;
+        div.onclick = () => showAddBotModal();
+        list.appendChild(div);
+    }
 }
 
 const EMOJI_OPTIONS = ['😎', '👻', '🤖', '🐱', '💀', '👽', '🦊', '🐯', '🤴', '🥷', '🦁', '🦄', '🐼', '🐵', '🐸'];
@@ -667,9 +1166,52 @@ function renderAvatar(user, size = 'md') {
         } catch (e) { }
     }
 
+    // Bot Default Avatar
+    if (user.is_bot == 1 && (!user.photo_url || user.photo_url === '🤖')) {
+        return `<div class="avatar-${size}" style="background: #e0f7fa; display: flex; align-items: center; justify-content: center; font-size: ${size === 'lg' ? '24px' : '18px'};">🤖</div>`;
+    }
+
     // Fallback to Photo URL or UI Avatars
     const src = user.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name || 'U')}&background=random`;
     return `<div class="avatar-${size}" style="background-image: url('${src}')"></div>`;
+}
+
+/**
+ * Renders achievement list with premium styling and Bootstrap icons
+ * @param {Array} achievements 
+ * @returns {string} HTML
+ */
+function renderAchievements(achievements) {
+    if (!achievements || achievements.length === 0) {
+        return '<div class="text-muted small w-100 py-4 text-center">Пока нет достижений 🕸️</div>';
+    }
+
+    const iconMap = {
+        'first_game': 'bi-controller',
+        'first_win': 'bi-trophy-fill',
+        'social_butterfly': 'bi-people-fill',
+        'pacifist': 'bi-peace',
+        'flash': 'bi-lightning-charge-fill',
+        'brute': 'bi-hammer',
+        'veteran': 'bi-award-fill',
+        'champion': 'bi-star-fill'
+    };
+
+    return `
+        <div class="achievement-list">
+            ${achievements.map(a => `
+                <div class="achievement-card">
+                    <div class="achievement-icon-container">
+                        <i class="bi ${iconMap[a.code] || 'bi-trophy'}"></i>
+                    </div>
+                    <div class="achievement-info">
+                        <div class="achievement-name">${a.name.replace(/[^\x00-\x7F]/g, "").trim() || a.name}</div>
+                        <div class="achievement-desc">${a.description}</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 function openProfileEditor() {
@@ -824,27 +1366,133 @@ async function saveProfile() {
     location.reload();
 }
 
+// Helper to get background style for avatar
+function getAvatarStyle(user) {
+    if (user.photo_url && user.photo_url !== '🤖') {
+        return `background-image: url('${user.photo_url}')`;
+    } else if (user.custom_avatar) {
+        // If it's a file path
+        if (user.custom_avatar.startsWith('avatars/')) {
+            return `background-image: url('server/${user.custom_avatar}')`;
+        }
+    }
+    // Fallback emoji/color
+    // Ideally we render emoji, but for background-image style we can't easily.
+    // So for "style='...'" usage, we might need to handle emoji differently or use background-color.
+    // Let's assume for now we use colored box. 
+    return 'background-color: #bdc3c7; display: flex; align-items: center; justify-content: center;';
+}
+
+let cachedUserStats = null; // Store for modal
+
+async function loadMyProfileStats() {
+    // We need achievements count, so we must fetch full stats
+    const res = await apiRequest({ action: 'get_stats', user_id: globalUser.id });
+    if (res.status === 'ok') {
+        const stats = res.stats || {};
+        cachedUserStats = stats;
+
+        // Update Main View Counts
+        safeText('profile-stat-wins', stats.total_wins || 0);
+        safeText('profile-stat-xp', (stats.total_points_earned || 0));
+        safeText('profile-stat-achievements', (stats.achievements || []).length);
+
+        // Ensure Level is sync
+        const xp = stats.total_points_earned || 0;
+        const lvl = calculateLevel(xp);
+        safeText('profile-level-badge', lvl);
+        safeText('profile-xp-text', xp + ' XP');
+    }
+}
+
 function updateUserInfo(user) {
-    globalUser = user; // <<< Save to global
+    globalUser = user;
+    console.log("Updating User Info:", user);
 
-    const nameDisplay = document.getElementById('user-name-display');
-    if (nameDisplay) nameDisplay.innerText = user.custom_name || user.first_name;
+    // Header Name
+    safeText('user-name-display', user.custom_name || user.first_name);
 
-    const lobbyAvatar = document.getElementById('lobby-user-avatar');
-    if (lobbyAvatar) lobbyAvatar.innerHTML = renderAvatar(user, 'md');
+    // Header Avatar
+    const headAv = document.getElementById('lobby-user-avatar');
+    if (headAv) headAv.innerHTML = renderAvatar(user, 'sm');
 
-    const bigAvatar = document.getElementById('profile-avatar-big');
-    const bigName = document.getElementById('profile-name-big');
-    if (bigAvatar) bigAvatar.innerHTML = renderAvatar(user, 'xl');
-    if (bigName) bigName.innerText = user.custom_name || user.first_name;
+    // === PROFILE TAB UPDATES ===
+    safeText('profile-name-big', user.custom_name || user.first_name);
+
+    // Avatar Big uses new style
+    const bigAv = document.getElementById('profile-avatar-big');
+    if (bigAv) {
+        // We set background instead of innerHTML for the new design
+        // Preserve the badge inside
+        const badge = bigAv.querySelector('#profile-level-badge');
+        const badgeHTML = badge ? badge.outerHTML : '';
+
+        bigAv.style.cssText = getAvatarStyle(user);
+
+        // If no image, show emoji inside?
+        if (!user.photo_url && (!user.custom_avatar || !user.custom_avatar.startsWith('avatars/'))) {
+            // It's emoji
+            bigAv.innerHTML = `<span style="font-size: 32px;">${user.custom_avatar || '😎'}</span>` + badgeHTML;
+            bigAv.style.backgroundColor = user.custom_color || '#eee';
+            bigAv.style.display = 'flex';
+            bigAv.style.alignItems = 'center';
+            bigAv.style.justifyContent = 'center';
+        } else {
+            bigAv.innerHTML = badgeHTML;
+        }
+    }
+
+    // Trigger async fetch for accurate stats (Achievements count etc)
+    loadMyProfileStats();
 
     // Update inputs in modal
     const nameInput = document.getElementById('profile-name-input');
     if (nameInput) nameInput.value = user.custom_name || user.first_name;
+}
 
-    // Fetch Stats if we are on profile tab or just once
-    // Optimization: Only fetch if we haven't lately or just do it.
-    fetchUserStats();
+function openDetailedStatsModal() {
+    console.log("Opening Detailed Stats Modal...");
+    if (!cachedUserStats) {
+        console.log("No cached stats, fetching...");
+        showToast("Загрузка статистики...", "info");
+        loadMyProfileStats().then(() => {
+            /* force open after load, assuming success */
+            if (cachedUserStats) showModal('modal-detailed-stats');
+        });
+        return;
+    }
+
+    // Safety check just in case
+    triggerHaptic('impact', 'light');
+
+    const s = cachedUserStats || {};
+    const games = s.total_games_played || 0;
+    const wins = s.total_wins || 0;
+    const winrate = games > 0 ? Math.round((wins / games) * 100) : 0;
+    const xp = s.total_points_earned || 0;
+
+    // XP & Level Math
+    const level = calculateLevel(xp);
+    const prevThreshold = Math.pow(level - 1, 2) * 100;
+    const nextThreshold = Math.pow(level, 2) * 100;
+    const progressXP = xp - prevThreshold;
+    const neededXP = nextThreshold - prevThreshold;
+    const progressPct = Math.min(100, Math.max(0, (progressXP / neededXP) * 100));
+
+    safeText('detail-total-games', games);
+    safeText('detail-winrate', winrate + '%');
+    safeText('detail-level-val', level);
+    safeText('detail-xp-range', `${xp} / ${nextThreshold} XP`);
+
+    const progBar = document.getElementById('detail-xp-progress');
+    if (progBar) progBar.style.width = progressPct + '%';
+
+    const achContainer = document.getElementById('detail-achievements-list');
+    if (achContainer) {
+        achContainer.innerHTML = renderAchievements(s.achievements);
+    }
+
+    showModal('modal-detailed-stats');
 }
 
 async function fetchUserStats() {
@@ -853,6 +1501,12 @@ async function fetchUserStats() {
         safeText('profile-stat-wins', res.stats.total_wins);
         safeText('profile-stat-games', res.stats.total_games_played);
         safeText('profile-stat-rating', res.stats.rating);
+
+        // Render Achievements
+        const container = document.getElementById('profile-achievements-container');
+        if (container) {
+            container.innerHTML = renderAchievements(res.stats.achievements);
+        }
     }
 }
 
@@ -952,6 +1606,13 @@ function showScreen(id) {
     // Прячем все экраны
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active-screen'));
 
+    // Explicitly hide splash if it exists (fix for persisting splash)
+    const splash = document.getElementById('screen-splash');
+    if (splash) {
+        splash.classList.remove('active-screen');
+        splash.style.setProperty('display', 'none', 'important');
+    }
+
     // Включаем нужный
     const target = document.getElementById('screen-' + id);
     if (target) target.classList.add('active-screen');
@@ -962,15 +1623,22 @@ function showScreen(id) {
         const shouldShow = (id === 'lobby' || id === 'leaderboard');
         nav.style.setProperty('display', shouldShow ? 'flex' : 'none', 'important');
     }
+
+    if (id === 'game') {
+        if (typeof renderReactionToolbar === 'function') renderReactionToolbar();
+    } else {
+        if (typeof hideReactionToolbar === 'function') hideReactionToolbar();
+    }
 }
 
 // Новая функция для Хоста, чтобы просто выйти в лобби
 async function finishGameSession() {
-    if (!confirm('Завершить игру и вернуться в лобби?')) return;
-    const res = await apiRequest({ action: 'finish_game_session' });
-    if (res.status === 'ok') {
-        checkState(); // Оно само переключит экран на 'room' (лобби)
-    }
+    showConfirmation('Завершить игру', 'Завершить игру и вернуться в лобби?', async () => {
+        const res = await apiRequest({ action: 'finish_game_session' });
+        if (res.status === 'ok') {
+            await checkState();
+        }
+    }, { confirmText: 'Завершить' });
 }
 
 /**
@@ -1050,11 +1718,33 @@ async function startGame(gameName) {
 async function backToLobby() {
     const amIHost = window.isHost;
     if (amIHost) {
-        if (!confirm('Завершить игру для всех?')) return;
-        const res = await apiRequest({ action: 'stop_game' });
-        if (res.status === 'ok') checkState();
+        showConfirmation('Завершить для всех', 'Завершить игру для всех участников?', async () => {
+            const res = await apiRequest({ action: 'stop_game' });
+            if (res.status === 'ok') await checkState();
+        }, { isDanger: true, confirmText: 'Завершить' });
     } else {
         leaveRoom();
+    }
+}
+
+// Modal Helpers
+function showModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'flex';
+        // Force reflow
+        void modal.offsetWidth;
+        modal.classList.add('show');
+    } else {
+        console.error('Modal not found:', id);
+    }
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
     }
 }
 
@@ -1078,14 +1768,23 @@ function sendToTelegram() {
     }
 }
 
-async function kickPlayer(id, name) { if (!confirm(`Выгнать ${name}?`)) return; await apiRequest({ action: 'kick_player', target_id: id }); checkState(); }
+async function kickPlayer(id, name) {
+    showConfirmation('Исключение', `Вы действительно хотите выгнать игрока ${name}?`, async () => {
+        const res = await apiRequest({ action: 'kick_player', target_id: id });
+        if (res.status === 'ok') {
+            checkState();
+        } else {
+            showAlert("Ошибка", res.message, 'error');
+        }
+    }, { isDanger: true, confirmText: 'Выгнать' });
+}
 window.sendGameAction = async function (type, additionalData = {}) {
     // 1. Ждем ответ от сервера
     const res = await apiRequest({ action: 'game_action', type: type, ...additionalData });
 
     // 2. Если сервер вернул ошибку - показываем её!
     if (res.status === 'error') {
-        alert("Ошибка: " + res.message);
+        showAlert("Ошибка", res.message, 'error');
     }
 
     // 3. Обновляем экран
@@ -1207,7 +1906,7 @@ async function addFriend(id, event) {
 
     const res = await apiRequest({ action: 'add_friend', friend_id: id });
     if (res.status === 'ok') {
-        alert('Заявка отправлена!');
+        showAlert('Успех', 'Заявка отправлена!', 'success');
         // Update button in profile modal if open
         const profileBtn = document.getElementById(`friend-action-btn-${id}`);
         if (profileBtn) {
@@ -1225,7 +1924,7 @@ async function addFriend(id, event) {
             searchResults.style.display = 'none';
         }
     } else {
-        alert(res.message);
+        showAlert('Внимание', res.message, 'warning');
     }
 }
 
@@ -1234,26 +1933,16 @@ async function acceptFriend(id, event) {
         event.stopPropagation();
         event.preventDefault();
     }
-    // Remove confirm to make it smoother or keep it? User said "doesn't work", maybe confirm blocks?
-    // Let's keep confirm but make sure it works.
-    if (!confirm('Принять заявку?')) return;
-
-    const res = await apiRequest({ action: 'accept_friend', friend_id: id });
-    if (res.status === 'ok') {
-        loadFriends();
-        // Update button if invalidating modal
-        const profileBtn = document.getElementById(`friend-action-btn-${id}`); // The ID might not be set for accept/remove buttons yet?
-        // Wait, openUserProfile didn't set ID for accept/remove buttons!
-        // openUserProfile ONLY sets ID for the "Add" button in my previous edit.
-        // I need to update openUserProfile to set IDs for ALL buttons first.
-
-        // Actually, let's just reload the profile modal content or update the button using a more generic approach if ID is missing.
-        // But for now, let's just Alert success to be sure.
-        alert('Теперь вы друзья! 🎉');
-        openUserProfile(id); // Reload the profile modal to show updated state (Remove Friend button)
-    } else {
-        alert(res.message);
-    }
+    showConfirmation('Дружба', 'Принять заявку в друзья?', async () => {
+        const res = await apiRequest({ action: 'accept_friend', friend_id: id });
+        if (res.status === 'ok') {
+            loadFriends();
+            showAlert('Ура!', 'Теперь вы друзья! 🎉', 'success');
+            openUserProfile(id);
+        } else {
+            showAlert('Ошибка', res.message, 'error');
+        }
+    }, { confirmText: 'Принять' });
 }
 
 async function removeFriend(id, event) {
@@ -1261,15 +1950,16 @@ async function removeFriend(id, event) {
         event.stopPropagation();
         event.preventDefault();
     }
-    if (!confirm('Удалить из друзей?')) return;
-    const res = await apiRequest({ action: 'remove_friend', friend_id: id });
-    if (res.status === 'ok') {
-        loadFriends();
-        alert('Пользователь удален из друзей');
-        openUserProfile(id); // Reload profile to show "Add" button
-    } else {
-        alert(res.message);
-    }
+    showConfirmation('Удаление', 'Удалить пользователя из друзей?', async () => {
+        const res = await apiRequest({ action: 'remove_friend', friend_id: id });
+        if (res.status === 'ok') {
+            loadFriends();
+            showAlert('Готово', 'Пользователь удален из друзей', 'success');
+            openUserProfile(id);
+        } else {
+            showAlert('Ошибка', res.message, 'error');
+        }
+    }, { isDanger: true, confirmText: 'Удалить' });
 }
 
 // === LEADERBOARD LOGIC ===
@@ -1288,44 +1978,74 @@ async function openUserProfile(userId) {
     if (res.status === 'ok') {
         const p = res.profile;
         const fs = res.friend_status;
+        const xp = p.total_points_earned || 0;
+        const level = calculateLevel(xp);
+
+        // XP Math for progress bar
+        const prevThreshold = Math.pow(level - 1, 2) * 100;
+        const nextThreshold = Math.pow(level, 2) * 100;
+        const progressXP = xp - prevThreshold;
+        const neededXP = nextThreshold - prevThreshold;
+        const progressPct = Math.max(0, Math.min(100, (progressXP / neededXP) * 100));
 
         // Action Button Logic
         let actionBtn = '';
         if (fs === 'none') {
-            actionBtn = `<button id="friend-action-btn-${p.id}" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="addFriend(${p.id}, event)"><i class="bi bi-person-plus me-2"></i>Добавить</button>`;
+            actionBtn = `<button id="friend-action-btn-${p.id}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="addFriend(${p.id}, event)"><i class="bi bi-person-plus me-2"></i>Добавить</button>`;
         } else if (fs === 'pending_out') {
-            actionBtn = `<button class="btn btn-outline-secondary rounded-pill px-4" disabled>Заявка отправлена</button>`;
+            actionBtn = `<button class="btn btn-light rounded-pill px-4 border" disabled>Ожидание</button>`;
         } else if (fs === 'pending_in') {
-            actionBtn = `<button class="btn btn-success rounded-pill px-4 fw-bold" onclick="acceptFriend(${p.id}, event)">Принять заявку</button>`;
+            actionBtn = `<button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="acceptFriend(${p.id}, event)">Принять</button>`;
         } else if (fs === 'accepted') {
-            actionBtn = `<button class="btn btn-outline-danger rounded-pill px-4" onclick="removeFriend(${p.id}, event)">Удалить</button>`;
+            actionBtn = `<button class="btn btn-link text-danger btn-sm text-decoration-none" onclick="removeFriend(${p.id}, event)">Удалить друга</button>`;
         } else {
             // self
             actionBtn = '';
         }
 
         container.innerHTML = `
-            <div class="d-flex justify-content-center mb-3">
+            <div class="d-flex align-items-center gap-3 mb-4 text-start">
                  ${renderAvatar(p, 'xl')}
+                 <div>
+                    <h4 class="fw-bold mb-0">${p.custom_name || p.first_name}</h4>
+                    <div class="text-muted small">ID: ${p.id}</div>
+                 </div>
             </div>
-            <h4 class="fw-bold mb-1">${p.custom_name || p.first_name}</h4>
-            <div class="text-muted small mb-3">ID: ${p.id}</div> 
+
+            <!-- Level Bar -->
+            <div class="p-2 bg-light rounded-4 border mb-3 text-start">
+                <div class="d-flex justify-content-between align-items-end mb-1">
+                    <div class="fw-bold text-primary" style="font-size: 14px;">${level} LVL</div>
+                    <div class="text-muted" style="font-size: 10px;">${xp} / ${nextThreshold} XP</div>
+                </div>
+                <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(0,0,0,0.05);">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: ${progressPct}%; border-radius: 3px;"></div>
+                </div>
+            </div>
             
-            <div class="d-flex justify-content-center gap-4 mb-4">
-                <div class="text-center">
-                    <div class="h5 fw-bold mb-0 text-warning">${p.total_wins}</div>
-                    <div class="small text-muted">Побед</div>
+            <div class="row g-2 mb-4">
+                <div class="col-6">
+                    <div class="p-2 bg-light rounded-4 text-center border">
+                        <div class="text-muted" style="font-size: 9px; text-transform: uppercase;">Игр</div>
+                        <div class="fw-bold fs-6">${p.total_games_played}</div>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <div class="h5 fw-bold mb-0 text-primary">${p.total_games_played}</div>
-                    <div class="small text-muted">Игр</div>
-                </div>
-                 <div class="text-center">
-                    <div class="h5 fw-bold mb-0 text-danger">${p.rating}</div>
-                    <div class="small text-muted">Рейтинг</div>
+                <div class="col-6">
+                    <div class="p-2 bg-light rounded-4 text-center border">
+                        <div class="text-muted" style="font-size: 9px; text-transform: uppercase;">Побед</div>
+                        <div class="fw-bold fs-6 text-success">${p.total_wins}</div>
+                    </div>
                 </div>
             </div>
-            ${actionBtn}
+
+            <div class="achievements-section text-center mb-4">
+                 <h6 class="fw-bold mb-3" style="font-size: 13px; text-transform: uppercase; color: #666;">Достижения</h6>
+                 ${renderAchievements(res.achievements)}
+            </div>
+
+            <div class="mt-2">
+                ${actionBtn}
+            </div>
         `;
     } else {
         container.innerHTML = '<p class="text-danger">Ошибка загрузки</p>';
@@ -1341,8 +2061,11 @@ function openLeaderboardScreen() {
 
 // function closeLeaderboardScreen() removed
 
+// Expose globally for HTML onclick events
+window.loadLeaderboard = loadLeaderboardList;
+
 async function loadLeaderboardList(type = 'global') {
-    const container = document.getElementById('leaderboard-screen-container');
+    const container = document.getElementById('leaderboard-screen-container'); // Correct ID from index.html
     if (!container) return;
 
     container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
@@ -1356,33 +2079,31 @@ async function loadLeaderboardList(type = 'global') {
         }
 
         res.leaderboard.forEach((u, index) => {
-            let medal = '';
-            if (index === 0) medal = '🥇';
-            if (index === 1) medal = '🥈';
-            if (index === 2) medal = '🥉';
-            if (index > 2) medal = `<span class="fw-bold text-muted">${index + 1}</span>`;
+            let rankClass = '';
+            let rankContent = index + 1;
+
+            if (index === 0) { rankClass = 'top-1'; rankContent = '🥇'; }
+            else if (index === 1) { rankClass = 'top-2'; rankContent = '🥈'; }
+            else if (index === 2) { rankClass = 'top-3'; rankContent = '🥉'; }
+            else { rankClass = 'text-muted'; rankContent = index + 1; }
 
             const div = document.createElement('div');
-            // Changed bg-white to slightly transparent glass style
-            div.className = 'd-flex align-items-center mb-3 p-3 rounded-4';
-            div.style.background = 'rgba(255, 255, 255, 0.7)';
-            div.style.backdropFilter = 'blur(10px)';
-            div.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
+            div.className = 'lb-card mx-1'; // Minimal margin
             div.onclick = () => openUserProfile(u.user_id || u.id);
             div.style.cursor = 'pointer';
 
             div.innerHTML = `
-                <div class="fs-4 me-3 d-flex justify-content-center align-items-center" style="width: 40px; flex-shrink: 0;">${medal}</div>
-                <div class="me-3">
-                     ${renderAvatar(u, 'md')}
+                <div class="lb-rank ${rankClass}" style="min-width: 30px; text-align: center; font-size: ${index < 3 ? '24px' : '16px'}">${rankContent}</div>
+                <div class="me-3">${renderAvatar(u, 'md')}</div>
+                <div class="lb-info">
+                    <div class="lb-name">${u.custom_name || u.first_name}</div>
+                    <div class="lb-detail">
+                        <span class="level-pill">LVL ${u.level || calculateLevel(u.total_points_earned)}</span>
+                    </div>
                 </div>
-                <div class="flex-grow-1">
-                    <div class="fw-bold text-dark">${u.custom_name || u.first_name}</div>
-                    <div class="small text-muted">${u.total_wins} побед</div>
-                </div>
-                <div class="text-end">
-                    <div class="fw-bold text-primary">${u.rating}</div>
-                    <div class="small text-muted" style="font-size:10px;">MMR</div>
+                <div class="lb-score">
+                    ${u.total_points_earned || 0}
+                    <small>XP</small>
                 </div>
              `;
             container.appendChild(div);
@@ -1672,7 +2393,7 @@ async function sendInvites() {
     let roomId = window.currentRoomId;
     if (!roomId) {
         // Fallback or error
-        alert('Ошибка: Не найдена комната');
+        showAlert('Ошибка', 'Не найдена комната', 'error');
         return;
     }
 
@@ -1696,7 +2417,7 @@ async function sendInvites() {
         } else {
             let msg = 'Ошибка: ' + res.message;
             if (res.debug_log_error) msg += '\nLog Error: ' + res.debug_log_error;
-            alert(msg);
+            showAlert('Ошибка', msg, 'error');
             btn.innerHTML = 'Попробовать снова';
             btn.disabled = false;
         }
@@ -1731,11 +2452,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const touch = e.changedTouches[0];
         const deltaX = touch.clientX - touchStartX;
         const deltaY = Math.abs(touch.clientY - touchStartY);
-
-        // Check for horizontal swipe (more horizontal than vertical)
         if (deltaX > SWIPE_THRESHOLD && deltaX > deltaY * 1.5) {
             handleSwipeBack();
         }
+
     }, { passive: true });
 
     function handleSwipeBack() {
@@ -1772,4 +2492,50 @@ function switchFriendsTab(tabName) {
         document.getElementById('tab-friends-requests').style.display = 'block';
         loadFriendRequests();
     }
+}
+function showAddBotModal() {
+    // Let's use showConfirmation with 3 buttons if possible?
+    // Our showConfirmation supports 2 buttons.
+
+    // Helper to create a custom modal on the fly or just use a simple list
+    const html = `
+    <div class="d-grid gap-3 p-2">
+        <button class="glass-btn glass-btn-success" onclick="addBot('easy')">
+             <span style="font-size: 18px;">👶</span>
+             <span>Лёгкий</span>
+        </button>
+        <button class="glass-btn glass-btn-warning" onclick="addBot('medium')">
+             <span style="font-size: 18px;">😐</span>
+             <span>Средний</span>
+        </button>
+        <button class="glass-btn glass-btn-danger" onclick="addBot('hard')">
+             <span style="font-size: 18px;">🤖</span>
+             <span>Сложный</span>
+        </button>
+    </div>
+    `;
+    window.showAlert('Выберите сложность', html, 'info');
+    // Using showAlert with HTML content
+}
+
+async function addBot(difficulty) {
+    // Close modal if open (showAlert auto-closes on button click if we didn't override, wait, showAlert just shows content. 
+    // We need to manually close the alert modal.
+    const modalEl = document.getElementById('customAlertModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    await apiRequest({
+        action: 'add_bot',
+        difficulty: difficulty
+    });
+    // State update via poll will handle rendering
+}
+
+async function removeBot(userId) {
+    if (!await showConfirmation('Удалить бота?')) return;
+    await apiRequest({
+        action: 'remove_bot',
+        target_id: userId
+    });
 }

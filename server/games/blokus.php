@@ -125,7 +125,7 @@ function handleGameAction($pdo, $room, $user, $data) {
     $currentColor = $state['turnOrder'][$state['currentTurnIndex']];
     
     // Validate turn ownership based on mode
-    $stmt = $pdo->prepare("SELECT user_id, is_host FROM room_players WHERE room_id = ? ORDER BY id ASC");
+    $stmt = $pdo->prepare("SELECT user_id, is_host, is_bot FROM room_players WHERE room_id = ? ORDER BY id ASC");
     $stmt->execute([$room['id']]);
     $roomPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -183,6 +183,42 @@ function handleGameAction($pdo, $room, $user, $data) {
 
     // Override for single player / debug
     if (count($roomPlayers) === 1) $isMyTurn = true;
+
+    // BOT OVERRIDE: If the current turn belongs to a bot, allow the HOST to move for it
+    if (!$isMyTurn) {
+        $currentPlayerInfo = $roomPlayers[$state['currentTurnIndex']] ?? null;
+        // Map color index to player index logic is complex above, but for standard games:
+        if ($mode === 'standard') {
+            $currentPlayerInfo = $roomPlayers[array_search($currentColor, BLOKUS_COLORS)] ?? null;
+        } elseif ($mode === '2player') {
+             // 2player: P1(0) controls Blue/Red, P2(1) controls Yellow/Green
+             // If P1 is bot, P1 controls Blue/Red.
+             // We need to know if the "Owner" of the current color is a bot.
+             if ($myPlayerIndex === 0 && ($currentColor === 'BLUE' || $currentColor === 'RED')) $currentPlayerInfo = $roomPlayers[0];
+             else $currentPlayerInfo = $roomPlayers[1];
+        }
+        
+        // Simplified check: If I am HOST, and the "implied" owner of this turn is a bot -> Allow.
+        // Actually, let's just reverse check:
+        // Who owns this turn?
+        $turnOwnerIndex = -1;
+        if ($mode === 'standard') {
+             $turnOwnerIndex = array_search($currentColor, BLOKUS_COLORS);
+        }
+        
+        if ($turnOwnerIndex !== -1 && isset($roomPlayers[$turnOwnerIndex])) {
+            $turnOwner = $roomPlayers[$turnOwnerIndex];
+            if ($turnOwner['is_bot']) {
+               // Verify if requestor is host
+               $amIHost = false;
+               foreach($roomPlayers as $rp) { 
+                   if($rp['user_id'] == $user['id'] && !empty($rp['is_host'])) $amIHost = true; 
+               }
+               
+               if ($amIHost) $isMyTurn = true;
+            }
+        }
+    }
 
     if (!$isMyTurn) {
          throw new Exception("Not your turn");

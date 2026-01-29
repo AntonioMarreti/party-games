@@ -37,6 +37,33 @@ $achievements = [
         'category' => 'game',
         'condition_type' => 'wins',
         'condition_value' => 10
+    ],
+    [
+        'code' => 'pacifist',
+        'name' => '🕊️ Pacifist',
+        'description' => 'Win Blokus without blocking anyone',
+        'icon' => '🕊️',
+        'category' => 'game',
+        'condition_type' => 'game_event',
+        'condition_value' => 0
+    ],
+    [
+        'code' => 'flash',
+        'name' => '⚡ Flash',
+        'description' => 'Answer in under 0.5s',
+        'icon' => '⚡',
+        'category' => 'game',
+        'condition_type' => 'game_event',
+        'condition_value' => 500 // ms
+    ],
+    [
+        'code' => 'brute',
+        'name' => '🔪 Brute',
+        'description' => 'Kick 3 people in Bunker',
+        'icon' => '🔪',
+        'category' => 'game',
+        'condition_type' => 'game_event',
+        'condition_value' => 3
     ]
 ];
 

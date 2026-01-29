@@ -27,15 +27,15 @@ window.startBunkerGame = async function () {
             mode: hardcore ? 'hardcore' : 'normal'
         });
     } catch (e) {
-        alert("Ошибка: " + e.message);
+        window.showAlert("Ошибка", e.message, 'error');
     }
 };
 
 window.triggerBunkerReveal = function (key, name) {
     var displayName = name || window.BUNKER_ROUND_NAMES[key] || key;
-    if (confirm(`Показать всем карту "${displayName}"?`)) {
+    window.showConfirmation('Раскрытие карты', `Показать всем карту "${displayName}"?`, function () {
         window.sendGameAction('reveal_card', { card_type: key });
-    }
+    }, { confirmText: 'Показать' });
 };
 
 window.sendVoteQuery = function (val) {
@@ -43,9 +43,9 @@ window.sendVoteQuery = function (val) {
 };
 
 window.sendVoteKick = function (targetId) {
-    if (confirm('Точно этот игрок?')) {
+    window.showConfirmation('Голосование', 'Вы действительно хотите проголосовать за этого игрока?', function () {
         window.sendGameAction('vote_kick', { target_id: targetId });
-    }
+    }, { isDanger: true, confirmText: 'Голосовать' });
 };
 
 // Use window-scoped flag to survive re-loads safely
@@ -65,52 +65,52 @@ window.bunkerFinish = async function (evt) {
         return;
     }
 
-    if (!confirm('Завершить игру и выйти в лобби?')) return;
+    window.showConfirmation('Завершить игру', 'Завершить игру и выйти в лобби?', async function () {
+        window.bunkerIsFinishing = true;
 
-    window.bunkerIsFinishing = true;
-
-    var btn = evt?.target || (window.event ? window.event.target : null);
-    if (btn) {
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...';
-        btn.style.opacity = '0.7';
-    }
-
-    try {
-        var s = window.bunkerState?.lastServerState;
-        var r = window.bunkerState?.lastRes;
-
-        if (s && s.kicked_players && r && r.players) {
-            try {
-                var playersData = r.players.map(function (p) {
-                    return {
-                        user_id: parseInt(p.id),
-                        score: 0,
-                        rank: s.kicked_players.includes(String(p.id)) ? 2 : 1
-                    };
-                });
-                if (typeof window.submitGameResults === 'function') {
-                    await window.submitGameResults(playersData);
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        await window.apiRequest({ action: 'stop_game' });
-        window.bunkerState = { activeTab: 'me', lastRes: null, lastServerState: null, lastStateHash: '' };
-
-        if (typeof window.checkState === 'function') {
-            await window.checkState();
-        } else {
-            window.location.reload();
-        }
-    } catch (e) {
-        alert("Ошибка: " + e.message);
-    } finally {
-        window.bunkerIsFinishing = false;
+        var btn = evt?.target || (window.event ? window.event.target : null);
         if (btn) {
-            btn.innerHTML = '↩️ В Лобби';
-            btn.style.opacity = '1';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...';
+            btn.style.opacity = '0.7';
         }
-    }
+
+        try {
+            var s = window.bunkerState?.lastServerState;
+            var r = window.bunkerState?.lastRes;
+
+            if (s && s.kicked_players && r && r.players) {
+                try {
+                    var playersData = r.players.map(function (p) {
+                        return {
+                            user_id: parseInt(p.id),
+                            score: 0,
+                            rank: s.kicked_players.includes(String(p.id)) ? 2 : 1
+                        };
+                    });
+                    if (typeof window.submitGameResults === 'function') {
+                        await window.submitGameResults(playersData);
+                    }
+                } catch (err) { console.error(err); }
+            }
+
+            await window.apiRequest({ action: 'stop_game' });
+            window.bunkerState = { activeTab: 'me', lastRes: null, lastServerState: null, lastStateHash: '' };
+
+            if (typeof window.checkState === 'function') {
+                await window.checkState();
+            } else {
+                window.location.reload();
+            }
+        } catch (e) {
+            window.showAlert("Ошибка", e.message, 'error');
+        } finally {
+            window.bunkerIsFinishing = false;
+            if (btn) {
+                btn.innerHTML = '↩️ В Лобби';
+                btn.style.opacity = '1';
+            }
+        }
+    }, { isDanger: true, confirmText: 'Завершить' });
 };
 
 window.finishGameSession = window.bunkerFinish;

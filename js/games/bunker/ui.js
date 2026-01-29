@@ -67,7 +67,7 @@ window.renderBunkerHeader = function (state) {
                 <div class="cata-info">
                     <div class="cata-title">${catastrophe.title}</div>
                     ${catastrophe.duration ? `<div class="cata-duration small opacity-75 mt-1">Пробыть в бункере: <b>${catastrophe.duration}</b></div>` : ''}
-                    <div class="cata-desc" onclick="alert('${catastrophe.desc ? catastrophe.desc.replace(/'/g, "\\'") : ''}')">
+                    <div class="cata-desc" onclick="window.showAlert('${catastrophe.title.replace(/'/g, "\\'")}', '${catastrophe.desc ? catastrophe.desc.replace(/'/g, "\\'") : ''}')">
                         ${catastrophe.intro_text || 'Нажмите для полного описания...'}
                     </div>
                 </div>

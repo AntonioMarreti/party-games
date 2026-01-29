@@ -14,7 +14,16 @@ function render_whoami(res) {
         const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
 
-    // Создаем или находим основной враппер
+    // 0. INJECT STYLES
+    if (!document.getElementById('wai-styles')) {
+        const link = document.createElement('link');
+        link.id = 'wai-styles';
+        link.rel = 'stylesheet';
+        link.href = 'css/modules/whoami.css?v=' + new Date().getTime();
+        document.head.appendChild(link);
+    }
+
+    // 1. Создаем или находим основной враппер
     let wrapper = document.getElementById('wai-wrapper');
     if (!wrapper) {
         container.innerHTML = '';
@@ -63,7 +72,7 @@ function buildWaiSkeleton(state, wrapper, isHost) {
         `;
         if (isHost) {
             document.getElementById('wai-start-btn').onclick = () => {
-                if (!window.waiSelectedTheme) return alert("Выберите тему!");
+                if (!window.waiSelectedTheme) return showAlert("Внимание", "Выберите тему!", 'warning');
                 sendGameAction('select_theme', { theme: window.waiSelectedTheme, limit: window.waiSelectedLimit });
             };
         }
@@ -251,3 +260,5 @@ window.setWaiLimit = (n, btn) => {
         if (input) input.value = '';
     }
 };
+
+window.render_whoami = render_whoami;

@@ -87,8 +87,10 @@
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-radius: 32px;
     padding: 4px 18px;
+    padding: 4px 18px;
     /* Adjusted padding */
-    display: flex;
+    display: none;
+    /* CHANGED: Hidden by default, shown via JS */
     justify-content: space-around;
     align-items: center;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
@@ -367,6 +369,7 @@
 #screen-leaderboard .content-wrapper {
     padding-bottom: 120px;
 }
+
 /* Explicitly remove padding from Leaderboard screen wrapper */
 #screen-leaderboard {
     padding-top: 0 !important;
@@ -375,7 +378,8 @@
 /* === MOVED FROM LOBBY.CSS FOR RELIABILITY === */
 /* === DESKTOP ROOM EXIT BUTTON === */
 .desktop-room-exit-btn {
-    display: none !important; /* Force hidden on Mobile */
+    display: none !important;
+    /* Force hidden on Mobile */
     align-items: center;
     padding: 8px 20px;
     border-radius: 12px;
@@ -394,17 +398,20 @@
 }
 
 @media (min-width: 768px) {
+
     /* Show direct Exit button on Desktop */
     .desktop-room-exit-btn {
         display: flex !important;
     }
-    
+
     .room-header-dropdown-btn i {
-        display: none; /* Hide chevron on desktop */
+        display: none;
+        /* Hide chevron on desktop */
     }
-    
+
     .room-header-dropdown-btn {
-        pointer-events: none; /* Disable click on desktop */
+        pointer-events: none;
+        /* Disable click on desktop */
     }
 
     /* Force space-between for header items on desktop to avoid notch area */

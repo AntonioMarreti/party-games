@@ -2,6 +2,8 @@
 // server/bot.php
 require_once 'config.php'; // Подключаем твой конфиг с PDO и BOT_TOKEN
 require_once 'auth.php';   // НУЖНО для регистрации юзеров
+require_once 'lib/shared_helpers.php'; // Missing helper functions (check_achievements, etc)
+require_once 'actions/admin.php'; // For db repair tool
 
 // Получаем данные от Telegram
 $content = file_get_contents("php://input");
@@ -190,6 +192,38 @@ if (strpos($cmd, '/public') === 0) {
         reply($chatId, $msg);
     } catch (Throwable $e) {
         reply($chatId, getSfEmoji('error') . " Ошибка: " . htmlspecialchars($e->getMessage()));
+    }
+}
+
+// /repair - DB Repair Tool
+if (strpos($cmd, '/repair') === 0 || strpos($cmd, '/db_repair') === 0) {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Доступ запрещен");
+        exit;
+    }
+    
+    reply($chatId, "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> <b>Запуск диагностики и ремонта БД...</b>");
+    
+    try {
+        // Reuse logic from actions/admin.php
+        $res = perform_db_repair($pdo);
+        
+        if ($res['status'] === 'ok') {
+            $msg = getSfEmoji('success') . " <b>Ремонт завершен!</b>\n\n";
+            if (empty($res['fixes'])) {
+                $msg .= "✅ Проблем не обнаружено.";
+            } else {
+                foreach ($res['fixes'] as $fix) {
+                    $msg .= "• " . htmlspecialchars($fix) . "\n";
+                }
+            }
+        } else {
+             $msg = getSfEmoji('error') . " <b>Ошибка:</b> " . htmlspecialchars($res['error']);
+        }
+        reply($chatId, $msg);
+        
+    } catch (Throwable $e) {
+        reply($chatId, getSfEmoji('error') . " Критическая Ошибка: " . htmlspecialchars($e->getMessage()));
     }
 }
 

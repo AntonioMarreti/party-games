@@ -21,6 +21,13 @@ function action_create_room($pdo, $user, $data) {
         $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_host) VALUES (?, ?, 1)")->execute([$rid, $user['id']]);
         
         $pdo->commit();
+
+        TelegramLogger::logEvent('room', "Room Created", [
+            'id' => $rid,
+            'code' => $code,
+            'host' => $user['first_name'] . " (ID: " . $user['id'] . ")"
+        ]);
+
         echo json_encode(['status' => 'ok', 'room_code' => $code]);
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -58,7 +65,51 @@ function action_join_room($pdo, $user, $data) {
 }
 
 function action_leave_room($pdo, $user, $data) {
+    // 1. Get Room BEFORE leaving (to check if it becomes empty)
+    $room = getRoom($user['id']);
+    
+    // 2. Remove User
     clearUserRooms($pdo, $user['id']);
+    
+    // 3. Cleanup Logic
+    if ($room) {
+        $roomId = $room['id'];
+        
+        // Count REMAINING Humans
+        // We join with users table and check is_bot flag
+        // (Assuming we added is_bot column in previous repairs, or we check telegram_id < 0)
+        // Safer to check room_players count where associated user is NOT a bot.
+        
+        // Note: RP table now has is_bot column (added in migration/repair).
+        // Let's use that for efficiency.
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ? AND is_bot = 0");
+        $stmt->execute([$roomId]);
+        $humansLeft = $stmt->fetchColumn();
+        
+        if ($humansLeft == 0) {
+            // No humans left. Kill the room and all bots in it.
+            
+            // A. Get Bot User IDs to delete their Shadow User accounts
+            $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
+            $stmt->execute([$roomId]);
+            $botIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            // B. Delete Room
+            $pdo->prepare("DELETE FROM rooms WHERE id = ?")->execute([$roomId]);
+            
+            // C. Delete Room Players (Cascade might handle this if FK, but do explicit)
+            $pdo->prepare("DELETE FROM room_players WHERE room_id = ?")->execute([$roomId]);
+            
+            // D. Delete Shadow Users (Clean up users table)
+            if (!empty($botIds)) {
+                $placeholders = implode(',', array_fill(0, count($botIds), '?'));
+                $pdo->prepare("DELETE FROM users WHERE id IN ($placeholders)")->execute($botIds);
+            }
+            
+            TelegramLogger::logEvent('room_cleanup', "Cleaned Bot Room", ['room_id' => $roomId, 'bots_removed' => count($botIds)]);
+        }
+    }
+
     echo json_encode(['status' => 'ok']);
 }
 
@@ -70,8 +121,77 @@ function action_kick_player($pdo, $user, $data) {
     $targetId = $data['target_id'] ?? 0;
     if ($targetId == $user['id']) return; // Cannot kick self here, use leave
     
-    $stmt = $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?");
     $stmt->execute([$room['id'], $targetId]);
+    echo json_encode(['status' => 'ok']);
+}
+
+function action_add_bot($pdo, $user, $data) {
+    $room = getRoom($user['id']);
+    if (!$room) sendError('No room');
+    if (!$room['is_host']) sendError('Not host');
+    
+    // Check limit
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ?");
+    $stmt->execute([$room['id']]);
+    if ($stmt->fetchColumn() >= 4) sendError('Room is full');
+
+    $difficulty = $data['difficulty'] ?? 'medium';
+    if (!in_array($difficulty, ['easy', 'medium', 'hard'])) $difficulty = 'medium';
+
+    $botName = "Bot " . ucfirst($difficulty);
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // 1. Create a Shadow User
+        // Use a random negative ID for bots to avoid telegram_id unique constraint collision (0)
+        $fakeTgId = -(time() + rand(100, 99999));
+        $pdo->prepare("INSERT INTO users (first_name, is_bot, photo_url, telegram_id) VALUES (?, 1, NULL, ?)")
+            ->execute([$botName, $fakeTgId]);
+        $botUserId = $pdo->lastInsertId();
+        
+        // 2. Add to Room
+        $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_bot, bot_difficulty) VALUES (?, ?, 1, ?)")
+            ->execute([$room['id'], $botUserId, $difficulty]);
+            
+        $pdo->commit();
+        echo json_encode(['status' => 'ok', 'user_id' => $botUserId]);
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        TelegramLogger::log("Add Bot Error", ['error' => $e->getMessage()]);
+        sendError('Could not add bot');
+    }
+}
+
+function action_remove_bot($pdo, $user, $data) {
+    $room = getRoom($user['id']);
+    if (!$room) sendError('No room');
+    if (!$room['is_host']) sendError('Not host');
+    
+    $targetId = $data['target_id'] ?? 0;
+    
+    // Verify it is a bot
+    $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+    $stmt->execute([$room['id'], $targetId]);
+    $isBot = $stmt->fetchColumn();
+    
+    // Verify it is a bot (Check flag OR negative ID OR name prefix for legacy cleanup)
+    $stmt = $pdo->prepare("SELECT is_bot, first_name FROM users WHERE id = ?");
+    $stmt->execute([$targetId]);
+    $u = $stmt->fetch();
+    
+    // Allow removal if: is_bot flag in room_players is 1 OR user ID < 0 OR user name starts with "Bot "
+    // Note: strpos returns 0 if found at start.
+    $name = $u['first_name'] ?? '';
+    if (!$isBot && $targetId > 0 && strpos($name, 'Bot ') !== 0) {
+         sendError('Target is not a bot');
+    }
+    
+    $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?")->execute([$room['id'], $targetId]);
+    // Optionally delete shadow user to keep DB clean
+    $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$targetId]);
+    
     echo json_encode(['status' => 'ok']);
 }
 
@@ -91,11 +211,11 @@ function action_get_state($pdo, $user, $data) {
     // Note: We might want to do this less frequently or async, but SQL is fast enough for now
     $pdo->prepare("UPDATE room_players SET last_active = NOW() WHERE room_id = ? AND user_id = ? AND last_active < (NOW() - INTERVAL 60 SECOND)")->execute([$room['id'], $user['id']]);
     
-    $stmt = $pdo->prepare("SELECT u.id, u.first_name, u.photo_url, u.custom_name, u.custom_avatar, rp.is_host, rp.score 
-                   FROM room_players rp 
-                   JOIN users u ON u.id = rp.user_id 
-                   WHERE rp.room_id = ?
-                   ORDER BY rp.id ASC");
+    $stmt = $pdo->prepare("SELECT u.id, u.first_name, u.photo_url, u.custom_name, u.custom_avatar, rp.is_host, rp.score, rp.is_bot, rp.bot_difficulty 
+                    FROM room_players rp 
+                    JOIN users u ON u.id = rp.user_id 
+                    WHERE rp.room_id = ?
+                    ORDER BY rp.id ASC");
     $stmt->execute([$room['id']]);
     $players = $stmt->fetchAll();
     
@@ -108,13 +228,25 @@ function action_get_state($pdo, $user, $data) {
         $notifs = $nStmt->fetchAll(PDO::FETCH_COLUMN);
     } catch (Exception $e) {}
     
+    // Get Recent Room Events (Live Reactions)
+    // Last 3 seconds
+    $events = [];
+    try {
+        $eStmt = $pdo->prepare("SELECT type, payload, user_id, created_at FROM room_events WHERE room_id = ? AND created_at > (NOW() - INTERVAL 3 SECOND) ORDER BY created_at ASC");
+        $eStmt->execute([$room['id']]);
+        $events = $eStmt->fetchAll();
+    } catch (Exception $e) {
+        // Table might not exist yet if migration didn't run
+    }
+
     echo json_encode([
         'status' => 'in_room', 
         'user' => $user, 
         'room' => $room, 
         'players' => $players, 
         'is_host' => $room['is_host'],
-        'notifications' => $notifs
+        'notifications' => $notifs,
+        'events' => $events
     ]);
 }
 

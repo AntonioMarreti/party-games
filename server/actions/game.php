@@ -70,3 +70,29 @@ function action_game_action($pdo, $user, $data) {
         sendError('Game file not found');
     }
 }
+
+function action_send_reaction($pdo, $user, $data) {
+    global $room; // Potentially needed if used inside game context, but here we get room explicitly.
+    $room = getRoom($user['id']);
+    if (!$room) sendError('No room');
+
+    $type = $data['type'] ?? 'emoji';
+    $payloadData = $data['payload'] ?? '[]';
+
+    // If payload is a string (which it is from FormData), decode it first to avoid double encoding
+    if (is_string($payloadData)) {
+        $decoded = json_decode($payloadData, true);
+        if ($decoded !== null) {
+            $payloadData = $decoded;
+        }
+    }
+    
+    try {
+        $pdo->prepare("INSERT INTO room_events (room_id, user_id, type, payload) VALUES (?, ?, ?, ?)")
+            ->execute([$room['id'], $user['id'], $type, json_encode($payloadData)]);
+        echo json_encode(['status' => 'ok']);
+    } catch (Exception $e) {
+        TelegramLogger::log("Reaction Error", ['error' => $e->getMessage()]);
+        echo json_encode(['status' => 'error']);
+    }
+}

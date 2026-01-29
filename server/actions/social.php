@@ -95,10 +95,13 @@ function action_get_public_profile($pdo, $user, $data) {
     if (!$targetUser) sendError('User not found');
     
     // 2. Get Stats
-    $stmt = $pdo->prepare("SELECT total_wins, total_games_played, rating FROM user_statistics WHERE user_id = ?");
+    $stmt = $pdo->prepare("SELECT total_wins, total_games_played, rating, total_points_earned FROM user_statistics WHERE user_id = ?");
     $stmt->execute([$targetId]);
     $stats = $stmt->fetch();
-    if (!$stats) $stats = ['total_wins' => 0, 'total_games_played' => 0, 'rating' => 1000];
+    if (!$stats) $stats = ['total_wins' => 0, 'total_games_played' => 0, 'rating' => 1000, 'total_points_earned' => 0];
+    
+    // Add Level
+    $stats['level'] = calculateLevel($stats['total_points_earned'] ?? 0);
     
     // 3. Get Friendship Status
     $friendStatus = 'none'; // none, pending_out, pending_in, accepted, self
@@ -120,10 +123,16 @@ function action_get_public_profile($pdo, $user, $data) {
         }
     }
     
+    // 4. Get Achievements
+    $stmt = $pdo->prepare("SELECT a.*, ua.unlocked_at FROM achievements a JOIN user_achievements ua ON ua.achievement_id = a.id WHERE ua.user_id = ?");
+    $stmt->execute([$targetId]);
+    $achievements = $stmt->fetchAll();
+
     echo json_encode([
         'status' => 'ok',
         'profile' => array_merge($targetUser, $stats),
-        'friend_status' => $friendStatus
+        'friend_status' => $friendStatus,
+        'achievements' => $achievements
     ]);
 }
 
@@ -151,6 +160,10 @@ function action_accept_friend($pdo, $user, $data) {
         
         // Notify Requester inside App
         createNotification($pdo, $requesterId, 'friend_accepted', $user['id']);
+
+        // Check Achievements for both
+        check_achievements($pdo, $user['id']);
+        check_achievements($pdo, $requesterId);
 
         // Notify Requester via Telegram
         try {
@@ -308,60 +321,6 @@ function action_get_achievements($pdo, $user, $data) {
     echo json_encode(['status' => 'ok', 'achievements' => $stmt->fetchAll()]);
 }
 
-function check_achievements($pdo, $userId) {
-    // 1. Get Stats (ensure they are up to date)
-    $stmt = $pdo->prepare("SELECT * FROM user_statistics WHERE user_id = ?");
-    $stmt->execute([$userId]);
-    $stats = $stmt->fetch();
-    if (!$stats) {
-        // Init stats if missing
-        $pdo->prepare("INSERT IGNORE INTO user_statistics (user_id) VALUES (?)")->execute([$userId]);
-        $stats = ['total_wins' => 0, 'total_games_played' => 0, 'longest_win_streak' => 0];
-    }
-
-    // 2. Get All Achievements (cached ideally, but SQL is fast for now)
-    $achievements = $pdo->query("SELECT * FROM achievements")->fetchAll();
-    
-    // 3. Get User Unlocked
-    $stmt = $pdo->prepare("SELECT achievement_id FROM user_achievements WHERE user_id = ?");
-    $stmt->execute([$userId]);
-    $unlockedIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    $newlyUnlocked = [];
-
-    foreach ($achievements as $ach) {
-        if (in_array($ach['id'], $unlockedIds)) continue;
-
-        $unlocked = false;
-        $val = $ach['condition_value'];
-
-        switch ($ach['condition_type']) {
-            case 'wins':
-                if ($stats['total_wins'] >= $val) $unlocked = true;
-                break;
-            case 'games_played':
-                if ($stats['total_games_played'] >= $val) $unlocked = true;
-                break;
-            case 'friends_added':
-                // Query count
-                $c = $pdo->prepare("SELECT COUNT(*) FROM friendships WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'");
-                $c->execute([$userId, $userId]);
-                if ($c->fetchColumn() >= $val) $unlocked = true;
-                break;
-        }
-
-        if ($unlocked) {
-            try {
-                $pdo->prepare("INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)")->execute([$userId, $ach['id']]);
-                createNotification($pdo, $userId, 'achievement_unlocked', null, $ach['id']);
-                TelegramLogger::log("Achievement Unlocked!", ['user' => $userId, 'achievement' => $ach['code']]);
-                $newlyUnlocked[] = $ach;
-            } catch (Exception $e) {}
-        }
-    }
-    
-    return $newlyUnlocked;
-}
 
 // === INVITE SYSTEM ===
 
@@ -483,21 +442,3 @@ function action_mark_notification_read($pdo, $user, $data) {
     echo json_encode(['status' => 'ok']);
 }
 
-// === HELPER ===
-
-function createNotification($pdo, $userId, $type, $actorId = null, $relatedId = null) {
-    try {
-        $pdo->prepare("INSERT INTO notifications (user_id, type, actor_user_id, related_id) VALUES (?, ?, ?, ?)")
-            ->execute([$userId, $type, $actorId, $relatedId]);
-    } catch (Exception $e) {
-        // Notifications are non-critical, catch silently but log
-        TelegramLogger::logError('database', [
-            'message' => $e->getMessage(),
-            'code' => $e->getCode()
-        ], [
-            'user_id' => $userId,
-            'action' => 'create_notification',
-            'type' => $type
-        ]);
-    }
-}
