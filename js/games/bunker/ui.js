@@ -23,26 +23,106 @@ window.BUNKER_ROUND_NAMES = {
     luggage: 'Багаж', facts: 'Факт', condition: 'Особое условие'
 };
 
+window.sendGameAction = async function (type, data = {}) {
+    console.log('[Debug] sendGameAction called:', type, data);
+    try {
+        await window.apiRequest({
+            action: 'game_action',
+            type: type,
+            ...data
+        });
+    } catch (e) {
+        console.error("Game Action Error:", e);
+        window.showAlert("Ошибка", e.message, 'error');
+    }
+};
+
+/* --- Popups --- */
+
+window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {
+    var overlay = document.createElement('div');
+    overlay.className = 'bunker-reveal-overlay animate__animated animate__zoomIn';
+    overlay.innerHTML = `
+        <div class="reveal-content text-center">
+            <div class="reveal-header mb-3">
+                <img src="${photoUrl || ''}" class="reveal-avatar rounded-circle border border-4 border-white shadow-lg mb-3">
+                <h2 class="text-white fw-bold mb-0">${playerName}</h2>
+                <div class="text-white-50 small text-uppercase letter-spacing-2">РАСКРЫВАЕТ КАРТУ</div>
+            </div>
+            
+            <div class="reveal-card glass-card p-4 mx-auto animate__animated animate__flipInX animate__delay-1s">
+                <div class="reveal-icon mb-2 display-1 text-primary">${window.BUNKER_ICONS[cardType]}</div>
+                <div class="reveal-type text-uppercase text-muted fw-bold small mb-2">${window.BUNKER_ROUND_NAMES[cardType]}</div>
+                <div class="reveal-text h2 fw-bold text-dark mb-0">${cardText}</div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Play sound? window.playSound('reveal');
+
+    setTimeout(function () {
+        overlay.classList.remove('animate__zoomIn');
+        overlay.classList.add('animate__fadeOut');
+        setTimeout(function () { overlay.remove(); }, 500);
+    }, 4000);
+};
+
 /* --- Main Render Router --- */
 
 window.renderRoundPhase = function (wrapper, state, res) {
     var myId = String(res.user.id);
     var myCards = state.players_cards ? state.players_cards[myId] : null;
+    var activePlayerId = String(state.current_player_id);
+    var isMyTurn = activePlayerId === myId;
+
+    // Default to 'others' (Survivors) if not set
+    if (!window.bunkerState.activeTab) window.bunkerState.activeTab = 'others';
+
+    // Get active player name
+    var activePlayer = res.players.find(function (p) { return String(p.id) === activePlayerId; });
+    var activeName = activePlayer ? activePlayer.first_name : 'Unknown';
 
     wrapper.innerHTML = `
         <div class="bunker-main-layout">
             ${window.renderBunkerHeader(state)}
             
-            <div class="bunker-tabs">
-                <button class="bunker-tab ${window.bunkerState.activeTab === 'me' ? 'active' : ''}" onclick="window.switchBunkerTab('me')"><i class="bi bi-person-vcard-fill me-2"></i>Досье</button>
-                <button class="bunker-tab ${window.bunkerState.activeTab === 'others' ? 'active' : ''}" onclick="window.switchBunkerTab('others')"><i class="bi bi-people-fill me-2"></i>Выжившие</button>
+            <!-- Floating Turn Indicator -->
+            <div class="turn-indicator-floating ${isMyTurn ? 'my-turn' : ''}">
+                <div class="turn-avatar-ring">
+                    <img src="${activePlayer?.photo_url || ''}" onerror="this.src='data:image/svg+xml;base64,...'" class="turn-avatar">
+                </div>
+                <div class="turn-info">
+                    <div class="turn-label text-uppercase small letter-spacing-1 opacity-75">Ходит сейчас</div>
+                    <div class="turn-name fw-bold">${isMyTurn ? 'ВЫ' : activeName}</div>
+                </div>
+                 ${isMyTurn ? '<div class="turn-badge pulsing"><i class="bi bi-lightning-fill"></i></div>' : ''}
+            </div>
+
+            <!-- Segmented Control Tabs -->
+            <div class="bunker-segmented-control mb-3 mx-3">
+                <button class="segment-btn ${window.bunkerState.activeTab === 'others' ? 'active' : ''}" onclick="window.switchBunkerTab('others')">
+                    <i class="bi bi-people-fill me-2"></i>Выжившие
+                </button>
+                <button class="segment-btn ${window.bunkerState.activeTab === 'me' ? 'active' : ''}" onclick="window.switchBunkerTab('me')">
+                    <i class="bi bi-person-vcard-fill me-2"></i>Досье
+                </button>
+            </div>
+
+            <div class="bunker-status-text text-center mb-2 small text-muted">
+                 ${state.turn_phase === 'reveal'
+            ? (isMyTurn ? 'Выберите характеристику для раскрытия' : `Ожидаем хода игрока...`)
+            : 'Время обсуждения и споров...'}
             </div>
 
             <div class="bunker-content">
-                ${window.bunkerState.activeTab === 'me' ? window.renderMyCards(myCards, state) : window.renderOtherPlayers(res.players, state, myId)}
+                ${window.bunkerState.activeTab === 'me'
+            ? window.renderMyCards(myCards, state, isMyTurn)
+            : window.renderOtherPlayers(res.players, state, myId, activePlayerId)}
             </div>
 
-            ${window.renderFooterActions(res.is_host, state)}
+            ${window.renderFooterActions(res.is_host, state, isMyTurn)}
         </div>
     `;
 };
@@ -57,7 +137,8 @@ window.renderBunkerHeader = function (state) {
 
     return `
         <div class="bunker-header-card">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="bunker-round-badge">Раунд ${state.current_round}</div>
                 <div class="bunker-places-badge">Мест: ${state.bunker_places}</div>
             </div>
@@ -74,7 +155,7 @@ window.renderBunkerHeader = function (state) {
             </div>
 
             ${latestFeature ? `
-                <div class="bunker-feature-alert mt-3 glass-card">
+                <div class="bunker-feature-alert mt-3 glass-card clickable" onclick="window.showAlert('Бункер: ${latestFeature.text.replace(/'/g, "\\'")}', 'В этом раунде была открыта новая зона или факт о бункере.')">
                     <span class="feature-icon"><i class="bi bi-bricks text-warning"></i></span>
                     <span class="feature-text"><b>Бункер:</b> ${latestFeature.text || latestFeature}</span>
                 </div>
@@ -85,7 +166,7 @@ window.renderBunkerHeader = function (state) {
 
 /* --- My Cards Component --- */
 
-window.renderMyCards = function (myCards, state) {
+window.renderMyCards = function (myCards, state, isMyTurn) {
     if (!myCards) return '<div class="bunker-empty">Данные загружаются...</div>';
 
     var html = `<div class="bunker-grid pb-5">`;
@@ -101,15 +182,24 @@ window.renderMyCards = function (myCards, state) {
         var isRevealed = cardData.revealed;
         var tags = cardData.tags || [];
 
+        // Logic for Locking
         var isLocked = false;
-        if (state.current_round === 0) {
-            if (!['professions', 'facts', 'luggage', 'condition'].includes(key)) isLocked = true;
+
+        // 1. If revealed, not locked (visible).
+        // 2. If not revealed:
+        //    - It must be my turn.
+        //    - It must be 'reveal' phase.
+        //    - (Optional) Round restrictions can apply here too.
+
+        if (!isRevealed) {
+            if (!isMyTurn) isLocked = true;
+            else if (state.turn_phase !== 'reveal') isLocked = true;
         }
 
         var statusClass = 'bunker-trait-card';
         if (isRevealed) statusClass += ' revealed';
         else if (isLocked) statusClass += ' locked';
-        else statusClass += ' active';
+        else statusClass += ' active pulse-border'; // New class for clickable
 
         var tagsHtml = '';
         if (isRevealed && tags.length > 0) {
@@ -131,8 +221,14 @@ window.renderMyCards = function (myCards, state) {
                     ${cardSub ? `<div class="trait-sub">${cardSub}</div>` : ''}
                     ${tagsHtml}
                 </div>
-                ${(!isRevealed && !isLocked) ? '<div class="tap-hint mt-2 text-primary small fw-bold">Нажмите, чтобы раскрыть</div>' : ''}
-                ${(!isRevealed && isLocked) ? '<div class="mt-2 text-muted small">Показать всем можно будет позже</div>' : ''}
+                ${(!isRevealed && !isLocked) ? '<div class="tap-hint mt-2 text-primary small fw-bold">НАЖМИ ЧТОБЫ РАСКРЫТЬ</div>' : ''}
+                ${(!isRevealed && isLocked) ? '<div class="mt-2 text-muted small">Ждите своего хода</div>' : ''}
+                
+                ${(isRevealed && isMyTurn && window.getAbilityForTags(tags)) ?
+                `<button class="btn btn-sm btn-outline-primary w-100 rounded-pill mt-2" onclick="event.stopPropagation(); window.triggerAbility('${key}', '${window.getAbilityForTags(tags)}')">
+                        ${window.getAbilityLabel(window.getAbilityForTags(tags))}
+                     </button>`
+                : ''}
             </div>
         `;
     });
@@ -141,14 +237,68 @@ window.renderMyCards = function (myCards, state) {
     return html;
 };
 
+/* --- Abilities Helpers --- */
+
+window.getAbilityForTags = function (tags) {
+    // Only items (medkit) give active abilities, not professions
+    if (tags.includes('medkit')) return 'heal';
+    if (tags.includes('gun')) return 'threat';
+    return null;
+};
+
+window.getAbilityLabel = function (type) {
+    if (type === 'heal') return '❤️ Вылечить';
+    if (type === 'threat') return '🔫 Угрожать';
+    return 'Использовать';
+};
+
+window.triggerAbility = function (cardKey, actionType) {
+    // Show Target Picker
+    var players = window.bunkerState.lastRes.players.filter(p => !window.bunkerState.lastServerState.kicked_players.includes(String(p.id)));
+
+    // Choose Target Overlay
+    var overlay = document.createElement('div');
+    overlay.className = 'bunker-reveal-overlay animate__animated animate__fadeIn'; // Reuse overlay style
+    overlay.style.pointerEvents = 'auto'; // Enable clicks
+    overlay.innerHTML = `
+        <div class="bg-white p-4 rounded-4 shadow-lg" style="width: 90%; max-width: 400px;">
+            <h3 class="fw-bold mb-3 text-center">Выберите цель</h3>
+            <div class="d-grid gap-2">
+                ${players.map(p => `
+                    <button class="btn btn-outline-dark text-start py-2" onclick="window.sendAbility('${cardKey}', '${actionType}', '${p.id}', this)">
+                        <img src="${p.photo_url}" class="rounded-circle me-2" style="width:30px; height:30px;">
+                        ${p.first_name}
+                    </button>
+                `).join('')}
+            </div>
+            <button class="btn btn-secondary w-100 mt-3 rounded-pill" onclick="this.closest('.bunker-reveal-overlay').remove()">Отмена</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+};
+
+window.sendAbility = function (cardKey, actionType, targetId, btn) {
+    btn.innerHTML = 'Отправка...';
+    // Remove overlay
+    document.querySelector('.bunker-reveal-overlay').remove();
+
+    window.sendGameAction('use_ability', {
+        action: actionType,
+        card_key: cardKey,
+        target_id: targetId
+    });
+};
+
 /* --- Other Players Component --- */
 
-window.renderOtherPlayers = function (players, state, myId) {
+window.renderOtherPlayers = function (players, state, myId, activePlayerId) {
     var html = `<div class="bunker-grid pb-5">`;
 
     players.forEach(function (p) {
         if (String(p.id) === String(myId)) return;
         if (state.kicked_players.includes(String(p.id))) return;
+
+        var isActive = String(p.id) === String(activePlayerId);
 
         var pCards = state.players_cards[p.id];
         var knownTraits = '';
@@ -174,10 +324,10 @@ window.renderOtherPlayers = function (players, state, myId) {
         if (!knownTraits) knownTraits = `<div class="text-muted small">Информации пока нет</div>`;
 
         html += `
-            <div class="survivor-item mb-3">
+            <div class="survivor-item mb-3 ${isActive ? 'border-primary shadow' : ''}" style="${isActive ? 'border-width:2px;' : ''}">
                 <div class="survivor-head d-flex align-items-center mb-3">
-                    <img src="${p.photo_url || ''}" class="survivor-avatar rounded-circle border border-2 border-white shadow-sm me-3" style="width:40px; height:40px;">
-                    <div class="survivor-name fw-bold">${p.first_name}</div>
+                    <img src="${p.photo_url || ''}" class="survivor-avatar rounded-circle border border-2 ${isActive ? 'border-primary' : 'border-white'} shadow-sm me-3" style="width:40px; height:40px;">
+                    <div class="survivor-name fw-bold">${p.first_name} ${isActive ? '<span class="badge bg-primary ms-2">ХОДИТ</span>' : ''}</div>
                 </div>
                 <div class="survivor-body">
                     ${knownTraits}
@@ -198,6 +348,12 @@ window.renderVoteQuery = function (wrapper, state, res) {
 
     wrapper.innerHTML = `
         <div class="bunker-voting-screen text-center">
+             <div class="position-absolute top-0 start-0 p-3" style="z-index:100">
+                <button class="btn btn-outline-light btn-sm rounded-pill" onclick="window.bunkerFinish()">
+                    <i class="bi bi-chevron-left"></i> Выход
+                </button>
+             </div>
+             
             <div class="voting-header mb-5">
                 <h1 class="display-1 text-primary"><i class="bi bi-box-seam-fill"></i></h1>
                 <h2 class="fw-bold">Голосование</h2>
@@ -221,10 +377,17 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
     var amIKicked = state.kicked_players.includes(myId);
 
     var html = `
-        <div class="bunker-voting-screen px-4">
-            <div class="text-center mb-4">
+        <div class="bunker-voting-screen px-4 pb-5"> 
+            <!-- Removed Top Exit Button -->
+            <div class="text-center mb-4 pt-4">
                 <h2 class="fw-bold">${isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?"}</h2>
                 ${isRevote ? `<div class="alert alert-warning py-2 small fw-bold mt-2">При повторной ничьей - случайный вылет!</div>` : ''}
+                
+                ${res.is_host ? `
+                    <button class="btn btn-sm btn-outline-warning mt-2" onclick="window.sendGameAction('force_skip_voting')">
+                        <i class="bi bi-fast-forward-fill"></i> Завершить голосование
+                    </button>
+                ` : ''}
             </div>
     `;
 
@@ -261,7 +424,14 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
         html += `</div>`;
     }
 
-    html += `</div>`;
+    html += `
+        <div class="mt-4 pb-4">
+            <button class="btn btn-outline-secondary btn-sm rounded-pill w-100 py-3 fw-bold" onclick="window.bunkerFinish(event)">
+                <i class="bi bi-chevron-left"></i> Выйти из игры
+            </button>
+        </div>
+    </div>`;
+
     wrapper.innerHTML = html;
 };
 
@@ -280,11 +450,14 @@ window.renderVoteResults = function (wrapper, state, res) {
                 ${results.is_random ? `<div class="badge bg-warning text-dark mt-2">Случайный жребий</div>` : ''}
             </div>
             
-            <div class="mt-5 px-4">
+            <div class="mt-5 px-4 mb-5">
                 ${res.is_host ?
             `<button class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold" onclick="window.sendGameAction('next_phase')">Следующий раунд ➡️</button>` :
             `<div class="text-muted pulse fw-bold">Ждем хоста...</div>`
         }
+                <button class="btn btn-link text-muted mt-4 text-decoration-none w-100" onclick="window.bunkerFinish(event)">
+                    Выйти в лобби
+                </button>
             </div>
         </div>
     `;
@@ -366,11 +539,123 @@ window.renderStories = function (players, state) {
     }).join('');
 };
 
-window.renderFooterActions = function (isHost, state) {
-    if (!isHost) return `<div class="bunker-footer-wait">Ожидание хоста... <span onclick="window.bunkerFinish(event)" class="text-decoration-underline pointer">Выйти</span></div>`;
-    return `
-        <div class="bunker-host-controls pb-4">
-            <button class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold shadow-lg" onclick="window.sendGameAction('next_phase')">Следующая фаза ➡️</button>
+window.renderFooterActions = function (isHost, state, isMyTurn) {
+    // Only show in Reveal/Discussion phases
+    if (state.turn_phase !== 'reveal' && state.turn_phase !== 'discussion') return '';
+
+    let buttons = '';
+
+    // -- 1. ADMIN ACTIONS --
+    // Only Admin (Host), only if NOT my turn, only in Reveal
+    if (isHost && !isMyTurn && state.turn_phase === 'reveal') {
+        buttons += `
+            <button class="action-btn-circle warning" onclick="window.sendGameAction('end_turn')" title="Пропустить ход игрока">
+                <i class="bi bi-skip-forward-fill"></i>
+            </button>
+            <div class="action-label">Пропуск</div>
+        `;
+    }
+
+    // Only Admin (Host), in Discussion (start vote)
+    if (isHost && state.turn_phase === 'discussion') {
+        buttons += `
+            <button class="action-btn-circle success pulsing" onclick="window.sendGameAction('end_turn')" title="Начать голосование">
+                <i class="bi bi-play-fill" style="font-size: 1.5rem;"></i>
+            </button>
+            <div class="action-label">Голосовать</div>
+        `;
+    }
+
+    // -- 2. PLAYER ACTIONS (End Turn) --
+    // Only Active Player, in Discussion
+    if (isMyTurn && state.turn_phase === 'discussion') {
+        buttons += `
+            <button class="action-btn-circle success" onclick="window.sendGameAction('end_turn')">
+                <i class="bi bi-check-lg" style="font-size: 1.5rem;"></i>
+            </button>
+            <div class="action-label">Завершить</div>
+        `;
+    }
+
+    // -- 3. EXIT BUTTON (Always available) --
+    let exitButton = `
+        <div class="action-group">
+            <button class="action-btn-circle secondary" onclick="window.bunkerFinish()">
+                <i class="bi bi-door-open-fill"></i>
+            </button>
+            <div class="action-label">Выход</div>
         </div>
     `;
+
+    return `
+        <div class="bunker-footer-bar">
+            <div class="footer-actions-container">
+                ${exitButton}
+                
+                ${buttons ? `<div class="action-divider"></div>` : ''}
+                
+                ${buttons ? `<div class="action-group">${buttons}</div>` : ''}
+            </div>
+        </div>
+    `;
+};
+
+window.renderTieReveal = function (wrapper, state, res) {
+    var myId = String(res.user.id);
+    var isCandidate = state.tie_candidates && state.tie_candidates.includes(myId);
+    
+    var html = `
+        <div class="bunker-voting-screen px-4 pb-5 pt-5 text-center">
+            <h1 class="display-3 mb-4">⚖️</h1>
+            <h2 class="fw-bold mb-3">НИЧЬЯ!</h2>
+            <div class="alert alert-info rounded-4 shadow-sm mb-4">
+                Кандидаты должны раскрыть по одной дополнительной карте (Багаж или Факт), чтобы склонить чашу весов в свою пользу!
+            </div>
+    `;
+
+    if (isCandidate) {
+        // Find which cards are NOT revealed yet among Facts/Luggage
+        var pCards = state.players_cards[myId];
+        var options = ['facts', 'luggage'].filter(k => pCards[k] && !pCards[k].revealed);
+        
+        if (options.length === 0) {
+            html += `<div class="pulse fw-bold">Все карты раскрыты. Ожидаем остальных...</div>`;
+        } else {
+            html += `<div class="d-grid gap-3">`;
+            options.forEach(k => {
+                html += `
+                    <button class="btn btn-primary btn-lg rounded-pill py-3 fw-bold" onclick="window.sendGameAction('reveal_card', {card_type: '${k}'})">
+                        Раскрыть: ${window.BUNKER_ROUND_NAMES[k] || k}
+                    </button>
+                `;
+            });
+            html += `</div>`;
+        }
+    } else {
+        html += `
+            <div class="vote-status-msg pulse">
+                Кандидаты выбирают карты...
+            </div>
+        `;
+    }
+
+    if (res.is_host) {
+        html += `
+            <div class="mt-4">
+                <button class="btn btn-outline-warning btn-sm rounded-pill px-4" onclick="window.sendGameAction('skip_tie_reveal')">
+                    Пропустить (Сразу к голосованию)
+                </button>
+            </div>
+        `;
+    }
+
+    html += `
+        <div class="mt-5">
+            <button class="btn btn-link text-muted text-decoration-none" onclick="window.bunkerFinish(event)">
+                Выйти в лобби
+            </button>
+        </div>
+    </div>`;
+
+    wrapper.innerHTML = html;
 };

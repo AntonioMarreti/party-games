@@ -18,6 +18,14 @@ function getInitialState() {
     return [
         'phase' => 'briefing',
         'current_round' => 0,
+        
+        // Turn-Based Mechanics
+        'active_player_index' => 0, // Index in aliveIds array
+        'current_player_id' => null, // Explicit ID for easier frontend checks
+        'turn_phase' => 'reveal', // 'reveal' -> 'discussion' -> 'next'
+        'timer_start' => 0,
+        'turn_queue' => [], // List of user IDs for the current round order
+        
         'catastrophe' => [],
         'players_cards' => [],
         'bunker_places' => 0,
@@ -50,49 +58,49 @@ function handleGameAction($pdo, $room, $user, $postData) {
     $type = $postData['type'];
     $userId = (string)$user['id'];
     
-    $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players']);
+    if ($state['current_player_id'] && $userId !== strval($state['current_player_id']) && $room['is_host']) {
+         $stmtB = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+         $stmtB->execute([$room['id'], $state['current_player_id']]);
+         $isBot = $stmtB->fetchColumn();
+         if ($isBot) {
+             $userId = strval($state['current_player_id']);
+         }
+    }
+    
+    $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
     $aliveCount = count($aliveIds);
 
     // === 1. ИНИЦИАЛИЗАЦИЯ ===
     if ($type === 'init_bunker' && empty($state['players_cards'])) {
         if (!$room['is_host']) return;
-        
         $json = file_get_contents(BUNKER_PACK);
         $data = json_decode($json, true);
         $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ?");
         $stmt->execute([$room['id']]);
         $allIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
+        shuffle($allIds);
+        $aliveIds = array_map('strval', $allIds);
         $scenario = $data['catastrophes'][array_rand($data['catastrophes'])];
         $state['catastrophe'] = $scenario;
         $state['bunker_places'] = ceil(count($allIds) * $scenario['survival_rate']);
-        $state['game_mode'] = $postData['mode'] ?? 'normal'; // Save mode
-        
-        // --- NEW: Init Features & Threats ---
+        $state['game_mode'] = $postData['mode'] ?? 'normal';
         $feats = $data['bunker_features'] ?? [];
         shuffle($feats);
         $state['bunker_features'] = array_slice($feats, 0, 5);
         $state['revealed_features'] = [];
-        
-        // Reveal 1st feature immediately (Round 0)
         if (!empty($state['bunker_features'])) {
              $state['revealed_features'][] = $state['bunker_features'][0];
         }
-
         $threats = $data['threats'] ?? [];
         shuffle($threats);
-        $state['threats'] = array_slice($threats, 0, 2); // Pick 2 random threats
-        // -------------------------------------
-
+        $state['threats'] = array_slice($threats, 0, 2); 
         $state['players_cards'] = [];
-        
         $cats = array_keys($data['cards']);
-        foreach ($allIds as $uid) {
+        foreach ($aliveIds as $uid) {
             $uid = (string)$uid;
             $cards = [];
             foreach ($cats as $cat) {
                 $cardObj = $data['cards'][$cat][array_rand($data['cards'][$cat])];
-                // Ensure legacy compatibility if some cards are simple strings
                 if (is_string($cardObj)) {
                     $cards[$cat] = ['text' => $cardObj, 'revealed' => false, 'tags' => []];
                 } else {
@@ -103,136 +111,179 @@ function handleGameAction($pdo, $room, $user, $postData) {
             $cards['condition'] = ['data' => $cond, 'revealed' => false];
             $state['players_cards'][$uid] = $cards;
         }
-        
         $state['current_round'] = 0;
-        $state['phase'] = 'round';
-        foreach ($state['players_cards'] as &$pc) { $pc['professions']['revealed'] = true; }
-        
-        updateGameState($room['id'], $state);
-        return ['status' => 'ok'];
-    }
-
-    // === 2. РАСКРЫТИЕ КАРТЫ (СВОБОДНЫЙ РЕЖИМ) ===
-    if ($type === 'reveal_card') {
-        $cardType = $postData['card_type'];
-        $currentRound = (int)($state['current_round'] ?? 0);
-        
-        // В раунде 0 можно только профессию, факт, багаж.
-        // В раундах 1+ можно ВСЁ.
-        $canReveal = true;
-        if ($currentRound === 0) {
-            if (!in_array($cardType, ['professions', 'facts', 'luggage', 'condition'])) {
-                $canReveal = false;
-            }
-        }
-        // Removed block for condition
-
-        // Если это фаза ничьей - можно только кандидатам и только факт/багаж
-        if ($state['phase'] === 'tie_reveal') {
-            if (!in_array($userId, $state['tie_candidates'])) return ['status' => 'error', 'message' => 'Не вы кандидат'];
-            if (!in_array($cardType, ['facts', 'luggage'])) return ['status' => 'error', 'message' => 'Только Факт или Багаж'];
-            
-            if (isset($state['players_cards'][$userId][$cardType])) {
-                $state['players_cards'][$userId][$cardType]['revealed'] = true;
-                $state['tie_revealed_count']++;
-                if ($state['tie_revealed_count'] >= count($state['tie_candidates'])) {
-                    $state['phase'] = 'tie_voting';
-                    $state['votes'] = [];
-                }
-                updateGameState($room['id'], $state);
-                return ['status' => 'ok'];
-            }
-        }
-
-        if (!$canReveal) return ['status' => 'error', 'message' => "Рано!"];
-        
-        if (isset($state['players_cards'][$userId][$cardType])) {
-            $state['players_cards'][$userId][$cardType]['revealed'] = true;
-            updateGameState($room['id'], $state);
-            return ['status' => 'ok'];
-        }
-    }
-
-    // === 3. СМЕНА ФАЗЫ ===
-    if ($type === 'next_phase') {
-        if (!$room['is_host']) return;
-        $round = $state['current_round'];
-        
-        // ПРОВЕРКА НА АВТО-ПОБЕДУ
-        // Если мест хватает всем живым -> сразу финал
-        if ($aliveCount <= $state['bunker_places']) {
-            $state['phase'] = 'outro';
-            updateGameState($room['id'], $state);
-            return ['status' => 'ok'];
-        }
-
-        if ($state['phase'] === 'round') {
-            if ($ROUNDS_CONFIG[$round]['vote'] === 'mandatory') {
-                $state['phase'] = 'voting';
-                $state['votes'] = [];
-            } else {
-                $state['phase'] = 'vote_query';
-                $state['vote_query_result'] = [];
-            }
-        }
-        else if ($state['phase'] === 'vote_results') {
-            goToNextRound($state);
-        }
-        
-        updateGameState($room['id'], $state);
-        return ['status' => 'ok'];
-    }
-
-    // === 4. ОПРОС ===
-    if ($type === 'vote_query_answer') {
-        if (!in_array($userId, $aliveIds)) return;
-        $state['vote_query_result'][$userId] = $postData['answer'];
-        
-        if (count($state['vote_query_result']) >= $aliveCount) {
-            $yes = 0; $no = 0;
-            foreach ($state['vote_query_result'] as $v) ($v === 'yes') ? $yes++ : $no++;
-            if ($yes > $no) {
-                $state['phase'] = 'voting';
-                $state['votes'] = [];
-            } else {
-                goToNextRound($state);
-            }
-        }
-        updateGameState($room['id'], $state);
-        return ['status' => 'ok'];
-    }
-
-    // === 5. ГОЛОСОВАНИЕ ===
-    if ($type === 'vote_kick') {
-        if (!in_array($userId, $aliveIds)) return;
-        
-        $targetId = (string)$postData['target_id'];
-        
-        if ($state['phase'] === 'tie_voting') {
-            if (!in_array($targetId, $state['tie_candidates'])) return ['status' => 'error', 'message' => 'Только за кандидатов!'];
-        }
-
-        $state['votes'][$userId] = $targetId;
-        
-        if (count($state['votes']) >= $aliveCount) {
-            processVotingResults($state);
-        }
-        
-        updateGameState($room['id'], $state);
-        return ['status' => 'ok'];
-    }
-
-    if ($type === 'force_finish_voting') {
-        if (!$room['is_host']) return;
-        processVotingResults($state);
+        $state['turn_queue'] = [];
+        $state['active_player_index'] = -1;
+        $state['current_player_id'] = null;
+        $state['phase'] = 'intro';
+        $state['turn_phase'] = 'intro';
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
     
-    if ($type === 'skip_tie_reveal') {
+    if ($type === 'finish_intro') {
         if (!$room['is_host']) return;
-        $state['phase'] = 'tie_voting';
-        $state['votes'] = [];
+        if ($state['phase'] !== 'intro') return;
+        $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players']);
+        $state['current_round'] = 1;
+        $state['turn_queue'] = $aliveIds;
+        $state['active_player_index'] = 0;
+        $state['current_player_id'] = $aliveIds[0];
+        $state['phase'] = 'round';
+        $state['turn_phase'] = 'reveal';
+        $state['timer_start'] = time();
+        $state['history'][] = ['type' => 'system', 'text' => 'Игра началась! Раунд 1.'];
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    // === SERVER TICK (Bot Logic) ===
+    if ($type === 'tick') {
+        if ($state['phase'] === 'round' && $state['turn_phase'] === 'reveal') {
+            $currentPlayerId = $state['current_player_id'];
+            $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+            $stmt->execute([$room['id'], $currentPlayerId]);
+            if ($stmt->fetchColumn()) {
+                $elapsed = time() - (int)($state['timer_start'] ?? 0);
+                if ($elapsed >= 2) { 
+                    $cards = $state['players_cards'][$currentPlayerId] ?? [];
+                    $candidates = [];
+                    foreach ($cards as $key => $c) {
+                        if (is_array($c) && isset($c['revealed']) && !$c['revealed']) $candidates[] = $key;
+                    }
+                    if (!empty($candidates)) {
+                        $toReveal = $candidates[array_rand($candidates)];
+                        $state['players_cards'][$currentPlayerId][$toReveal]['revealed'] = true;
+                        $state['history'][] = [
+                            'type' => 'reveal', 'user_id' => $currentPlayerId, 'card_type' => $toReveal,
+                            'text' => $state['players_cards'][$currentPlayerId][$toReveal]['text'] ?? '???'
+                        ];
+                    }
+                    $state['turn_phase'] = 'discussion';
+                    $state['timer_start'] = time();
+                    updateGameState($room['id'], $state);
+                    return ['status' => 'ok', 'action' => 'bot_reveal'];
+                }
+            }
+        }
+        
+        if ($state['phase'] === 'round' && $state['turn_phase'] === 'discussion') {
+             $currentPlayerId = $state['current_player_id'];
+             $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+             $stmt->execute([$room['id'], $currentPlayerId]);
+             if ($stmt->fetchColumn()) {
+                 $elapsed = time() - (int)($state['timer_start'] ?? 0);
+                 if ($elapsed >= 4) { 
+                     $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
+                     $aliveIdsInQueue = array_values(array_intersect($state['turn_queue'], $aliveIds));
+                     $currentIndex = array_search($state['current_player_id'], $aliveIdsInQueue);
+                     if ($currentIndex === false) $currentIndex = -1;
+                     
+                     if ($currentIndex >= count($aliveIdsInQueue) - 1) {
+                        startVotingPhase($state);
+                     } else {
+                        $nextId = $aliveIdsInQueue[$currentIndex + 1];
+                        $state['active_player_index'] = $currentIndex + 1;
+                        $state['current_player_id'] = $nextId;
+                        $state['turn_phase'] = 'reveal';
+                        $state['timer_start'] = time();
+                     }
+                     updateGameState($room['id'], $state);
+                     return ['status' => 'ok', 'action' => 'bot_end_turn'];
+                 }
+             }
+        }
+        
+        if ($state['phase'] === 'voting' || $state['phase'] === 'tie_voting') {
+            $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
+            $candidates = ($state['phase'] === 'tie_voting') ? ($state['tie_candidates'] ?? []) : $aliveIds;
+            $botsChanged = false;
+            foreach ($aliveIds as $pid) {
+                if (isset($state['votes'][$pid])) continue;
+                $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+                $stmt->execute([$room['id'], $pid]);
+                if ($stmt->fetchColumn()) {
+                    $targets = array_diff($candidates, [$pid]);
+                    if (!empty($targets)) {
+                        $state['votes'][$pid] = $targets[array_rand($targets)];
+                        $botsChanged = true;
+                    }
+                }
+            }
+            if ($botsChanged) {
+                if (count($state['votes'] ?? []) >= count($aliveIds)) {
+                    processVotingResults($state, $aliveIds);
+                }
+                updateGameState($room['id'], $state);
+                return ['status' => 'ok', 'action' => 'bot_voted'];
+            }
+        }
+        return ['status' => 'ok'];
+    }
+
+    if ($type === 'reveal_card') {
+        $cardType = $postData['card_type'];
+        if ($state['phase'] === 'tie_reveal') {
+            if (!in_array($userId, $state['tie_candidates'])) return ['status' => 'error', 'message' => 'Не вы кандидат'];
+            if (!in_array($cardType, ['facts', 'luggage'])) return ['status' => 'error', 'message' => 'Только Факт или Багаж'];
+            $state['players_cards'][$userId][$cardType]['revealed'] = true;
+            $state['tie_revealed_count']++;
+            if ($state['tie_revealed_count'] >= count($state['tie_candidates'])) {
+                $state['phase'] = 'tie_voting'; $state['votes'] = [];
+            }
+            updateGameState($room['id'], $state);
+            return ['status' => 'ok'];
+        }
+        if ($state['phase'] !== 'round') return ['status' => 'error', 'message' => 'Не фаза раунда'];
+        if ($userId !== $state['current_player_id']) return ['status' => 'error', 'message' => 'Не ваш ход'];
+        if (isset($state['players_cards'][$userId][$cardType])) {
+             $state['players_cards'][$userId][$cardType]['revealed'] = true;
+             $state['turn_phase'] = 'discussion';
+             $state['timer_start'] = time();
+             $state['history'][] = ['type' => 'reveal', 'user_id' => $userId, 'card_type' => $cardType, 'text' => $state['players_cards'][$userId][$cardType]['text'] ?? '...'];
+             updateGameState($room['id'], $state);
+             return ['status' => 'ok'];
+        }
+    }
+    
+    if ($type === 'end_turn') {
+        if ($state['phase'] !== 'round') return ['status' => 'error'];
+        if ($userId !== $state['current_player_id'] && !$room['is_host']) return ['status' => 'error'];
+        $aliveIdsInQueue = array_values(array_intersect($state['turn_queue'], $aliveIds));
+        $currentIndex = array_search($state['current_player_id'], $aliveIdsInQueue);
+        if ($currentIndex >= count($aliveIdsInQueue) - 1) {
+            startVotingPhase($state);
+        } else {
+            $nextId = $aliveIdsInQueue[$currentIndex + 1];
+            $state['active_player_index'] = $currentIndex + 1;
+            $state['current_player_id'] = $nextId;
+            $state['turn_phase'] = 'reveal';
+            $state['timer_start'] = time();
+        }
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    if ($type === 'force_skip_voting') {
+        if (!$room['is_host']) return ['status' => 'error'];
+        $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
+        $candidates = ($state['phase'] === 'tie_voting') ? ($state['tie_candidates'] ?? []) : $aliveIds;
+        foreach ($aliveIds as $pid) {
+            if (!isset($state['votes'][$pid])) {
+                $targets = array_diff($candidates, [$pid]);
+                $state['votes'][$pid] = !empty($targets) ? $targets[array_rand($targets)] : $pid;
+            }
+        }
+        processVotingResults($state, $aliveIds);
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+    
+    if ($type === 'vote_kick') {
+        $targetId = (string)$postData['target_id'];
+        if ($state['phase'] === 'tie_voting' && !in_array($targetId, $state['tie_candidates'] ?? [])) return ['status' => 'error'];
+        $state['votes'][$userId] = $targetId;
+        if (count($state['votes']) >= count($aliveIds)) processVotingResults($state, $aliveIds);
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
@@ -240,57 +291,50 @@ function handleGameAction($pdo, $room, $user, $postData) {
     return ['status' => 'ok'];
 }
 
-function processVotingResults(&$state) {
-    if (empty($state['votes'])) {
-        goToNextRound($state);
-        return;
-    }
+function startVotingPhase(&$state) {
+    $state['phase'] = 'voting';
+    $state['votes'] = [];
+    $state['current_player_id'] = null;
+    $state['timer_start'] = time();
+}
 
-    $counts = array_count_values($state['votes']);
-    arsort($counts);
-    
-    $leaderId = array_key_first($counts);
-    $maxVotes = current($counts);
+function processVotingResults(&$state, $aliveIds) {
+    if (empty($state['votes'])) { goToNextRound($state, $aliveIds); return; }
+    $counts = array_count_values($state['votes']); arsort($counts);
+    $leaderId = array_key_first($counts); $maxVotes = current($counts);
     $candidates = array_keys($counts, $maxVotes);
-    
     if (count($candidates) > 1) {
         if ($state['phase'] === 'tie_voting') {
-            $leaderId = $candidates[array_rand($candidates)];
-            finishKick($state, $leaderId, $counts, true, true); // True for Tie, True for Random
-        } 
-        else {
-            $state['phase'] = 'tie_reveal';
-            $state['tie_candidates'] = $candidates;
-            $state['tie_revealed_count'] = 0;
-            $state['votes'] = [];
+            finishKick($state, $candidates[array_rand($candidates)], $counts, true, true);
+        } else {
+            $state['phase'] = 'tie_reveal'; $state['tie_candidates'] = $candidates;
+            $state['tie_revealed_count'] = 0; $state['votes'] = [];
         }
     } else {
-        finishKick($state, $leaderId, $counts, false, false);
+        finishKick($state, $leaderId, $counts, false);
     }
 }
 
 function finishKick(&$state, $leaderId, $counts, $wasTie, $isRandom = false) {
     $state['kicked_players'][] = (string)$leaderId;
-    $state['vote_results'] = [
-        'kicked_id' => $leaderId,
-        'counts' => $counts,
-        'is_tie' => $wasTie,
-        'is_random' => $isRandom // NEW: Flag for UI
-    ];
+    $state['vote_results'] = ['kicked_id' => $leaderId, 'counts' => $counts, 'is_tie' => $wasTie, 'is_random' => $isRandom];
     $state['phase'] = 'vote_results';
 }
 
-// ... (previous code)
-
-function goToNextRound(&$state) {
+function goToNextRound(&$state, $aliveIds) {
     if ($state['current_round'] < 5) {
         $state['current_round']++;
         $state['phase'] = 'round';
-        
-        // Reveal next feature
-        $r = $state['current_round'];
-        if (isset($state['bunker_features'][$r])) {
-            $state['revealed_features'][] = $state['bunker_features'][$r];
+        $state['votes'] = [];
+        $state['vote_results'] = [];
+        $queue = array_values($aliveIds);
+        shuffle($queue);
+        $state['turn_queue'] = $queue;
+        $state['active_player_index'] = 0;
+        $state['current_player_id'] = $queue[0];
+        $state['turn_phase'] = 'reveal';
+        if (isset($state['bunker_features'][$state['current_round']])) {
+            $state['revealed_features'][] = $state['bunker_features'][$state['current_round']];
         }
     } else {
         $state['phase'] = 'outro';
@@ -303,79 +347,35 @@ function resolveThreats(&$state) {
     $survivorsIds = array_keys(array_filter($state['players_cards'], function($k) use ($state) {
         return !in_array($k, $state['kicked_players']);
     }, ARRAY_FILTER_USE_KEY));
-    
-    // 1. Collect all tags from Survivors & Bunker
     $groupTags = [];
-    
-    // Survivors
     foreach ($survivorsIds as $uid) {
-        $cards = $state['players_cards'][$uid];
-        foreach ($cards as $k => $v) {
-            // Check 'tags' array
+        foreach ($state['players_cards'][$uid] as $v) {
             if (isset($v['tags']) && is_array($v['tags'])) {
                 foreach ($v['tags'] as $t) $groupTags[mb_strtolower($t)] = true;
             }
-            // Also keep 'text' for fallback or specific logic? Not needed for now.
         }
     }
-    
-    // Bunker Features
-    $features = $state['revealed_features'] ?? [];
-    foreach ($features as $f) {
+    foreach (($state['revealed_features'] ?? []) as $f) {
         if (isset($f['tags']) && is_array($f['tags'])) {
             foreach ($f['tags'] as $t) $groupTags[mb_strtolower($t)] = true;
         }
     }
-    
-    // 2. Resolve Each Threat
     foreach (($state['threats'] ?? []) as $threat) {
         $reqs = $threat['requirements'] ?? []; 
-        $matches = 0;
-        $matchedTags = [];
-        
+        $matches = 0; $matchedTags = [];
         foreach ($reqs as $req) {
-            // Requirements e.g. "Soldier", "Gun"
-            // Clean up: "Luggage.Gun" -> "gun"
-            $parts = explode('.', $req);
-            $cleanReq = mb_strtolower(end($parts));
-            
-            if (isset($groupTags[$cleanReq])) {
-                $matches++;
-                $matchedTags[] = $cleanReq;
-            }
+            $parts = explode('.', $req); $cleanReq = mb_strtolower(end($parts));
+            if (isset($groupTags[$cleanReq])) { $matches++; $matchedTags[] = $cleanReq; }
         }
-        
-        // Calculation Logic
-        // Base: 40%
-        // Per Survivor: +5%
-        // Per Match: +20%
-        
-        $chance = 40 + (count($survivorsIds) * 5);
-        $chance += ($matches * 20);
-        
-        if ($chance > 95) $chance = 95;
-        if ($chance < 5) $chance = 5;
-        
-        $roll = rand(0, 100);
-        $success = $roll < $chance;
-        
-        $resultText = $success 
-            ? "Группа объединила усилия и справилась." 
-            : "Вам не хватило специалистов или ресурсов.";
-            
-        if ($matches > 0) {
-            $resultText .= " (Использовано: " . implode(', ', $matchedTags) . ")";
-        }
-        
+        $chance = 40 + (count($survivorsIds) * 5) + ($matches * 20);
+        $chance = max(5, min(95, $chance));
+        $success = rand(0, 100) < $chance;
         $results[] = [
-            'title' => $threat['title'],
-            'desc' => $threat['desc'],
-            'success' => $success,
-            'result_text' => $resultText,
-            'chance' => $chance // debug info
+            'title' => $threat['title'], 'desc' => $threat['desc'], 'success' => $success,
+            'result_text' => ($success ? "Группа справилась." : "Не хватило ресурсов.") . ($matches > 0 ? " (Использовано: " . implode(', ', $matchedTags) . ")" : ""),
+            'chance' => $chance
         ];
     }
-    
     $state['threat_results'] = $results;
 }
 ?>

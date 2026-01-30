@@ -285,6 +285,20 @@ function render_blokus(res) {
 
     // 6. Check for Bot Turn
     checkBotTurn();
+
+    // SOUNDS: Check for turn change
+    if (blokusState.serverState.status === 'playing') {
+        const s = blokusState.serverState;
+        const myColor = blokusState.myColor;
+        const currentColor = s.turnOrder[s.currentTurnIndex];
+
+        // If it JUST became my turn (naive check: simple polling might re-trigger, 
+        // ideally we check previous state, but for now we rely on idempotency or "notification" type sounds)
+        if (myColor === currentColor && window.lastTurnIndex !== s.currentTurnIndex) {
+            window.audioManager.play('notification');
+            window.lastTurnIndex = s.currentTurnIndex;
+        }
+    }
 }
 
 async function checkBotTurn() {
@@ -369,6 +383,7 @@ async function checkBotTurn() {
 
                 // We do NOT clear the lock here on success, because we want to wait for the
                 // server to process and change the currentTurnIndex, which will naturally release the lock.
+                window.audioManager.play('move'); // Bot made a move
 
             } catch (e) {
                 console.error("[Bot] Error:", e);
@@ -475,3 +490,16 @@ window.setPieceFilter = function (num) {
 
 // Global Exposure
 window.render_blokus = render_blokus;
+
+// Hook into blokus actions for sounds (Monkey Patching or direct edit handlers.js would be better, but this is faster)
+const originalApply = window.blokusApplyMove;
+window.blokusApplyMove = async function () {
+    // We assume if this is called, button was enabled
+    window.audioManager.play('move');
+    if (originalApply) await originalApply();
+};
+
+const originalPieceSelect = window.selectPiece;
+// We need to catch where selectPiece is defined. It's likely in ui.js or handlers.js. 
+// Since we are editing blokus.js which is the entry point, we can wrap standard UI interactions here if exposed.
+

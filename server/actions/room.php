@@ -100,13 +100,14 @@ function action_leave_room($pdo, $user, $data) {
             // C. Delete Room Players (Cascade might handle this if FK, but do explicit)
             $pdo->prepare("DELETE FROM room_players WHERE room_id = ?")->execute([$roomId]);
             
-            // D. Delete Shadow Users (Clean up users table)
-            if (!empty($botIds)) {
-                $placeholders = implode(',', array_fill(0, count($botIds), '?'));
-                $pdo->prepare("DELETE FROM users WHERE id IN ($placeholders)")->execute($botIds);
-            }
+            // D. Delete Shadow Users (Clean up users table) - DISABLED FOR SINGLETON BOTS
+            // We now want bots to persist to keep their stats/achievements.
+            // if (!empty($botIds)) {
+            //    $placeholders = implode(',', array_fill(0, count($botIds), '?'));
+            //    $pdo->prepare("DELETE FROM users WHERE id IN ($placeholders)")->execute($botIds);
+            // }
             
-            TelegramLogger::logEvent('room_cleanup', "Cleaned Bot Room", ['room_id' => $roomId, 'bots_removed' => count($botIds)]);
+            TelegramLogger::logEvent('room_cleanup', "Cleaned Bot Room (Bots Persisted)", ['room_id' => $roomId, 'bots_in_room' => count($botIds)]);
         }
     }
 
@@ -126,6 +127,7 @@ function action_kick_player($pdo, $user, $data) {
 }
 
 function action_add_bot($pdo, $user, $data) {
+    global $currentUser;
     $room = getRoom($user['id']);
     if (!$room) sendError('No room');
     if (!$room['is_host']) sendError('Not host');
@@ -133,27 +135,61 @@ function action_add_bot($pdo, $user, $data) {
     // Check limit
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ?");
     $stmt->execute([$room['id']]);
-    if ($stmt->fetchColumn() >= 4) sendError('Room is full');
+    if ($stmt->fetchColumn() >= 12) sendError('Room is full (Max 12)');
 
     $difficulty = $data['difficulty'] ?? 'medium';
     if (!in_array($difficulty, ['easy', 'medium', 'hard'])) $difficulty = 'medium';
 
-    $botName = "Bot " . ucfirst($difficulty);
+    // Bot Pool Ranges
+    $ranges = [
+        'easy'   => [-100, -109],
+        'medium' => [-200, -209],
+        'hard'   => [-300, -309]
+    ];
+    
+    $range = $ranges[$difficulty];
+    $start = $range[0]; // e.g. -100
+    $end = $range[1];   // e.g. -109
+    
+    // We need to find valid USERS that have telegram_id in this range.
+    // AND are not already in the room.
+    
+    // 1. Get List of Bots currently in the room (user_id list)
+    $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
+    $stmt->execute([$room['id']]);
+    $existingBotUserIds = $stmt->fetchAll(PDO::FETCH_COLUMN); // These are users.id
+    
+    // 2. Find Available Candidates from Users table
+    // We search by telegram_id range, but select users.id
+    // Note: SQL BETWEEN is inclusive and usually expects min AND max.
+    // Since IDs are negative: -109 is min, -100 is max.
+    $min = min($start, $end);
+    $max = max($start, $end);
+    
+    $sql = "SELECT id FROM users WHERE telegram_id BETWEEN ? AND ? AND is_bot = 1";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$min, $max]);
+    $allPoolIds = $stmt->fetchAll(PDO::FETCH_COLUMN); // These are users.id
+    
+    $candidates = array_diff($allPoolIds, $existingBotUserIds);
+    
+    if (empty($candidates)) {
+        sendError("No more $difficulty bots available in pool!");
+    }
+    
+    // 3. Pick Random Candidate
+    // array_diff preserves keys, so re-index or use array_rand carefully
+    $botUserId = $candidates[array_rand($candidates)];
     
     try {
         $pdo->beginTransaction();
         
-        // 1. Create a Shadow User
-        // Use a random negative ID for bots to avoid telegram_id unique constraint collision (0)
-        $fakeTgId = -(time() + rand(100, 99999));
-        $pdo->prepare("INSERT INTO users (first_name, is_bot, photo_url, telegram_id) VALUES (?, 1, NULL, ?)")
-            ->execute([$botName, $fakeTgId]);
-        $botUserId = $pdo->lastInsertId();
-        
-        // 2. Add to Room
         $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_bot, bot_difficulty) VALUES (?, ?, 1, ?)")
             ->execute([$room['id'], $botUserId, $difficulty]);
             
+        // Log it
+        TelegramLogger::logEvent('room_event', "Added Bot to Room", ['room_id' => $room['id'], 'bot_id' => $botUserId, 'diff' => $difficulty]);
+        
         $pdo->commit();
         echo json_encode(['status' => 'ok', 'user_id' => $botUserId]);
         
@@ -253,13 +289,16 @@ function action_get_state($pdo, $user, $data) {
 function cleanupOldRooms($pdo) {
     if (rand(1, 20) !== 1) return; // 5% chance to run
     try {
-        // Delete rooms older than 24 hours
+        // 1. Delete old rooms (assuming FK Cascade might not exist)
+        // We use a multi-table delete or just delete orphans after.
+        // Let's delete rooms, then delete orphans.
+        
         $pdo->exec("DELETE FROM rooms WHERE created_at < (NOW() - INTERVAL 24 HOUR)");
-        // Orphaned players are not deleted here, but they will be safe.
-        // Better: Delete room_players for those rooms first? 
-        // FK constraints usually cascade, but let's be safe.
-        // Actually, if we delete room, room_players should cascade if defined.
-        // If not, we have zombies. Let's assume standard behavior for now.
+        
+        // 2. Delete orphaned room_players (where room_id no longer exists)
+        // This ensures bots (and humans) are removed from the mapping table if the room is gone.
+        $pdo->exec("DELETE FROM room_players WHERE room_id NOT IN (SELECT id FROM rooms)");
+        
     } catch (Exception $e) {
         // Ignore cleanup errors
     }

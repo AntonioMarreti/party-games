@@ -1,4 +1,12 @@
 // === ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ОШИБОК ===
+// --- Global Audio Triggers ---
+document.addEventListener('click', (e) => {
+    // Play sound for any button or link
+    if (window.audioManager && (e.target.closest('button') || e.target.closest('a') || e.target.closest('.btn') || e.target.closest('.clickable'))) {
+        window.audioManager.play('click');
+    }
+});
+
 window.onerror = function (msg, url, line, col, error) {
 
     return false;
@@ -37,10 +45,17 @@ function loadSettings() {
     applySettings();
 
     // Sync UI state
-    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled'];
+    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled'];
     switches.forEach(key => {
         const el = document.getElementById('setting-' + key);
-        if (el) el.checked = !!appSettings[key];
+        if (el) {
+            // Special case for sound, sync with audioManager if available
+            if (key === 'soundEnabled' && window.audioManager) {
+                el.checked = window.audioManager.enabled;
+            } else {
+                el.checked = !!appSettings[key];
+            }
+        }
     });
 }
 
@@ -377,6 +392,12 @@ window.handleReactions = function (events) {
         const key = ev.created_at + '_' + ev.user_id + '_' + ev.type;
         if (seenReactionIds.has(key)) return;
         seenReactionIds.add(key);
+
+        // Memory Leak Fix: Prune seenReactionIds if it gets too large
+        if (seenReactionIds.size > 500) {
+            const firstEntry = seenReactionIds.values().next().value;
+            seenReactionIds.delete(firstEntry);
+        }
 
         // Skip our own reactions (already shown locally and instantly)
         if (window.globalUser && ev.user_id == window.globalUser.id) return;
@@ -1078,10 +1099,7 @@ function renderPlayerList(players, containerId) {
 
     // Берем флаг хоста из глобального состояния приложения
     const amIHost = window.isHost;
-    const isBlokus = selectedGameId === 'blokus';
-    const MAX_SLOTS = isBlokus ? 4 : players.length;
-    // For other games, we just show list. For Blokus, we want fixed 4 slots visual if host?
-    // Actually, let's just append "Add Bot" button if slots < 4 and is Blokus.
+
 
     // Render Actual Players
     players.forEach(p => {
@@ -1123,8 +1141,16 @@ function renderPlayerList(players, containerId) {
         list.appendChild(div);
     });
 
-    // Render Empty Slots / Add Bot Button (Only for Blokus & Host & < 4 players)
-    if (isBlokus && amIHost && players.length < 4) {
+    // Render Empty Slots / Add Bot Button
+    const isBlokus = selectedGameId === 'blokus';
+    const isBunker = selectedGameId === 'bunker';
+
+    // Limits: Blokus = 4, Bunker = 12 (or more?), others = 0 (no bots supported yet)
+    let botLimit = 0;
+    if (isBlokus) botLimit = 4;
+    else if (isBunker) botLimit = 12;
+
+    if (amIHost && botLimit > 0 && players.length < botLimit) {
         const div = document.createElement('div');
         div.className = 'player-grid-item'; // Base layout class
 
@@ -1676,24 +1702,36 @@ async function loadGameScripts(files) {
             const cleanPath = file.split('?')[0];
             const isCss = cleanPath.endsWith('.css');
 
-            if (isCss) {
+            if (file.endsWith('.css')) {
                 // Handle CSS loading
                 const oldLink = document.querySelector(`link[href^="${cleanPath}"]`);
+                // If already loaded, don't re-append to avoid memory bloat
+                if (oldLink && !file.includes('?')) {
+                    resolve();
+                    return;
+                }
+
                 if (oldLink) oldLink.remove();
 
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
-                link.href = `${file}?v=${new Date().getTime()}`;
+                link.href = `${file}${file.includes('?') ? '' : '?v=' + new Date().getTime()}`;
                 link.onload = resolve;
                 link.onerror = reject;
                 document.head.appendChild(link);
             } else {
                 // Handle JS loading
                 const oldScript = document.querySelector(`script[src^="${cleanPath}"]`);
+                // If already loaded, don't re-append to avoid memory bloat
+                if (oldScript && !file.includes('?')) {
+                    resolve();
+                    return;
+                }
+
                 if (oldScript) oldScript.remove();
 
                 const script = document.createElement('script');
-                script.src = `${file}?v=${new Date().getTime()}`;
+                script.src = `${file}${file.includes('?') ? '' : '?v=' + new Date().getTime()}`;
                 script.onload = resolve;
                 script.onerror = reject;
                 document.head.appendChild(script);
@@ -2533,9 +2571,15 @@ async function addBot(difficulty) {
 }
 
 async function removeBot(userId) {
-    if (!await showConfirmation('Удалить бота?')) return;
-    await apiRequest({
-        action: 'remove_bot',
-        target_id: userId
-    });
+    showConfirmation(
+        'Удалить бота?',
+        'Вы уверены, что хотите кикнуть этого бота?',
+        async () => {
+            await apiRequest({
+                action: 'remove_bot',
+                target_id: userId
+            });
+        },
+        { confirmText: 'Удалить', isDanger: true }
+    );
 }

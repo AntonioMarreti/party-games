@@ -134,6 +134,7 @@
             const numEl = document.getElementById('cnt-number');
             if (count > 0 && numEl) {
                 numEl.innerText = count;
+                window.audioManager.play('click'); // Tick sound
             } else {
                 clearInterval(interval);
                 countdownActive = false;
@@ -144,9 +145,11 @@
                 if (window.BB_MECHANICS && window.BB_MECHANICS[task.type]) {
                     window.BB_MECHANICS[task.type](wrapper, task);
                     battleStartTime = performance.now();
+                    window.audioManager.play('pop'); // Game Start!
                 }
             }
         }, 1000);
+        window.audioManager.play('click'); // Pre-countdown tick
     }
 
     function renderSetup(wrapper, isHost) {
@@ -242,6 +245,10 @@
                 ${isCorrect ? '<i class="bi bi-check-lg text-success"></i>' : '<i class="bi bi-x-lg text-danger"></i>'}
             </div>
             <h2 class="fw-bold mb-1 text-center" style="color: ${isCorrect ? '#00b894' : '#d63031'}">${isCorrect ? 'Верно!' : 'Ошибка'}</h2>
+            <script>
+                if (${isCorrect}) window.audioManager.play('success');
+                else window.audioManager.play('error');
+            </script>
             <p class="text-muted mb-4 text-center fw-bold">${(myRes.time / 1000).toFixed(2)} сек</p>
             
             <div class="bb-glass-card p-4 text-center mb-4 mx-3">
@@ -290,6 +297,7 @@
             <div class="mb-4 animate__animated animate__bounceIn">
                 <div style="font-size: 80px; filter: drop-shadow(0 10px 20px rgba(255, 215, 0, 0.4));">🏆</div>
             </div>
+            <script>window.audioManager.play('win');</script>
             
             <h2 class="display-6 fw-bold mb-2 text-center" style="color: #2D3436;">Битва окончена!</h2>
             

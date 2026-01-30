@@ -3,7 +3,19 @@
  * Manages user interactions and server communication.
  * Using 'var' and explicit 'window' scope to allow multiple re-loads via dynamic script tags.
  */
-
+window.sendGameAction = async function (type, data = {}) {
+    try {
+        await window.apiRequest({
+            action: 'game_action',
+            type: type,
+            ...data
+        });
+        // Feedback?
+    } catch (e) {
+        console.error("Game Action Error:", e);
+        window.showAlert("Ошибка", e.message, 'error');
+    }
+};
 window.BUNKER_ROUND_NAMES = {
     professions: 'Профессия', biology: 'Биология', health: 'Здоровье',
     hobby: 'Хобби', advantages: 'Сильная черта', disadvantages: 'Слабость',
@@ -94,6 +106,14 @@ window.bunkerFinish = async function (evt) {
             }
 
             await window.apiRequest({ action: 'stop_game' });
+
+            // Memory Leak Fix: Clear Ticker on Exit
+            if (window.bunkerTickInterval) {
+                clearInterval(window.bunkerTickInterval);
+                window.bunkerTickInterval = null;
+                console.log("[Bunker] Ticker cleared on exit.");
+            }
+
             window.bunkerState = { activeTab: 'me', lastRes: null, lastServerState: null, lastStateHash: '' };
 
             if (typeof window.checkState === 'function') {

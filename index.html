@@ -15,16 +15,17 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/variables.css?v=2171">
-    <link rel="stylesheet" href="css/layout.css?v=2171">
-    <link rel="stylesheet" href="css/components.css?v=2171">
-    <link rel="stylesheet" href="css/modules/lobby.css?v=2171">
-    <link rel="stylesheet" href="css/modules/profile.css?v=2171">
-    <link rel="stylesheet" href="css/modules/room.css?v=2171">
-    <link rel="stylesheet" href="css/modules/modals.css?v=2171">
-    <link rel="stylesheet" href="css/modules/blokus.css?v=2171">
-    <link rel="stylesheet" href="styles.css?v=2171">
-    <script src="js/app.js?v=2171"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2172">
+    <link rel="stylesheet" href="css/layout.css?v=2172">
+    <link rel="stylesheet" href="css/components.css?v=2172">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2172">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2172">
+    <link rel="stylesheet" href="css/modules/room.css?v=2172">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2172">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2172">
+    <link rel="stylesheet" href="styles.css?v=2172">
+    <script src="js/audio.js?v=2172"></script>
+    <script src="js/app.js?v=2172"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -544,6 +545,17 @@
                             <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                 <input class="form-check-input settings-switch ms-auto" type="checkbox"
                                     id="setting-haptics" onchange="toggleSetting('haptics', this.checked)">
+                            </div>
+                        </div>
+                        <div class="settings-item">
+                            <div class="settings-label-wrap">
+                                <div class="fw-bold">Звук</div>
+                                <div class="text-muted small">Эффекты и уведомления</div>
+                            </div>
+                            <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                                <input class="form-check-input settings-switch ms-auto" type="checkbox"
+                                    id="setting-soundEnabled"
+                                    onchange="window.audioManager.toggle(this.checked); toggleSetting('soundEnabled', this.checked)">
                             </div>
                         </div>
                     </div>

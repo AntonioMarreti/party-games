@@ -182,7 +182,28 @@
     line-height: 1.4;
 }
 
-/* Footer Controls */
+/* Feature Alert */
+.bunker-feature-alert {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.feature-icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+}
+
+.feature-text {
+    font-size: 0.9rem;
+    color: var(--bunker-text);
+    line-height: 1.3;
+}
+
 .bunker-host-controls {
     position: fixed;
     bottom: 0;
@@ -292,6 +313,200 @@
     font-size: 28px;
 }
 
+/* === NEW UI COMPONENTS === */
+
+/* Segmented Control Tabs */
+.bunker-segmented-control {
+    background: rgba(118, 118, 128, 0.12);
+    border-radius: 9px;
+    padding: 2px;
+    display: flex;
+    overflow: hidden;
+}
+
+.segment-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 7px;
+    color: var(--bunker-text);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.segment-btn.active {
+    background: white;
+    box-shadow: 0 3px 1px rgba(0, 0, 0, 0.04), 0 3px 8px rgba(0, 0, 0, 0.12);
+    color: black;
+}
+
+/* Floating Turn Indicator */
+.turn-indicator-floating {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 50px;
+    padding: 6px 20px 6px 6px;
+    display: inline-flex;
+    align-items: center;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    position: relative;
+    max-width: 90%;
+}
+
+.turn-indicator-floating.my-turn {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.turn-avatar-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 2px;
+    background: linear-gradient(135deg, #E2E8F0 0%, #F1F5F9 100%);
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.my-turn .turn-avatar-ring {
+    background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+}
+
+.turn-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    background: white;
+}
+
+.turn-info {
+    text-align: left;
+    line-height: 1.2;
+}
+
+.turn-badge {
+    position: absolute;
+    right: -5px;
+    top: -5px;
+    width: 24px;
+    height: 24px;
+    background: #F59E0B;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
+}
+
+/* New Footer Bar */
+.bunker-footer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    /* Glass Background */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 12px 24px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.footer-actions-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center everything */
+    width: 100%;
+    max-width: 600px;
+}
+
+.action-group {
+    /* Wrapper for item + text */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 80px;
+    /* Fixed width for alignment */
+}
+
+.action-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 0 15px;
+    /* Spacing around divider */
+}
+
+.action-btn-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    /* Squircle */
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn-circle:active {
+    transform: scale(0.92);
+}
+
+.action-btn-circle.secondary {
+    background: #F1F5F9;
+    color: #64748B;
+    box-shadow: none;
+    border: 1px solid #E2E8F0;
+}
+
+.action-btn-circle.success {
+    background: #10B981;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.action-btn-circle.warning {
+    background: #F59E0B;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+}
+
+.action-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #94A3B8;
+    letter-spacing: 0.5px;
+}
+
+/* Override padding for content with new footer */
+.bunker-theme-wrapper {
+    padding-bottom: 110px !important;
+}
+
 /* Animations & Flicker Prevention */
 .pulse {
     animation: bunkerPulse 2s infinite ease-in-out;
@@ -339,9 +554,61 @@
     z-index: 1000;
 }
 
-.fixed-top-right-actions {
+@keyframes borderPulse {
+    0% {
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+    }
+
+    70% {
+        border-color: rgba(99, 102, 241, 1);
+        box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+    }
+
+    100% {
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    }
+}
+
+.pulse-border {
+    animation: borderPulse 2s infinite;
+    cursor: pointer;
+}
+
+/* Reveal Overlay */
+.bunker-reveal-overlay {
     position: fixed;
-    top: calc(15px + env(safe-area-inset-top));
-    right: 20px;
-    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    /* Let clicks pass through if needed? Maybe better to block */
+}
+
+.reveal-avatar {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+}
+
+.reveal-card {
+    background: white;
+    border-radius: 24px;
+    max-width: 80%;
+    width: 350px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    transform: perspective(1000px);
+}
+
+.letter-spacing-2 {
+    letter-spacing: 2px;
 }
