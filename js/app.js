@@ -1,11 +1,16 @@
 // === ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ОШИБОК ===
 // --- Global Audio Triggers ---
 document.addEventListener('click', (e) => {
+    // Unlock Audio for browsers (required on laptop/desktop)
+    if (window.audioManager && !window.audioManager.unlocked) {
+        window.audioManager.unlock();
+    }
+
     // Play sound for any button or link
     if (window.audioManager && (e.target.closest('button') || e.target.closest('a') || e.target.closest('.btn') || e.target.closest('.clickable'))) {
         window.audioManager.play('click');
     }
-});
+}, { once: false });
 
 window.onerror = function (msg, url, line, col, error) {
 
@@ -14,10 +19,11 @@ window.onerror = function (msg, url, line, col, error) {
 
 // === КОНФИГУРАЦИЯ ===
 const API_URL = 'server/api.php';
-let authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_token').trim() : null;
-let pollInterval = null;
-let loadedGames = {};
-let globalUser = null;
+var authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_token').trim() : null;
+var pollInterval = null;
+var loadedGames = {};
+var globalUser = null;
+var serverTimeOffset = 0; // Difference between server and local clock (ms)
 
 function calculateLevel(xp) {
     if (!xp || xp < 0) return 1;
@@ -35,17 +41,24 @@ let isCheckingState = false; // Блокировка повторных вызо
 const DEFAULT_SETTINGS = {
     noAnimations: false,
     haptics: true,
-    notificationsEnabled: true
+    notificationsEnabled: true,
+    thermalSafe: false // NEW: Low power mode
 };
 // Merge defaults with stored settings to ensure new keys exist
 let storedSettings = JSON.parse(localStorage.getItem('pgb_settings')) || {};
 let appSettings = { ...DEFAULT_SETTINGS, ...storedSettings };
 
 function loadSettings() {
+    // Auto-detect mobile and thermal safety if never set
+    if (typeof storedSettings.thermalSafe === 'undefined') {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) appSettings.thermalSafe = true; // Enabled by default on iOS to prevent heating
+    }
+
     applySettings();
 
     // Sync UI state
-    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled'];
+    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe'];
     switches.forEach(key => {
         const el = document.getElementById('setting-' + key);
         if (el) {
@@ -113,6 +126,13 @@ function applySettings() {
         document.body.classList.add('large-font');
     } else {
         document.body.classList.remove('large-font');
+    }
+
+    // Thermal Safe (Low power mode)
+    if (appSettings.thermalSafe) {
+        document.body.classList.add('thermal-safe');
+    } else {
+        document.body.classList.remove('thermal-safe');
     }
 }
 
@@ -191,6 +211,14 @@ const AVAILABLE_GAMES = [
         color: '#3498db',
         bgColor: '#ebf5fb',
         files: ['js/games/blokus/engine.js', 'js/games/blokus/ui.js', 'js/games/blokus/handlers.js', 'js/games/blokus/bot.js', 'js/games/blokus.js']
+    },
+    {
+        id: 'wordclash',
+        name: 'Слова',
+        icon: 'bi-fonts', // Bootstrap Icon
+        color: '#6aaa64', // Green
+        bgColor: '#e8f5e9',
+        files: ['js/games/wordclash/index.js']
     }
 ];
 
@@ -332,8 +360,19 @@ window.apiRequest = async function (data) {
     }
 
     try {
+        const localBefore = Date.now();
         const response = await fetch(API_URL, { method: 'POST', body: body });
         if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+
+        // Time Sync Logic: assume server time from Date header
+        const localAfter = Date.now();
+        const serverDateStr = response.headers.get('Date');
+        if (serverDateStr) {
+            const serverMs = new Date(serverDateStr).getTime();
+            // Estimate offset: serverTime - localTime (centrally at request duration)
+            serverTimeOffset = serverMs - (localBefore + (localAfter - localBefore) / 2);
+        }
+
         return await response.json();
     } catch (e) {
         console.error("API Error:", e);
@@ -379,6 +418,17 @@ async function flushReactionBuffer() {
     } catch (e) { console.error("Flush reactions failed", e); }
 }
 
+// === GLOBAL SYNC EVENT SYSTEM ===
+window.sendSyncEvent = async function (type, payload = {}) {
+    try {
+        await apiRequest({
+            action: 'send_reaction',
+            type: type,
+            payload: JSON.stringify(payload)
+        });
+    } catch (e) { console.error("Sync event failed", e); }
+};
+
 // === GLOBAL REACTION SYSTEM ===
 window.handleReactions = function (events) {
     if (!events || !Array.isArray(events)) return;
@@ -403,6 +453,32 @@ window.handleReactions = function (events) {
         if (window.globalUser && ev.user_id == window.globalUser.id) return;
 
         const payload = JSON.parse(ev.payload || '{}');
+
+        // Special: Audio Pings (Global sound sync with delay compensation)
+        if (ev.type === 'audio_ping' || ev.type === 'catastrophe_audio') {
+            const sound = payload.sound || payload.emoji;
+            const playAt = payload.playAt; // Shared target timestamp (ms)
+
+            if (window.audioManager) {
+                if (playAt) {
+                    const nowOnServer = Date.now() + serverTimeOffset;
+                    const wait = playAt - nowOnServer;
+
+                    if (wait > 0) {
+                        setTimeout(() => window.audioManager.play(sound), wait);
+                        console.log(`[Sync] Scheduled ${sound} in ${Math.round(wait)}ms`);
+                    } else if (wait > -3000) {
+                        // Late by less than 3s: play now
+                        window.audioManager.play(sound);
+                        console.log(`[Sync] Playing ${sound} immediately (Late by ${Math.round(-wait)}ms)`);
+                    }
+                } else {
+                    window.audioManager.play(sound);
+                }
+            }
+            return;
+        }
+
         const emoji = payload.emoji || '👍';
         const count = payload.count || 1;
 
@@ -725,6 +801,33 @@ window.showAlert = function (title, text, type = 'info') {
     if (customModalEl) {
         document.getElementById('customAPITitle').innerHTML = title; // Allow HTML in title? Why not.
         document.getElementById('customAPIBody').innerHTML = text;
+
+        // Dynamic Icon Logic
+        var iconEl = document.getElementById('customAPIIcon');
+        if (iconEl) {
+            // Default
+            var iconClass = 'bi-info-circle-fill';
+            var colorClass = 'text-primary';
+
+            if (type === 'success') {
+                iconClass = 'bi-check-circle-fill';
+                colorClass = 'text-success';
+            } else if (type === 'error') {
+                iconClass = 'bi-x-octagon-fill';
+                colorClass = 'text-danger';
+            } else if (type === 'warning') {
+                iconClass = 'bi-exclamation-triangle-fill';
+                colorClass = 'text-warning';
+            } else if (type === 'robot') {
+                iconClass = 'bi-robot';
+                colorClass = 'text-primary';
+            } else if (type.startsWith('bi-')) {
+                // Allow passing direct icon class
+                iconClass = type;
+            }
+
+            iconEl.className = `bi ${iconClass} ${colorClass}`;
+        }
         const modal = new bootstrap.Modal(customModalEl);
         modal.show();
         return;
@@ -917,7 +1020,7 @@ window.checkState = async function () {
                 }
 
                 const renderFunc = window[`render_${gameType}`];
-                console.log(`[App] Trying to render ${gameType}, func exists?`, !!renderFunc);
+                // console.log(`[App] Trying to render ${gameType}, func exists?`, !!renderFunc);
                 if (typeof renderFunc === 'function') {
                     if (!isScreenActive('game')) showScreen('game');
                     try {
@@ -969,7 +1072,8 @@ function updateNotificationBadge(count) {
 
 // === RENDER LOBBY ===
 function renderLobby(res) {
-    safeStyle('score-card', 'display', 'block');
+    document.body.classList.remove('wordclash-active'); // Cleanup WordClash state
+    // safeStyle('score-card', 'display', 'block'); // LEGACY REMOVED
 
     const codeDisplay = document.getElementById('room-code-display');
     if (codeDisplay) codeDisplay.innerText = res.room.room_code;
@@ -986,6 +1090,25 @@ function renderLobby(res) {
         const gameNameDisplay = document.getElementById('selected-game-name');
         const currentGame = AVAILABLE_GAMES.find(g => g.id === selectedGameId);
         if (gameNameDisplay) gameNameDisplay.innerText = currentGame ? currentGame.name : 'Выбрать игру';
+
+        // Update Icon
+        const gameIconBg = document.getElementById('selected-game-icon-bg');
+        const gameIcon = document.getElementById('selected-game-icon');
+
+        if (currentGame) {
+            if (gameIconBg) {
+                gameIconBg.style.background = currentGame.bgColor || '#eee';
+                gameIconBg.style.color = currentGame.color || '#333';
+            }
+            if (gameIcon) gameIcon.className = `bi ${currentGame.icon || 'bi-controller'}`;
+        } else {
+            // Reset to default
+            if (gameIconBg) {
+                gameIconBg.style.background = ''; // default CSS
+                gameIconBg.style.color = '';
+            }
+            if (gameIcon) gameIcon.className = 'bi bi-lightning-fill';
+        }
 
         const list = document.getElementById('game-selector-list');
         if (list) {
@@ -1431,9 +1554,23 @@ async function loadMyProfileStats() {
     }
 }
 
+let lastUserUpdateHash = '';
 function updateUserInfo(user) {
+    const userHash = JSON.stringify({
+        id: user.id,
+        name: user.custom_name || user.first_name,
+        photo: user.photo_url,
+        avatar: user.custom_avatar
+    });
+
+    if (userHash === lastUserUpdateHash) {
+        globalUser = user;
+        return;
+    }
+    lastUserUpdateHash = userHash;
+
     globalUser = user;
-    console.log("Updating User Info:", user);
+    // console.log("Updating User Info:", user);
 
     // Header Name
     safeText('user-name-display', user.custom_name || user.first_name);
@@ -1740,8 +1877,25 @@ async function loadGameScripts(files) {
     }
 }
 
-function startPolling() { if (!pollInterval) pollInterval = setInterval(checkState, 2000); }
+function startPolling() {
+    if (!pollInterval && document.visibilityState === 'visible') {
+        pollInterval = setInterval(checkState, 2000);
+    }
+}
 function stopPolling() { if (pollInterval) { clearInterval(pollInterval); pollInterval = null; } }
+
+// Visibility API to save battery
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        stopPolling();
+    } else {
+        // Only restart if we are supposed to be in a room
+        if (window.currentRoomCode) {
+            startPolling();
+            checkState(); // Refresh immediately when coming back
+        }
+    }
+});
 
 async function startGame(gameName) {
     await apiRequest({ action: 'start_game', game_name: gameName });
@@ -1821,8 +1975,14 @@ window.sendGameAction = async function (type, additionalData = {}) {
     const res = await apiRequest({ action: 'game_action', type: type, ...additionalData });
 
     // 2. Если сервер вернул ошибку - показываем её!
+    // 2. Если сервер вернул ошибку - показываем её!
     if (res.status === 'error') {
-        showAlert("Ошибка", res.message, 'error');
+        // Special visual feedback for WordClash errors (like invalid word)
+        if (window.selectedGameId === 'wordclash' && window.showInvalidWord) {
+            window.showInvalidWord(res.message);
+        } else {
+            showAlert("Ошибка", res.message, 'error');
+        }
     }
 
     // 3. Обновляем экран
@@ -2583,3 +2743,55 @@ async function removeBot(userId) {
         { confirmText: 'Удалить', isDanger: true }
     );
 }
+
+// === DEBUG / PERF TOOLS ===
+window.debugInterval = null;
+window.toggleDebugHUD = function () {
+    let hud = document.getElementById('debug-hud');
+    if (hud) {
+        hud.remove();
+        if (window.debugInterval) clearInterval(window.debugInterval);
+        return;
+    }
+
+    hud = document.createElement('div');
+    hud.id = 'debug-hud';
+    hud.style.cssText = 'position:fixed;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:10px;padding:4px;z-index:99999;pointer-events:none;width:100px;';
+    document.body.appendChild(hud);
+
+    let frames = 0;
+    let lastTime = performance.now();
+    let fps = 0;
+
+    function loop() {
+        if (!document.getElementById('debug-hud')) return;
+        frames++;
+        const now = performance.now();
+        if (now - lastTime >= 1000) {
+            fps = frames;
+            frames = 0;
+            lastTime = now;
+            updateHUD(fps);
+        }
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    function updateHUD(currentFps) {
+        if (!hud) return;
+        const mem = window.performance && window.performance.memory ? Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A';
+        const nodes = document.getElementsByTagName('*').length;
+        // Thermal State Check
+        const listeners = (window.bunkerTickInterval ? 'Tick: ON' : 'Tick: OFF');
+
+        hud.innerHTML = `
+            FPS: <span style="color:${currentFps < 30 ? 'red' : '#0f0'}">${currentFps}</span><br>
+            DOM: ${nodes}<br>
+            MEM: ${mem} MB<br>
+            ${listeners}<br>
+            RES: ${window.innerWidth}x${window.innerHeight}
+        `;
+    }
+};
+// Expose
+window.startDebug = window.toggleDebugHUD;

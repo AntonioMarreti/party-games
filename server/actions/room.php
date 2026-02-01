@@ -122,6 +122,7 @@ function action_kick_player($pdo, $user, $data) {
     $targetId = $data['target_id'] ?? 0;
     if ($targetId == $user['id']) return; // Cannot kick self here, use leave
     
+    $stmt = $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?");
     $stmt->execute([$room['id'], $targetId]);
     echo json_encode(['status' => 'ok']);
 }

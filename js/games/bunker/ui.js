@@ -17,6 +17,14 @@ window.BUNKER_ICONS = {
     threat: '<i class="bi bi-radioactive"></i>'
 };
 
+// Simple grey silhouette for default avatar
+window.DEFAULT_AVATAR = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%23e0e0e0'%3E%3Crect width='64' height='64' rx='32' fill='%23cccccc'/%3E%3Ccircle cx='32' cy='25' r='12' fill='%239e9e9e'/%3E%3Cpath d='M12 56c0-11 9-20 20-20s20 9 20 20' fill='%239e9e9e'/%3E%3C/svg%3E";
+
+window.getAvatarSrc = function (url) {
+    if (!url || url.length < 5 || url === 'undefined') return window.DEFAULT_AVATAR;
+    return url;
+};
+
 window.BUNKER_ROUND_NAMES = {
     professions: 'Профессия', biology: 'Биология', health: 'Здоровье',
     hobby: 'Хобби', advantages: 'Сильная черта', disadvantages: 'Слабость',
@@ -45,7 +53,7 @@ window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {
     overlay.innerHTML = `
         <div class="reveal-content text-center">
             <div class="reveal-header mb-3">
-                <img src="${photoUrl || ''}" class="reveal-avatar rounded-circle border border-4 border-white shadow-lg mb-3">
+                <img src="${window.getAvatarSrc(photoUrl)}" class="reveal-avatar rounded-circle border border-4 border-white shadow-lg mb-3">
                 <h2 class="text-white fw-bold mb-0">${playerName}</h2>
                 <div class="text-white-50 small text-uppercase letter-spacing-2">РАСКРЫВАЕТ КАРТУ</div>
             </div>
@@ -91,11 +99,13 @@ window.renderRoundPhase = function (wrapper, state, res) {
             <!-- Floating Turn Indicator -->
             <div class="turn-indicator-floating ${isMyTurn ? 'my-turn' : ''}">
                 <div class="turn-avatar-ring">
-                    <img src="${activePlayer?.photo_url || ''}" onerror="this.src='data:image/svg+xml;base64,...'" class="turn-avatar">
+                    <img src="${window.getAvatarSrc(activePlayer?.photo_url)}" class="turn-avatar">
                 </div>
                 <div class="turn-info">
-                    <div class="turn-label text-uppercase small letter-spacing-1 opacity-75">Ходит сейчас</div>
-                    <div class="turn-name fw-bold">${isMyTurn ? 'ВЫ' : activeName}</div>
+                   ${isMyTurn
+            ? `<div class="turn-label text-uppercase fw-bold letter-spacing-1 text-warning">ВАШ ХОД!</div>`
+            : `<div class="turn-label text-uppercase small letter-spacing-1 opacity-75">Ходит сейчас</div><div class="turn-name fw-bold">${activeName}</div>`
+        }
                 </div>
                  ${isMyTurn ? '<div class="turn-badge pulsing"><i class="bi bi-lightning-fill"></i></div>' : ''}
             </div>
@@ -106,7 +116,7 @@ window.renderRoundPhase = function (wrapper, state, res) {
                     <i class="bi bi-people-fill me-2"></i>Выжившие
                 </button>
                 <button class="segment-btn ${window.bunkerState.activeTab === 'me' ? 'active' : ''}" onclick="window.switchBunkerTab('me')">
-                    <i class="bi bi-person-vcard-fill me-2"></i>Досье
+                    <i class="bi bi-file-earmark-person-fill me-2"></i>Досье
                 </button>
             </div>
 
@@ -191,9 +201,23 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
         //    - It must be 'reveal' phase.
         //    - (Optional) Round restrictions can apply here too.
 
+        // Limit: Determine if I have ANY revealed cards yet?
+        // Note: We check 'professions' specifically.
+        var isProfessionRevealed = myCards['professions'].revealed;
+
         if (!isRevealed) {
-            if (!isMyTurn) isLocked = true;
-            else if (state.turn_phase !== 'reveal') isLocked = true;
+            if (!isMyTurn) {
+                isLocked = true;
+            } else if (state.turn_phase !== 'reveal') {
+                isLocked = true;
+            } else {
+                // It IS my turn and it IS reveal phase.
+                // Rule: First reveal MUST be 'professions'.
+                // If profession is NOT revealed yet, lock everything else.
+                if (!isProfessionRevealed && key !== 'professions') {
+                    isLocked = true;
+                }
+            }
         }
 
         var statusClass = 'bunker-trait-card';
@@ -266,7 +290,7 @@ window.triggerAbility = function (cardKey, actionType) {
             <div class="d-grid gap-2">
                 ${players.map(p => `
                     <button class="btn btn-outline-dark text-start py-2" onclick="window.sendAbility('${cardKey}', '${actionType}', '${p.id}', this)">
-                        <img src="${p.photo_url}" class="rounded-circle me-2" style="width:30px; height:30px;">
+                        <img src="${window.getAvatarSrc(p.photo_url)}" class="rounded-circle me-2" style="width:30px; height:30px;">
                         ${p.first_name}
                     </button>
                 `).join('')}
@@ -326,7 +350,7 @@ window.renderOtherPlayers = function (players, state, myId, activePlayerId) {
         html += `
             <div class="survivor-item mb-3 ${isActive ? 'border-primary shadow' : ''}" style="${isActive ? 'border-width:2px;' : ''}">
                 <div class="survivor-head d-flex align-items-center mb-3">
-                    <img src="${p.photo_url || ''}" class="survivor-avatar rounded-circle border border-2 ${isActive ? 'border-primary' : 'border-white'} shadow-sm me-3" style="width:40px; height:40px;">
+                    <img src="${window.getAvatarSrc(p.photo_url)}" class="survivor-avatar rounded-circle border border-2 ${isActive ? 'border-primary' : 'border-white'} shadow-sm me-3" style="width:40px; height:40px;">
                     <div class="survivor-name fw-bold">${p.first_name} ${isActive ? '<span class="badge bg-primary ms-2">ХОДИТ</span>' : ''}</div>
                 </div>
                 <div class="survivor-body">
@@ -413,7 +437,7 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
 
             html += `
                 <button class="voting-target-btn w-100 mb-3" onclick="window.sendVoteKick('${p.id}')">
-                    <img src="${p.photo_url || ''}" class="target-avatar rounded-circle me-3" style="width:50px; height:50px;">
+                    <img src="${window.getAvatarSrc(p.photo_url)}" class="target-avatar rounded-circle me-3" style="width:50px; height:50px;">
                     <div class="text-start">
                         <div class="target-name fw-bold">${p.first_name}</div>
                         ${argsHtml}
@@ -445,7 +469,7 @@ window.renderVoteResults = function (wrapper, state, res) {
             <h2 class="fw-bold mt-3">ИЗГНАН</h2>
             
             <div class="kicked-card mt-4 mx-auto shadow-lg" style="max-width:300px;">
-                <img src="${kickedUser?.photo_url || ''}" class="rounded-circle border border-4 border-danger mb-3" style="width:120px; height:120px; object-fit:cover;">
+                <img src="${window.getAvatarSrc(kickedUser?.photo_url)}" class="rounded-circle border border-4 border-danger mb-3" style="width:120px; height:120px; object-fit:cover;">
                 <div class="kicked-name text-danger fw-bold h4">${kickedUser?.first_name || 'Игрок'}</div>
                 ${results.is_random ? `<div class="badge bg-warning text-dark mt-2">Случайный жребий</div>` : ''}
             </div>
@@ -525,7 +549,7 @@ window.renderStories = function (players, state) {
             <div class="card border-0 shadow-sm mb-3 ${isKicked ? 'bg-light opacity-75' : 'bg-white'}">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-2">
-                        <img src="${p.photo_url}" class="rounded-circle me-3" style="width:36px; height:36px;">
+                        <img src="${window.getAvatarSrc(p.photo_url)}" class="rounded-circle me-3" style="width:36px; height:36px;">
                         <div class="flex-grow-1">
                             <div class="fw-bold">${p.first_name}</div>
                         </div>
@@ -603,7 +627,7 @@ window.renderFooterActions = function (isHost, state, isMyTurn) {
 window.renderTieReveal = function (wrapper, state, res) {
     var myId = String(res.user.id);
     var isCandidate = state.tie_candidates && state.tie_candidates.includes(myId);
-    
+
     var html = `
         <div class="bunker-voting-screen px-4 pb-5 pt-5 text-center">
             <h1 class="display-3 mb-4">⚖️</h1>
@@ -617,7 +641,7 @@ window.renderTieReveal = function (wrapper, state, res) {
         // Find which cards are NOT revealed yet among Facts/Luggage
         var pCards = state.players_cards[myId];
         var options = ['facts', 'luggage'].filter(k => pCards[k] && !pCards[k].revealed);
-        
+
         if (options.length === 0) {
             html += `<div class="pulse fw-bold">Все карты раскрыты. Ожидаем остальных...</div>`;
         } else {

@@ -15,17 +15,17 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/variables.css?v=2172">
-    <link rel="stylesheet" href="css/layout.css?v=2172">
-    <link rel="stylesheet" href="css/components.css?v=2172">
-    <link rel="stylesheet" href="css/modules/lobby.css?v=2172">
-    <link rel="stylesheet" href="css/modules/profile.css?v=2172">
-    <link rel="stylesheet" href="css/modules/room.css?v=2172">
-    <link rel="stylesheet" href="css/modules/modals.css?v=2172">
-    <link rel="stylesheet" href="css/modules/blokus.css?v=2172">
-    <link rel="stylesheet" href="styles.css?v=2172">
-    <script src="js/audio.js?v=2172"></script>
-    <script src="js/app.js?v=2172"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2188">
+    <link rel="stylesheet" href="css/layout.css?v=2188">
+    <link rel="stylesheet" href="css/components.css?v=2188">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2188">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2188">
+    <link rel="stylesheet" href="css/modules/room.css?v=2188">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2188">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2188">
+    <link rel="stylesheet" href="styles.css?v=2188">
+    <script src="js/audio.js?v=2188"></script>
+    <script src="js/app.js?v=2188"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -335,7 +335,8 @@
                     <div id="host-controls" style="display:none; width: 100%; margin-top: auto;">
                         <div class="game-setting-card" data-bs-toggle="modal" data-bs-target="#gameSelectorModal">
                             <div class="d-flex align-items-center">
-                                <div class="game-setting-icon"><i class="bi bi-lightning-fill"></i></div>
+                                <div class="game-setting-icon" id="selected-game-icon-bg"><i
+                                        class="bi bi-lightning-fill" id="selected-game-icon"></i></div>
                                 <div>
                                     <div style="font-size: 12px; color: #888;">Выбрать игру</div>
                                     <div style="font-weight: 700; font-size: 16px;" id="selected-game-name">...</div>
@@ -364,12 +365,7 @@
              Теперь игра (whoami.js) сама строит свой интерфейс на весь экран -->
                 <div id="game-area"></div>
 
-                <!-- Оставляем на всякий случай для совместимости со старыми играми, 
-             но по умолчанию скрываем через JS -->
-                <div id="score-card" class="card mt-3 p-2" style="display:none;">
-                    <h6 class="text-muted small ps-3 pt-2 mb-1">Результат</h6>
-                    <ul class="list-group list-group-flush" id="game-players-list"></ul>
-                </div>
+                <!-- LEGACY SCORE CARD REMOVED -->
                 <div id="game-host-controls" class="fixed-bottom p-3 bg-white border-top rounded-top-4 shadow-lg"
                     style="display:none; z-index: 2000;"></div>
             </div>
@@ -530,6 +526,17 @@
                             <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                 <input class="form-check-input settings-switch ms-auto" type="checkbox"
                                     id="setting-largeFont" onchange="toggleSetting('largeFont', this.checked)">
+                            </div>
+                        </div>
+                        <div class="settings-item"
+                            style="border-top: 1px solid rgba(0,0,0,0.05); margin-top: 5px; padding-top: 10px;">
+                            <div class="settings-label-wrap">
+                                <div class="fw-bold text-danger">Режим охлаждения ❄️</div>
+                                <div class="text-muted small">Максимальная экономия заряда</div>
+                            </div>
+                            <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                                <input class="form-check-input settings-switch ms-auto" type="checkbox"
+                                    id="setting-thermalSafe" onchange="toggleSetting('thermalSafe', this.checked)">
                             </div>
                         </div>
                     </div>
@@ -797,7 +804,7 @@
                 style="border-radius: 30px; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); border: 1px solid rgba(255, 255, 255, 0.18);">
                 <div class="modal-body p-4 text-center">
                     <div class="mb-3">
-                        <i class="bi bi-robot text-primary"
+                        <i id="customAPIIcon" class="bi bi-robot text-primary"
                             style="font-size: 3rem; text-shadow: 0 4px 10px rgba(0,0,0,0.1);"></i>
                     </div>
                     <h5 class="fw-bold mb-3" id="customAPITitle" style="color: #2c3e50;">Уведомление</h5>

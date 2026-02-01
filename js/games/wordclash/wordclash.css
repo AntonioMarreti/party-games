@@ -1,0 +1,308 @@
+/* === WORDCLASH CSS === */
+
+/* Shared Board / Stream */
+.wc-stream-container {
+    flex: 1;
+    overflow-y: auto;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 120px;
+    /* Large buffer to allow scrolling last items above keyboard/input */
+    width: 100%;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+    margin-top: calc(130px + env(safe-area-inset-top));
+    /* Increased to clear lowered header */
+    transition: margin-top 0.3s ease;
+}
+
+body.wc-keyboard-active .wc-stream-container {
+    margin-top: calc(20px + env(safe-area-inset-top));
+    /* Reclaim space when header is hidden */
+}
+
+.wc-guess-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center the words */
+    gap: 12px;
+    animation: slideInUp 0.3s ease-out;
+}
+
+.wc-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    object-fit: cover;
+    background: #333;
+    /* Fallback color for transparent/broken images */
+}
+
+.wc-word-grid {
+    display: flex;
+    gap: 6px;
+    /* Slightly larger gap */
+}
+
+.wc-tile {
+    width: 48px;
+    /* Bigger tiles */
+    height: 48px;
+    font-size: 26px;
+    /* Bigger text */
+    font-weight: 800;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Colors (Matches result [0,1,2]) */
+.wc-tile.res-0 {
+    background: #787c7e;
+    border-color: #787c7e;
+}
+
+/* Grey */
+.wc-tile.res-1 {
+    background: #c9b458;
+    border-color: #c9b458;
+}
+
+/* Yellow */
+.wc-tile.res-2 {
+    background: #6aaa64;
+    border-color: #6aaa64;
+}
+
+/* Green */
+
+/* --- KEYBOARD STATE --- */
+body.wc-keyboard-active #wc-header {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+#wc-header {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Input Area */
+/* Input Area - Floating Glass Style */
+.wc-input-area {
+    padding: 16px;
+    padding-bottom: 16px;
+    /* Reset padding since it's floating */
+    margin: 0 16px;
+    /* Side margins */
+    margin-bottom: calc(10px + env(safe-area-inset-bottom));
+    /* Float above home indicator */
+
+    background: rgba(30, 42, 58, 0.90);
+    /* Slightly opaque for legibility */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+
+    width: auto;
+    /* Allow margin to control width */
+    border-radius: 32px;
+    /* Fully rounded corners */
+
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: margin-bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* Smooth keyboard float */
+}
+
+/* Error Shake Animation */
+.wc-input-area.input-error {
+    animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+    border-color: #ff4d4d;
+    box-shadow: 0 0 15px rgba(255, 77, 77, 0.3);
+}
+
+@keyframes shake {
+
+    10%,
+    90% {
+        transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(4px, 0, 0);
+    }
+}
+
+.wc-input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.wc-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: white;
+    font-size: 18px;
+    padding: 12px;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+
+.wc-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.wc-send-btn {
+    width: 60px;
+    border-radius: 12px;
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animations */
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Winner Banner */
+.wc-winner-banner {
+    background: linear-gradient(135deg, #6aaa64 0%, #4caf50 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 16px;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    animation: pulse 2s infinite;
+}
+
+/* Header Dropdown Menu */
+.header-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: white;
+    min-width: 200px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 2000;
+}
+
+.header-dropdown.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.header-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 12px;
+    font-weight: 600;
+    color: #333;
+    font-size: 15px;
+    text-align: left;
+    transition: 0.1s;
+}
+
+.header-menu-item:active {
+    background: #f0f0f0;
+    transform: scale(0.98);
+}
+
+/* Force hide lobby elements ONLY when WordClash is active */
+body.wordclash-active #score-card {
+    display: none !important;
+}
+
+/* Fix "Pink Gap" by making body background match the game */
+body.wordclash-active,
+body.wordclash-active .device-wrapper {
+    background: #1e2a3a !important;
+    background-image: none !important;
+}
+
+/* Mobile-only fixes for keyboard stability */
+@media (max-width: 768px) {
+
+    body.wordclash-active,
+    body.wordclash-active .device-wrapper {
+        padding-bottom: 0 !important;
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        touch-action: none;
+    }
+}
+
+/* Hide Bottom Nav & Tab Bar explicitly */
+body.wordclash-active .bottom-nav,
+body.wordclash-active .tab-bar {
+    display: none !important;
+}
+
+/* Reset wrapper padding for WordClash to allow full height */
+body.wordclash-active .game-custom-wrapper,
+#wc-wrapper {
+    padding-bottom: 0 !important;
+}

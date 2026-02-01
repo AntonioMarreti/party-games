@@ -206,8 +206,9 @@
                 </div>
             </div>
             
-            <div class="fixed-bottom-actions pb-2">
-                <button class="bb-start-btn py-3" onclick="bbStart()">Начать битву</button>
+            <div class="fixed-bottom-actions pb-2 d-flex gap-2">
+                <button class="bb-start-btn py-3 flex-grow-1" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: #fff;" onclick="backToLobby()">Выйти</button>
+                <button class="bb-start-btn py-3 flex-grow-1" onclick="bbStart()">Начать битву</button>
             </div>
             <div style="height: 60px;"></div>`;
 

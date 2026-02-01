@@ -227,6 +227,61 @@ if (strpos($cmd, '/repair') === 0 || strpos($cmd, '/db_repair') === 0) {
     }
 }
 
+
+// /test_buttons - Test Layer 224 Button Styles
+if (strpos($cmd, '/test_buttons') === 0) {
+    // Public command now
+
+    // 1. Inline Keyboard with Custom Icons
+    // Using 'rocket' emoji ID: 5258332798409783582
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                [
+                    'text' => 'Icon Test',
+                    'callback_data' => 'test_1',
+                    'icon_custom_emoji_id' => '5258332798409783582' // Rocket
+                ],
+                [
+                    'text' => 'No Icon',
+                    'callback_data' => 'test_2'
+                ]
+            ]
+        ]
+    ];
+
+    sendTelegram('sendMessage', [
+        'chat_id' => $chatId,
+        'text' => "🧪 <b>Inline Buttons Test</b>\n\nПроверка <code>icon_custom_emoji_id</code>.",
+        'parse_mode' => 'HTML',
+        'reply_markup' => json_encode($inlineKeyboard)
+    ]);
+
+    // 2. Reply Keyboard with Colors
+    // We will hardcode the JSON structure for the reply keyboard to be safe
+    // Trying 'color' field based on Telegram's usual naming conventions for recent features
+    $replyJson = '{
+        "keyboard": [
+            [
+                { "text": "🔵 Primary", "color": "primary" }, 
+                { "text": "🔴 Danger", "color": "danger" }
+            ],
+            [
+                 { "text": "🟢 Success", "color": "success" },
+                 { "text": "Normal" }
+            ]
+        ],
+        "resize_keyboard": true
+    }';
+    
+    sendTelegram('sendMessage', [
+        'chat_id' => $chatId,
+        'text' => "🎨 <b>Reply Buttons Test</b>\n\nПроверка цветов кнопок (<code>color</code>: primary/danger/success).",
+        'parse_mode' => 'HTML',
+        'reply_markup' => $replyJson
+    ]);
+}
+
 function reply($chatId, $text) {
     sendTelegram('sendMessage', [
         'chat_id' => $chatId,

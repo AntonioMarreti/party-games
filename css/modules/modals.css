@@ -18,7 +18,9 @@
 
 
 .modal-dialog {
-    margin: 20px !important;
+    margin: 20px auto !important;
+    max-width: calc(100% - 40px);
+    /* Ensure it doesn't touch edges on small screens */
 }
 
 .modal-content {

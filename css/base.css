@@ -73,3 +73,57 @@ body {
     width: 0px;
     background: transparent;
 }
+
+/* === THERMAL SAFE (LOW POWER MODE) === */
+.thermal-safe *,
+.thermal-safe *::before,
+.thermal-safe *::after {
+    animation-duration: 0.1s !important;
+    animation-iteration-count: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transition: none !important;
+}
+
+.thermal-safe body {
+    background-image: none !important;
+    background-color: #F8F9FD !important;
+}
+
+.thermal-safe .glass,
+.thermal-safe .glass-card,
+.thermal-safe .modal-content,
+.thermal-safe .bottom-nav,
+.thermal-safe .action-card,
+.thermal-safe .achievement-card,
+.thermal-safe .glass-btn,
+.thermal-safe .mini-game-card,
+.thermal-safe .game-list-card,
+.thermal-safe .lb-card,
+.thermal-safe .room-header-dropdown-btn,
+.thermal-safe #screen-room .dropdown-menu,
+.thermal-safe .room-code-card,
+.thermal-safe .game-setting-card,
+.thermal-safe #guest-waiting-msg,
+.thermal-safe .reaction-trigger,
+.thermal-safe .reaction-bubble {
+    background: #FFFFFF !important;
+    border: 1px solid #E0E0E0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.thermal-safe .header-bg {
+    background: #6C5CE7 !important;
+    box-shadow: none !important;
+}
+
+.thermal-safe .login-bg-animated,
+.thermal-safe .device-wrapper::before {
+    display: none !important;
+}
+
+.thermal-safe .login-card {
+    background: #1c1c1e !important;
+    backdrop-filter: none !important;
+}
