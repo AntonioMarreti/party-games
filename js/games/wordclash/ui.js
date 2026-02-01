@@ -1,19 +1,101 @@
-window.renderWordClash = function (res) {
+// Keyboard mode preference (GLOBAL)
+function isMobilePlatform() {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform) {
+        const p = window.Telegram.WebApp.platform;
+        return p === 'ios' || p === 'android' || p === 'weba' || p === 'mobile';
+    }
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+function useCustomKeyboard() {
+    const pref = localStorage.getItem('wc_keyboard_mode');
+    if (pref) return pref === 'custom';
+
+    // Default: custom (built-in) for mobile, system for others
+    return isMobilePlatform();
+}
+
+window.toggleKeyboardMode = function (e) {
+    if (e) e.stopPropagation();
+    const current = useCustomKeyboard();
+    localStorage.setItem('wc_keyboard_mode', current ? 'system' : 'custom');
+    location.reload();
+};
+
+window.exitToLobby = async function () {
+    const res = window.lastWCRes;
+    const state = window.lastWCState;
+
+    // Автоматически сохраняем результаты, если хост выходит во время активной игры (не в фазе настройки)
+    if (res && res.is_host && state && state.phase !== 'setup' && state.scores) {
+        await window.finishWordClash();
+        return; // finishWordClash сам перезагрузит страницу
+    }
+    location.reload();
+};
+
+window.finishWordClash = async function () {
+    const res = window.lastWCRes;
+    const state = window.lastWCState;
+
+    if (!res || !state || !state.scores) {
+        window.exitToLobby();
+        return;
+    }
+
+    // Собираем данные всех игроков (даже с 0 очков)
+    const playersData = res.players.map(p => {
+        const score = parseInt(state.scores[p.id] || 0);
+        return {
+            user_id: parseInt(p.id),
+            score: score
+        };
+    });
+
+    // Сортируем по убыванию очков для определения ранга
+    playersData.sort((a, b) => b.score - a.score);
+    playersData.forEach((p, idx) => {
+        p.rank = idx + 1;
+    });
+
+    // Отправляем на сервер (сабмит стат/MMR)
+    if (window.submitGameResults) {
+        await window.submitGameResults(playersData);
+    }
+
+    // Возвращаемся в лобби
+    window.exitToLobby();
+};
+
+function renderWordClash(res) {
+    window.lastWCRes = res;
     var container = document.getElementById('game-area');
     if (!container) return;
     if (!res || !res.room) return;
 
-    var state = typeof res.room.game_state === 'string'
+    // Handle both old and new state formats
+    var state = res.game_state || (typeof res.room.game_state === 'string'
         ? JSON.parse(res.room.game_state)
-        : res.room.game_state;
+        : res.room.game_state);
+    window.lastWCState = state;
     if (!state) return;
 
-    // Скрываем общие элементы интерфейса лобби
+    // Backwards compatibility: if no phase, assume 'playing'
+    if (!state.phase) {
+        state.phase = 'playing';
+        state.word_length = 5; // Default to 5 for old games
+    }
+
+    // --- SETUP PHASE ---
+    if (state.phase === 'setup') {
+        renderSetupScreen(res, container);
+        return;
+    }
+
     // Скрываем общие элементы интерфейса лобби
     ['default-game-header', 'game-host-controls', 'score-card'].forEach(id => {
         const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
-
     document.body.classList.add('wordclash-active');
 
     // Ensure Global Game ID is set for Error Handling (app.js interceptor)
@@ -99,9 +181,13 @@ window.renderWordClash = function (res) {
                     
                     <!-- Dropdown -->
                     <div class="header-dropdown ${window.wcMenuOpen ? 'active' : ''}">
-                        <button class="header-menu-item" onclick="window.confirmExitGame()">
+                        <button class="header-menu-item" onclick="window.toggleKeyboardMode(event)">
+                            <i class="bi ${useCustomKeyboard() ? 'bi-keyboard' : 'bi-keyboard-fill'}"></i>
+                            <span>${useCustomKeyboard() ? 'Системная клавиатура' : 'Встроенная клавиатура'}</span>
+                        </button>
+                        <button class="header-menu-item" onclick="window.exitToLobby()">
                             <i class="bi bi-door-open text-danger"></i>
-                            <span class="text-danger">Покинуть игру</span>
+                            <span class="text-danger">Выйти в лобби</span>
                         </button>
                         <button class="header-menu-item" onclick="location.reload()">
                             <i class="bi bi-arrow-clockwise"></i>
@@ -117,64 +203,104 @@ window.renderWordClash = function (res) {
         `;
     }
 
-    // --- GAME OVER / WINNER MODAL ---
+    // --- GAME OVER / INTERMISSION MODAL ---
+    var isIntermission = state.phase === 'intermission';
+    var isGameOver = state.phase === 'game_over';
     var modal = document.getElementById('wc-victory-modal');
-    if (state.game_over && state.winner_id) {
-        var winner = res.players.find(p => String(p.id) === String(state.winner_id));
-        var wName = winner ? winner.first_name : 'Unknown';
-        var isMe = String(state.winner_id) === String(res.user.id);
-        var wScore = (state.scores && state.scores[state.winner_id]) || 0;
 
+    if ((isIntermission || isGameOver) && state.winner_id) {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'wc-victory-modal';
             modal.className = 'wc-victory-modal';
-            // Append to body to ensure it overlays absolutely everything
-            document.body.appendChild(modal);
+            // Anchor inside the game wrapper to respect device frames!
+            wrapper.appendChild(modal);
         }
 
-        // Only update if content/winner changed to avoid re-renders
-        var modalHash = `${state.winner_id}-${state.secret_word}`;
+        var winner = res.players.find(p => String(p.id) === String(state.winner_id));
+        var wName = winner ? (winner.first_name || winner.username) : 'Гений слов';
+        var isMe = String(state.winner_id) === String(res.user.id);
+
+        // Only update if content/winner changed
+        var modalHash = `v2-${state.phase}-${state.winner_id}-${state.secret_word}-${JSON.stringify(state.scores)}`;
         if (modal.dataset.hash !== modalHash) {
             modal.dataset.hash = modalHash;
+
+            // Build Leaderboard
+            var sortedPlayers = [...res.players].sort((a, b) => (state.scores[b.id] || 0) - (state.scores[a.id] || 0));
+            var lbHtml = sortedPlayers.slice(0, 4).map(p => `
+                <div class="wc-lb-row">
+                    <span class="wc-lb-name">${p.first_name || p.username}</span>
+                    <span class="wc-lb-score">${state.scores[p.id] || 0}</span>
+                </div>
+            `).join('');
+
+            var title = isGameOver ? (isMe ? 'ТЫ ЧЕМПИОН! 🏆' : 'ИГРА ОКОНЧЕНА 💀') : 'РАУНД ЗАВЕРШЕН! 🎉';
+            var roundSubtitle = state.round_count ? `Раунд ${state.current_round} из ${state.round_count}` : `Завершено раундов: ${state.current_round}`;
+
             modal.innerHTML = `
                 <div class="wc-victory-card">
-                    <div class="wc-victory-emoji">${isMe ? '🏆' : '💀'}</div>
-                    <div class="wc-victory-title">${isMe ? 'ПОБЕДА!' : 'ИГРА ОКОНЧЕНА'}</div>
+                    <div class="wc-victory-emoji mb-2">${isMe ? (isGameOver ? '🏆' : '🔥') : (isGameOver ? '💀' : '👏')}</div>
+                    <div class="wc-victory-title">${title}</div>
+                    <div class="text-white-50 small mb-3">${roundSubtitle}</div>
+                    
                     <div class="wc-victory-subtitle">
-                        ${isMe ? 'Вы угадали слово и заработали очки!' : `Победил <b>${wName}</b>`}
+                        ${isMe ? 'Вы угадали слово и заработали 10 баллов!' : `Угадал <b>${wName}</b>`}
+                    </div>
+
+                    <div class="wc-leaderboard">
+                        <div class="text-white-50 x-small text-uppercase mb-2" style="font-size: 10px; letter-spacing: 1px;">ТОП ИГРОКОВ</div>
+                        ${lbHtml}
                     </div>
                     
-                    <div class="wc-secret-word-label">Загаданное слово</div>
-                    <div class="wc-secret-word">${state.secret_word}</div>
+                    <div class="wc-secret-section">
+                        <div class="wc-secret-word-label">Загаданное слово</div>
+                        <div class="wc-secret-word">${state.secret_word}</div>
+                    </div>
 
-                    ${res.is_host ? `
-                        <button class="wc-btn-primary" onclick="window.sendGameAction('restart', {})">
-                            ИГРАТЬ СНОВА
-                        </button>
-                    ` : '<div class="text-white-50 small mb-3">Ожидайте решения хоста...</div>'}
-                    
-                    <button class="wc-btn-secondary" onclick="window.confirmExitGame()">
-                        Выйти в меню
-                    </button>
+                    <div class="d-flex flex-column gap-2 mt-2">
+                        ${res.is_host ? `
+                            ${isIntermission ? `
+                                <button class="wc-btn-primary" onclick="window.sendGameAction('next_round', {})">
+                                    СЛЕДУЮЩЕЕ СЛОВО <i class="bi bi-chevron-right"></i>
+                                </button>
+                            ` : `
+                                <button class="wc-btn-primary" onclick="window.finishWordClash()">
+                                    ЗАВЕРШИТЬ ИГРУ <i class="bi bi-check-circle"></i>
+                                </button>
+                                <button class="wc-btn-secondary" onclick="window.sendGameAction('restart', {})" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 16px; font-weight: 700; font-size: 14px; margin-top: 5px;">
+                                    ИГРАТЬ ЕЩЕ РАЗ
+                                </button>
+                            `}
+                        ` : `
+                            <div class="wc-waiting-msg" style="padding: 12px; font-size: 14px;">
+                                <i class="bi bi-hourglass-split"></i> 
+                                ${isGameOver ? 'Ожидание новой игры...' : 'Ожидание следующего раунда...'}
+                            </div>
+                        `}
+
+                        ${!isGameOver ? `
+                            <button class="wc-btn-secondary" onclick="window.exitToLobby()" style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.05); color: white; padding: 12px; border-radius: 16px; font-weight: 700; font-size: 14px;">
+                                Выйти в лобби
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
             `;
-        }
 
-        // Show Modal
-        if (!modal.classList.contains('active')) {
-            // Small delay for drama
-            setTimeout(() => modal.classList.add('active'), 500);
+            // Show Modal with animation
+            setTimeout(() => {
+                if (modal) modal.classList.add('active');
+            }, 100);
+
             // Trigger confetti if I won
             if (isMe && window.confetti) {
                 window.confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
         }
-
-    } else if (modal && !state.game_over) {
-        // Hide and remove modal if game restarted
-        modal.classList.remove('active');
-        setTimeout(() => modal.remove(), 300);
+    } else if (modal) {
+        // Remove modal if not in victory/intermission state
+        modal.remove();
     }
 
     // --- STREAM (GUESSES) ---
@@ -208,7 +334,7 @@ window.renderWordClash = function (res) {
         var newItems = state.history.slice(lastHistoryLen);
         newItems.forEach(function (entry) {
             var p = res.players.find(pl => String(pl.id) === String(entry.user_id));
-            var avatar = p ? (p.photo_url || 'assets/default_avatar.png') : 'assets/default_avatar.png';
+            var avatar = (p && p.photo_url) ? p.photo_url : `https://api.dicebear.com/7.x/bottts/svg?seed=${entry.user_id}`;
             var score = (parseInt(entry.score_delta) || 0);
 
             var row = document.createElement('div');
@@ -243,77 +369,155 @@ window.renderWordClash = function (res) {
 
         // Auto Scroll: Ensure the LATEST item is visible at the BOTTOM of the viewport
         setTimeout(() => {
-            if (stream.lastElementChild) {
-                stream.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            } else {
-                stream.scrollTop = stream.scrollHeight;
-            }
+            // Force strict bottom scroll using direct scrollTop assignment
+            // This is more reliable on mobile IOs than scrollIntoView for inner containers
+            stream.scrollTop = stream.scrollHeight;
         }, 100);
     }
 
-    // --- INPUT AREA ---
+    // --- INPUT AREA (DUAL KEYBOARD SYSTEM) ---
     var inputArea = document.getElementById('wc-input-area');
+    var customMode = useCustomKeyboard();
+
     if (!inputArea) {
         inputArea = document.createElement('div');
         inputArea.id = 'wc-input-area';
-        inputArea.className = 'wc-input-area';
-        inputArea.innerHTML = `
-            <form id="wc-form" class="wc-input-group" autocomplete="off" onsubmit="window.submitWordClash(event)">
-                <input type="text" id="wc-input" class="wc-input" maxlength="5" placeholder="СЛОВО" ${state.game_over ? 'disabled' : ''}>
-                <button type="submit" class="wc-send-btn shadow" ${state.game_over ? 'disabled' : ''}><i class="bi bi-arrow-up-circle-fill"></i></button>
-            </form>
-        `;
-        wrapper.appendChild(inputArea);
 
-        // Focus handler
-        var inp = document.getElementById('wc-input');
+        if (customMode) {
+            // CUSTOM KEYBOARD MODE
+            var wordLength = state.word_length || 5;
+            window.currentWordLength = wordLength; // Store for keyboard handler
+            inputArea.innerHTML = `
+                <div class="wc-virtual-display-row" style="position: relative;">
+                    <div id="wc-error-label" class="wc-error-label"></div>
+                    <div class="wc-virtual-input">${'_'.repeat(wordLength)}</div>
+                    <button class="wc-send-btn shadow" onclick="window.submitWordClash(null)">
+                        <i class="bi bi-arrow-up-circle-fill"></i>
+                    </button>
+                </div>
+                <div class="wc-keyboard">
+                    <div class="wc-kb-row">
+                        ${['Й', 'Ц', 'У', 'К', 'Е', 'Н', 'Г', 'Ш', 'Щ', 'З', 'Х', 'Ъ'].map(l => `<button class="wc-key" data-key="${l}">${l}</button>`).join('')}
+                    </div>
+                    <div class="wc-kb-row">
+                        ${['Ф', 'Ы', 'В', 'А', 'П', 'Р', 'О', 'Л', 'Д', 'Ж', 'Э'].map(l => `<button class="wc-key" data-key="${l}">${l}</button>`).join('')}
+                    </div>
+                    <div class="wc-kb-row">
+                        ${['Я', 'Ч', 'С', 'М', 'И', 'Т', 'Ь', 'Б', 'Ю'].map(l => `<button class="wc-key" data-key="${l}">${l}</button>`).join('')}
+                        <button class="wc-key wc-key-wide" data-key="BACK">
+                            <i class="bi bi-backspace"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            wrapper.appendChild(inputArea);
 
-        // Toggle body class for keyboard state
-        inp.addEventListener('focus', () => {
-            document.body.classList.add('wc-keyboard-active');
-        });
-        inp.addEventListener('blur', () => {
-            document.body.classList.remove('wc-keyboard-active');
-        });
-
-        setTimeout(() => inp.focus(), 500);
-    } else {
-        // Update disabled state if game over
-        var inp = document.getElementById('wc-input');
-        var btn = document.querySelector('.wc-send-btn');
-        if (state.game_over) {
-            inp.disabled = true;
-            btn.disabled = true;
+            // Setup keyboard handlers
+            document.querySelectorAll('.wc-key').forEach(btn => {
+                btn.addEventListener('click', handleKeyPress);
+            });
         } else {
-            inp.disabled = false;
-            btn.disabled = false;
+            // SYSTEM KEYBOARD MODE (Original)
+            inputArea.innerHTML = `
+                <form id="wc-form" class="wc-input-group" autocomplete="off" onsubmit="window.submitWordClashSystem(event)">
+                    <div id="wc-error-label" class="wc-error-label"></div>
+                    <input type="text" id="wc-input" class="wc-input" maxlength="5" placeholder="СЛОВО" ${state.game_over ? 'disabled' : ''}>
+                    <button type="submit" class="wc-send-btn shadow" tabindex="-1" ${state.game_over ? 'disabled' : ''}><i class="bi bi-arrow-up-circle-fill"></i></button>
+                </form>
+            `;
+            wrapper.appendChild(inputArea);
+
+            // Auto-focus
+            setTimeout(() => {
+                const inp = document.getElementById('wc-input');
+                if (inp && !state.game_over) inp.focus();
+            }, 500);
+        }
+    } else {
+        // Update disabled state
+        var shouldDisable = !!state.game_over || state.phase === 'intermission';
+        if (customMode) {
+            document.querySelectorAll('.wc-key').forEach(btn => {
+                btn.disabled = shouldDisable;
+            });
+        } else {
+            const inp = document.getElementById('wc-input');
+            const btn = document.querySelector('.wc-send-btn');
+            if (inp && inp.disabled !== shouldDisable) inp.disabled = shouldDisable;
+            if (btn && btn.disabled !== shouldDisable) btn.disabled = shouldDisable;
         }
     }
 };
 
+// Virtual Input State
+var virtualWord = '';
+
+function handleKeyPress(e) {
+    var key = e.currentTarget.dataset.key;
+    if (!key) return;
+
+    // Remove focus immediately
+    e.currentTarget.blur();
+
+    // Haptic feedback
+    if (window.triggerHaptic) {
+        window.triggerHaptic('impact', 'light');
+    }
+
+    // Get current word length from last render
+    var maxLength = window.currentWordLength || 5;
+
+    if (key === 'BACK') {
+        virtualWord = virtualWord.slice(0, -1);
+    } else if (key === 'ENTER') {
+        window.submitWordClash(null);
+        return;
+    } else if (virtualWord.length < maxLength) {
+        virtualWord += key.toLowerCase();
+    }
+
+    // Update display
+    updateVirtualDisplay();
+}
+
+function updateVirtualDisplay() {
+    var display = document.querySelector('.wc-virtual-input');
+    if (!display) return;
+
+    var maxLength = window.currentWordLength || 5;
+    var chars = [];
+    for (var i = 0; i < maxLength; i++) {
+        chars.push(virtualWord[i] ? virtualWord[i].toUpperCase() : '_');
+    }
+
+    display.textContent = chars.join('');
+}
+
 // Helper for visual feedback
-window.showInvalidWord = function (msg) {
+window.showInvalidWord = function (message) {
     var area = document.getElementById('wc-input-area');
+    var errLabel = document.getElementById('wc-error-label');
+
     if (area) {
         area.classList.remove('input-error');
-        void area.offsetWidth; // Trigger reflow
-        area.classList.add('input-error');
+        setTimeout(() => area.classList.add('input-error'), 10);
         setTimeout(() => area.classList.remove('input-error'), 500);
     }
 
-    // Toast Notification
-    var toast = document.createElement('div');
-    toast.className = 'position-fixed start-50 translate-middle-x badge bg-danger text-white fs-6 shadow';
-    toast.style.bottom = '100px'; // Above input
-    toast.style.zIndex = '2000';
-    toast.style.transition = 'opacity 0.3s';
-    toast.innerText = msg || 'Такого слова нет!';
-    document.body.appendChild(toast);
+    if (errLabel) {
+        errLabel.textContent = message || 'Ошибка!';
+        errLabel.classList.add('visible');
 
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 1500);
+        // Clear virtual word if using custom keyboard
+        if (useCustomKeyboard()) {
+            virtualWord = '';
+            updateVirtualDisplay();
+        }
+
+        setTimeout(() => {
+            errLabel.classList.remove('visible');
+        }, 2000);
+    }
 };
 
 // --- MENU & EXIT HELPERS ---
@@ -341,16 +545,57 @@ function closeWcMenu() {
     document.removeEventListener('click', closeWcMenu);
 }
 
-window.confirmExitGame = function () {
-    if (window.leaveRoom) {
-        window.leaveRoom();
+window.exitToLobby = function () {
+    // 1. Host stops the game for everyone
+    if (window.isHost) {
+        window.apiRequest({ action: 'stop_game' }).then(() => {
+            document.body.classList.remove('wordclash-active');
+            location.reload();
+        });
     } else {
+        // 2. Guests just reload to get room state
+        document.body.classList.remove('wordclash-active');
         location.reload();
     }
 };
 
-window.submitWordClash = function (e) {
-    e.preventDefault();
+window.confirmExitGame = function () {
+    window.exitToLobby();
+};
+
+// Submit for CUSTOM keyboard
+window.submitWordClash = async function (e) {
+    if (e) e.preventDefault();
+
+    var word = virtualWord.trim().toLowerCase();
+
+    if (word.length !== 5) {
+        window.showInvalidWord('Нужно 5 букв!');
+        return;
+    }
+
+    // Disable keyboard during submit
+    document.querySelectorAll('.wc-key').forEach(btn => btn.disabled = true);
+
+    try {
+        var res = await window.sendGameAction('submit_guess', { word: word });
+
+        if (res && res.status === 'ok') {
+            virtualWord = ''; // Success! Clear virtual input.
+            updateVirtualDisplay();
+        }
+        // On error - word stays for correction
+
+    } finally {
+        // Re-enable keyboard
+        document.querySelectorAll('.wc-key').forEach(btn => btn.disabled = false);
+    }
+};
+
+// Submit for SYSTEM keyboard (original behavior, keyboard might close but that's OK)
+window.submitWordClashSystem = async function (e) {
+    if (e) e.preventDefault();
+
     var input = document.getElementById('wc-input');
     var word = input.value.trim().toLowerCase();
 
@@ -359,9 +604,149 @@ window.submitWordClash = function (e) {
         return;
     }
 
-    // Optimistic Clear
-    input.value = '';
+    try {
+        var res = await window.sendGameAction('submit_guess', { word: word });
 
-    window.sendGameAction('submit_guess', { word: word });
+        if (res && res.status === 'ok') {
+            input.value = ''; // Clear on success
+        }
+        // On error - keep word for correction
+    } finally {
+        // Always attempt to refocus (may or may not work depending on browser)
+        if (input) input.focus();
+    }
 };
 
+// ===== SETUP SCREEN =====
+
+function renderSetupScreen(res, container) {
+    var state = res.game_state || (typeof res.room.game_state === 'string'
+        ? JSON.parse(res.room.game_state)
+        : res.room.game_state);
+
+    if (!state) return;
+
+    // Sync global settings with server state
+    window.setupSettings.wordLength = state.word_length || 5;
+    window.setupSettings.roundCount = state.round_count;
+
+    // --- PREVENT FLICKER / RE-ANIMATION ---
+    var stateHash = `${state.word_length}-${state.round_count}-${state.phase}-${res.is_host}`;
+    if (container.dataset.wcHash === stateHash) return;
+
+    var isHost = res.is_host || (res.room && res.room.host_user_id === window.currentUserId);
+    var setupCard = document.querySelector('.wc-setup-card');
+
+    // If card exists and we just need logic update (host selection), don't clear everything
+    if (setupCard && container.dataset.wcHash) {
+        container.dataset.wcHash = stateHash;
+        // Update button active states without replacing the whole DOM
+        var selectedLength = state.word_length || 5;
+        var selectedRounds = state.round_count;
+
+        document.querySelectorAll('[data-length]').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.length) == selectedLength);
+        });
+        document.querySelectorAll('[data-rounds]').forEach(btn => {
+            var roundsVal = btn.dataset.rounds === 'null' ? null : parseInt(btn.dataset.rounds);
+            btn.classList.toggle('active', roundsVal == selectedRounds);
+        });
+        return;
+    }
+
+    container.dataset.wcHash = stateHash;
+    container.innerHTML = '';
+
+    var setupScreen = document.createElement('div');
+    setupScreen.id = 'wc-setup-screen';
+    setupScreen.className = 'wc-setup-screen';
+    container.appendChild(setupScreen);
+
+    var selectedLength = state.word_length || 5;
+    var selectedRounds = state.round_count;
+
+    setupScreen.innerHTML = `
+        <div class="wc-setup-card">
+            <h2 class="wc-setup-title">НАСТРОЙКИ ИГРЫ</h2>
+            
+            <div class="wc-setup-section">
+                <h3 class="wc-setup-label">Длина слова</h3>
+                <div class="wc-setup-options">
+                    ${[5, 6, 7].map(len => `
+                        <button 
+                            class="wc-option-btn ${selectedLength == len ? 'active' : ''}" 
+                            data-length="${len}"
+                            ${!isHost ? 'disabled' : ''}
+                            onclick="window.selectWordLength(${len})">
+                            ${len} букв
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="wc-setup-section">
+                <h3 class="wc-setup-label">Количество раундов</h3>
+                <div class="wc-setup-options">
+                    ${[5, 10, 15, null].map(rounds => `
+                        <button 
+                            class="wc-option-btn ${selectedRounds == rounds ? 'active' : ''}" 
+                            data-rounds="${rounds === null ? 'null' : rounds}"
+                            ${!isHost ? 'disabled' : ''}
+                            onclick="window.selectRoundCount(${rounds === null ? 'null' : rounds})">
+                            ${rounds === null ? '∞' : rounds}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            
+            ${isHost ? `
+                <button class="wc-btn-primary wc-start-btn" onclick="window.startGameWithSettings()">
+                    <i class="bi bi-play-fill"></i> НАЧАТЬ ИГРУ
+                </button>
+            ` : `
+                <div class="wc-waiting-msg">
+                    <i class="bi bi-hourglass-split"></i>
+                    Ожидание настроек от хоста...
+                </div>
+            `}
+
+            <button class="wc-btn-secondary mt-3" onclick="window.exitToLobby()" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.15); color: white;">
+                ВЕРНУТЬСЯ В ЛОББИ
+            </button>
+        </div>
+    `;
+}
+
+window.setupSettings = {
+    wordLength: 5,
+    roundCount: null
+};
+
+window.selectWordLength = function (length) {
+    // Send to server immediately
+    window.sendGameAction('configure_game', {
+        word_length: length,
+        round_count: window.setupSettings.roundCount
+    });
+    window.setupSettings.wordLength = length;
+};
+
+window.selectRoundCount = function (rounds) {
+    // Send to server immediately
+    window.sendGameAction('configure_game', {
+        word_length: window.setupSettings.wordLength,
+        round_count: rounds
+    });
+    window.setupSettings.roundCount = rounds;
+};
+
+window.startGameWithSettings = function () {
+    var settings = window.setupSettings;
+    window.sendGameAction('configure_game', {
+        word_length: settings.wordLength,
+        round_count: settings.roundCount,
+        start: true  // Signal to start the game
+    });
+};
+
+window.renderWordClash = renderWordClash;

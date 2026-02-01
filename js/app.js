@@ -76,14 +76,27 @@ function triggerHaptic(type = 'impact', detail = 'light') {
     if (!appSettings.haptics) return;
     try {
         const tg = window.Telegram.WebApp;
-        if (!tg || !tg.HapticFeedback) return;
+        if (!tg) return;
 
-        if (type === 'impact') {
-            tg.HapticFeedback.impactOccurred(detail);
-        } else if (type === 'notification') {
-            tg.HapticFeedback.notificationOccurred(detail);
-        } else if (type === 'selection') {
-            tg.HapticFeedback.selectionChanged();
+        // HapticFeedback requires version 6.1+
+        if (tg.HapticFeedback && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
+            if (type === 'impact') {
+                tg.HapticFeedback.impactOccurred(detail);
+            } else if (type === 'notification') {
+                tg.HapticFeedback.notificationOccurred(detail);
+            } else if (type === 'selection') {
+                tg.HapticFeedback.selectionChanged();
+            }
+        } else {
+            // Fallback for older versions or regular browsers
+            // Check for user activation to avoid "Intervention" warnings on app start
+            const hasInteracted = (navigator.userActivation && typeof navigator.userActivation.hasBeenActive !== 'undefined')
+                ? navigator.userActivation.hasBeenActive
+                : true; // If API not supported, just try (will fail silently in catch)
+
+            if (type === 'impact' && hasInteracted && 'vibrate' in navigator) {
+                navigator.vibrate(10);
+            }
         }
     } catch (e) {
         console.warn("Haptics error:", e);
@@ -230,7 +243,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         tg = window.Telegram.WebApp;
         tg.expand();
-        if (tg.requestFullscreen) tg.requestFullscreen();
+        if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
+            tg.requestFullscreen();
+        }
         if (tg.isVerticalSwipesEnabled !== undefined) tg.isVerticalSwipesEnabled = false;
         if (tg.setHeaderColor) tg.setHeaderColor('#2E1A5B');
         if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
@@ -634,6 +649,20 @@ window.renderReactionToolbar = function () {
         const palette = document.createElement('div');
         palette.className = 'reaction-palette';
 
+        // Add hide button for word clash
+        if (window.selectedGameId === 'wordclash') {
+            const hideBtn = document.createElement('div');
+            hideBtn.className = 'reaction-hide-btn';
+            hideBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+            hideBtn.title = 'Скрыть для этой игры';
+            hideBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                localStorage.setItem(`hide_reactions_${window.selectedGameId}`, 'true');
+                hideReactionToolbar();
+            });
+            palette.appendChild(hideBtn);
+        }
+
         // Palette: Approval, Fun, Wow, Shock, Thinking, Waiting/Hurry
         const emojis = ['👍', '😂', '🔥', '😱', '🤔', '⏳'];
         emojis.forEach(e => {
@@ -743,6 +772,12 @@ window.renderReactionToolbar = function () {
         document.addEventListener('click', () => {
             container.classList.remove('expanded');
         });
+    }
+
+    // Check if user hid reactions for this game
+    if (window.selectedGameId && localStorage.getItem(`hide_reactions_${window.selectedGameId}`) === 'true') {
+        container.style.display = 'none';
+        return;
     }
 
     container.style.display = 'block';
@@ -1971,13 +2006,9 @@ async function kickPlayer(id, name) {
     }, { isDanger: true, confirmText: 'Выгнать' });
 }
 window.sendGameAction = async function (type, additionalData = {}) {
-    // 1. Ждем ответ от сервера
     const res = await apiRequest({ action: 'game_action', type: type, ...additionalData });
 
-    // 2. Если сервер вернул ошибку - показываем её!
-    // 2. Если сервер вернул ошибку - показываем её!
     if (res.status === 'error') {
-        // Special visual feedback for WordClash errors (like invalid word)
         if (window.selectedGameId === 'wordclash' && window.showInvalidWord) {
             window.showInvalidWord(res.message);
         } else {
@@ -1985,8 +2016,8 @@ window.sendGameAction = async function (type, additionalData = {}) {
         }
     }
 
-    // 3. Обновляем экран
     checkState();
+    return res;
 }
 
 // === FRIENDS LOGIC ===

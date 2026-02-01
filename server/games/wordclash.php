@@ -1,79 +1,181 @@
 <?php
 // server/games/wordclash.php
 
-define('WC_WORDS_FILE', __DIR__ . '/packs/wordclash/words.json');
+// Cache for loaded words to avoid re-reading file on every check in the same request
+$wordCache = [];
 
-function getInitialState() {
-    $words = [];
-    if (file_exists(WC_WORDS_FILE)) {
-        $words = json_decode(file_get_contents(WC_WORDS_FILE), true);
+// Load words by length
+function loadWords($length = 5)
+{
+    global $wordCache;
+    if (isset($wordCache[$length]))
+        return $wordCache[$length];
+
+    $file = __DIR__ . '/../../words/russian_' . $length . '.json';
+    if (!file_exists($file)) {
+        return ['пират', 'слово', 'игра']; // Fallback
     }
-    
-    // Fallback if file missing
-    if (empty($words)) $words = ['пират'];
+    $words = json_decode(file_get_contents($file), true);
+    $result = is_array($words) ? $words : [];
 
-    $secret = $words[array_rand($words)];
+    // Normalize words just in case
+    $result = array_map(function ($w) {
+        return mb_strtolower(trim($w), 'UTF-8');
+    }, $result);
 
+    $wordCache[$length] = $result;
+    return $result;
+}
+
+// Validate word exists in dictionary
+function isValidWord($word, $length)
+{
+    $words = loadWords($length);
+    return in_array(mb_strtolower(trim($word), 'UTF-8'), $words);
+}
+
+function getInitialState()
+{
     return [
-        'phase' => 'round', // No setup needed really, just jump to round 1
-        'round_count' => 1,
-        'secret_word' => $secret, // Note: In a real secure app, we wouldn't send this to client. But for MVP/Local, it's fine or we filter it in api.php if needed.
-        // Actually, let's keep it here but Client UI should NOT peek at it.
-        // Actually, let's keep it here but Client UI should NOT peek at it.
-        'history' => [], // Array of { user_id, word, pattern, timestamp }
-        'scores' => [], // UserID -> Points
+        'phase' => 'setup', // NEW: setup, playing, intermission, game_over
+        'word_length' => 5, // Default
+        'round_count' => null, // null = infinite
+        'current_round' => 0,
+        'secret_word' => '',
+        'history' => [],
+        'scores' => [],
         'winner_id' => null,
         'game_over' => false
     ];
 }
 
-function handleGameAction($pdo, $room, $user, $postData) {
+function handleGameAction($pdo, $room, $user, $postData)
+{
     $state = json_decode($room['game_state'], true);
     $type = $postData['type'];
 
+    // --- CONFIGURE GAME (Setup Phase) ---
+    if ($type === 'configure_game') {
+        if (!$room['is_host'])
+            return ['error' => 'Only host can configure game'];
+        if ($state['phase'] !== 'setup')
+            return ['error' => 'Game already started'];
+
+        $wordLength = isset($postData['word_length']) ? (int) $postData['word_length'] : ($state['word_length'] ?? 5);
+
+        $roundCount = $state['round_count'];
+        if (isset($postData['round_count'])) {
+            $roundCount = $postData['round_count'];
+            if ($roundCount === 'null' || $roundCount === '')
+                $roundCount = null;
+            else
+                $roundCount = (int) $roundCount;
+        }
+
+        $shouldStart = isset($postData['start']) && ($postData['start'] === true || $postData['start'] === 'true' || $postData['start'] === '1');
+
+        // Validate
+        if (!in_array($wordLength, [5, 6, 7])) {
+            return ['error' => 'Invalid word length'];
+        }
+
+        // Update state with new settings
+        $state['word_length'] = $wordLength;
+        $state['round_count'] = $roundCount; // null or number
+
+        // Only start game if 'start' flag is true
+        if ($shouldStart) {
+            // Load word list and select secret word
+            $words = loadWords($wordLength);
+            if (empty($words)) {
+                return ['error' => 'Word database not found'];
+            }
+
+            $state['current_round'] = 1;
+            $state['secret_word'] = $words[array_rand($words)];
+            $state['phase'] = 'playing';
+            $state['history'] = [];
+            $state['scores'] = [];
+        }
+
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    // --- NEXT ROUND (Intermission Phase) ---
+    if ($type === 'next_round') {
+        if (!$room['is_host'])
+            return ['error' => 'Only host can start next round'];
+        if ($state['phase'] !== 'intermission')
+            return ['error' => 'Not in intermission'];
+
+        $words = loadWords($state['word_length']);
+        $state['current_round']++;
+        $state['secret_word'] = $words[array_rand($words)];
+        $state['history'] = [];
+        $state['winner_id'] = null;
+        $state['game_over'] = false;
+        $state['phase'] = 'playing';
+
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
     // --- RESTART / NEXT ROUND ---
     if ($type === 'restart') {
-        // Allow anyone to restart for now, or just host? Let's say Host.
-        if (!$room['is_host']) return ['error' => 'Only host can restart'];
-        
-        $state = getInitialState();
-        $state['round_count'] = ($state['round_count'] ?? 0) + 1;
-        
+        if (!$room['is_host'])
+            return ['error' => 'Only host can restart'];
+
+        $wordLength = $state['word_length'] ?? 5;
+        $words = loadWords($wordLength);
+
+        $state['secret_word'] = $words[array_rand($words)];
+        $state['current_round'] = ($state['current_round'] ?? 0) + 1;
+        $state['history'] = [];
+        $state['winner_id'] = null;
+        $state['game_over'] = false;
+        $state['phase'] = 'playing';
+
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
 
     // --- SUBMIT GUESS ---
     if ($type === 'submit_guess') {
-        if ($state['game_over']) return ['status' => 'error', 'message' => 'Game is over'];
-        
-        $guess = mb_strtolower(trim($postData['word']));
-        
-        
+        if ($state['game_over'])
+            return ['status' => 'error', 'message' => 'Game is over'];
+
+        // Set internal encoding to be safe
+        mb_internal_encoding("UTF-8");
+
+        $guess = mb_strtolower(trim($postData['word']), 'UTF-8');
+        $wordLength = (int) ($state['word_length'] ?? 5);
+
         // 1. Validate Length
-        if (mb_strlen($guess) !== 5) return ['status' => 'error', 'message' => 'Слово должно быть из 5 букв'];
+        $actualLen = mb_strlen($guess, 'UTF-8');
+        if ($actualLen !== $wordLength) {
+            return ['status' => 'error', 'message' => "Слово '$guess' ($actualLen) должно быть из $wordLength букв"];
+        }
 
         // 2. Validate Dictionary
-        $words = [];
-        if (file_exists(WC_WORDS_FILE)) {
-            $words = json_decode(file_get_contents(WC_WORDS_FILE), true);
-        }
+        $words = loadWords($wordLength);
         if (!in_array($guess, $words)) {
-            return ['status' => 'error', 'message' => 'Такого слова нет в словаре'];
+            $count = count($words);
+            return ['status' => 'error', 'message' => "Слова '$guess' нет в базе ($count слов)"];
         }
 
-        // 3. Calculate Pattern
-        // 2 = Green, 1 = Yellow, 0 = Grey
+        // 3. Calculate Pattern (2 = Green, 1 = Yellow, 0 = Grey)
         $secret = $state['secret_word'];
-        $pattern = [0, 0, 0, 0, 0];
         $secretArr = mb_str_split($secret);
         $guessArr = mb_str_split($guess);
-        
-        // Pass 1: Greens (Exact matches)
-        $secretUsed = array_fill(0, 5, false);
-        $guessUsed = array_fill(0, 5, false);
+        $length = mb_strlen($secret);
 
-        for ($i = 0; $i < 5; $i++) {
+        $pattern = array_fill(0, $length, 0);
+        $secretUsed = array_fill(0, $length, false);
+        $guessUsed = array_fill(0, $length, false);
+
+        // Pass 1: Greens (Exact matches)
+        for ($i = 0; $i < $length; $i++) {
             if ($guessArr[$i] === $secretArr[$i]) {
                 $pattern[$i] = 2;
                 $secretUsed[$i] = true;
@@ -82,13 +184,13 @@ function handleGameAction($pdo, $room, $user, $postData) {
         }
 
         // Pass 2: Yellows (Wrong position)
-        for ($i = 0; $i < 5; $i++) {
-            if ($guessUsed[$i]) continue; // Already green
-
-            for ($j = 0; $j < 5; $j++) {
+        for ($i = 0; $i < $length; $i++) {
+            if ($guessUsed[$i])
+                continue;
+            for ($j = 0; $j < $length; $j++) {
                 if (!$secretUsed[$j] && $guessArr[$i] === $secretArr[$j]) {
                     $pattern[$i] = 1;
-                    $secretUsed[$j] = true; // Mark this secret letter as "used" for a yellow match
+                    $secretUsed[$j] = true;
                     break;
                 }
             }
@@ -97,13 +199,17 @@ function handleGameAction($pdo, $room, $user, $postData) {
         // 4. Calculate Score & Add to History
         $points = 0;
         foreach ($pattern as $p) {
-            if ($p === 2) $points += 2;
-            elseif ($p === 1) $points += 1;
+            if ($p === 2)
+                $points += 2;
+            elseif ($p === 1)
+                $points += 1;
         }
 
         // Init score if needed
-        if (!isset($state['scores'])) $state['scores'] = [];
-        if (!isset($state['scores'][$user['id']])) $state['scores'][$user['id']] = 0;
+        if (!isset($state['scores']))
+            $state['scores'] = [];
+        if (!isset($state['scores'][$user['id']]))
+            $state['scores'][$user['id']] = 0;
 
         $state['scores'][$user['id']] += $points;
 
@@ -114,14 +220,24 @@ function handleGameAction($pdo, $room, $user, $postData) {
             'score_delta' => $points, // Store detailed delta for animations
             'timestamp' => time()
         ];
-        
+
         $state['history'][] = $entry;
 
-        // 5. Check Win
+        // 5. Check Row Win (Word guessed correctly)
         if ($guess === $secret) {
             $state['winner_id'] = $user['id'];
-            $state['game_over'] = true;
-            $state['scores'][$user['id']] += 10; // Bonus for winning
+            $state['scores'][$user['id']] += 10; // Bonus for winning the round
+
+            // Check if final round
+            $isFinal = ($state['round_count'] !== null && $state['current_round'] >= $state['round_count']);
+
+            if ($isFinal) {
+                $state['phase'] = 'game_over';
+                $state['game_over'] = true;
+            } else {
+                $state['phase'] = 'intermission';
+                $state['game_over'] = false; // Still active game, just round over
+            }
         }
 
         updateGameState($room['id'], $state);
@@ -133,7 +249,8 @@ function handleGameAction($pdo, $room, $user, $postData) {
 
 // Helper for splitting multibyte string
 if (!function_exists('mb_str_split')) {
-    function mb_str_split($string) {
+    function mb_str_split($string)
+    {
         return preg_split('/(?<!^)(?!$)/u', $string);
     }
 }

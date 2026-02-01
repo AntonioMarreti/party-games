@@ -15,17 +15,17 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/variables.css?v=2188">
-    <link rel="stylesheet" href="css/layout.css?v=2188">
-    <link rel="stylesheet" href="css/components.css?v=2188">
-    <link rel="stylesheet" href="css/modules/lobby.css?v=2188">
-    <link rel="stylesheet" href="css/modules/profile.css?v=2188">
-    <link rel="stylesheet" href="css/modules/room.css?v=2188">
-    <link rel="stylesheet" href="css/modules/modals.css?v=2188">
-    <link rel="stylesheet" href="css/modules/blokus.css?v=2188">
-    <link rel="stylesheet" href="styles.css?v=2188">
-    <script src="js/audio.js?v=2188"></script>
-    <script src="js/app.js?v=2188"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2249">
+    <link rel="stylesheet" href="css/layout.css?v=2249">
+    <link rel="stylesheet" href="css/components.css?v=2249">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2249">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2249">
+    <link rel="stylesheet" href="css/modules/room.css?v=2249">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2249">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2249">
+    <link rel="stylesheet" href="styles.css?v=2249">
+    <script src="js/audio.js?v=2249"></script>
+    <script src="js/app.js?v=2249"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -825,13 +825,17 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-2">
-                    <input type="text" id="join-room-code"
-                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold" placeholder="A1B2"
-                        style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
-                    <input type="password" id="join-room-pass" class="form-control mb-3"
-                        placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
-                    <button class="btn btn-primary w-100 btn-lg" style="border-radius: 16px;"
-                        onclick="joinRoom(); bootstrap.Modal.getInstance(document.getElementById('joinModal')).hide();">Присоединиться</button>
+                    <form
+                        onsubmit="joinRoom(); bootstrap.Modal.getInstance(document.getElementById('joinModal')).hide(); return false;">
+                        <input type="text" id="join-room-code"
+                            class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold"
+                            placeholder="A1B2"
+                            style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
+                        <input type="password" id="join-room-pass" class="form-control mb-3"
+                            placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
+                        <button type="submit" class="btn btn-primary w-100 btn-lg"
+                            style="border-radius: 16px;">Присоединиться</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -846,21 +850,23 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-2">
-                    <input type="text" id="create-room-title" class="form-control mb-3 fw-bold"
-                        placeholder="Название комнаты" style="border-radius: 16px;">
+                    <form onsubmit="createRoom(); return false;">
+                        <input type="text" id="create-room-title" class="form-control mb-3 fw-bold"
+                            placeholder="Название комнаты" style="border-radius: 16px;">
 
-                    <input type="password" id="create-room-pass" class="form-control mb-3"
-                        placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
+                        <input type="password" id="create-room-pass" class="form-control mb-3"
+                            placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
 
-                    <div class="form-check form-switch mb-3 ps-5">
-                        <input class="form-check-input" type="checkbox" id="create-room-public"
-                            style="transform: scale(1.3);">
-                        <label class="form-check-label ms-2 fw-bold" for="create-room-public">Сделать
-                            публичной</label>
-                    </div>
+                        <div class="form-check form-switch mb-3 ps-5">
+                            <input class="form-check-input" type="checkbox" id="create-room-public"
+                                style="transform: scale(1.3);">
+                            <label class="form-check-label ms-2 fw-bold" for="create-room-public">Сделать
+                                публичной</label>
+                        </div>
 
-                    <button class="btn btn-primary w-100 btn-lg" style="border-radius: 16px;"
-                        onclick="createRoom()">Создать</button>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg"
+                            style="border-radius: 16px;">Создать</button>
+                    </form>
                 </div>
             </div>
         </div>
