@@ -11,7 +11,8 @@ try {
     commitCount = execSync('git rev-list --count HEAD').toString().trim();
     // Offset to match the current version style
     // +1 because pre-commit runs before the current commit is registered
-    const offset = 2301;
+    // +1 because pre-commit runs before the current commit is registered
+    const offset = 2305;
     commitCount = parseInt(commitCount) + offset;
 } catch (e) {
     console.error('Git not found or not a repository. Using current timestamp as fallback.');
