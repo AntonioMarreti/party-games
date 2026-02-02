@@ -574,3 +574,204 @@
     color: #b2bec3;
     font-weight: 600;
 }
+
+/* === GAME SHOWCASE (DETAIL SCREEN) === */
+.mini-game-card.clickable {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mini-game-card.clickable:active {
+    transform: scale(0.92);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.game-detail-wrapper {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: #f8fbff;
+    color: #2d3436;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+.hero-image-wrap {
+    background-size: cover;
+    background-position: center;
+}
+
+.btn-back-detail {
+    transition: transform 0.1s;
+}
+
+.btn-back-detail:active {
+    transform: scale(0.92);
+}
+
+.game-detail-icon-wrap {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: 3px solid #fff;
+    flex-shrink: 0;
+}
+
+.rule-v2-item {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.rule-v2-item:last-child {
+    border-bottom: none;
+}
+
+.bg-white-glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#screen-game-detail .rules-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Animations */
+#screen-game-detail {
+    animation: slideUp 0.5s cubic-bezier(0.1, 0.8, 0.1, 1);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100vh);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* === SHOWCASE 3.0 DEMO COMPONENTS === */
+
+/* Bunker Card Demo */
+.demo-bunker-card {
+    background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+    border-radius: 16px;
+    padding: 15px;
+    color: white;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.demo-bunker-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+}
+
+.card-header-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #E67E22;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+}
+
+/* Blokus Demo */
+.demo-blokus-move {
+    display: flex;
+    gap: 20px;
+}
+
+.move-box {
+    flex: 1;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+}
+
+.move-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    width: 100px;
+    margin: 0 auto 8px;
+}
+
+.mg-cell {
+    width: 18px;
+    height: 18px;
+    background: #eee;
+    border-radius: 2px;
+}
+
+.mg-cell.active {
+    background: #3498db;
+}
+
+.mg-cell.wrong {
+    background: #e74c3c;
+    opacity: 0.5;
+}
+
+/* WordClash Demo */
+.word-demo-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.word-tile {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    color: white;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.tile-correct {
+    background: #6aaa64;
+}
+
+.tile-present {
+    background: #c9b458;
+}
+
+.tile-absent {
+    background: #787c7e;
+}
+
+/* Features Section */
+.feature-item-v3 {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.feature-icon-v3 {
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}

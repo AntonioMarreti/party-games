@@ -1,4 +1,8 @@
-/* === LAYOUT === */
+html,
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
 
 /* Wrapper */
 .device-wrapper {
@@ -238,9 +242,8 @@
     }
 
     .device-wrapper {
-        width: auto;
-        height: 90vh;
-        aspect-ratio: 400 / 860;
+        width: calc(88vh * (430 / 860));
+        height: 88vh;
         background: #1c1c1e;
         border-radius: 64px;
         border: 4px solid #4a4a4c;
@@ -264,8 +267,6 @@
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         position: relative;
-        mask-image: radial-gradient(white, black);
-        -webkit-mask-image: -webkit-radial-gradient(white, black);
     }
 
     /* Notch / Dynamic Island (Attached to Content) */
@@ -309,10 +310,6 @@
         border-radius: 0 4px 4px 0;
     }
 
-    .container {
-        padding: 0;
-        max-width: 100%;
-    }
 
     .device-content::-webkit-scrollbar {
         width: 0px;
@@ -320,6 +317,55 @@
 
     .device-content:has(#screen-game.active-screen .blokus-wrapper) {
         overflow: hidden !important;
+    }
+
+    /* Fixed positioning fix for desktop mockup */
+    .device-content .fixed-bottom,
+    .device-content .fixed-top {
+        position: absolute !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+    }
+
+    .device-content .fixed-top {
+        top: 0 !important;
+        bottom: auto !important;
+    }
+
+    /* Safety rule for horizontal scroll on detail screen */
+    #screen-game-detail,
+    #screen-game-detail * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #screen-game-detail {
+        width: 100% !important;
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+        /* Managed by inner scroller layer */
+    }
+
+    #screen-game-detail .game-detail-wrapper {
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    #screen-game-detail .no-scrollbar {
+        max-width: none !important;
+        /* Allow the stats bar to scroll internally */
+        overflow-x: auto !important;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none !important;
+        scrollbar-width: none !important;
     }
 
     body::before {
@@ -349,6 +395,14 @@
     /* Restore bottom padding lost from wrapper removal */
     #screen-leaderboard .content-wrapper {
         padding-bottom: 120px !important;
+    }
+
+    /* Container fix for desktop mockup (Constrain and Centering) */
+    .container {
+        padding: 0;
+        max-width: 480px !important;
+        margin: 0 auto !important;
+        overflow-x: hidden;
     }
 }
 

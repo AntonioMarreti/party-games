@@ -194,6 +194,83 @@ const AVAILABLE_GAMES = [
         icon: 'bi-shield-shaded',
         color: '#E67E22',
         bgColor: '#FDF2E9',
+        promoImage: 'assets/promo/bunker.jpg',
+        description: 'Психологическая стратегия в мире после апокалипсиса.',
+        longDescription: `
+            <p>Планета охвачена катастрофой. У вас есть шанс спастись в защищенном бункере, но места на всех не хватит. Это не просто игра, это проверка вашей способности убеждать, манипулировать и работать в команде.</p>
+            <p><strong>Ваш Персонаж:</strong> Каждый игрок получает уникальный набор характеристик — «Карты Жизни». Ваша профессия, состояние здоровья, багаж и даже странные хобби могут стать как билетом к спасению, так и причиной вашего изгнания.</p>
+            <p>В этой игре нет правильных ответов, есть только ваша харизма и умение плести интриги. Будете ли вы честным врачом или хитрым политиком? Решать только вам.</p>
+        `,
+        stats: { players: '4-12', time: '20-60 мин', difficulty: 'Средняя' },
+        rules: [
+            { icon: 'bi-person-badge', text: 'Уникальные роли и тайны' },
+            { icon: 'bi-megaphone', text: 'Жаркие дебаты и голосования' },
+            { icon: 'bi-shield-lock', text: 'Борьба за выживание человечества' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background:#FDF2E9; border:1px dashed #E67E22;">
+                        <div class="text-center mb-2" style="font-weight:bold; color:#E67E22; font-size:12px; letter-spacing:1px;">КАРТА ПЕРСОНАЖА</div>
+                        <div class="bg-white p-3 rounded-3 shadow-sm">
+                            <div class="d-flex border-bottom pb-2 mb-2">
+                                <span class="small opacity-50 flex-grow-1">Профессия</span>
+                                <span class="small fw-bold">Врач-хирург</span>
+                            </div>
+                            <div class="d-flex border-bottom pb-2 mb-2">
+                                <span class="small opacity-50 flex-grow-1">Здоровье</span>
+                                <span class="small fw-bold">Астма</span>
+                            </div>
+                            <div class="d-flex">
+                                <span class="small opacity-50 flex-grow-1">Хобби</span>
+                                <span class="small fw-bold">Стрельба</span>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background:#1a1a1a; border:1px solid #333; color:#eee;">
+                        <div class="text-center mb-2" style="font-weight:bold; color:#e74c3c; font-size:12px; letter-spacing:1px;">КАТАСТРОФА</div>
+                        <div class="text-center py-2">
+                            <i class="bi bi-radioactive" style="font-size:32px; color:#e74c3c;"></i>
+                            <div style="font-size:14px; margin-top:5px; font-weight:bold;">Ядерная война</div>
+                            <div style="font-size:11px; opacity:0.7;">Радиация на поверхности. Зима близко.</div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background:#FCF3CF; border:1px dashed #f39c12;">
+                        <div class="text-center mb-2" style="font-weight:bold; color:#f39c12; font-size:12px; letter-spacing:1px;">ЛОКАЦИЯ: БУНКЕР</div>
+                        <div class="bg-white p-2 rounded-3">
+                            <div class="d-flex gap-2 align-items-center mb-1 small"><i class="bi bi-flower1 text-success"></i> Оранжерея (Еда)</div>
+                            <div class="d-flex gap-2 align-items-center mb-1 small"><i class="bi bi-shield-lock text-primary"></i> Комната охраны</div>
+                            <div class="d-flex gap-2 align-items-center small"><i class="bi bi-bookshelf text-warning"></i> Библиотека</div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                content: `
+                    <div class="p-2 rounded-4 mb-3" style="background:#f8f9fa; border:1px solid #dee2e6;">
+                         <div class="text-center mb-2" style="font-weight:bold; color:#2d3436; font-size:11px; letter-spacing:1px;">ГЛОУБ АЛЬТ: ГОЛОСОВАНИЕ</div>
+                         <div class="d-flex justify-content-center gap-2 mb-1">
+                            <div style="width:28px; height:28px; background:#e74c3c; border-radius:50%; color:white; text-align:center; line-height:28px; font-size:12px;">✖</div>
+                            <div style="width:28px; height:28px; background:#eee; border-radius:50%;"></div>
+                            <div style="width:28px; height:28px; background:#eee; border-radius:50%;"></div>
+                         </div>
+                         <div class="text-center x-small opacity-50 mt-1">Решим, кто покинет убежище</div>
+                    </div>
+                `
+            }
+        ],
         files: [
             'js/games/bunker/bunker.css',
             'js/games/bunker/ui.js',
@@ -207,6 +284,78 @@ const AVAILABLE_GAMES = [
         icon: 'bi-lightbulb-fill',
         color: '#9B59B6',
         bgColor: '#F4ECF7',
+        promoImage: 'assets/promo/brainbattle.jpg',
+        description: 'Динамичный турнир из быстрых мини-игр!',
+        longDescription: `
+            <p>Забудьте о скучных викторинах. «Мозговая Битва» — это аттракцион для вашего ума! Мы собрали лучшие механики на проверку скорости реакции, логического мышления и математической интуиции в одном приложении.</p>
+            <p>Игра идеально подходит как для большой компании, так и для одиночной тренировки мозга. Соревнуйтесь в реальном времени, зарабатывайте баллы и докажите, что ваш интеллект достоин звания гроссмейстера вечеринок!</p>
+        `,
+        stats: { players: '1-8', time: '5-15 мин', difficulty: 'Легкая' },
+        rules: [
+            { icon: 'bi-lightning-charge', text: 'Мини-игры на любой вкус' },
+            { icon: 'bi-stopwatch', text: 'Каждая секунда на счету' },
+            { icon: 'bi-graph-up-arrow', text: 'Рост сложности со временем' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background: #F4ECF7; border: 1px dashed #9B59B6;">
+                        <div class="text-center mb-2" style="font-weight: bold; color: #9B59B6; font-size: 11px; letter-spacing: 1px;">ЛОГИКА (LOGIC)</div>
+                        <div class="d-flex justify-content-center">
+                            <div class="bg-white p-3 rounded-3 shadow-sm text-center" style="width: 100%;">
+                                <div style="font-size:14px; color: #666; margin-bottom: 5px;">Цветовая ловушка</div>
+                                <div style="font-size:24px; font-weight:bold; color: #e74c3c;">СИНИЙ</div>
+                                <div style="font-size:11px; color: #9B59B6;">(Нажми на цвет текста)</div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background: #EBF5FB; border: 1px dashed #3498db;">
+                        <div class="text-center mb-2" style="font-weight: bold; color: #3498db; font-size: 11px; letter-spacing: 1px;">ВНИМАНИЕ (ATTENTION)</div>
+                        <div class="bg-white p-3 rounded-3 shadow-sm text-center">
+                            <div style="font-size:14px; color: #666; margin-bottom: 8px;">Матрица: Найди пару</div>
+                            <div class="d-flex justify-content-center gap-2">
+                                <div style="width:30px; height:30px; background:#3498db; border-radius:6px; color:white; display:flex; align-items:center; justify-content:center;"><i class="bi bi-star-fill"></i></div>
+                                <div style="width:30px; height:30px; background:#eee; border-radius:6px;"></div>
+                                <div style="width:30px; height:30px; background:#3498db; border-radius:6px; color:white; display:flex; align-items:center; justify-content:center;"><i class="bi bi-star-fill"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background: #FEF9E7; border: 1px dashed #f1c40f;">
+                        <div class="text-center mb-2" style="font-weight: bold; color: #f39c12; font-size: 11px; letter-spacing: 1px;">РЕАКЦИЯ (MOTOR)</div>
+                        <div class="d-flex flex-column align-items-center bg-white p-3 rounded-3 shadow-sm">
+                            <div style="width:50px; height:50px; background:#2ecc71; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:20px;">
+                                <i class="bi bi-cursor-fill"></i>
+                            </div>
+                            <div style="font-size:12px; margin-top:8px; font-weight: bold; color: #2ecc71;">ЖМИ СЕЙЧАС!</div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background: #F2F3F4; border: 1px dashed #7F8C8D;">
+                        <div class="text-center mb-2" style="font-weight: bold; color: #2C3E50; font-size: 11px; letter-spacing: 1px;">РЕЗУЛЬТАТЫ БИТВЫ</div>
+                        <div class="small bg-white p-2 rounded-3">
+                            <div class="d-flex justify-content-between border-bottom py-1"><span>1. Алексей</span><span class="fw-bold text-success">1450</span></div>
+                            <div class="d-flex justify-content-between border-bottom py-1"><span>2. Мария</span><span class="fw-bold">1200</span></div>
+                            <div class="d-flex justify-content-between py-1"><span>3. Вы</span><span class="fw-bold text-primary">1180</span></div>
+                        </div>
+                    </div>
+                `
+            }
+        ],
         files: ['js/games/brainbattle.js']
     },
     {
@@ -215,6 +364,30 @@ const AVAILABLE_GAMES = [
         icon: 'bi-question-circle-fill',
         color: '#1ABC9C',
         bgColor: '#E8F8F5',
+        promoImage: 'assets/promo/whoami.jpg',
+        description: 'Раскройте все секреты вашей компании!',
+        longDescription: `
+            <p>«Кто из нас?» — это игра, которая превращает обычную посиделку в вечер откровений и безудержного смеха. Правила элементарны: ведущий зачитывает провокационный или забавный вопрос, а все остальные анонимно голосуют за того, кто больше всего подходит под описание.</p>
+            <p>«Кто из нас чаще всего забывает ключи?» или «Кто из нас мог бы стать секретным агентом?» — вопросы варьируются от невинных до по-настоящему острых. Это лучший способ узнать, что друзья думают о вас на самом деле.</p>
+            <p>Никаких обид, только юмор и искренность. Самое интересное начинается после подсчета голосов!</p>
+        `,
+        stats: { players: '3-20', time: '10-30 мин', difficulty: 'Легкая' },
+        rules: [
+            { icon: 'bi-chat-heart', text: 'Необычные и смешные вопросы' },
+            { icon: 'bi-people-fill', text: 'Голосуйте за своих друзей' },
+            { icon: 'bi-incognito', text: 'Полная анонимность выбора' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                content: `
+                    <div class="p-3 rounded-4 mb-3" style="background: white; border:1px solid #eee; text-align:center;">
+                        <div style="font-size:14px; font-weight:bold; color:#1ABC9C; margin-bottom:8px;">КТО ИЗ НАС...</div>
+                        <div style="font-size:16px; font-style:italic;">Будет первым, кто предложит заказать пиццу в 3 часа ночи?</div>
+                    </div>
+                `
+            }
+        ],
         files: ['js/games/whoami.js']
     },
     {
@@ -223,14 +396,106 @@ const AVAILABLE_GAMES = [
         icon: 'bi-grid-3x3',
         color: '#3498db',
         bgColor: '#ebf5fb',
+        promoImage: 'assets/promo/blockus.jpg',
+        description: 'Легендарная абстрактная стратегия.',
+        longDescription: `
+            <p>Blokus — это математически выверенная битва за пространство. У каждого игрока есть набор из 21 фигуры разной формы. Ваша цель проста: выставить как можно больше фигур на поле 20x20.</p>
+            <p>Уникальность игры в её единственном правиле размещения: каждая новая фигура вашего цвета должна соприкасаться с вашей же фигурой хотя бы одним углом. Касаться гранями (сторонами) — запрещено.</p>
+            <p>Постепенно поле заполняется, и ваша задача — не только расширять свою территорию, но и блокировать пути наступления противников. Это идеальное сочетание глубины шахмат и простоты тетриса.</p>
+        `,
+        stats: { players: '2-4', time: '15-25 мин', difficulty: 'Высокая' },
+        rules: [
+            { icon: 'bi-bounding-box', text: 'Захват территории поля' },
+            { icon: 'bi-node-plus', text: 'Правило касания только углами' },
+            { icon: 'bi-slash-circle', text: 'Блокируйте пути врагам' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                label: 'Правило: Касание углами',
+                content: `
+                    <div class="demo-blokus-move">
+                        <div class="move-box" style="margin: 0 auto; background: rgba(39, 174, 96, 0.05); border: 1px dashed rgba(39, 174, 96, 0.2);">
+                            <div class="move-grid">
+                                <div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                                <div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell active"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                                <div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell active"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                                <div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell active"></div>
+                                <div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell"></div>
+                            </div>
+                            <div style="font-size:10px; color:#27ae60; font-weight:800; text-transform: uppercase;"><i class="bi bi-check-circle-fill"></i> Только уголок</div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                label: 'Ошибка: Касание сторонами',
+                content: `
+                    <div class="demo-blokus-move">
+                        <div class="move-box" style="margin: 0 auto; background: rgba(231, 76, 60, 0.05); border: 1px dashed rgba(231, 76, 60, 0.2);">
+                            <div class="move-grid">
+                                <div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                                <div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell active"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                                <div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell active"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                                <div class="mg-cell"></div><div class="mg-cell active"></div><div class="mg-cell active"></div><div class="mg-cell active"></div><div class="mg-cell active"></div>
+                                <div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div><div class="mg-cell"></div>
+                            </div>
+                            <div style="font-size:10px; color:#e74c3c; font-weight:800; text-transform: uppercase;"><i class="bi bi-x-circle-fill"></i> Нельзя касаться гранями</div>
+                        </div>
+                    </div>
+                `
+            }
+        ],
         files: ['js/games/blokus/engine.js', 'js/games/blokus/ui.js', 'js/games/blokus/handlers.js', 'js/games/blokus/bot.js', 'js/games/blokus.js']
     },
     {
         id: 'wordclash',
-        name: 'Слова',
-        icon: 'bi-fonts', // Bootstrap Icon
-        color: '#6aaa64', // Green
+        name: 'Битва Слов',
+        icon: 'bi-fonts',
+        color: '#6aaa64',
         bgColor: '#e8f5e9',
+        promoImage: 'assets/promo/wordclash.jpg',
+        description: 'Найдите секретное слово быстрее всех!',
+        longDescription: `
+            <p>Любите ли вы головоломки так, как любим их мы? «Битва Слов» — это соревновательная версия классических словесных игр. Ваша задача — отгадать загаданное слово из 5 букв за ограниченное количество попыток.</p>
+            <p>Каждое введенное слово дает подсказку: зеленые буквы стоят на своих местах, желтые — есть в слове, но в другой позиции, а серые отсутствуют вовсе. Но помните, время — ваш главный враг. Каждый участник видит прогресс друг друга, что превращает игру в настоящую интеллектуальную гонку.</p>
+            <p>Используйте логику, словарный запас и интуицию, чтобы стать мастером лингвистических сражений!</p>
+        `,
+        stats: { players: '1-8', time: '3-10 мин', difficulty: 'Средняя' },
+        rules: [
+            { icon: 'bi-keyboard-fill', text: 'Вводите только настоящие слова' },
+            { icon: 'bi-palette2', text: 'Следите за цветом букв' },
+            { icon: 'bi-trophy-fill', text: 'Побеждает самый быстрый' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                label: 'Зеленый: Правильное место',
+                content: `
+                    <div class="word-demo-row mb-3">
+                        <div class="word-tile tile-correct" style="width: 44px; height: 44px;">Б</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">У</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">К</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">В</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">А</div>
+                    </div>
+                `
+            },
+            {
+                type: 'html',
+                label: 'Желтый: Буква есть, но не там',
+                content: `
+                    <div class="word-demo-row mb-3">
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">С</div>
+                        <div class="word-tile tile-present" style="width: 44px; height: 44px;">Л</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">О</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">В</div>
+                        <div class="word-tile tile-absent" style="width: 44px; height: 44px;">О</div>
+                    </div>
+                `
+            }
+        ],
         files: ['js/games/wordclash/index.js']
     }
 ];
@@ -1083,6 +1348,7 @@ window.checkState = async function () {
             window.currentRoomCode = null;
             window.isHost = false;
             showScreen('lobby');
+            renderPopularGames();
         }
         return res;
     } finally {
@@ -1820,6 +2086,39 @@ function showScreen(id) {
     if (nav) {
         const shouldShow = (id === 'lobby' || id === 'leaderboard');
         nav.style.setProperty('display', shouldShow ? 'flex' : 'none', 'important');
+    }
+
+    // Telegram Native BackButton handling
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        if (id === 'game-detail') {
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => {
+                window.showScreen('lobby');
+                tg.BackButton.hide();
+            });
+        } else {
+            tg.BackButton.hide();
+            tg.BackButton.offClick();
+        }
+    }
+
+    // Swipe-to-close for game-detail
+    const showcase = document.getElementById('screen-game-detail');
+    if (showcase && !showcase.dataset.swipeBound) {
+        let touchStartX = 0;
+        showcase.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        showcase.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].screenX;
+            // Native-like swipe from left (start in first 20% of screen)
+            if (touchStartX < window.innerWidth * 0.2 && touchEndX - touchStartX > 100) {
+                window.showScreen('lobby');
+            }
+        }, { passive: true });
+        showcase.dataset.swipeBound = "true";
     }
 
     if (id === 'game') {
@@ -2826,3 +3125,165 @@ window.toggleDebugHUD = function () {
 };
 // Expose
 window.startDebug = window.toggleDebugHUD;
+
+// === ПОПУЛЯРНЫЕ ИГРЫ (DYNAMIC) ===
+window.renderPopularGames = function () {
+    const list = document.getElementById('popular-games-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+    AVAILABLE_GAMES.forEach(game => {
+        const card = document.createElement('div');
+        card.className = 'mini-game-card clickable';
+        card.onclick = () => openGameShowcase(game.id);
+
+        const iconColor = game.color || '#6c757d';
+        const gradient = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
+
+        card.innerHTML = `
+            <div class="mini-icon-box" style="background: ${iconColor}; background-image: ${gradient}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <i class="bi ${game.icon || 'bi-controller'}"></i>
+            </div>
+            <div class="mini-game-title">${game.name}</div>
+        `;
+        list.appendChild(card);
+    });
+};
+
+window.openGameShowcase = function openGameShowcase(gameId) {
+    const game = AVAILABLE_GAMES.find(g => g.id === gameId);
+    if (!game) return;
+
+    // Elements
+    const headerTitle = document.getElementById('game-detail-header-title');
+    const loreArea = document.getElementById('game-detail-lore');
+    const demoArea = document.getElementById('game-detail-demo-area');
+    const rulesList = document.getElementById('game-detail-rules');
+    const heroImg = document.getElementById('game-detail-image-container');
+    const iconWrap = document.getElementById('game-detail-icon-wrap');
+    const icon = document.getElementById('game-detail-icon');
+
+    // Stats
+    const statPlayers = document.getElementById('stat-players');
+    const statTime = document.getElementById('stat-time');
+    const statDifficulty = document.getElementById('stat-difficulty');
+
+    // Populate Data
+    if (headerTitle) headerTitle.innerText = game.name;
+    if (loreArea) loreArea.innerHTML = game.longDescription || game.description || 'Описание скоро появится!';
+    if (icon) icon.className = `bi ${game.icon || 'bi-controller'}`;
+    if (iconWrap) {
+        const color = game.color || '#666';
+        iconWrap.style.background = color;
+        iconWrap.style.backgroundImage = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
+        iconWrap.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+        iconWrap.style.display = 'flex';
+        iconWrap.style.alignItems = 'center';
+        iconWrap.style.justifyContent = 'center';
+    }
+
+    // Populate Gallery (With context headers)
+    if (demoArea) {
+        demoArea.innerHTML = '';
+        if (game.gallery && game.gallery.length > 0) {
+            const galleryHeader = document.createElement('h2');
+            galleryHeader.className = 'fw-bold mb-4 text-dark';
+            galleryHeader.style.cssText = 'font-size: 22px; letter-spacing: -0.5px;';
+            galleryHeader.innerText = 'Примеры игры';
+            demoArea.appendChild(galleryHeader);
+
+            game.gallery.forEach(item => {
+                if (item.type === 'html') {
+                    const blockWrap = document.createElement('div');
+                    blockWrap.className = 'mb-4';
+
+                    // Add label if present in data, otherwise use generic description
+                    const label = item.label || 'Игровой процесс';
+                    blockWrap.innerHTML = `
+                        <div class="text-muted small fw-bold text-uppercase mb-3" style="letter-spacing: 1px; font-size: 10px;">${label}</div>
+                        ${item.content}
+                    `;
+                    demoArea.appendChild(blockWrap);
+                }
+            });
+        }
+    }
+
+    // Rules logic (Cleaner Flat List)
+    if (rulesList) {
+        rulesList.innerHTML = '';
+        if (game.rules) {
+            game.rules.forEach((rule, idx) => {
+                const item = document.createElement('div');
+                item.className = 'rule-v3-item d-flex align-items-start py-3';
+                if (idx < game.rules.length - 1) {
+                    item.style.borderBottom = '1px solid #f2f2f7';
+                }
+
+                item.innerHTML = `
+                    <div class="rule-icon-box me-3 d-flex align-items-center justify-content-center" 
+                         style="width: 28px; height: 28px; background: transparent; color: ${game.color}; font-size: 18px; flex-shrink: 0;">
+                        <i class="bi ${rule.icon}"></i>
+                    </div>
+                    <div class="rule-text text-dark" style="font-size: 16px; font-weight: 500; line-height: 1.4; flex: 1; padding-top: 2px;">
+                        ${rule.text}
+                    </div>
+                `;
+                rulesList.appendChild(item);
+            });
+        }
+    }
+
+    if (statPlayers) statPlayers.innerText = game.stats ? game.stats.players : '-';
+    if (statTime) statTime.innerText = game.stats ? game.stats.time : '-';
+    if (statDifficulty) statDifficulty.innerText = game.stats ? game.stats.difficulty : '-';
+
+    // Hero Image Rendering
+    if (heroImg) {
+        if (game.promoImage) {
+            heroImg.innerHTML = `
+                <img src="${game.promoImage}?v=2260" class="h-100 w-100" style="object-fit: cover;">
+                <!-- Subtle Transition Gradient -->
+                <div style="position:absolute; bottom:0; left:0; width:100%; height:80px; background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%); z-index: 2;"></div>
+            `;
+        } else {
+            heroImg.innerHTML = `
+                <div style="width:100%; height:100%; background: linear-gradient(135deg, ${game.color} 0%, var(--accent-color) 100%); display: flex; align-items: center; justify-content: center; font-size: 140px; color: rgba(255,255,255,0.2);">
+                    <i class="bi ${game.icon || 'bi-controller'}"></i>
+                </div>
+            `;
+        }
+    }
+
+    // Button Logic
+    const tryBtn = document.getElementById('btn-try-game-now');
+    const headerBtn = document.getElementById('btn-header-try-now');
+    const tryHandler = () => tryGameNow(gameId);
+    if (tryBtn) tryBtn.onclick = tryHandler;
+    if (headerBtn) headerBtn.onclick = tryHandler;
+
+    // Telegram Native BackButton
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            window.showScreen('lobby');
+            tg.BackButton.hide();
+        });
+    }
+
+    showScreen('game-detail');
+};
+
+window.tryGameNow = async function (gameId) {
+    // 1. Select the game
+    selectedGameId = gameId;
+
+    // 2. Clear pass input
+    const passInput = document.getElementById('create-room-pass');
+    if (passInput) passInput.value = '';
+
+    // 3. Create room
+    if (window.triggerHaptic) triggerHaptic('impact', 'medium');
+    await createRoom();
+};

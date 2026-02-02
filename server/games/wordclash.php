@@ -164,6 +164,15 @@ function handleGameAction($pdo, $room, $user, $postData)
             return ['status' => 'error', 'message' => "Слова '$guess' нет в базе ($count слов)"];
         }
 
+        // 2.1 Check for Duplicates (Round History)
+        if (isset($state['history'])) {
+            foreach ($state['history'] as $entry) {
+                if ($entry['word'] === $guess) {
+                    return ['status' => 'error', 'message' => "Это слово уже было использовано!"];
+                }
+            }
+        }
+
         // 3. Calculate Pattern (2 = Green, 1 = Yellow, 0 = Grey)
         $secret = $state['secret_word'];
         $secretArr = mb_str_split($secret);
