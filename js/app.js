@@ -24,6 +24,24 @@ var pollInterval = null;
 var loadedGames = {};
 var globalUser = null;
 var serverTimeOffset = 0; // Difference between server and local clock (ms)
+const APP_REPO = 'AntonioMarreti/party-games';
+
+// Dynamically extract version from the script tag in index.html (e.g. js/app.js?v=2318)
+function getAppVersionFromDOM() {
+    try {
+        const scripts = document.getElementsByTagName('script');
+        for (let i = 0; i < scripts.length; i++) {
+            const src = scripts[i].getAttribute('src');
+            if (src && src.includes('js/app.js?v=')) {
+                return src.split('v=')[1];
+            }
+        }
+    } catch (e) {
+        console.warn("Could not extract version from DOM:", e);
+    }
+    return 'Unknown';
+}
+const APP_VERSION_LOCAL = getAppVersionFromDOM();
 
 // === THEME MANAGEMENT ===
 // Internal function: Dynamic style injection to fix Safari/WebKit repaint bug
@@ -731,6 +749,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.warn("Telegram WebApp not found");
     }
+
+    fetchAppVersion();
 
     const hash = window.location.hash;
     if (hash.includes('auth_token=')) {
@@ -2408,6 +2428,26 @@ async function submitGameResults(playersData) {
         }
     } catch (e) {
         console.error("❌ Error submitting game results:", e);
+    }
+}
+
+async function fetchAppVersion() {
+    const el = document.getElementById('app-version-display');
+    if (!el) return;
+
+    try {
+        // Fetch latest commit from GitHub
+        const response = await fetch(`https://api.github.com/repos/${APP_REPO}/commits/main`);
+        if (!response.ok) throw new Error('GitHub API Limit or Network Error');
+
+        const data = await response.json();
+        const shortSha = data.sha.substring(0, 7);
+        const date = new Date(data.commit.author.date).toLocaleDateString();
+
+        el.innerHTML = `v${APP_VERSION_LOCAL} <span class="opacity-50">•</span> ${shortSha} <span class="opacity-50">(${date})</span>`;
+    } catch (e) {
+        console.warn("⚠️ Could not fetch latest version from GitHub:", e);
+        el.innerText = `v${APP_VERSION_LOCAL}`;
     }
 }
 
