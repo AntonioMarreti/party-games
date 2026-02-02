@@ -102,9 +102,10 @@ body.wc-keyboard-active #wc-header {
 .wc-input-area {
     width: 100%;
     background: #1e2a3a;
-    padding: 12px;
-    padding-left: calc(12px + env(safe-area-inset-left, 0px));
-    padding-right: calc(12px + env(safe-area-inset-right, 0px));
+    padding: 12px 24px;
+    /* Increased side padding */
+    padding-left: calc(24px + env(safe-area-inset-left, 0px));
+    padding-right: calc(24px + env(safe-area-inset-right, 0px));
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     flex: 0 0 auto;
     z-index: 20;
@@ -356,6 +357,28 @@ body.wc-keyboard-active #wc-header {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.wc-exit-btn-mini {
+    width: 50px;
+    height: 50px;
+    /* Match height of send btn/input roughly */
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ff6b6b;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.wc-exit-btn-mini:active {
+    background: rgba(255, 0, 0, 0.2);
+    transform: scale(0.95);
 }
 
 /* Animations */

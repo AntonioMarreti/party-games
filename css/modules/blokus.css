@@ -226,7 +226,7 @@
 }
 
 .btn-apply:not(:disabled) {
-    background: #6C4AB6 !important;
+    background: var(--primary-color) !important;
     color: white !important;
 }
 
@@ -315,9 +315,9 @@
 }
 
 .blokus-piece-card.selected {
-    border-color: #6C4AB6;
+    border-color: var(--primary-color);
     background: white;
-    box-shadow: 0 4px 15px rgba(108, 74, 182, 0.1);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--primary-color), transparent 80%);
 }
 
 .capsule-filter-container {

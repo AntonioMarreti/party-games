@@ -79,19 +79,21 @@ function buildWaiSkeleton(state, wrapper, isHost) {
     }
     else if (phase === 'voting') {
         wrapper.innerHTML = `
-            <div class="px-3 pt-2">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="px-3">
+                <div class="d-flex justify-content-center align-items-center mb-3">
                     <span class="badge bg-light text-dark" id="wai-round-info">...</span>
-                    ${isHost ?
-                `<button class="btn btn-sm text-primary fw-bold" onclick="backToLobby()">В Лобби</button>` :
-                `<button class="btn btn-sm text-danger fw-bold" onclick="leaveRoom()">Выйти</button>`
-            }
                 </div>
-                <!-- ВОТ ЭТОТ БЛОК БЫЛ ПРОПУЩЕН -->
                 <h2 id="wai-q-text" class="fw-bold text-center mb-4 animate__animated animate__fadeIn" style="font-size: 24px; min-height: 80px;"></h2>
             </div>
             <div id="wai-voting-grid" class="voting-grid px-3"></div>
             <div id="wai-wait-msg" class="text-center text-muted mt-3" style="display:none">Ждем остальных игроков...</div>
+            
+            <div class="fixed-bottom-actions">
+                ${isHost ?
+                `<button class="btn-bottom-secondary" onclick="backToLobby()">Выйти в лобби</button>` :
+                `<button class="btn-bottom-secondary" onclick="leaveRoom()">Выйти</button>`
+            }
+            </div>
         `;
     }
     else if (phase === 'results' || phase === 'final_leaderboard') {

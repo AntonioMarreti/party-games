@@ -389,6 +389,9 @@ function renderWordClash(res) {
             window.currentWordLength = wordLength; // Store for keyboard handler
             inputArea.innerHTML = `
                 <div class="wc-virtual-display-row" style="position: relative;">
+                    <button class="wc-exit-btn-mini shadow-sm" onclick="window.confirmExitGame()">
+                        <i class="bi bi-door-open-fill"></i>
+                    </button>
                     <div id="wc-error-label" class="wc-error-label"></div>
                     <div class="wc-virtual-input">${'_'.repeat(wordLength)}</div>
                     <button class="wc-send-btn shadow" onclick="window.submitWordClash(null)">
@@ -420,6 +423,9 @@ function renderWordClash(res) {
             // SYSTEM KEYBOARD MODE (Original)
             inputArea.innerHTML = `
                 <form id="wc-form" class="wc-input-group" autocomplete="off" onsubmit="window.submitWordClashSystem(event)">
+                    <button type="button" class="wc-exit-btn-mini shadow-sm" onclick="window.confirmExitGame()">
+                        <i class="bi bi-door-open-fill"></i>
+                    </button>
                     <div id="wc-error-label" class="wc-error-label"></div>
                     <input type="text" id="wc-input" class="wc-input" maxlength="5" placeholder="СЛОВО" ${state.game_over ? 'disabled' : ''}>
                     <button type="submit" class="wc-send-btn shadow" tabindex="-1" ${state.game_over ? 'disabled' : ''}><i class="bi bi-arrow-up-circle-fill"></i></button>

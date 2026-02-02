@@ -378,7 +378,7 @@
     display: flex;
     flex-direction: column;
     padding: 25px;
-    padding-top: calc(60px + env(safe-area-inset-top));
+    padding-top: calc(50px + env(safe-area-inset-top));
     /* Increased clearance */
     overflow-y: auto;
 }
@@ -772,6 +772,7 @@ div:where(.swal2-popup) {
 .letter-spacing-2 {
     letter-spacing: 2px;
 }
+
 /* === THERMAL SAFE MODE (Low Power / iOS) === */
 body.thermal-safe .bunker-theme-wrapper {
     background: #f0f2f5 !important;
@@ -821,7 +822,11 @@ body.thermal-safe .text-white-shadow {
     text-shadow: none !important;
 }
 
-body.thermal-safe h1, body.thermal-safe h2, body.thermal-safe h3,
-body.thermal-safe h4, body.thermal-safe h5, body.thermal-safe h6 {
+body.thermal-safe h1,
+body.thermal-safe h2,
+body.thermal-safe h3,
+body.thermal-safe h4,
+body.thermal-safe h5,
+body.thermal-safe h6 {
     color: #000 !important;
 }

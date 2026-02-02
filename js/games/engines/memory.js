@@ -16,7 +16,7 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
                 `).join('')}
             </div>
             <div class="progress w-75 rounded-pill" style="height: 12px; background: rgba(0,0,0,0.05);">
-                <div class="progress-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, #6C5CE7, #a29bfe); border-radius: 10px;"></div>
+                <div class="progress-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color), white 30%)); border-radius: 10px;"></div>
             </div>
         </div>
     `;
@@ -101,7 +101,7 @@ window.bbBlindClick = function () {
         const timeMs = performance.now() - window.bbBattleStartTime;
         const timeSec = timeMs / 1000;
 
-        display.style.color = "#6C5CE7";
+        display.style.color = "var(--primary-color)";
         display.innerHTML = timeSec.toFixed(3); // Показываем точный результат
 
         // Считаем точность

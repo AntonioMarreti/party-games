@@ -6,8 +6,8 @@
     margin: 0 auto 16px auto;
     border-radius: 50%;
     padding: 4px;
-    background: linear-gradient(180deg, #6C4AB6 0%, #2E1A5B 100%);
-    box-shadow: 0 10px 30px rgba(108, 74, 182, 0.4);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary-color), black 10%) 0%, color-mix(in srgb, var(--primary-color), black 40%) 100%);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 60%);
 }
 
 .profile-img {
@@ -33,7 +33,7 @@
 }
 
 .menu-item {
-    background: white;
+    background: var(--section-bg);
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 10px;
@@ -305,6 +305,27 @@
     /* Clip corners */
 }
 
+/* Color Picker Buttons */
+.color-option-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex-shrink: 0;
+}
+
+.color-option-btn:active {
+    transform: scale(0.9);
+}
+
+.color-option-btn.selected {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px var(--bg-color), 0 0 0 5px var(--custom-primary, #6C5CE7);
+    border: none;
+}
+
 /* Ensure headers on these screens are readable */
 #screen-profile-edit h4,
 #screen-friends h4,
@@ -324,7 +345,7 @@
 }
 
 .settings-item:not(:last-child) {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .settings-item.clickable {
@@ -399,12 +420,12 @@ body.large-font .text-muted.small {
 
 /* === V1.2 "VIBE UPDATE" MODERN STYLES === */
 .profile-header-modern {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--header-gradient);
     color: white;
     padding: 30px 20px 40px;
     border-bottom-left-radius: 30px;
     border-bottom-right-radius: 30px;
-    box-shadow: 0 10px 30px -10px rgba(118, 75, 162, 0.5);
+    box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--primary-color), transparent 50%);
     text-align: center;
     position: relative;
     z-index: 10;
@@ -494,7 +515,7 @@ body.large-font .text-muted.small {
 
 /* === Profile Button Updates === */
 .menu-btn-item {
-    background: white;
+    background: var(--section-bg);
     border: none;
     border-radius: 20px;
     padding: 18px 20px;

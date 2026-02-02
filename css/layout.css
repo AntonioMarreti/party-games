@@ -27,7 +27,7 @@ body {
 }
 
 .room-content-wrapper {
-    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-top: calc(80px + env(safe-area-inset-top));
     padding-left: 24px;
     padding-right: 24px;
     padding-bottom: 140px;
@@ -38,6 +38,7 @@ body {
 
 /* Fix for Safe Area in game wrapper */
 .game-custom-wrapper {
+    padding-top: calc(80px + env(safe-area-inset-top));
     padding-bottom: calc(120px + env(safe-area-inset-bottom)) !important;
     min-height: 100%;
     display: flex;
@@ -57,7 +58,7 @@ body {
     margin-bottom: -35px;
     position: relative;
     z-index: 0;
-    box-shadow: 0 10px 40px rgba(46, 26, 91, 0.2);
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--primary-color), black 50%);
 }
 
 .header-title {
@@ -173,7 +174,8 @@ body {
 
 #screen-profile-edit,
 #screen-room {
-    padding-top: calc(10px + env(safe-area-inset-top));
+    /* Removed padding-top here to rely on inner wrapper */
+    padding-top: 0;
     background: transparent;
     min-height: 100%;
     display: none;
@@ -190,10 +192,8 @@ body {
     justify-content: flex-start;
 }
 
-#screen-profile-edit .room-content-wrapper,
 #screen-friends .room-content-wrapper,
-#screen-leaderboard .room-content-wrapper,
-#screen-room .room-content-wrapper {
+#screen-leaderboard .room-content-wrapper {
     padding-top: 0 !important;
     margin-top: 0 !important;
     flex: 1;
@@ -211,7 +211,7 @@ body {
 
 /* Isolated wrapper for Friends screen (Mobile Default) */
 .friends-view-wrapper {
-    padding-top: calc(20px + env(safe-area-inset-top)) !important;
+    padding-top: calc(80px + env(safe-area-inset-top)) !important;
     padding-left: 24px;
     padding-right: 24px;
     padding-bottom: 20px;

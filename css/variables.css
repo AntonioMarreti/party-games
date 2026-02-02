@@ -4,27 +4,118 @@
     /* Soft Purple-Blue */
     --accent-color: #00CEC9;
     /* Vibrant Cyan */
-    --bg-color: #F8F9FD;
-    --card-bg: rgba(255, 255, 255, 0.65);
-    /* Glass Effect Base */
-    --text-dark: #2D3436;
+    /* === Hybrid Theming: Telegram Base + Custom Accent === */
+
+    /* 1. Backgrounds (Synced with TG) */
+    --bg-color: var(--tg-theme-bg-color, #F8F9FD);
+    --card-bg: var(--tg-theme-secondary-bg-color, rgba(255, 255, 255, 0.65));
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    /* Default Light Glass */
+    --section-bg: var(--tg-theme-section-bg-color, #ffffff);
+
+    /* 2. Text (Synced with TG) */
+    --text-dark: var(--tg-theme-text-color, #2D3436);
     --text-light: #FFFFFF;
+    /* Keep white for accents */
+    --text-hint: var(--tg-theme-hint-color, #999999);
+
+    /* 3. Accent (Custom Personal Brand) */
+    --primary-color: var(--custom-primary, #6C5CE7);
+    /* Default Purple */
+    --accent-color: #00CEC9;
+    /* Cyan */
     --nav-height: 80px;
 
     --radius-lg: 32px;
     --radius-md: 24px;
     --radius-sm: 16px;
 
-    /* Mesh Gradient Header */
-    --header-gradient: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
-    --primary-gradient: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
+    /* Mesh Gradient Header - NOW DYNAMIC */
+    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
+    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
 
-    /* Colored Shadows */
-    --shadow-sm: 0 4px 15px rgba(108, 92, 231, 0.1);
-    --shadow-md: 0 10px 30px rgba(108, 92, 231, 0.15);
-    --shadow-lg: 0 20px 40px rgba(108, 92, 231, 0.2);
-    --shadow-primary: 0 10px 25px rgba(108, 92, 231, 0.4);
+    /* Colored Shadows - NOW DYNAMIC */
+    /* Using color-mix to create transparent versions of the primary color */
+    --shadow-sm: 0 4px 15px color-mix(in srgb, var(--primary-color), transparent 90%);
+    --shadow-md: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 85%);
+    --shadow-lg: 0 20px 40px color-mix(in srgb, var(--primary-color), transparent 80%);
+    --shadow-primary: 0 10px 25px color-mix(in srgb, var(--primary-color), transparent 60%);
 
     /* Glass Borders */
     --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+
+    /* Dynamic UI Borders */
+    --border-color: #f0f0f0;
+}
+
+/* === DARK MODE === */
+body.dark-mode {
+    /* Backgrounds - Premium Dark Blue / Slate */
+    --bg-color: #0f172a;
+    /* Slate 900 */
+    --card-bg: rgba(30, 41, 59, 0.7);
+    /* Slate 800-ish */
+    --glass-bg: rgba(51, 65, 85, 0.4);
+    /* Slate 700-ish */
+    --section-bg: #1e293b;
+    /* Slate 800 */
+
+    /* Text */
+    --text-dark: #f1f5f9;
+    /* Slate 100 */
+    --text-light: #ffffff;
+    --text-hint: #94a3b8;
+    /* Slate 400 */
+
+    /* Glass Borders */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* Dynamic UI Borders */
+    --border-color: #334155;
+    /* Slate 700 */
+
+    /* Update gradients for dark mode */
+    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 30%) 100%);
+    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 30%) 100%);
+}
+
+/* Override Bootstrap Defaults */
+:root {
+    --bs-primary: var(--custom-primary, #6C5CE7);
+    --bs-primary-rgb: 108, 92, 231;
+    /* Ideally we need to decompose this in JS, but for now just fallback */
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--primary-color), black 10%);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--primary-color), black 10%);
+}
+
+/* === FORCE DARK MODE OVERRIDES === */
+body.dark-mode {
+    --bg-color: #17212b;
+    /* Telegram Dark Bg */
+    --card-bg: rgba(30, 30, 30, 0.85);
+    --section-bg: #242f3d;
+    /* Telegram Dark Section */
+
+    --text-dark: #ffffff;
+    --text-hint: #aaaaaa;
+
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --border-color: rgba(255, 255, 255, 0.1);
+
+    /* In dark mode, mix with black instead of white */
+    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 20%) 100%);
+
+    /* Dark Glass - Darker and more opaque for readability */
+    --glass-bg: rgba(30, 30, 30, 0.6);
+}
+
+/* Hide Scrollbar Globally */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
 }

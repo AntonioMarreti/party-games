@@ -5,8 +5,8 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding-top: calc(10px + env(safe-area-inset-top));
-    /* Reduced top padding */
+    padding-top: calc(80px + env(safe-area-inset-top));
+    /* Standardized top padding */
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -19,7 +19,7 @@
     border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 24px;
     /* Slightly smaller radius */
-    box-shadow: 0 8px 32px rgba(108, 92, 231, 0.1);
+    box-shadow: 0 8px 32px color-mix(in srgb, var(--primary-color), transparent 90%);
     transition: transform 0.2s;
     padding: 16px !important;
     /* Force smaller padding */
@@ -27,7 +27,7 @@
 
 /* Typography */
 .bb-title {
-    background: linear-gradient(135deg, #6C5CE7 0%, #00CEC9 100%);
+    background: var(--primary-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 800;
@@ -48,9 +48,9 @@
 /* Game Title Badge */
 .bb-game-badge {
     background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(108, 92, 231, 0.2);
-    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.1);
-    color: #6C5CE7;
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 80%);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--primary-color), transparent 90%);
+    color: var(--primary-color);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -78,8 +78,8 @@
 
 /* Rounds Selector */
 .bb-round-btn {
-    border: 1px solid rgba(108, 92, 231, 0.3);
-    color: #6C5CE7;
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 70%);
+    color: var(--primary-color);
     background: rgba(255, 255, 255, 0.5);
     font-weight: 700;
     border-radius: 16px;
@@ -89,11 +89,11 @@
 
 .bb-round-btn:active,
 .bb-round-btn.active {
-    background: #6C5CE7;
+    background: var(--primary-color);
     color: white;
     transform: scale(0.96);
-    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
-    border-color: #6C5CE7;
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--primary-color), transparent 70%);
+    border-color: var(--primary-color);
 }
 
 /* Category Toggles */
@@ -115,7 +115,7 @@
     width: 24px;
     height: 24px;
     border-radius: 8px;
-    border: 2px solid #6C5CE7;
+    border: 2px solid var(--primary-color);
     margin-right: 12px;
     appearance: none;
     -webkit-appearance: none;
@@ -124,8 +124,8 @@
 }
 
 .bb-checkbox:checked {
-    background: #6C5CE7;
-    border-color: #6C5CE7;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
 .bb-checkbox:checked::after {
@@ -141,7 +141,7 @@
 
 /* Start Button */
 .bb-start-btn {
-    background: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
     color: white;
     font-weight: 800;
     font-size: 18px;
@@ -149,7 +149,7 @@
     border-radius: 24px;
     border: none;
     width: 100%;
-    box-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 70%);
     margin-bottom: 20px;
 }
 
@@ -191,7 +191,7 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    color: #6C5CE7;
+    color: var(--primary-color);
     margin-right: 12px;
 }
 

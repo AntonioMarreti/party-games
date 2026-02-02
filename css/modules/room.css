@@ -1,10 +1,7 @@
 /* === ROOM SCREEN (LOBBY) === */
 
 /* Wrapper adjustment */
-#screen-room .room-content-wrapper {
-    padding-top: 60px;
-    /* Reduced from 85px to fit better */
-}
+
 
 /* 1. Header Capsule (Dropdown Trigger) */
 .room-header-dropdown-btn {
@@ -101,13 +98,13 @@
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary-color), transparent 60%);
     transition: all 0.2s;
 }
 
 .btn-share-code:active {
     transform: scale(0.9);
-    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--primary-color), transparent 70%);
 }
 
 /* 3. Players Grid (Using generic styles mostly, but tweaking header) */
@@ -160,19 +157,19 @@
     width: 100%;
     padding: 16px;
     border-radius: 24px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #a29bfe 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 30%) 100%);
     color: white;
     border: none;
     font-size: 18px;
     font-weight: 800;
-    box-shadow: 0 10px 30px rgba(108, 92, 231, 0.4);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 60%);
     transition: all 0.2s;
     letter-spacing: 0.5px;
 }
 
 .btn-start-floating:active {
     transform: scale(0.96);
-    box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+    box-shadow: 0 5px 15px color-mix(in srgb, var(--primary-color), transparent 70%);
 }
 
 /* Guest Waiting Message */
@@ -204,7 +201,9 @@
 }
 
 /* Ensure content doesn't hide behind fixed bottom */
+/* Ensure content doesn't hide behind fixed bottom and has safe area at top */
 #screen-room .room-content-wrapper {
+    padding-top: calc(80px + env(safe-area-inset-top));
     padding-bottom: 120px;
     min-height: 100%;
 }

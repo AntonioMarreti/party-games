@@ -7,6 +7,7 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="referrer" content="origin">
     <title>Party Games</title>
+    <!-- Live version: https://lapin.live/mpg -->
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
 
@@ -15,17 +16,18 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/variables.css?v=2279">
-    <link rel="stylesheet" href="css/layout.css?v=2279">
-    <link rel="stylesheet" href="css/components.css?v=2279">
-    <link rel="stylesheet" href="css/modules/lobby.css?v=2279">
-    <link rel="stylesheet" href="css/modules/profile.css?v=2279">
-    <link rel="stylesheet" href="css/modules/room.css?v=2279">
-    <link rel="stylesheet" href="css/modules/modals.css?v=2279">
-    <link rel="stylesheet" href="css/modules/blokus.css?v=2279">
-    <link rel="stylesheet" href="styles.css?v=2279">
-    <script src="js/audio.js?v=2279"></script>
-    <script src="js/app.js?v=2279"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2313">
+    <link rel="stylesheet" href="css/layout.css?v=2313">
+    <link rel="stylesheet" href="css/components.css?v=2313">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2313">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2313">
+    <link rel="stylesheet" href="css/modules/room.css?v=2313">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2313">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2313">
+    <link rel="stylesheet" href="styles.css?v=2313">
+    <link rel="stylesheet" href="css/dark-mode.css?v=2313">
+    <script src="js/audio.js?v=2313"></script>
+    <script src="js/app.js?v=2311"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -482,7 +484,7 @@
 
 
 
-                <!-- 8. ЭКРАН НАСТРОЕК -->
+                <!-- 8. ЭКРАН НАСТРОЕК (REDESIGNED) -->
                 <div id="screen-settings" class="screen">
                     <div class="room-content-wrapper">
                         <div class="d-flex align-items-center mb-4">
@@ -492,13 +494,77 @@
                             <h4 class="fw-bold m-0">Настройки</h4>
                         </div>
 
-                        <!-- Группа: ИНТЕРФЕЙС -->
-                        <div class="settings-group-title small text-muted text-uppercase px-3 mb-2">Интерфейс</div>
-                        <div class="settings-group mb-4">
+                        <!-- 1. PERSONALIZATION CARD -->
+                        <div class="settings-group mb-4 p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                        class="bi bi-palette me-2"></i>Внешний вид</h6>
+                            </div>
+
+                            <!-- Accent Color (Prominent) -->
+                            <div class="mb-4">
+                                <div class="fw-bold mb-2" style="font-size: 15px;">Цветовой акцент</div>
+                                <div class="d-flex gap-3 justify-content-between px-1">
+                                    <div class="color-option-btn selected" style="background: #6C5CE7;"
+                                        onclick="applyAccentColor('#6C5CE7'); highlightColorBtn(this);"></div>
+                                    <div class="color-option-btn" style="background: #0984e3;"
+                                        onclick="applyAccentColor('#0984e3'); highlightColorBtn(this);"></div>
+                                    <div class="color-option-btn" style="background: #fdcb6e;"
+                                        onclick="applyAccentColor('#fdcb6e'); highlightColorBtn(this);"></div>
+                                    <div class="color-option-btn" style="background: #00b894;"
+                                        onclick="applyAccentColor('#00b894'); highlightColorBtn(this);"></div>
+                                    <div class="color-option-btn" style="background: #e17055;"
+                                        onclick="applyAccentColor('#e17055'); highlightColorBtn(this);"></div>
+                                </div>
+                            </div>
+
+                            <!-- Visual Toggles -->
+                            <!-- Dark Mode Toggle -->
+                            <div class="settings-item">
+                                <div class="settings-label-wrap">
+                                    <div class="fw-bold">Темная тема</div>
+                                    <div class="text-muted small">Всегда темный фон</div>
+                                </div>
+                                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                                    <input class="form-check-input settings-switch ms-auto" type="checkbox"
+                                        id="setting-darkMode" onchange="toggleSetting('darkMode', this.checked)">
+                                </div>
+                            </div>
+
+                            <div class="settings-item">
+                                <div class="settings-label-wrap">
+                                    <div class="fw-bold">Экономный фон</div>
+                                    <div class="text-muted small">Без анимации градиента</div>
+                                </div>
+                                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                                    <input class="form-check-input settings-switch ms-auto" type="checkbox"
+                                        id="setting-simpleBg" onchange="toggleSetting('simpleBg', this.checked)">
+                                </div>
+                            </div>
+
+                            <div class="settings-item border-0 pb-0">
+                                <div class="settings-label-wrap">
+                                    <div class="fw-bold">Крупный шрифт</div>
+                                    <div class="text-muted small">Для удобства чтения</div>
+                                </div>
+                                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                                    <input class="form-check-input settings-switch ms-auto" type="checkbox"
+                                        id="setting-largeFont" onchange="toggleSetting('largeFont', this.checked)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. PERFORMANCE CARD -->
+                        <div class="settings-group mb-4 p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                        class="bi bi-lightning-charge me-2"></i>Производительность</h6>
+                            </div>
+
                             <div class="settings-item">
                                 <div class="settings-label-wrap">
                                     <div class="fw-bold">Без анимаций</div>
-                                    <div class="text-muted small">Экономит заряд и ускоряет работу</div>
+                                    <div class="text-muted small">Ускоряет работу</div>
                                 </div>
                                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -506,31 +572,11 @@
                                         onchange="toggleSetting('noAnimations', this.checked)">
                                 </div>
                             </div>
-                            <div class="settings-item">
-                                <div class="settings-label-wrap">
-                                    <div class="fw-bold">Экономный фон</div>
-                                    <div class="text-muted small">Отключает живые градиенты</div>
-                                </div>
-                                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
-                                    <input class="form-check-input settings-switch ms-auto" type="checkbox"
-                                        id="setting-simpleBg" onchange="toggleSetting('simpleBg', this.checked)">
-                                </div>
-                            </div>
-                            <div class="settings-item">
-                                <div class="settings-label-wrap">
-                                    <div class="fw-bold">Крупный шрифт</div>
-                                    <div class="text-muted small">Увеличить текст для удобства</div>
-                                </div>
-                                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
-                                    <input class="form-check-input settings-switch ms-auto" type="checkbox"
-                                        id="setting-largeFont" onchange="toggleSetting('largeFont', this.checked)">
-                                </div>
-                            </div>
-                            <div class="settings-item"
-                                style="border-top: 1px solid rgba(0,0,0,0.05); margin-top: 5px; padding-top: 10px;">
+
+                            <div class="settings-item border-0 pb-0">
                                 <div class="settings-label-wrap">
                                     <div class="fw-bold text-danger">Режим охлаждения ❄️</div>
-                                    <div class="text-muted small">Максимальная экономия заряда</div>
+                                    <div class="text-muted small">Максимальная экономия</div>
                                 </div>
                                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -539,23 +585,26 @@
                             </div>
                         </div>
 
-                        <!-- Группа: ОБРАТНАЯ СВЯЗЬ -->
-                        <div class="settings-group-title small text-muted text-uppercase px-3 mb-2">Обратная связь</div>
-                        <div class="settings-group mb-4">
+                        <!-- 3. SYSTEM CARD -->
+                        <div class="settings-group mb-4 p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                        class="bi bi-sliders me-2"></i>Система</h6>
+                            </div>
+
                             <div class="settings-item">
                                 <div class="settings-label-wrap">
-                                    <div class="fw-bold">Тактильная отдача</div>
-                                    <div class="text-muted small">Вибрация при нажатии и событиях</div>
+                                    <div class="fw-bold">Вибрация (Haptics)</div>
                                 </div>
                                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
                                         id="setting-haptics" onchange="toggleSetting('haptics', this.checked)">
                                 </div>
                             </div>
+
                             <div class="settings-item">
                                 <div class="settings-label-wrap">
-                                    <div class="fw-bold">Звук</div>
-                                    <div class="text-muted small">Эффекты и уведомления</div>
+                                    <div class="fw-bold">Звуковые эффекты</div>
                                 </div>
                                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -563,15 +612,11 @@
                                         onchange="window.audioManager.toggle(this.checked); toggleSetting('soundEnabled', this.checked)">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Группа: ПРИВАТНОСТЬ -->
-                        <div class="settings-group-title small text-muted text-uppercase px-3 mb-2">Приватность</div>
-                        <div class="settings-group mb-4">
-                            <div class="settings-item">
+                            <div class="settings-item border-0 pb-0">
                                 <div class="settings-label-wrap">
                                     <div class="fw-bold">Лидерборд</div>
-                                    <div class="text-muted small">Показывать мой профиль в топе</div>
+                                    <div class="text-muted small">Показывать меня всем</div>
                                 </div>
                                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -581,13 +626,17 @@
                             </div>
                         </div>
 
-                        <!-- Группа: УВЕДОМЛЕНИЯ -->
-                        <div class="settings-group-title small text-muted text-uppercase px-3 mb-2">Уведомления</div>
-                        <div class="settings-group mb-4">
+                        <!-- 4. ABOUT CARD -->
+                        <div class="settings-group mb-4 p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                        class="bi bi-info-circle me-2"></i>О приложении</h6>
+                            </div>
+
                             <div class="settings-item">
                                 <div class="settings-label-wrap">
-                                    <div class="fw-bold">Запросы и вызовы</div>
-                                    <div class="text-muted small">Друзья и приглашения в игру</div>
+                                    <div class="fw-bold">Уведомления</div>
+                                    <div class="text-muted small">Приглашения в игру</div>
                                 </div>
                                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -595,19 +644,15 @@
                                         onchange="toggleSetting('notificationsEnabled', this.checked)">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Группа: ПРОЕКТ -->
-                        <div class="settings-group-title small text-muted text-uppercase px-3 mb-2">Проект</div>
-                        <div class="settings-group mb-4">
                             <div class="settings-item">
                                 <div class="settings-label-wrap">
-                                    <div class="fw-bold">ПО Версия</div>
-                                    <div class="text-muted small">v1.2.5 — Stable Release</div>
+                                    <div class="fw-bold">Версия</div>
+                                    <div class="text-muted small fw-bold">Build 2279 (v1.2.5)</div>
                                 </div>
-                                <div class="text-muted small fw-bold">Build 2279</div>
                             </div>
-                            <div class="settings-item clickable"
+
+                            <div class="settings-item clickable border-0 pb-0"
                                 onclick="window.open('https://github.com/antoniomarreti/party-games', '_blank')">
                                 <div class="settings-label-wrap">
                                     <div class="fw-bold">Open Source</div>
@@ -620,126 +665,133 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 7. ЭКРАН ОБЗОРА ИГРЫ (Robust Layered Architecture) -->
-            <div id="screen-game-detail" class="screen"
-                style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; height: 100% !important; overflow: hidden !important; background: #fff; width: 100%; z-index: 1000;">
+                <!-- 7. ЭКРАН ОБЗОРА ИГРЫ (Robust Layered Architecture) -->
+                <div id="screen-game-detail" class="screen"
+                    style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; height: 100% !important; overflow: hidden !important; background: #fff; width: 100%; z-index: 1000;">
 
-                <!-- 7A. FIXED UI LAYER -->
-                <div class="fixed-ui-layer position-absolute w-100 h-100"
-                    style="top:0; left:0; z-index: 100; pointer-events: none;">
-                    <!-- Close Button -->
-                    <div class="position-absolute"
-                        style="top: calc(44px + env(safe-area-inset-top)); right: 20px; pointer-events: auto;">
-                        <button class="btn d-flex align-items-center justify-content-center shadow-lg"
-                            onclick="window.showScreen('lobby')"
-                            style="width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.4); color:white; padding: 0; flex-shrink: 0; min-width: 40px;">
-                            <i class="bi bi-x-lg" style="font-size: 18px; line-height: 1;"></i>
-                        </button>
+                    <!-- 7A. FIXED UI LAYER -->
+                    <div class="fixed-ui-layer position-absolute w-100 h-100"
+                        style="top:0; left:0; z-index: 100; pointer-events: none;">
+                        <!-- Close Button -->
+                        <div class="position-absolute"
+                            style="top: calc(44px + env(safe-area-inset-top)); right: 20px; pointer-events: auto;">
+                            <button class="btn d-flex align-items-center justify-content-center shadow-lg"
+                                onclick="window.showScreen('lobby')"
+                                style="width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.4); color:white; padding: 0; flex-shrink: 0; min-width: 40px;">
+                                <i class="bi bi-x-lg" style="font-size: 18px; line-height: 1;"></i>
+                            </button>
+                        </div>
+
+                        <!-- Bottom Action Button (Navbar style) -->
+                        <div class="position-absolute bottom-0 start-0 end-0 p-4 border-top"
+                            style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;">
+                            <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg" id="btn-try-game-now"
+                                style="border: none; font-size: 16px; background: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%); letter-spacing: 0.5px;">
+                                ПОПРОБОВАТЬ СЕЙЧАС
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Bottom Action Button (Navbar style) -->
-                    <div class="position-absolute bottom-0 start-0 end-0 p-4 border-top"
-                        style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;">
-                        <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg" id="btn-try-game-now"
-                            style="border: none; font-size: 16px; background: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%); letter-spacing: 0.5px;">
-                            ПОПРОБОВАТЬ СЕЙЧАС
-                        </button>
-                    </div>
+                    <div class="h-100"
+                        style="overflow-y: auto; overflow-x: hidden; width: 100%; -webkit-overflow-scrolling: touch; z-index: 1;">
+                        <div class="game-detail-wrapper"
+                            style="background: #fff; padding-bottom: 200px; width: 100%; overflow-x: hidden;">
+                            <!-- Cinematic Hero -->
+                            <div class="game-detail-hero position-relative"
+                                style="height: auto; aspect-ratio: 16/11; min-height: 300px; overflow:hidden; background: #000;">
+                                <div id="game-detail-image-container"
+                                    class="hero-image-wrap h-100 w-100 position-absolute"
+                                    style="top:0; left:0; z-index:1;">
+                                    <!-- Content injected via JS -->
+                                </div>
+
+
+                            </div>
+
+                            <!-- Integrated App Bar (Overlap Effect) -->
+                            <div class="bg-white p-4 d-flex align-items-center position-relative"
+                                style="z-index: 15; border-bottom: 1px solid #f2f2f7; margin-top: -32px; border-radius: 32px 32px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.05);">
+                                <div id="game-detail-icon-wrap" class="me-3"
+                                    style="width: 72px; height: 72px; border-radius: 16px; color: #fff; font-size: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
+                                    <i id="game-detail-icon" class="bi"></i>
+                                </div>
+                                <div class="flex-grow-1 min-width-0 pe-2" style="min-width: 0;">
+                                    <h3 class="fw-800 mb-0 text-dark text-truncate" id="game-detail-header-title"
+                                        style="font-size: 21px; letter-spacing: -0.5px; width: 100%;">...</h3>
+                                    <div class="text-muted small text-truncate"
+                                        style="font-size: 13px; font-weight: 500; width: 100%;">Вечеринки • Топ выбор
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary px-4 py-2 rounded-pill fw-bold" id="btn-header-try-now"
+                                    style="background: #007AFF; border: none; font-size: 14px; color: #fff;">ИГРАТЬ</button>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="p-4 bg-white">
+                                <div class="d-flex overflow-auto pb-4 mb-4 border-bottom no-scrollbar"
+                                    style="gap: 24px;">
+                                    <div class="flex-shrink-0 text-center"
+                                        style="min-width: 80px; border-right: 1px solid #f2f2f7; padding-right: 24px;">
+                                        <div class="text-muted small mb-1"
+                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                                            Игроков
+                                        </div>
+                                        <div class="fw-bold text-dark" id="stat-players" style="font-size: 17px;">-
+                                        </div>
+                                    </div>
+                                    <div class="flex-shrink-0 text-center"
+                                        style="min-width: 80px; border-right: 1px solid #f2f2f7; padding-right: 24px;">
+                                        <div class="text-muted small mb-1"
+                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Время
+                                        </div>
+                                        <div class="fw-bold text-dark" id="stat-time" style="font-size: 17px;">-</div>
+                                    </div>
+                                    <div class="flex-shrink-0 text-center" style="min-width: 80px;">
+                                        <div class="text-muted small mb-1"
+                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                                            Сложность
+                                        </div>
+                                        <div class="fw-bold text-dark" id="stat-difficulty" style="font-size: 17px;">-
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="game-detail-lore" class="text-dark mb-5"
+                                    style="line-height: 1.6; font-size: 17px; font-weight: 400; color: #1c1c1e !important;">
+                                </div>
+
+                                <div class="mb-5">
+                                    <h2 class="fw-bold mb-4 text-dark" style="font-size: 22px; letter-spacing: -0.5px;">
+                                        Как
+                                        играть?
+                                    </h2>
+                                    <div id="game-detail-rules" class="rules-list"></div>
+                                </div>
+
+                                <div id="game-detail-demo-area" class="mb-5"></div>
+                            </div>
+                        </div>
+                    </div> <!-- /h-100 scroller layer -->
+                </div> <!-- /screen-game-detail -->
+
+                <!-- === НИЖНЯЯ НАВИГАЦИЯ === -->
+                <div class="bottom-nav">
+                    <button class="nav-item active" onclick="switchTab('home')"><i
+                            class="bi bi-house-door-fill"></i><span>Главная</span></button>
+                    <button class="nav-item" onclick="switchTab('games')"><i
+                            class="bi bi-grid-fill"></i><span>Игры</span></button>
+                    <button class="nav-item" onclick="switchTab('leaderboard')"><i
+                            class="bi bi-bar-chart-fill"></i><span>Топ</span></button>
+                    <button class="nav-item" onclick="switchTab('profile')"><i
+                            class="bi bi-person-fill"></i><span>Профиль</span></button>
                 </div>
 
-                <div class="h-100"
-                    style="overflow-y: auto; overflow-x: hidden; width: 100%; -webkit-overflow-scrolling: touch; z-index: 1;">
-                    <div class="game-detail-wrapper"
-                        style="background: #fff; padding-bottom: 200px; width: 100%; overflow-x: hidden;">
-                        <!-- Cinematic Hero -->
-                        <div class="game-detail-hero position-relative"
-                            style="height: auto; aspect-ratio: 16/11; min-height: 300px; overflow:hidden; background: #000;">
-                            <div id="game-detail-image-container" class="hero-image-wrap h-100 w-100 position-absolute"
-                                style="top:0; left:0; z-index:1;">
-                                <!-- Content injected via JS -->
-                            </div>
+                <!-- 5. ЭКРАН РЕДАКТОРА ПРОФИЛЯ (Отдельный экран) -->
 
 
-                        </div>
-
-                        <!-- Integrated App Bar (Overlap Effect) -->
-                        <div class="bg-white p-4 d-flex align-items-center position-relative"
-                            style="z-index: 15; border-bottom: 1px solid #f2f2f7; margin-top: -32px; border-radius: 32px 32px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.05);">
-                            <div id="game-detail-icon-wrap" class="me-3"
-                                style="width: 72px; height: 72px; border-radius: 16px; color: #fff; font-size: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
-                                <i id="game-detail-icon" class="bi"></i>
-                            </div>
-                            <div class="flex-grow-1 min-width-0 pe-2" style="min-width: 0;">
-                                <h3 class="fw-800 mb-0 text-dark text-truncate" id="game-detail-header-title"
-                                    style="font-size: 21px; letter-spacing: -0.5px; width: 100%;">...</h3>
-                                <div class="text-muted small text-truncate"
-                                    style="font-size: 13px; font-weight: 500; width: 100%;">Вечеринки • Топ выбор</div>
-                            </div>
-                            <button class="btn btn-primary px-4 py-2 rounded-pill fw-bold" id="btn-header-try-now"
-                                style="background: #007AFF; border: none; font-size: 14px; color: #fff;">ИГРАТЬ</button>
-                        </div>
-
-                        <!-- Content -->
-                        <div class="p-4 bg-white">
-                            <div class="d-flex overflow-auto pb-4 mb-4 border-bottom no-scrollbar" style="gap: 24px;">
-                                <div class="flex-shrink-0 text-center"
-                                    style="min-width: 80px; border-right: 1px solid #f2f2f7; padding-right: 24px;">
-                                    <div class="text-muted small mb-1"
-                                        style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Игроков
-                                    </div>
-                                    <div class="fw-bold text-dark" id="stat-players" style="font-size: 17px;">-</div>
-                                </div>
-                                <div class="flex-shrink-0 text-center"
-                                    style="min-width: 80px; border-right: 1px solid #f2f2f7; padding-right: 24px;">
-                                    <div class="text-muted small mb-1"
-                                        style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Время
-                                    </div>
-                                    <div class="fw-bold text-dark" id="stat-time" style="font-size: 17px;">-</div>
-                                </div>
-                                <div class="flex-shrink-0 text-center" style="min-width: 80px;">
-                                    <div class="text-muted small mb-1"
-                                        style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Сложность
-                                    </div>
-                                    <div class="fw-bold text-dark" id="stat-difficulty" style="font-size: 17px;">-</div>
-                                </div>
-                            </div>
-
-                            <div id="game-detail-lore" class="text-dark mb-5"
-                                style="line-height: 1.6; font-size: 17px; font-weight: 400; color: #1c1c1e !important;">
-                            </div>
-
-                            <div class="mb-5">
-                                <h2 class="fw-bold mb-4 text-dark" style="font-size: 22px; letter-spacing: -0.5px;">Как
-                                    играть?
-                                </h2>
-                                <div id="game-detail-rules" class="rules-list"></div>
-                            </div>
-
-                            <div id="game-detail-demo-area" class="mb-5"></div>
-                        </div>
-                    </div>
-                </div> <!-- /h-100 scroller layer -->
-            </div> <!-- /screen-game-detail -->
-
-            <!-- === НИЖНЯЯ НАВИГАЦИЯ === -->
-            <div class="bottom-nav">
-                <button class="nav-item active" onclick="switchTab('home')"><i
-                        class="bi bi-house-door-fill"></i><span>Главная</span></button>
-                <button class="nav-item" onclick="switchTab('games')"><i
-                        class="bi bi-grid-fill"></i><span>Игры</span></button>
-                <button class="nav-item" onclick="switchTab('leaderboard')"><i
-                        class="bi bi-bar-chart-fill"></i><span>Топ</span></button>
-                <button class="nav-item" onclick="switchTab('profile')"><i
-                        class="bi bi-person-fill"></i><span>Профиль</span></button>
-            </div>
-
-            <!-- 5. ЭКРАН РЕДАКТОРА ПРОФИЛЯ (Отдельный экран) -->
-
-
-        </div> <!-- /container -->
-    </div> <!-- /device-content -->
+            </div> <!-- /container -->
+        </div> <!-- /device-content -->
     </div> <!-- /device-wrapper -->
 
     <!-- MOVED MODALS TO ROOT for correct z-index stacking -->

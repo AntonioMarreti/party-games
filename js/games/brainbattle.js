@@ -121,7 +121,7 @@
         wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
             <h5 class="bb-subtitle mb-4">Готовьтесь...</h5>
-            <div id="cnt-number" class="display-1 fw-bold animate__animated animate__pulse animate__infinite" style="font-size: 100px; color: #6C5CE7; text-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);">3</div>
+            <div id="cnt-number" class="display-1 fw-bold animate__animated animate__pulse animate__infinite" style="font-size: 100px; color: var(--primary-color); text-shadow: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 70%);">3</div>
             <div class="bb-glass-card px-4 py-2 mt-4">
                 <p class="mb-0 text-primary fw-bold fs-4 text-center">${task.title || 'Задание'}</p>
             </div>
@@ -254,7 +254,7 @@
             
             <div class="bb-glass-card p-4 text-center mb-4 mx-3">
                 <div class="small text-uppercase text-muted fw-bold mb-1">Получено очков</div>
-                <h1 class="display-2 fw-bold mb-0" style="background: linear-gradient(135deg, #6C5CE7 0%, #00CEC9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">+${myRes.score}</h1>
+                <h1 class="display-2 fw-bold mb-0" style="background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 40%) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">+${myRes.score}</h1>
             </div>
 
             <h6 class="text-start ms-4 mb-3 small text-uppercase text-muted fw-extrabold" style="letter-spacing: 1px;">Топ раунда</h6>

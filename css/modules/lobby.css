@@ -177,10 +177,11 @@
     position: absolute;
     inset: -50%;
     z-index: -1;
-    background: radial-gradient(circle at 70% 30%, #2E1A5B, transparent 50%),
-        radial-gradient(circle at 30% 70%, #6C4AB6, transparent 50%),
+    z-index: -1;
+    background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--primary-color), black 60%) 0%, transparent 50%),
+        radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--primary-color), transparent 50%) 0%, transparent 50%),
         radial-gradient(circle at 80% 80%, #1A1A2E, transparent 50%),
-        radial-gradient(circle at 20% 20%, #4a2d8a, transparent 50%);
+        radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--primary-color), black 40%) 0%, transparent 50%);
     filter: blur(80px);
     animation: mesh-rotate 20s linear infinite;
     opacity: 0.8;

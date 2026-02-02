@@ -56,7 +56,7 @@ window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
             : opt;
 
         html += `<button class="btn bb-glass-card border-0 shadow-sm rounded-4 d-flex align-items-center justify-content-center p-0" 
-            style="font-size: 2.5rem; height: 80px; color: #6C5CE7;" 
+            style="font-size: 2.5rem; height: 80px; color: var(--primary-color);" 
             onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${content}</button>`;
     });
     html += `</div></div>`;

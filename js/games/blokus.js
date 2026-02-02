@@ -137,12 +137,12 @@ function render_blokus(res) {
                 <!-- SETUP / RULES OVERLAY -->
                 <div id="blokus-setup-screen" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.1); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); z-index:1500; padding:20px; text-align:center;">
                     <div class="d-flex flex-column align-items-center justify-content-center h-100">
-                        <i class="bi bi-grid-3x3 mb-3" style="font-size: 48px; color: #6C4AB6; text-shadow: 0 4px 10px rgba(108, 92, 231, 0.4);"></i>
+                        <i class="bi bi-grid-3x3 mb-3" style="font-size: 48px; color: var(--primary-color); text-shadow: 0 4px 10px color-mix(in srgb, var(--primary-color), transparent 60%);"></i>
                         <h1 class="fw-bold mb-2">Blokus</h1>
-                        <p class="text-muted mb-4">Захвати территорию и заблокируй других!</p>
+                        <p class="text-muted mb-4 subtitle-text">Захвати территорию и заблокируй других!</p>
                         
-                        <div class="card p-4 mb-4 w-100 shadow-sm border-0 text-start" style="background: rgba(255,255,255,0.6); backdrop-filter: blur(12px); border-radius: 24px;">
-                            <h6 class="fw-bold mb-2 text-dark">Как играть:</h6>
+                        <div class="card p-4 mb-4 w-100 shadow-sm border-0 text-start glass-modern-card" style="border-radius: 24px;">
+                            <h6 class="fw-bold mb-2 title-text">Как играть:</h6>
                             <ul class="small text-muted ps-3 mb-0" style="gap:5px; display:flex; flex-direction:column;">
                                 <li>Фигуры должны касаться <b>только углом</b> фигур вашего цвета.</li>
                                 <li>Фигуры <b>не могут</b> касаться сторонами фигур вашего цвета.</li>
@@ -162,8 +162,7 @@ function render_blokus(res) {
                         <div id="setup-host-controls">
                             <!-- MODE SELECTION -->
                             <div class="mb-3">
-                                <label class="text-muted small fw-bold mb-1">Режим игры:</label>
-                                <select id="blokus-mode-select" class="form-select text-center fw-bold" style="border-radius: 12px; background: #F8F9FA; border: 1px solid #EEE;">
+                                <select id="blokus-mode-select" class="form-select text-center fw-bold custom-select-modern" style="border-radius: 12px;">
                                     <option value="standard">Стандарт (4 игрока)</option>
                                     <option value="3player">3 игрока (Зелёный общий)</option>
                                     <option value="2player">2 игрока (по 2 цвета)</option>
@@ -171,10 +170,16 @@ function render_blokus(res) {
                                 </select>
                             </div>
 
-                            <button class="btn btn-lg w-100 fw-bold text-white shadow-sm mb-2" 
-                                style="background: #6C4AB6; border-radius: 16px;" 
+                            <button class="btn btn-lg w-100 fw-bold text-white shadow-sm mb-3" 
+                                style="background: var(--primary-color); border-radius: 16px;" 
                                 onclick="blokusStartMatch()">
                                 Начать игру
+                            </button>
+                            
+                            <button class="btn btn-outline-secondary w-100 fw-bold mb-2" 
+                                style="border-radius: 16px;" 
+                                onclick="returnToRoomLobby()">
+                                <i class="bi bi-arrow-left me-2"></i>Назад в лобби
                             </button>
                             <button class="btn btn-link text-muted small" onclick="startLocalGame()">
                                 Играть локально (на одном устройстве)
@@ -187,9 +192,9 @@ function render_blokus(res) {
                 </div>
 
                 <!-- GAME OVER OVERLAY -->
-                <div id="blokus-results-screen" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.5); z-index:1600; padding:120px 20px 40px 20px; align-items: flex-end; justify-content: center;">
-                   <div class="bg-white w-100 rounded-4 p-4 shadow-lg anime-slide-up" style="max-height: 100%; display: flex; flex-direction: column; position: relative;">
-                        <h2 class="fw-bold text-center mb-4">Результаты</h2>
+                <div id="blokus-results-screen" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.7); z-index:1600; padding:120px 20px 40px 20px; align-items: flex-end; justify-content: center;">
+                   <div class="results-card-container w-100 rounded-4 p-4 shadow-lg anime-slide-up" style="max-height: 100%; display: flex; flex-direction: column; position: relative;">
+                        <h2 class="fw-bold text-center mb-4 title-text">Результаты</h2>
                         <div id="blokus-results-list" class="flex-grow-1 overflow-auto mb-3" style="min-height: 150px;"></div>
                         <div class="results-footer pb-2">
                              <!-- Dynamic Buttons -->

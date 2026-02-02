@@ -25,6 +25,200 @@ var loadedGames = {};
 var globalUser = null;
 var serverTimeOffset = 0; // Difference between server and local clock (ms)
 
+// === THEME MANAGEMENT ===
+// Internal function: Dynamic style injection to fix Safari/WebKit repaint bug
+// DO NOT CALL DIRECTLY - use applyAccentColor() instead
+function _updateThemeStyles(explicitColor = null) {
+    console.log('🎨 _updateThemeStyles called with color:', explicitColor);
+    const root = document.documentElement;
+    const primary = explicitColor || root.style.getPropertyValue('--custom-primary') || '#6C5CE7';
+    const isDark = document.body.classList.contains('dark-mode');
+    const mixColor = isDark ? 'black' : 'white';
+
+    // TELEGRAM FIX: Apply inline styles directly to .header-bg elements
+    // CSS injection doesn't work in Telegram WebApp due to specificity issues
+    const headerBgGradient = `linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%)`;
+    const headerBgShadow = `0 10px 40px color-mix(in srgb, ${primary}, black 50%)`;
+
+    document.querySelectorAll('.header-bg').forEach(el => {
+        el.style.setProperty('background', headerBgGradient, 'important');
+        el.style.setProperty('box-shadow', headerBgShadow, 'important');
+    });
+
+    console.log('🎨 Applied inline styles to', document.querySelectorAll('.header-bg').length, '.header-bg elements');
+
+    // Check if style tag exists, else create it
+    let styleTag = document.getElementById('dynamic-theme-overrides');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'dynamic-theme-overrides';
+    } else {
+        // TELEGRAM FIX: Remove and re-append to ensure it's ALWAYS last in <head>
+        // Telegram adds its own <style> tags dynamically, which can override ours
+        styleTag.remove();
+    }
+
+    // Always append to the END of <head> to override any Telegram styles
+    document.head.appendChild(styleTag);
+
+    const css = `
+        /* Headers & Gradients */
+        .header-bg, .profile-header-modern, .profile-header-premium {
+            background: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%) !important;
+        }
+        .header-bg {
+            box-shadow: 0 10px 40px color-mix(in srgb, ${primary}, black 50%) !important;
+        }
+        .profile-header-modern {
+            box-shadow: 0 10px 30px -10px color-mix(in srgb, ${primary}, transparent 50%) !important;
+        }
+
+        /* Avatars & Profile */
+        .profile-avatar-wrapper {
+            background-image: linear-gradient(180deg, color-mix(in srgb, ${primary}, black 10%) 0%, color-mix(in srgb, ${primary}, black 40%) 100%) !important;
+            box-shadow: 0 10px 30px color-mix(in srgb, ${primary}, transparent 60%) !important;
+        }
+        .profile-img {
+            border-color: ${primary} !important;
+        }
+
+        /* Navigation */
+        .nav-item.active, .nav-item.active i {
+            color: ${primary} !important;
+        }
+
+        /* Buttons & Actions */
+        .btn-primary, .btn-action {
+            background-color: ${primary} !important;
+            border-color: ${primary} !important;
+        }
+        .btn-primary:hover, .btn-action:hover {
+            background-color: color-mix(in srgb, ${primary}, black 10%) !important;
+            border-color: color-mix(in srgb, ${primary}, black 10%) !important;
+        }
+
+        /* Text & Icons */
+        .text-primary, .spinner-border.text-primary, .game-card h4, .action-icon {
+            color: ${primary} !important;
+        }
+
+        /* Form Controls */
+        .form-control:focus {
+            box-shadow: 0 0 0 4px color-mix(in srgb, ${primary}, transparent 85%) !important;
+            border-color: ${primary} !important;
+        }
+        .custom-round-input {
+            color: ${primary} !important;
+        }
+
+        /* Achievement Badges */
+        .achievement-icon-container {
+            background-color: ${primary} !important;
+            background-image: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%) !important;
+            box-shadow: 0 6px 15px color-mix(in srgb, ${primary}, transparent 70%) !important;
+        }
+
+        /* Room Elements */
+        .room-header, .game-setup-header {
+            background: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, white 30%) 100%) !important;
+            box-shadow: 0 10px 30px color-mix(in srgb, ${primary}, transparent 60%) !important;
+        }
+        .ready-badge, .host-badge {
+            box-shadow: 0 4px 10px color-mix(in srgb, ${primary}, transparent 70%) !important;
+        }
+
+        /* Brain Battle Elements */
+        .bb-category-card.selected {
+            border: 1px solid color-mix(in srgb, ${primary}, transparent 70%) !important;
+            box-shadow: 0 4px 15px color-mix(in srgb, ${primary}, transparent 70%) !important;
+        }
+        .bb-round-header {
+            background: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, white 20%) 100%) !important;
+            box-shadow: 0 10px 30px color-mix(in srgb, ${primary}, transparent 70%) !important;
+        }
+
+        /* Blokus Elements */
+        .blokus-piece.selected {
+            box-shadow: 0 4px 15px color-mix(in srgb, ${primary}, transparent 80%) !important;
+        }
+
+        /* Progress & Loaders */
+        .progress-bar {
+            background-color: ${primary} !important;
+        }
+    `;
+    console.log('🎨 Generated CSS:', css);
+    console.log('🎨 Setting innerHTML on styleTag:', styleTag);
+    styleTag.innerHTML = css;
+    console.log('🎨 ✅ Theme styles injected successfully');
+}
+
+// Public API: Apply accent color theme
+// This is the ONLY function you should call to change theme colors
+function applyAccentColor(color) {
+    if (!color) return;
+
+    // Apply to CSS variables
+    const root = document.documentElement;
+    root.style.setProperty('--custom-primary', color);
+    root.style.setProperty('--primary-color', color);
+
+    // SAFARI FIX: Manually update dependent variables
+    // Safari doesn't reactively update CSS variables that depend on other variables
+    const isDark = document.body.classList.contains('dark-mode');
+    const mixColor = isDark ? 'black' : 'white';
+
+    root.style.setProperty('--header-gradient',
+        `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color}, ${mixColor} 20%) 100%)`);
+    root.style.setProperty('--primary-gradient',
+        `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color}, ${mixColor} 20%) 100%)`);
+    root.style.setProperty('--shadow-sm',
+        `0 4px 15px color-mix(in srgb, ${color}, transparent 90%)`);
+    root.style.setProperty('--shadow-md',
+        `0 10px 30px color-mix(in srgb, ${color}, transparent 85%)`);
+    root.style.setProperty('--shadow-lg',
+        `0 20px 40px color-mix(in srgb, ${color}, transparent 80%)`);
+    root.style.setProperty('--shadow-primary',
+        `0 10px 25px color-mix(in srgb, ${color}, transparent 60%)`);
+
+    // Save to localStorage
+    localStorage.setItem('pgb_accent_color', color);
+
+    // Force theme update (Safari fix)
+    _updateThemeStyles(color);
+
+    // Haptic feedback
+    triggerHaptic('selection');
+
+    // Sync with Telegram header
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.setHeaderColor) {
+        window.Telegram.WebApp.setHeaderColor(color);
+    }
+}
+
+window.highlightColorBtn = function (el) {
+    document.querySelectorAll('.color-option-btn').forEach(btn => btn.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+};
+
+// Sync color button selection with saved color
+function syncColorButtonSelection() {
+    const savedColor = localStorage.getItem('pgb_accent_color');
+    if (!savedColor) return;
+
+    // Find and highlight the matching color button
+    const colorButtons = document.querySelectorAll('.color-option-btn');
+    colorButtons.forEach(btn => {
+        btn.classList.remove('selected');
+        const btnColor = btn.style.background || btn.style.backgroundColor;
+        // Normalize colors for comparison (remove spaces, lowercase)
+        if (btnColor && btnColor.toLowerCase().replace(/\s/g, '') === savedColor.toLowerCase().replace(/\s/g, '')) {
+            btn.classList.add('selected');
+        }
+    });
+}
+
+
 function calculateLevel(xp) {
     if (!xp || xp < 0) return 1;
     return Math.floor(Math.sqrt(xp / 100)) + 1;
@@ -58,7 +252,7 @@ function loadSettings() {
     applySettings();
 
     // Sync UI state
-    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe'];
+    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe', 'darkMode'];
     switches.forEach(key => {
         const el = document.getElementById('setting-' + key);
         if (el) {
@@ -70,6 +264,11 @@ function loadSettings() {
             }
         }
     });
+
+    // Sync color button selection
+    setTimeout(() => {
+        syncColorButtonSelection();
+    }, 100);
 }
 
 function triggerHaptic(type = 'impact', detail = 'light') {
@@ -120,6 +319,19 @@ function toggleSetting(key, value) {
 }
 
 function applySettings() {
+    // Dark Mode
+    if (appSettings.darkMode) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+
+    // Refresh theme colors when dark mode changes
+    const savedColor = localStorage.getItem('pgb_accent_color');
+    if (savedColor) {
+        _updateThemeStyles(savedColor);
+    }
+
     // Animations
     if (appSettings.noAnimations) {
         document.body.classList.add('no-animations');
@@ -512,7 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tg.requestFullscreen();
         }
         if (tg.isVerticalSwipesEnabled !== undefined) tg.isVerticalSwipesEnabled = false;
-        if (tg.setHeaderColor) tg.setHeaderColor('#2E1A5B');
+        // Header color will be set after loading saved accent color
         if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
         if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
         if (tg.ready) tg.ready(); // CRITICAL: Notify Telegram that app is initialized
@@ -532,6 +744,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Загружаем настройки
     loadSettings();
+
+    // Restore saved accent color (if any)
+    const savedColor = localStorage.getItem('pgb_accent_color');
+    if (savedColor) {
+        // Use applyAccentColor to ensure all variables are set correctly
+        const root = document.documentElement;
+        root.style.setProperty('--custom-primary', savedColor);
+        root.style.setProperty('--primary-color', savedColor);
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const mixColor = isDark ? 'black' : 'white';
+
+        root.style.setProperty('--header-gradient',
+            `linear-gradient(135deg, ${savedColor} 0%, color-mix(in srgb, ${savedColor}, ${mixColor} 20%) 100%)`);
+        root.style.setProperty('--primary-gradient',
+            `linear-gradient(135deg, ${savedColor} 0%, color-mix(in srgb, ${savedColor}, ${mixColor} 20%) 100%)`);
+
+        _updateThemeStyles(savedColor);
+
+        // Sync with Telegram header
+        if (tg && tg.setHeaderColor) {
+            tg.setHeaderColor(savedColor);
+        }
+    }
 
     if (authToken) {
         initApp(tg);
@@ -2029,6 +2265,14 @@ function switchTab(tabId) {
     }
 
     if (tabId === 'games') renderLibrary();
+
+    // SAFARI FIX: Refresh theme when switching tabs
+    // This ensures headers update correctly even if they were hidden
+    const savedColor = localStorage.getItem('pgb_accent_color');
+    console.log('🎨 switchTab: refreshing theme with color:', savedColor);
+    if (savedColor) {
+        _updateThemeStyles(savedColor);
+    }
 }
 
 function renderLibrary() {
@@ -2125,6 +2369,11 @@ function showScreen(id) {
         if (typeof renderReactionToolbar === 'function') renderReactionToolbar();
     } else {
         if (typeof hideReactionToolbar === 'function') hideReactionToolbar();
+    }
+
+    // Sync color button selection when settings screen opens
+    if (id === 'settings') {
+        syncColorButtonSelection();
     }
 }
 

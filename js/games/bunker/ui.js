@@ -285,7 +285,7 @@ window.triggerAbility = function (cardKey, actionType) {
     overlay.className = 'bunker-reveal-overlay animate__animated animate__fadeIn'; // Reuse overlay style
     overlay.style.pointerEvents = 'auto'; // Enable clicks
     overlay.innerHTML = `
-        <div class="bg-white p-4 rounded-4 shadow-lg" style="width: 90%; max-width: 400px;">
+        <div class="glass-card p-4 rounded-4 shadow-lg" style="width: 90%; max-width: 400px;">
             <h3 class="fw-bold mb-3 text-center">Выберите цель</h3>
             <div class="d-grid gap-2">
                 ${players.map(p => `
@@ -372,11 +372,6 @@ window.renderVoteQuery = function (wrapper, state, res) {
 
     wrapper.innerHTML = `
         <div class="bunker-voting-screen text-center">
-             <div class="position-absolute top-0 start-0 p-3" style="z-index:100">
-                <button class="btn btn-outline-light btn-sm rounded-pill" onclick="window.bunkerFinish()">
-                    <i class="bi bi-chevron-left"></i> Выход
-                </button>
-             </div>
              
             <div class="voting-header mb-5">
                 <h1 class="display-1 text-primary"><i class="bi bi-box-seam-fill"></i></h1>
@@ -391,6 +386,11 @@ window.renderVoteQuery = function (wrapper, state, res) {
                     <button class="btn btn-outline-danger btn-lg w-100 rounded-pill py-3 fw-bold" onclick="window.sendVoteQuery('no')">НЕТ</button>
                  </div>`
         }
+            <div class="mt-5 px-4">
+                 <button class="btn btn-outline-secondary btn-sm rounded-pill w-100 py-3" onclick="window.bunkerFinish()">
+                    <i class="bi bi-chevron-left"></i> Выход
+                </button>
+            </div>
         </div>
     `;
 };
@@ -491,10 +491,10 @@ window.renderOutro = function (wrapper, state, res) {
     var survivors = res.players.filter(p => !state.kicked_players.includes(String(p.id)));
 
     var html = `
-        <div class="bunker-outro-screen p-4" style="padding-top: calc(60px + env(safe-area-inset-top)) !important;">
+        <div class="bunker-outro-screen p-4" style="padding-top: calc(50px + env(safe-area-inset-top)) !important;">
             <h1 class="outro-title text-center fw-bold mb-4"><i class="bi bi-house-heart-fill me-2"></i>ИСТОРИЯ БУНКЕРА</h1>
             
-            <div class="outro-stats d-flex justify-content-around bg-white border rounded-pill p-3 mb-4 shadow-sm">
+            <div class="outro-stats d-flex justify-content-around glass-card border rounded-pill p-3 mb-4 shadow-sm">
                 <div class="fw-bold text-success">Выжило: ${survivors.length}</div>
                 <div class="fw-bold text-primary">Мест: ${state.bunker_places}</div>
             </div>
@@ -511,7 +511,7 @@ window.renderOutro = function (wrapper, state, res) {
         <div class="fixed-bottom-actions px-4 pb-4 bg-transparent">
             ${res.is_host ?
             `<button class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold shadow-lg" onclick="window.bunkerFinish(event)">↩️ В Лобби</button>` :
-            `<button class="btn btn-outline-secondary btn-lg w-100 rounded-pill py-3 fw-bold bg-white shadow-sm" onclick="window.bunkerFinish(event)">Выйти</button>`
+            `<button class="btn btn-outline-secondary btn-lg w-100 rounded-pill py-3 fw-bold shadow-sm" onclick="window.bunkerFinish(event)">Выйти</button>`
         }
         </div>`;
 
@@ -546,7 +546,7 @@ window.renderStories = function (players, state) {
         var cond = pCards.condition.data;
 
         return `
-            <div class="card border-0 shadow-sm mb-3 ${isKicked ? 'bg-light opacity-75' : 'bg-white'}">
+            <div class="card glass-card border-0 shadow-sm mb-3 ${isKicked ? 'opacity-50' : ''}">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-2">
                         <img src="${window.getAvatarSrc(p.photo_url)}" class="rounded-circle me-3" style="width:36px; height:36px;">
