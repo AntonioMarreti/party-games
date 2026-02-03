@@ -121,9 +121,9 @@
         wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
             <h5 class="bb-subtitle mb-4">Готовьтесь...</h5>
-            <div id="cnt-number" class="display-1 fw-bold animate__animated animate__pulse animate__infinite" style="font-size: 100px; color: var(--primary-color); text-shadow: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 70%);">3</div>
+            <div id="cnt-number" class="display-1 fw-bold animate__animated animate__pulse animate__infinite" style="font-size: 100px; color: var(--primary-color); text-shadow: var(--shadow-sm);">3</div>
             <div class="bb-glass-card px-4 py-2 mt-4">
-                <p class="mb-0 text-primary fw-bold fs-4 text-center">${task.title || 'Задание'}</p>
+                <p class="mb-0 text-primary fw-bold fs-4 text-center" style="color:var(--primary-color) !important;">${task.title || 'Задание'}</p>
             </div>
         </div>
     `;
@@ -172,7 +172,7 @@
                     <button class="bb-round-btn flex-grow-1 active py-1" onclick="selectRounds(10, this)">10</button>
                     <button class="bb-round-btn flex-grow-1 py-1" onclick="selectRounds(15, this)">15</button>
                 </div>
-                <input id="bb-rounds" type="number" value="10" min="1" max="50" class="form-control rounded-pill text-center fw-bold text-primary border-0 bg-light py-2">
+                <input id="bb-rounds" type="number" value="10" min="1" max="50" class="form-control rounded-pill text-center fw-bold py-2" style="color:var(--primary-color) !important; background:var(--bg-secondary) !important; border:1px solid var(--border-main) !important;">
             </div>
 
             <div class="bb-glass-card mb-4" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
@@ -181,27 +181,27 @@
                     <label class="bb-category-item py-2">
                         <input type="checkbox" class="bb-checkbox" value="attention" checked>
                         <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>
-                        <span class="fw-bold text-dark small">Внимание</span>
+                        <span class="fw-bold text-body small">Внимание</span>
                     </label>
                     <label class="bb-category-item py-2">
                         <input type="checkbox" class="bb-checkbox" value="logic" checked>
-                        <i class="bi bi-puzzle-fill me-2 text-warning"></i>
-                        <span class="fw-bold text-dark small">Логика</span>
+                        <i class="bi bi-puzzle-fill me-2 text-warning" style="color: var(--status-warning) !important;"></i>
+                        <span class="fw-bold text-body small">Логика</span>
                     </label>
                     <label class="bb-category-item py-2">
                         <input type="checkbox" class="bb-checkbox" value="erudition" checked>
-                        <i class="bi bi-globe me-2 text-info"></i>
-                        <span class="fw-bold text-dark small">Эрудиция</span>
+                        <i class="bi bi-globe me-2 text-info" style="color: var(--status-info) !important;"></i>
+                        <span class="fw-bold text-body small">Эрудиция</span>
                     </label>
                     <label class="bb-category-item py-2">
                         <input type="checkbox" class="bb-checkbox" value="motor" checked>
-                        <i class="bi bi-lightning-fill me-2 text-danger"></i>
-                        <span class="fw-bold text-dark small">Реакция</span>
+                        <i class="bi bi-lightning-fill me-2 text-danger" style="color: var(--status-error) !important;"></i>
+                        <span class="fw-bold text-body small">Реакция</span>
                     </label>
                     <label class="bb-category-item py-2">
                         <input type="checkbox" class="bb-checkbox" value="memory" checked>
-                        <i class="bi bi-stopwatch-fill me-2 text-success"></i>
-                        <span class="fw-bold text-dark small">Память</span>
+                        <i class="bi bi-stopwatch-fill me-2 text-success" style="color: var(--status-success) !important;"></i>
+                        <span class="fw-bold text-body small">Память</span>
                     </label>
                 </div>
             </div>
@@ -245,7 +245,7 @@
             <div class="bb-result-circle">
                 ${isCorrect ? '<i class="bi bi-check-lg text-success"></i>' : '<i class="bi bi-x-lg text-danger"></i>'}
             </div>
-            <h2 class="fw-bold mb-1 text-center" style="color: ${isCorrect ? '#00b894' : '#d63031'}">${isCorrect ? 'Верно!' : 'Ошибка'}</h2>
+            <h2 class="fw-bold mb-1 text-center" style="color: ${isCorrect ? 'var(--status-success)' : 'var(--status-error)'}">${isCorrect ? 'Верно!' : 'Ошибка'}</h2>
             <script>
                 if (${isCorrect}) window.audioManager.play('success');
                 else window.audioManager.play('error');
@@ -254,7 +254,7 @@
             
             <div class="bb-glass-card p-4 text-center mb-4 mx-3">
                 <div class="small text-uppercase text-muted fw-bold mb-1">Получено очков</div>
-                <h1 class="display-2 fw-bold mb-0" style="background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 40%) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">+${myRes.score}</h1>
+                <h1 class="display-2 fw-bold mb-0" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">+${myRes.score}</h1>
             </div>
 
             <h6 class="text-start ms-4 mb-3 small text-uppercase text-muted fw-extrabold" style="letter-spacing: 1px;">Топ раунда</h6>
@@ -267,10 +267,10 @@
                 html += `<div class="bb-result-card">
                 <div class="d-flex align-items-center">
                     <div class="bb-rank">#${index + 1}</div>
-                    <img src="${p.photo_url}" class="rounded-circle me-3" style="width:40px;height:40px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                    <span class="fw-bold text-dark" style="font-size: 15px;">${p.first_name}</span>
+                    <img src="${p.photo_url}" class="rounded-circle me-3" style="width:40px;height:40px; border: 2px solid var(--bg-secondary); box-shadow: var(--shadow-sm);">
+                    <span class="fw-bold" style="font-size: 15px; color:var(--text-main);">${p.first_name}</span>
                 </div>
-                <div class="fw-bold text-primary">+${data.score}</div>
+                <div class="fw-bold" style="color:var(--primary-color);">+${data.score}</div>
             </div>`;
             }
         });
@@ -300,7 +300,7 @@
             </div>
             <script>window.audioManager.play('win');</script>
             
-            <h2 class="display-6 fw-bold mb-2 text-center" style="color: #2D3436;">Битва окончена!</h2>
+            <h2 class="display-6 fw-bold mb-2 text-center" style="color: var(--text-main);">Битва окончена!</h2>
             
             ${isWinner
                 ? `<div class="bb-glass-card p-4 mb-5 w-100 text-center" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 255, 255, 0.6) 100%); border: 1px solid rgba(255, 215, 0, 0.3);">
@@ -336,9 +336,9 @@
         html += `</div><div style="height: 100px;"></div></div>`;
 
         if (res.is_host) {
-            html += `<div class="fixed-bottom-actions"><button class="bb-start-btn" style="background: #F1F2F6; color: #2D3436; box-shadow: none;" onclick="bbFinish()">↩️ Вернуться в Лобби</button></div>`;
+            html += `<div class="fixed-bottom-actions"><button class="bb-start-btn" style="background: var(--bg-secondary); color: var(--text-main); box-shadow: none; border: 1px solid var(--border-main);" onclick="bbFinish()">↩️ Вернуться в Лобби</button></div>`;
         } else {
-            html += `<div class="fixed-bottom-actions text-center"><button class="btn btn-link text-muted fw-bold text-decoration-none" onclick="leaveRoom()">Покинуть комнату</button></div>`;
+            html += `<div class="fixed-bottom-actions text-center"><button class="btn btn-link fw-bold text-decoration-none" style="color:var(--text-muted);" onclick="leaveRoom()">Покинуть комнату</button></div>`;
         }
 
         wrapper.innerHTML = html;

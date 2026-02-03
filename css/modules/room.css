@@ -5,15 +5,15 @@
 
 /* 1. Header Capsule (Dropdown Trigger) */
 .room-header-dropdown-btn {
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--bg-glass-strong);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: var(--border-glass);
     padding: 10px 24px;
     border-radius: 50px;
     font-weight: 700;
-    color: var(--text-dark);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+    box-shadow: var(--shadow-main);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -24,18 +24,18 @@
 .room-header-dropdown-btn:active,
 .room-header-dropdown-btn[aria-expanded="true"] {
     transform: scale(0.96);
-    background: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.05);
+    background: var(--bg-secondary);
+    box-shadow: var(--shadow-main);
+    border-color: var(--border-glass);
 }
 
 /* Custom Dropdown Styling */
 #screen-room .dropdown-menu {
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--bg-glass-strong);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: var(--border-glass);
+    box-shadow: var(--shadow-strong);
     border-radius: 24px !important;
     padding: 8px;
     margin-top: 50px !important;
@@ -54,22 +54,22 @@
 }
 
 #screen-room .dropdown-item:active {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--divider);
 }
 
 /* 2. Room Code Card (Premium Glass) */
 .room-code-card {
-    background: rgba(255, 255, 255, 0.65);
+    background: var(--bg-card);
     backdrop-filter: blur(16px) saturate(140%);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    border: var(--border-glass);
     border-radius: 32px;
     padding: 25px;
     margin-bottom: 30px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-strong);
     position: relative;
     overflow: hidden;
 }
@@ -81,10 +81,10 @@
     font-size: 42px;
     font-weight: 800;
     letter-spacing: 4px;
-    color: var(--text-dark);
+    color: var(--text-main);
     font-family: monospace;
     /* Monospace for clearer code reading */
-    text-shadow: 0 2px 0 rgba(255, 255, 255, 0.5);
+    text-shadow: 0 2px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn-share-code {
@@ -92,7 +92,7 @@
     height: 50px;
     border-radius: 18px;
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-accent);
     border: none;
     display: flex;
     align-items: center;
@@ -109,7 +109,7 @@
 
 /* 3. Players Grid (Using generic styles mostly, but tweaking header) */
 #screen-room h6 {
-    color: var(--text-dark);
+    color: var(--text-main);
     opacity: 0.7;
     margin-left: 8px;
     font-weight: 700;
@@ -120,29 +120,29 @@
 
 /* 4. Game Selector Card */
 .game-setting-card {
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: var(--border-glass);
     border-radius: 24px;
     padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-main);
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .game-setting-card:active {
-    background: white;
+    background: var(--bg-glass-strong);
     transform: scale(0.98);
 }
 
 .game-setting-icon {
     width: 48px;
     height: 48px;
-    background: var(--bg-color);
+    background: var(--bg-app);
     border-radius: 16px;
     display: flex;
     align-items: center;
@@ -157,8 +157,8 @@
     width: 100%;
     padding: 16px;
     border-radius: 24px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 30%) 100%);
-    color: white;
+    background: var(--primary-gradient);
+    color: var(--text-on-accent);
     border: none;
     font-size: 18px;
     font-weight: 800;
@@ -174,11 +174,11 @@
 
 /* Guest Waiting Message */
 #guest-waiting-msg {
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--bg-glass);
     backdrop-filter: blur(10px);
     padding: 20px;
     border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: var(--border-glass);
 }
 
 /* === FIXED BOTTOM CONTROLS === */

@@ -8,7 +8,7 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
     const overlay = document.createElement('div');
     overlay.id = 'bb-overlay-layer';
     overlay.className = 'animate__animated animate__fadeIn';
-    overlay.style.background = '#e74c3c'; // Start Red
+    overlay.style.background = 'var(--status-error)'; // Start Red
     overlay.onclick = window.bbReactionClick;
     overlay.innerHTML = `
         <div id="reaction-icon" style="font-size: 6rem;">✋</div>
@@ -22,7 +22,7 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
 
     window.bbReactionTimeout = setTimeout(() => {
         if (overlay) {
-            overlay.style.background = '#00b894'; // Green
+            overlay.style.background = 'var(--status-success)'; // Green
             document.getElementById('reaction-text').innerText = "ЖМИ!";
             document.getElementById('reaction-icon').innerText = "⚡️";
             window.bbBattleStartTime = performance.now();
@@ -48,7 +48,7 @@ window.bbReactionClick = function () {
         finish(time, true);
     } else {
         if (window.bbReactionTimeout) clearTimeout(window.bbReactionTimeout);
-        bg.style.background = '#2D3436';
+        bg.style.background = 'var(--bg-dark)';
         document.getElementById('reaction-text').innerText = "РАНО!";
 
         // Remove after short delay to show "Early" message
@@ -67,8 +67,8 @@ window.BB_MECHANICS.defuse_numbers = function (wrapper, task) {
             <h2 id="defuse-target" class="fw-bold text-primary mb-4">Жми: 1</h2>
             <div class="d-grid gap-2" style="grid-template-columns: repeat(3, 1fr); width: 300px;">
                 ${task.grid.map(num => `
-                    <button id="btn-num-${num}" class="btn btn-white shadow-sm border-0 fw-bold fs-2 rounded-4" 
-                        style="height: 80px;" onclick="window.handleDefuse(${num})">${num}</button>
+                    <button id="btn-num-${num}" class="btn shadow-sm border-0 fw-bold fs-2 rounded-4" 
+                        style="height: 80px; background:var(--bg-card); color:var(--text-main);" onclick="window.handleDefuse(${num})">${num}</button>
                 `).join('')}
             </div>
         </div>`;
@@ -94,9 +94,9 @@ window.BB_MECHANICS.timing_safe = function (wrapper, task) {
     wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
             <div class="badge bg-light text-dark mb-5 border">${task.title}</div>
-            <div class="position-relative w-100 bg-light rounded-pill mb-5" style="height: 40px; overflow: hidden; border: 2px solid #ddd;">
+            <div class="position-relative w-100 rounded-pill mb-5" style="height: 40px; overflow: hidden; border: 2px solid var(--border-main); background:var(--bg-secondary);">
                 <!-- Зеленая зона -->
-                <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: #28a745; opacity: 0.5;"></div>
+                <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: var(--status-success); opacity: 0.5;"></div>
                 <!-- Бегунок -->
                 <div id="safe-cursor" style="position: absolute; left: 0; width: 10px; height: 100%; background: var(--primary-color); shadow: 0 0 10px rgba(0,0,0,0.5);"></div>
             </div>

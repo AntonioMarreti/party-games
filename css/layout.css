@@ -48,7 +48,7 @@ body {
 /* === HEADER === */
 .header-bg {
     background: var(--header-gradient);
-    color: var(--text-light);
+    color: var(--text-on-accent);
     padding-top: calc(40px + env(safe-area-inset-top));
     padding-bottom: 60px;
     padding-left: 24px;
@@ -58,7 +58,7 @@ body {
     margin-bottom: -35px;
     position: relative;
     z-index: 0;
-    box-shadow: 0 10px 40px color-mix(in srgb, var(--primary-color), black 50%);
+    box-shadow: var(--shadow-strong);
 }
 
 .header-title {
@@ -85,7 +85,7 @@ body {
     transform: translateX(-50%);
     width: 90%;
     max-width: 380px;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-glass);
     /* Slightly more transparent */
     backdrop-filter: blur(20px) saturate(180%);
     /* Enhanced glass effect */
@@ -98,8 +98,8 @@ body {
     /* CHANGED: Hidden by default, shown via JS */
     justify-content: space-around;
     align-items: center;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: var(--shadow-main);
+    border: var(--border-glass);
     /* Glass border */
     z-index: 10000;
     margin-bottom: env(safe-area-inset-bottom);
@@ -112,7 +112,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #A0A0B0;
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 10px;
     gap: 4px;
@@ -261,7 +261,7 @@ body {
 
     .device-content {
         flex: 1;
-        background: var(--bg-color);
+        background: var(--bg-app);
         border-radius: 50px;
         overflow-y: auto;
         overflow-x: hidden;

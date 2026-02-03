@@ -115,7 +115,7 @@ function renderWordClash(res) {
         // wrapper.style.paddingTop = 'max(35px, env(safe-area-inset-top) + 10px)'; // Moved to header
 
         // Force background to cover full screen
-        wrapper.style.background = 'linear-gradient(135deg, #1e2a3a 0%, #2c3e50 100%)'; // A bit darker/cleaner
+        wrapper.style.background = 'var(--bg-app)'; // Use app bg or specific WC gradient if needed
         wrapper.style.zIndex = '100'; // Ensure it sits on top
         wrapper.style.position = 'relative';
 
@@ -155,11 +155,11 @@ function renderWordClash(res) {
         header.style.right = '16px';
         header.style.padding = '16px'; // Uniform padding
         header.style.borderRadius = '32px';
-        header.style.background = 'rgba(30, 42, 58, 0.90)'; // Match input area
+        header.style.background = 'var(--bg-glass-strong)'; // Match input area
         header.style.backdropFilter = 'blur(20px)';
         header.style.zIndex = '1000';
-        header.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.4)';
-        header.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+        header.style.boxShadow = 'var(--shadow-main)';
+        header.style.border = 'var(--border-glass)';
         wrapper.appendChild(header);
     }
 

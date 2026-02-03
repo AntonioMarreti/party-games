@@ -47,128 +47,40 @@ const APP_VERSION_LOCAL = getAppVersionFromDOM();
 // Internal function: Dynamic style injection to fix Safari/WebKit repaint bug
 // DO NOT CALL DIRECTLY - use applyAccentColor() instead
 function _updateThemeStyles(explicitColor = null) {
-    console.log('🎨 _updateThemeStyles called with color:', explicitColor);
     const root = document.documentElement;
     const primary = explicitColor || root.style.getPropertyValue('--custom-primary') || '#6C5CE7';
     const isDark = document.body.classList.contains('dark-mode');
     const mixColor = isDark ? 'black' : 'white';
 
-    // TELEGRAM FIX: Apply inline styles directly to .header-bg elements
-    // CSS injection doesn't work in Telegram WebApp due to specificity issues
+    // Headers & Basic components already use CSS variables from variables.css
+    // This function now primarily handles extreme Telegram cases where inline styles are needed
     const headerBgGradient = `linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%)`;
-    const headerBgShadow = `0 10px 40px color-mix(in srgb, ${primary}, black 50%)`;
 
     document.querySelectorAll('.header-bg').forEach(el => {
         el.style.setProperty('background', headerBgGradient, 'important');
-        el.style.setProperty('box-shadow', headerBgShadow, 'important');
     });
 
-    console.log('🎨 Applied inline styles to', document.querySelectorAll('.header-bg').length, '.header-bg elements');
-
-    // Check if style tag exists, else create it
+    // We no longer need to inject massive blocks of CSS as it's now in the CSS files
+    // But we still update the dynamic style tag for any leftover components
     let styleTag = document.getElementById('dynamic-theme-overrides');
     if (!styleTag) {
         styleTag = document.createElement('style');
         styleTag.id = 'dynamic-theme-overrides';
-    } else {
-        // TELEGRAM FIX: Remove and re-append to ensure it's ALWAYS last in <head>
-        // Telegram adds its own <style> tags dynamically, which can override ours
-        styleTag.remove();
+        document.head.appendChild(styleTag);
     }
 
-    // Always append to the END of <head> to override any Telegram styles
-    document.head.appendChild(styleTag);
-
-    const css = `
-        /* Headers & Gradients */
-        .header-bg, .profile-header-modern, .profile-header-premium {
-            background: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%) !important;
-        }
-        .header-bg {
-            box-shadow: 0 10px 40px color-mix(in srgb, ${primary}, black 50%) !important;
-        }
-        .profile-header-modern {
-            box-shadow: 0 10px 30px -10px color-mix(in srgb, ${primary}, transparent 50%) !important;
-        }
-
-        /* Avatars & Profile */
-        .profile-avatar-wrapper {
-            background-image: linear-gradient(180deg, color-mix(in srgb, ${primary}, black 10%) 0%, color-mix(in srgb, ${primary}, black 40%) 100%) !important;
-            box-shadow: 0 10px 30px color-mix(in srgb, ${primary}, transparent 60%) !important;
-        }
-        .profile-img {
-            border-color: ${primary} !important;
-        }
-
-        /* Navigation */
-        .nav-item.active, .nav-item.active i {
+    styleTag.innerHTML = `
+        .text-primary, .spinner-border.text-primary, .game-card h4, .action-icon {
             color: ${primary} !important;
         }
-
-        /* Buttons & Actions */
         .btn-primary, .btn-action {
             background-color: ${primary} !important;
             border-color: ${primary} !important;
         }
-        .btn-primary:hover, .btn-action:hover {
-            background-color: color-mix(in srgb, ${primary}, black 10%) !important;
-            border-color: color-mix(in srgb, ${primary}, black 10%) !important;
-        }
-
-        /* Text & Icons */
-        .text-primary, .spinner-border.text-primary, .game-card h4, .action-icon {
-            color: ${primary} !important;
-        }
-
-        /* Form Controls */
-        .form-control:focus {
-            box-shadow: 0 0 0 4px color-mix(in srgb, ${primary}, transparent 85%) !important;
-            border-color: ${primary} !important;
-        }
-        .custom-round-input {
-            color: ${primary} !important;
-        }
-
-        /* Achievement Badges */
-        .achievement-icon-container {
-            background-color: ${primary} !important;
-            background-image: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%) !important;
-            box-shadow: 0 6px 15px color-mix(in srgb, ${primary}, transparent 70%) !important;
-        }
-
-        /* Room Elements */
-        .room-header, .game-setup-header {
-            background: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, white 30%) 100%) !important;
-            box-shadow: 0 10px 30px color-mix(in srgb, ${primary}, transparent 60%) !important;
-        }
-        .ready-badge, .host-badge {
-            box-shadow: 0 4px 10px color-mix(in srgb, ${primary}, transparent 70%) !important;
-        }
-
-        /* Brain Battle Elements */
-        .bb-category-card.selected {
-            border: 1px solid color-mix(in srgb, ${primary}, transparent 70%) !important;
-            box-shadow: 0 4px 15px color-mix(in srgb, ${primary}, transparent 70%) !important;
-        }
-        .bb-round-header {
-            background: linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, white 20%) 100%) !important;
-            box-shadow: 0 10px 30px color-mix(in srgb, ${primary}, transparent 70%) !important;
-        }
-
-        /* Blokus Elements */
-        .blokus-piece.selected {
-            box-shadow: 0 4px 15px color-mix(in srgb, ${primary}, transparent 80%) !important;
-        }
-
-        /* Progress & Loaders */
         .progress-bar {
             background-color: ${primary} !important;
         }
     `;
-    console.log('🎨 Generated CSS:', css);
-    console.log('🎨 Setting innerHTML on styleTag:', styleTag);
-    styleTag.innerHTML = css;
-    console.log('🎨 ✅ Theme styles injected successfully');
 }
 
 // Public API: Apply accent color theme
@@ -423,7 +335,7 @@ const AVAILABLE_GAMES = [
         name: 'Бункер',
         icon: 'bi-shield-shaded',
         color: '#E67E22',
-        bgColor: '#FDF2E9',
+        bgColor: 'color-mix(in srgb, var(--primary-color), transparent 90%)',
         promoImage: 'assets/promo/bunker.jpg',
         description: 'Психологическая стратегия в мире после апокалипсиса.',
         longDescription: `
@@ -441,20 +353,20 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background:#FDF2E9; border:1px dashed #E67E22;">
-                        <div class="text-center mb-2" style="font-weight:bold; color:#E67E22; font-size:12px; letter-spacing:1px;">КАРТА ПЕРСОНАЖА</div>
-                        <div class="bg-white p-3 rounded-3 shadow-sm">
-                            <div class="d-flex border-bottom pb-2 mb-2">
-                                <span class="small opacity-50 flex-grow-1">Профессия</span>
-                                <span class="small fw-bold">Врач-хирург</span>
+                    <div class="p-3 rounded-4 mb-3" style="background:var(--bg-glass-strong); border:1px dashed var(--primary-color);">
+                        <div class="text-center mb-2" style="font-weight:bold; color:var(--primary-color); font-size:12px; letter-spacing:1px;">КАРТА ПЕРСОНАЖА</div>
+                        <div class="bg-card p-3 rounded-3 shadow-sm" style="background:var(--bg-card);">
+                            <div class="d-flex border-bottom pb-2 mb-2" style="border-color:var(--border-main) !important;">
+                                <span class="small opacity-50 flex-grow-1" style="color:var(--text-muted);">Профессия</span>
+                                <span class="small fw-bold" style="color:var(--text-main);">Врач-хирург</span>
                             </div>
-                            <div class="d-flex border-bottom pb-2 mb-2">
-                                <span class="small opacity-50 flex-grow-1">Здоровье</span>
-                                <span class="small fw-bold">Астма</span>
+                            <div class="d-flex border-bottom pb-2 mb-2" style="border-color:var(--border-main) !important;">
+                                <span class="small opacity-50 flex-grow-1" style="color:var(--text-muted);">Здоровье</span>
+                                <span class="small fw-bold" style="color:var(--text-main);">Астма</span>
                             </div>
                             <div class="d-flex">
-                                <span class="small opacity-50 flex-grow-1">Хобби</span>
-                                <span class="small fw-bold">Стрельба</span>
+                                <span class="small opacity-50 flex-grow-1" style="color:var(--text-muted);">Хобби</span>
+                                <span class="small fw-bold" style="color:var(--text-main);">Стрельба</span>
                             </div>
                         </div>
                     </div>
@@ -463,7 +375,7 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background:#1a1a1a; border:1px solid #333; color:#eee;">
+                    <div class="p-3 rounded-4 mb-3" style="background:var(--bg-dark, #1a1a1a); border:1px solid var(--border-main); color:var(--text-light);">
                         <div class="text-center mb-2" style="font-weight:bold; color:#e74c3c; font-size:12px; letter-spacing:1px;">КАТАСТРОФА</div>
                         <div class="text-center py-2">
                             <i class="bi bi-radioactive" style="font-size:32px; color:#e74c3c;"></i>
@@ -476,12 +388,12 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background:#FCF3CF; border:1px dashed #f39c12;">
-                        <div class="text-center mb-2" style="font-weight:bold; color:#f39c12; font-size:12px; letter-spacing:1px;">ЛОКАЦИЯ: БУНКЕР</div>
-                        <div class="bg-white p-2 rounded-3">
-                            <div class="d-flex gap-2 align-items-center mb-1 small"><i class="bi bi-flower1 text-success"></i> Оранжерея (Еда)</div>
-                            <div class="d-flex gap-2 align-items-center mb-1 small"><i class="bi bi-shield-lock text-primary"></i> Комната охраны</div>
-                            <div class="d-flex gap-2 align-items-center small"><i class="bi bi-bookshelf text-warning"></i> Библиотека</div>
+                    <div class="p-3 rounded-4 mb-3" style="background:var(--bg-card); border:1px dashed var(--primary-color);">
+                        <div class="text-center mb-2" style="font-weight:bold; color:var(--primary-color); font-size:12px; letter-spacing:1px;">ЛОКАЦИЯ: БУНКЕР</div>
+                        <div class="p-2 rounded-3" style="background:var(--bg-secondary);">
+                            <div class="d-flex gap-2 align-items-center mb-1 small" style="color:var(--text-main);"><i class="bi bi-flower1 text-success"></i> Оранжерея (Еда)</div>
+                            <div class="d-flex gap-2 align-items-center mb-1 small" style="color:var(--text-main);"><i class="bi bi-shield-lock text-primary"></i> Комната охраны</div>
+                            <div class="d-flex gap-2 align-items-center small" style="color:var(--text-main);"><i class="bi bi-bookshelf text-warning"></i> Библиотека</div>
                         </div>
                     </div>
                 `
@@ -489,14 +401,14 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-2 rounded-4 mb-3" style="background:#f8f9fa; border:1px solid #dee2e6;">
-                         <div class="text-center mb-2" style="font-weight:bold; color:#2d3436; font-size:11px; letter-spacing:1px;">ГЛОУБ АЛЬТ: ГОЛОСОВАНИЕ</div>
+                    <div class="p-2 rounded-4 mb-3" style="background:var(--bg-app); border:1px solid var(--border-main);">
+                         <div class="text-center mb-2" style="font-weight:bold; color:var(--text-main); font-size:11px; letter-spacing:1px;">ГЛОУБ АЛЬТ: ГОЛОСОВАНИЕ</div>
                          <div class="d-flex justify-content-center gap-2 mb-1">
                             <div style="width:28px; height:28px; background:#e74c3c; border-radius:50%; color:white; text-align:center; line-height:28px; font-size:12px;">✖</div>
-                            <div style="width:28px; height:28px; background:#eee; border-radius:50%;"></div>
-                            <div style="width:28px; height:28px; background:#eee; border-radius:50%;"></div>
+                            <div style="width:28px; height:28px; background:var(--bg-secondary); border-radius:50%;"></div>
+                            <div style="width:28px; height:28px; background:var(--bg-secondary); border-radius:50%;"></div>
                          </div>
-                         <div class="text-center x-small opacity-50 mt-1">Решим, кто покинет убежище</div>
+                         <div class="text-center x-small opacity-50 mt-1" style="color:var(--text-muted);">Решим, кто покинет убежище</div>
                     </div>
                 `
             }
@@ -530,13 +442,13 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background: #F4ECF7; border: 1px dashed #9B59B6;">
-                        <div class="text-center mb-2" style="font-weight: bold; color: #9B59B6; font-size: 11px; letter-spacing: 1px;">ЛОГИКА (LOGIC)</div>
+                    <div class="p-3 rounded-4 mb-3" style="background: var(--bg-glass); border: 1px dashed var(--primary-color);">
+                        <div class="text-center mb-2" style="font-weight: bold; color: var(--primary-color); font-size: 11px; letter-spacing: 1px;">ЛОГИКА (LOGIC)</div>
                         <div class="d-flex justify-content-center">
-                            <div class="bg-white p-3 rounded-3 shadow-sm text-center" style="width: 100%;">
-                                <div style="font-size:14px; color: #666; margin-bottom: 5px;">Цветовая ловушка</div>
+                            <div class="p-3 rounded-3 shadow-sm text-center" style="width: 100%; background:var(--bg-card);">
+                                <div style="font-size:14px; color: var(--text-muted); margin-bottom: 5px;">Цветовая ловушка</div>
                                 <div style="font-size:24px; font-weight:bold; color: #e74c3c;">СИНИЙ</div>
-                                <div style="font-size:11px; color: #9B59B6;">(Нажми на цвет текста)</div>
+                                <div style="font-size:11px; color: var(--primary-color);">(Нажми на цвет текста)</div>
                             </div>
                         </div>
                     </div>
@@ -545,14 +457,14 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background: #EBF5FB; border: 1px dashed #3498db;">
-                        <div class="text-center mb-2" style="font-weight: bold; color: #3498db; font-size: 11px; letter-spacing: 1px;">ВНИМАНИЕ (ATTENTION)</div>
-                        <div class="bg-white p-3 rounded-3 shadow-sm text-center">
-                            <div style="font-size:14px; color: #666; margin-bottom: 8px;">Матрица: Найди пару</div>
+                    <div class="p-3 rounded-4 mb-3" style="background: var(--bg-glass); border: 1px dashed var(--primary-color);">
+                        <div class="text-center mb-2" style="font-weight: bold; color: var(--primary-color); font-size: 11px; letter-spacing: 1px;">ВНИМАНИЕ (ATTENTION)</div>
+                        <div class="p-3 rounded-3 shadow-sm text-center" style="background:var(--bg-card);">
+                            <div style="font-size:14px; color: var(--text-muted); margin-bottom: 8px;">Матрица: Найди пару</div>
                             <div class="d-flex justify-content-center gap-2">
-                                <div style="width:30px; height:30px; background:#3498db; border-radius:6px; color:white; display:flex; align-items:center; justify-content:center;"><i class="bi bi-star-fill"></i></div>
-                                <div style="width:30px; height:30px; background:#eee; border-radius:6px;"></div>
-                                <div style="width:30px; height:30px; background:#3498db; border-radius:6px; color:white; display:flex; align-items:center; justify-content:center;"><i class="bi bi-star-fill"></i></div>
+                                <div style="width:30px; height:30px; background:var(--primary-color); border-radius:6px; color:var(--text-on-accent); display:flex; align-items:center; justify-content:center;"><i class="bi bi-star-fill"></i></div>
+                                <div style="width:30px; height:30px; background:var(--bg-secondary); border-radius:6px;"></div>
+                                <div style="width:30px; height:30px; background:var(--primary-color); border-radius:6px; color:var(--text-on-accent); display:flex; align-items:center; justify-content:center;"><i class="bi bi-star-fill"></i></div>
                             </div>
                         </div>
                     </div>
@@ -561,9 +473,9 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background: #FEF9E7; border: 1px dashed #f1c40f;">
-                        <div class="text-center mb-2" style="font-weight: bold; color: #f39c12; font-size: 11px; letter-spacing: 1px;">РЕАКЦИЯ (MOTOR)</div>
-                        <div class="d-flex flex-column align-items-center bg-white p-3 rounded-3 shadow-sm">
+                    <div class="p-3 rounded-4 mb-3" style="background: var(--bg-glass); border: 1px dashed var(--primary-color);">
+                        <div class="text-center mb-2" style="font-weight: bold; color: var(--primary-color); font-size: 11px; letter-spacing: 1px;">РЕАКЦИЯ (MOTOR)</div>
+                        <div class="d-flex flex-column align-items-center p-3 rounded-3 shadow-sm" style="background:var(--bg-card);">
                             <div style="width:50px; height:50px; background:#2ecc71; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:20px;">
                                 <i class="bi bi-cursor-fill"></i>
                             </div>
@@ -575,11 +487,11 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background: #F2F3F4; border: 1px dashed #7F8C8D;">
-                        <div class="text-center mb-2" style="font-weight: bold; color: #2C3E50; font-size: 11px; letter-spacing: 1px;">РЕЗУЛЬТАТЫ БИТВЫ</div>
-                        <div class="small bg-white p-2 rounded-3">
-                            <div class="d-flex justify-content-between border-bottom py-1"><span>1. Алексей</span><span class="fw-bold text-success">1450</span></div>
-                            <div class="d-flex justify-content-between border-bottom py-1"><span>2. Мария</span><span class="fw-bold">1200</span></div>
+                    <div class="p-3 rounded-4 mb-3" style="background: var(--bg-glass); border: 1px dashed var(--primary-color);">
+                        <div class="text-center mb-2" style="font-weight: bold; color: var(--primary-color); font-size: 11px; letter-spacing: 1px;">РЕЗУЛЬТАТЫ БИТВЫ</div>
+                        <div class="small p-2 rounded-3" style="background:var(--bg-card); color:var(--text-main);">
+                            <div class="d-flex justify-content-between border-bottom py-1" style="border-color:var(--border-main) !important;"><span>1. Алексей</span><span class="fw-bold text-success">1450</span></div>
+                            <div class="d-flex justify-content-between border-bottom py-1" style="border-color:var(--border-main) !important;"><span>2. Мария</span><span class="fw-bold">1200</span></div>
                             <div class="d-flex justify-content-between py-1"><span>3. Вы</span><span class="fw-bold text-primary">1180</span></div>
                         </div>
                     </div>
@@ -611,8 +523,8 @@ const AVAILABLE_GAMES = [
             {
                 type: 'html',
                 content: `
-                    <div class="p-3 rounded-4 mb-3" style="background: white; border:1px solid #eee; text-align:center;">
-                        <div style="font-size:14px; font-weight:bold; color:#1ABC9C; margin-bottom:8px;">КТО ИЗ НАС...</div>
+                    <div class="p-3 rounded-4 mb-3" style="background: var(--bg-card); border:1px solid var(--border-main); text-align:center; color:var(--text-main);">
+                        <div style="font-size:14px; font-weight:bold; color:var(--primary-color); margin-bottom:8px;">КТО ИЗ НАС...</div>
                         <div style="font-size:16px; font-style:italic;">Будет первым, кто предложит заказать пиццу в 3 часа ночи?</div>
                     </div>
                 `
@@ -3060,10 +2972,10 @@ async function loadPublicRooms() {
 
         if (res.rooms.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-4 rounded-4 shadow-sm position-relative" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px);">
+                <div class="text-center py-4 rounded-4 shadow-sm position-relative" style="background: var(--bg-glass); backdrop-filter: blur(10px); border: 1px solid var(--border-glass);">
                     ${refreshBtn}
                      <div class="mb-2 text-primary opacity-50"><i class="bi bi-telescope" style="font-size: 40px;"></i></div>
-                     <div class="fw-bold text-dark">Пусто</div>
+                     <div class="fw-bold" style="color: var(--text-main)">Пусто</div>
                      <div class="text-muted small mb-3">Никто не играет в открытую</div>
                      <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать</button>
                 </div >
@@ -3078,7 +2990,8 @@ async function loadPublicRooms() {
             // Glass style
             div.className = 'd-flex justify-content-between align-items-center mb-2 p-3 shadow-sm';
             div.style.borderRadius = '16px';
-            div.style.background = 'rgba(255, 255, 255, 0.7)';
+            div.style.border = '1px solid var(--border-glass)'; /* Added border */
+            div.style.background = 'var(--bg-glass)';
             div.style.backdropFilter = 'blur(10px)';
             div.onclick = () => joinRoom(r.room_code);
             div.style.cursor = 'pointer';
@@ -3088,7 +3001,7 @@ async function loadPublicRooms() {
                     <div class="d-flex align-items-center gap-3">
                         <div class="avatar-sm" style="background-image: url('${r.host_avatar || ''}')"></div>
                         <div>
-                            <div class="fw-bold text-dark">${r.title || ('Комната ' + r.host_name)}</div>
+                            <div class="fw-bold" style="color:var(--text-main);">${r.title || ('Комната ' + r.host_name)}</div>
                             <div class="small text-muted">${r.description || 'Присоединяйтесь!'}</div>
                         </div>
                     </div>

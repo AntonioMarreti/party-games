@@ -19,18 +19,18 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/variables.css?v=2320">
-    <link rel="stylesheet" href="css/layout.css?v=2320">
-    <link rel="stylesheet" href="css/components.css?v=2320">
-    <link rel="stylesheet" href="css/modules/lobby.css?v=2320">
-    <link rel="stylesheet" href="css/modules/profile.css?v=2320">
-    <link rel="stylesheet" href="css/modules/room.css?v=2320">
-    <link rel="stylesheet" href="css/modules/modals.css?v=2320">
-    <link rel="stylesheet" href="css/modules/blokus.css?v=2320">
-    <link rel="stylesheet" href="styles.css?v=2320">
-    <link rel="stylesheet" href="css/dark-mode.css?v=2320">
-    <script src="js/audio.js?v=2320"></script>
-    <script src="js/app.js?v=2320"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2321">
+    <link rel="stylesheet" href="css/layout.css?v=2321">
+    <link rel="stylesheet" href="css/components.css?v=2321">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2321">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2321">
+    <link rel="stylesheet" href="css/modules/room.css?v=2321">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2321">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2321">
+    <link rel="stylesheet" href="styles.css?v=2321">
+    <link rel="stylesheet" href="css/dark-mode.css?v=2321">
+    <script src="js/audio.js?v=2321"></script>
+    <script src="js/app.js?v=2321"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -204,7 +204,8 @@
                                         <div class="icon-wrap text-primary me-3" style="width:32px; text-align:center;">
                                             <i class="bi bi-pencil-square fs-5"></i>
                                         </div>
-                                        <span class="fw-bold text-dark">Редактировать профиль</span>
+                                        <span class="fw-bold" style="color: var(--text-main)">Редактировать
+                                            профиль</span>
                                     </div>
                                     <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
                                 </div>
@@ -212,10 +213,11 @@
                                 <!-- Friends -->
                                 <div class="settings-item clickable" onclick="openFriendsScreen()">
                                     <div class="d-flex align-items-center">
-                                        <div class="icon-wrap text-success me-3" style="width:32px; text-align:center;">
+                                        <div class="icon-wrap me-3"
+                                            style="width:32px; text-align:center; color: var(--primary-color);">
                                             <i class="bi bi-people-fill fs-5"></i>
                                         </div>
-                                        <span class="fw-bold text-dark">Друзья</span>
+                                        <span class="fw-bold" style="color: var(--text-main)">Друзья</span>
                                         <span id="friends-count-badge" class="badge bg-danger rounded-pill ms-2"
                                             style="display:none;">0</span>
                                     </div>
@@ -225,9 +227,10 @@
                                 <!-- Settings -->
                                 <div class="settings-item clickable" onclick="openSettingsScreen()">
                                     <div class="d-flex align-items-center">
-                                        <div class="icon-wrap text-dark me-3" style="width:32px; text-align:center;"><i
+                                        <div class="icon-wrap me-3"
+                                            style="width:32px; text-align:center; color: var(--primary-color);"><i
                                                 class="bi bi-gear-fill fs-5"></i></div>
-                                        <span class="fw-bold text-dark">Настройки</span>
+                                        <span class="fw-bold" style="color: var(--text-main)">Настройки</span>
                                     </div>
                                     <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
                                 </div>
@@ -261,7 +264,8 @@
 
                     <div class="content-wrapper pt-4">
                         <!-- Tabs -->
-                        <ul class="nav nav-pills nav-fill mb-3 bg-white rounded-pill p-1 shadow-sm mx-3">
+                        <ul class="nav nav-pills nav-fill mb-3 rounded-pill p-1 shadow-sm mx-3"
+                            style="background: var(--bg-secondary);">
                             <li class="nav-item">
                                 <a class="nav-link active rounded-pill" id="btn-lb-global" data-bs-toggle="pill"
                                     href="#tab-lb-global" onclick="loadLeaderboardList('global')">Глобальный</a>
@@ -375,7 +379,8 @@
                 <div id="screen-profile-edit" class="screen">
                     <div class="room-content-wrapper">
                         <div class="d-flex align-items-center mb-4">
-                            <button class="btn-back me-3" onclick="closeProfileEditor()">
+                            <button class="btn-back me-3" onclick="closeProfileEditor()"
+                                style="color: var(--primary-color) !important; background: var(--bg-card); border: 1px solid var(--primary-color);">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
                             <h4 class="fw-bold m-0">Редактор профиля</h4>
@@ -387,25 +392,28 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Имя</label>
-                            <input type="text" class="form-control rounded-4 py-3 bg-light border-0"
+                            <input type="text" class="form-control rounded-4 py-3"
+                                style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-glass);"
                                 id="profile-name-input" placeholder="Ваше имя">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Выберите аватар</label>
                             <div class="d-flex gap-3 mb-3">
-                                <input type="text" class="form-control rounded-4 py-3 bg-light border-0 text-center"
-                                    id="emoji-input" placeholder="😎" maxlength="2"
-                                    style="font-size: 32px; width: 80px; flex-shrink: 0;">
-                                <button class="btn btn-light rounded-4 py-3 flex-grow-1 fw-bold"
+                                <input type="text" class="form-control rounded-4 py-3 text-center" id="emoji-input"
+                                    placeholder="😎" maxlength="2"
+                                    style="font-size: 32px; width: 80px; flex-shrink: 0; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-glass);">
+                                <button class="btn rounded-4 py-3 flex-grow-1 fw-bold"
+                                    style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-glass);"
                                     onclick="document.getElementById('avatar-file-input').click()">
-                                    <i class="bi bi-image me-2"></i> Загрузить фото
+                                    <i class="bi bi-image me-2 text-primary"></i> Загрузить фото
                                 </button>
                                 <input type="file" id="avatar-file-input" accept="image/*" style="display: none;"
                                     onchange="handleAvatarUpload(event)">
                             </div>
                             <label class="form-label fw-bold">Цвет фона</label>
-                            <div class="color-grid bg-light rounded-4" id="color-grid"></div>
+                            <div class="color-grid rounded-4" id="color-grid"
+                                style="background: var(--bg-card); border: 1px solid var(--border-glass);"></div>
                         </div>
 
                         <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold mt-2"
@@ -424,14 +432,16 @@
                 <div id="screen-friends" class="screen">
                     <div class="friends-view-wrapper">
                         <div class="d-flex align-items-center mb-4">
-                            <button class="btn-back me-3" onclick="closeFriendsScreen()">
+                            <button class="btn-back me-3" onclick="closeFriendsScreen()"
+                                style="color: var(--primary-color) !important; background: var(--bg-card); border: 1px solid var(--primary-color);">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
                             <h4 class="fw-bold m-0">Друзья</h4>
                         </div>
 
                         <!-- Tabs -->
-                        <div class="nav nav-pills nav-fill mb-3 bg-light rounded-pill p-1">
+                        <div class="nav nav-pills nav-fill mb-3 rounded-pill p-1"
+                            style="background: var(--bg-secondary);">
                             <div class="nav-item" style="cursor:pointer">
                                 <a class="nav-link active rounded-pill" id="btn-friends-my"
                                     onclick="switchFriendsTab('my')">Мои</a>
@@ -491,7 +501,8 @@
                 <div id="screen-settings" class="screen">
                     <div class="room-content-wrapper">
                         <div class="d-flex align-items-center mb-4">
-                            <button class="btn-back me-3" onclick="closeSettingsScreen()">
+                            <button class="btn-back me-3" onclick="closeSettingsScreen()"
+                                style="color: var(--primary-color) !important; background: var(--bg-card); border: 1px solid var(--primary-color);">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
                             <h4 class="fw-bold m-0">Настройки</h4>
@@ -500,7 +511,8 @@
                         <!-- 1. PERSONALIZATION CARD -->
                         <div class="settings-group mb-4 p-3">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                <h6 class="fw-bold m-0 text-uppercase small"
+                                    style="color: var(--text-main); opacity: 0.7;"><i
                                         class="bi bi-palette me-2"></i>Внешний вид</h6>
                             </div>
 
@@ -560,7 +572,8 @@
                         <!-- 2. PERFORMANCE CARD -->
                         <div class="settings-group mb-4 p-3">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                <h6 class="fw-bold m-0 text-uppercase small"
+                                    style="color: var(--text-main); opacity: 0.7;"><i
                                         class="bi bi-lightning-charge me-2"></i>Производительность</h6>
                             </div>
 
@@ -591,7 +604,8 @@
                         <!-- 3. SYSTEM CARD -->
                         <div class="settings-group mb-4 p-3">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                <h6 class="fw-bold m-0 text-uppercase small"
+                                    style="color: var(--text-main); opacity: 0.7;"><i
                                         class="bi bi-sliders me-2"></i>Система</h6>
                             </div>
 
@@ -632,7 +646,8 @@
                         <!-- 4. ABOUT CARD -->
                         <div class="settings-group mb-4 p-3">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <h6 class="fw-bold m-0 text-uppercase text-muted small"><i
+                                <h6 class="fw-bold m-0 text-uppercase small"
+                                    style="color: var(--text-main); opacity: 0.7;"><i
                                         class="bi bi-info-circle me-2"></i>О приложении</h6>
                             </div>
 
@@ -721,8 +736,9 @@
                                     <i id="game-detail-icon" class="bi"></i>
                                 </div>
                                 <div class="flex-grow-1 min-width-0 pe-2" style="min-width: 0;">
-                                    <h3 class="fw-800 mb-0 text-dark text-truncate" id="game-detail-header-title"
-                                        style="font-size: 21px; letter-spacing: -0.5px; width: 100%;">...</h3>
+                                    <h3 class="fw-800 mb-0 text-truncate" id="game-detail-header-title"
+                                        style="font-size: 21px; letter-spacing: -0.5px; width: 100%; color: var(--text-main);">
+                                        ...</h3>
                                     <div class="text-muted small text-truncate"
                                         style="font-size: 13px; font-weight: 500; width: 100%;">Вечеринки • Топ выбор
                                     </div>
@@ -741,7 +757,8 @@
                                             style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
                                             Игроков
                                         </div>
-                                        <div class="fw-bold text-dark" id="stat-players" style="font-size: 17px;">-
+                                        <div class="fw-bold" id="stat-players"
+                                            style="font-size: 17px; color: var(--text-main);">-
                                         </div>
                                     </div>
                                     <div class="flex-shrink-0 text-center"
@@ -749,24 +766,27 @@
                                         <div class="text-muted small mb-1"
                                             style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Время
                                         </div>
-                                        <div class="fw-bold text-dark" id="stat-time" style="font-size: 17px;">-</div>
+                                        <div class="fw-bold" id="stat-time"
+                                            style="font-size: 17px; color: var(--text-main);">-</div>
                                     </div>
                                     <div class="flex-shrink-0 text-center" style="min-width: 80px;">
                                         <div class="text-muted small mb-1"
                                             style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
                                             Сложность
                                         </div>
-                                        <div class="fw-bold text-dark" id="stat-difficulty" style="font-size: 17px;">-
+                                        <div class="fw-bold" id="stat-difficulty"
+                                            style="font-size: 17px; color: var(--text-main);">-
                                         </div>
                                     </div>
                                 </div>
 
-                                <div id="game-detail-lore" class="text-dark mb-5"
-                                    style="line-height: 1.6; font-size: 17px; font-weight: 400; color: #1c1c1e !important;">
+                                <div id="game-detail-lore" class="mb-5"
+                                    style="line-height: 1.6; font-size: 17px; font-weight: 400; color: var(--text-main) !important;">
                                 </div>
 
                                 <div class="mb-5">
-                                    <h2 class="fw-bold mb-4 text-dark" style="font-size: 22px; letter-spacing: -0.5px;">
+                                    <h2 class="fw-bold mb-4"
+                                        style="font-size: 22px; letter-spacing: -0.5px; color: var(--text-main);">
                                         Как
                                         играть?
                                     </h2>

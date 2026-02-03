@@ -23,25 +23,50 @@
     /* Ensure it doesn't touch edges on small screens */
 }
 
+.room-header-dropdown-btn {
+    background: var(--bg-glass-strong);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: var(--border-glass);
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 700;
+    color: var(--text-main);
+    box-shadow: var(--shadow-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    font-size: 16px;
+}
+
+.room-header-dropdown-btn:active,
+.room-header-dropdown-btn[aria-expanded="true"] {
+    transform: scale(0.96);
+    background: var(--bg-secondary);
+    box-shadow: var(--shadow-main);
+    border-color: var(--border-glass);
+}
+
 .modal-content {
-    background: var(--card-bg);
+    background: var(--bg-card);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border: var(--border-glass) !important;
     border-radius: 36px !important;
     padding: 24px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
-    color: var(--text-dark);
+    box-shadow: var(--shadow-strong) !important;
+    color: var(--text-main);
 }
 
 .modal-title {
     font-weight: 800;
-    color: var(--text-dark);
+    color: var(--text-main);
     font-size: 22px;
 }
 
 .btn-close {
-    background-color: #F0F2F5;
+    background-color: var(--divider);
     border-radius: 50%;
     opacity: 1;
     padding: 14px;
@@ -49,14 +74,13 @@
     transition: 0.2s;
 }
 
-/* === INVITE MODAL === */
 .invite-icon-wrapper {
     width: 80px;
     height: 80px;
     min-width: 80px;
     min-height: 80px;
     border-radius: 50%;
-    background-color: #F8F9FA;
+    background-color: var(--bg-app);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -70,11 +94,11 @@
 }
 
 .invite-search-group {
-    background: var(--section-bg);
-    border: 1px solid #dee2e6;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-main);
     border-radius: 16px;
     padding: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-main);
     display: flex;
     align-items: center;
 }
@@ -116,8 +140,8 @@
 }
 
 .invite-send-btn:disabled {
-    background: #e9ecef;
-    color: #adb5bd !important;
+    background: var(--divider);
+    color: var(--text-muted) !important;
     box-shadow: none;
     cursor: not-allowed;
 }
@@ -137,6 +161,29 @@
 }
 
 /* === GAME SELECTOR MODAL === */
+.game-setting-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--bg-app);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-setting-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    border: var(--border-glass);
+    border-radius: 24px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-main);
+}
+
 .game-option-btn {
     width: 100%;
     border: none;
@@ -152,7 +199,7 @@
 }
 
 .game-option-btn:active {
-    background-color: #F4F5F9;
+    background-color: var(--divider);
 }
 
 .game-option-icon {
@@ -163,7 +210,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #F4F5F9;
+    background: var(--divider);
     border-radius: 12px;
     color: var(--primary-color);
 }
@@ -207,14 +254,13 @@
 }
 
 .custom-modal-content {
-    background: rgba(255, 255, 255, 0.85);
-    /* Glass */
+    background: var(--bg-glass-strong);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--border-glass);
     border-radius: 32px;
-    /* Smoother corners */
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    /* Softer shadow */
     width: 90%;
     max-width: 350px;
     animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);

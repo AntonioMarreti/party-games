@@ -135,15 +135,15 @@ function render_blokus(res) {
                 <div class="blokus-header" id="blokus-header-node"></div>
                 
                 <!-- SETUP / RULES OVERLAY -->
-                <div id="blokus-setup-screen" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.1); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); z-index:1500; padding:20px; text-align:center;">
+                <div id="blokus-setup-screen" style="display:none; position:absolute; inset:0; background:var(--bg-glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); z-index:1500; padding:20px; text-align:center;">
                     <div class="d-flex flex-column align-items-center justify-content-center h-100">
                         <i class="bi bi-grid-3x3 mb-3" style="font-size: 48px; color: var(--primary-color); text-shadow: 0 4px 10px color-mix(in srgb, var(--primary-color), transparent 60%);"></i>
-                        <h1 class="fw-bold mb-2">Blokus</h1>
-                        <p class="text-muted mb-4 subtitle-text">Захвати территорию и заблокируй других!</p>
+                        <h1 class="fw-bold mb-2" style="color:var(--text-main);">Blokus</h1>
+                        <p class="mb-4 subtitle-text" style="color:var(--text-muted);">Захвати территорию и заблокируй других!</p>
                         
                         <div class="card p-4 mb-4 w-100 shadow-sm border-0 text-start glass-modern-card" style="border-radius: 24px;">
-                            <h6 class="fw-bold mb-2 title-text">Как играть:</h6>
-                            <ul class="small text-muted ps-3 mb-0" style="gap:5px; display:flex; flex-direction:column;">
+                            <h6 class="fw-bold mb-2 title-text" style="color:var(--text-main);">Как играть:</h6>
+                            <ul class="small ps-3 mb-0" style="gap:5px; display:flex; flex-direction:column; color:var(--text-muted);">
                                 <li>Фигуры должны касаться <b>только углом</b> фигур вашего цвета.</li>
                                 <li>Фигуры <b>не могут</b> касаться сторонами фигур вашего цвета.</li>
                                 <li>Разные цвета могут касаться как угодно.</li>
@@ -151,7 +151,7 @@ function render_blokus(res) {
                             </ul>
                         </div>
 
-                        <div class="alert alert-info w-100 small mb-4">
+                        <div class="alert w-100 small mb-4" style="background:var(--bg-secondary); color:var(--text-main); border:1px solid var(--border-main);">
                             Порядок ходов:<br>
                             <span class="text-primary fw-bold">Синий</span> → 
                             <span class="text-warning fw-bold">Жёлтый</span> → 
@@ -162,7 +162,7 @@ function render_blokus(res) {
                         <div id="setup-host-controls">
                             <!-- MODE SELECTION -->
                             <div class="mb-3">
-                                <select id="blokus-mode-select" class="form-select text-center fw-bold custom-select-modern" style="border-radius: 12px;">
+                                <select id="blokus-mode-select" class="form-select text-center fw-bold custom-select-modern" style="border-radius: 12px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-main);">
                                     <option value="standard">Стандарт (4 игрока)</option>
                                     <option value="3player">3 игрока (Зелёный общий)</option>
                                     <option value="2player">2 игрока (по 2 цвета)</option>
@@ -185,15 +185,15 @@ function render_blokus(res) {
                                 Играть локально (на одном устройстве)
                             </button>
                         </div>
-                        <div id="setup-guest-msg" class="text-muted small">
+                        <div id="setup-guest-msg" class="small" style="color:var(--text-muted);">
                             Ожидание хоста...
                         </div>
                     </div>
                 </div>
 
                 <!-- GAME OVER OVERLAY -->
-                <div id="blokus-results-screen" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.7); z-index:1600; padding:120px 20px 40px 20px; align-items: flex-end; justify-content: center;">
-                   <div class="results-card-container w-100 rounded-4 p-4 shadow-lg anime-slide-up" style="max-height: 100%; display: flex; flex-direction: column; position: relative;">
+                <div id="blokus-results-screen" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1600; padding:120px 20px 40px 20px; align-items: flex-end; justify-content: center;">
+                   <div class="results-card-container w-100 rounded-4 p-4 shadow-lg anime-slide-up" style="max-height: 100%; display: flex; flex-direction: column; position: relative; background: var(--bg-card); border: 1px solid var(--border-main);">
                         <h2 class="fw-bold text-center mb-4 title-text">Результаты</h2>
                         <div id="blokus-results-list" class="flex-grow-1 overflow-auto mb-3" style="min-height: 150px;"></div>
                         <div class="results-footer pb-2">
@@ -431,17 +431,17 @@ function renderResults(state) {
     }
 
     list.innerHTML = results.map(r => {
-        let bgStyle = 'background: #f8f9fa;';
-        let textClass = 'text-dark';
-        let borderStyle = 'border: 1px solid #eee;';
+        let bgStyle = 'background: var(--bg-secondary);';
+        let textClass = '';
+        let borderStyle = 'border: 1px solid var(--border-main); color: var(--text-main);';
 
         if (r.rank === 1) {
-            bgStyle = 'background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #5c4000;';
-            textClass = ''; // custom color
-            borderStyle = 'border: none; box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);';
+            bgStyle = 'background: var(--primary-gradient); color: var(--text-on-accent);';
+            textClass = '';
+            borderStyle = 'border: none; box-shadow: var(--shadow-sm);';
         } else if (r.isMyUser) {
-            bgStyle = 'background: #e7f1ff;';
-            borderStyle = 'border: 1px solid #b6d4fe;';
+            bgStyle = 'background: color-mix(in srgb, var(--primary-color), transparent 90%);';
+            borderStyle = 'border: 1px solid var(--primary-color); color: var(--text-main);';
         }
 
         return `
@@ -469,7 +469,7 @@ function renderResults(state) {
             `;
         } else {
             footer.innerHTML = `
-                <div class="text-center text-muted mb-3 small">Ожидайте хоста...</div>
+                <div class="pill-badge text-center mb-3 small" style="background:var(--bg-secondary); color:var(--text-muted); padding:4px 12px; border-radius:12px; display:inline-block; width:100%;">Ожидайте хоста...</div>
                 <button class="btn btn-outline-danger w-100 py-3 rounded-4" onclick="leaveRoom()">
                     Выйти
                 </button>

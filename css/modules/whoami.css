@@ -1,14 +1,10 @@
-/* Who Am I - Game Styles */
-.game-custom-wrapper {
-    /* Main container already has styles, but we can refine */
-}
-
 .game-page-title {
     font-size: 32px;
     font-weight: 800;
     text-align: center;
-    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    background: var(--primary-gradient);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 5px;
 }
@@ -36,11 +32,11 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: var(--border-glass);
+    box-shadow: var(--shadow-main);
     transition: all 0.2s ease;
     cursor: pointer;
 }
@@ -50,15 +46,15 @@
 }
 
 .theme-card.selected {
-    background: #fff;
-    border: 2px solid #FF6B6B;
-    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.2);
+    background: var(--bg-secondary);
+    border: 2px solid var(--primary-color);
+    box-shadow: var(--shadow-strong);
 }
 
 .theme-icon {
     width: 44px;
     height: 44px;
-    background: #FFF0F0;
+    background: var(--divider);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -71,8 +67,8 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #eee;
-    color: white;
+    background: var(--divider);
+    color: var(--text-on-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,7 +76,7 @@
 }
 
 .theme-card.selected .theme-check {
-    background: #FF6B6B;
+    background: var(--primary-color);
 }
 
 /* Round Selector */
@@ -88,32 +84,32 @@
     flex: 1;
     padding: 10px;
     border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    background: rgba(255, 255, 255, 0.5);
+    border: var(--border-glass);
+    background: var(--bg-glass);
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--text-main);
     transition: all 0.2s;
 }
 
 .btn-round-opt.active {
-    background: #FF6B6B;
-    color: white;
-    border-color: #FF6B6B;
-    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+    background: var(--primary-color);
+    color: var(--text-on-accent);
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-strong);
 }
 
 .custom-round-input {
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: var(--bg-glass);
+    border: var(--border-glass);
     padding: 10px;
     font-weight: 700;
-    color: #FF6B6B;
+    color: var(--primary-color);
 }
 
 .custom-round-input:focus {
-    background: white;
-    border-color: #FF6B6B;
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
     box-shadow: none;
 }
 
@@ -126,7 +122,7 @@
 }
 
 .voting-card {
-    background: rgba(255, 255, 255, 0.7);
+    background: var(--bg-card);
     backdrop-filter: blur(10px);
     border-radius: 24px;
     padding: 20px;
@@ -135,7 +131,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-main);
     border: 2px solid transparent;
     transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -145,9 +141,9 @@
 }
 
 .voting-card.active {
-    border-color: #FF6B6B;
-    background: #fff;
-    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.25);
+    border-color: var(--primary-color);
+    background: var(--bg-secondary);
+    box-shadow: var(--shadow-strong);
     transform: translateY(-5px);
 }
 
@@ -157,25 +153,25 @@
     border-radius: 50%;
     object-fit: cover;
     margin-bottom: 10px;
-    border: 3px solid white;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border: 3px solid var(--text-on-accent);
+    box-shadow: var(--shadow-main);
 }
 
 .voting-name {
     font-weight: 700;
     font-size: 14px;
-    color: var(--text-dark);
+    color: var(--text-main);
 }
 
 /* Results */
 .result-card {
-    background: white;
+    background: var(--bg-card);
     border-radius: 16px;
     padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-main);
 }
 
 .result-avatar {

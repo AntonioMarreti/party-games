@@ -1,118 +1,103 @@
 :root {
-    /* === Modern Vibrant Palette === */
-    --primary-color: #6C5CE7;
-    /* Soft Purple-Blue */
-    --accent-color: #00CEC9;
-    /* Vibrant Cyan */
-    /* === Hybrid Theming: Telegram Base + Custom Accent === */
+    /* === Multi-Mode Theme Tokens === */
 
-    /* 1. Backgrounds (Synced with TG) */
-    --bg-color: var(--tg-theme-bg-color, #F8F9FD);
-    --card-bg: var(--tg-theme-secondary-bg-color, rgba(255, 255, 255, 0.65));
-    --glass-bg: rgba(255, 255, 255, 0.75);
-    /* Default Light Glass */
-    --section-bg: var(--tg-theme-section-bg-color, #ffffff);
+    /* 1. Surfaces & Backgrounds */
+    --bg-app: #F8F9FD;
+    --bg-secondary: #ffffff;
+    --bg-card: rgba(255, 255, 255, 0.65);
+    --bg-glass: rgba(255, 255, 255, 0.75);
+    --bg-glass-strong: rgba(255, 255, 255, 0.9);
 
-    /* 2. Text (Synced with TG) */
-    --text-dark: var(--tg-theme-text-color, #2D3436);
-    --text-light: #FFFFFF;
-    /* Keep white for accents */
-    --text-hint: var(--tg-theme-hint-color, #999999);
+    /* 2. Typography */
+    --text-main: #2D3436;
+    --text-muted: #999999;
+    --text-on-accent: #FFFFFF;
 
-    /* 3. Accent (Custom Personal Brand) */
-    --primary-color: var(--custom-primary, #6C5CE7);
-    /* Default Purple */
-    --accent-color: #00CEC9;
-    /* Cyan */
+    /* 3. Borders & Dividers */
+    --border-main: #f0f0f0;
+    --border-glass: rgba(255, 255, 255, 0.5);
+    --divider: rgba(0, 0, 0, 0.05);
+
+    /* 4. Brand & Accent (Synced with TG or Custom) */
+    --primary-color: var(--tg-theme-button-color, #6C5CE7);
+    --accent-color: var(--tg-theme-accent-text-color, #00CEC9);
+
+    /* 5. Gradients & Dynamic Styles */
+    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
+    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
+
+    --shadow-main: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 85%);
+    --shadow-strong: 0 20px 40px color-mix(in srgb, var(--primary-color), transparent 80%);
+    --shadow-glow: 0 0 20px color-mix(in srgb, var(--primary-color), transparent 60%);
+
+    /* 6. Layout Constants */
     --nav-height: 80px;
-
     --radius-lg: 32px;
     --radius-md: 24px;
     --radius-sm: 16px;
 
-    /* Mesh Gradient Header - NOW DYNAMIC */
-    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
-    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
+    /* Status Colors */
+    --status-success: #00b894;
+    --status-error: #d63031;
+    --status-warning: #fdcb6e;
+    --status-info: #0984e3;
 
-    /* Colored Shadows - NOW DYNAMIC */
-    /* Using color-mix to create transparent versions of the primary color */
-    --shadow-sm: 0 4px 15px color-mix(in srgb, var(--primary-color), transparent 90%);
-    --shadow-md: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 85%);
-    --shadow-lg: 0 20px 40px color-mix(in srgb, var(--primary-color), transparent 80%);
-    --shadow-primary: 0 10px 25px color-mix(in srgb, var(--primary-color), transparent 60%);
-
-    /* Glass Borders */
-    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --status-success-alpha: color-mix(in srgb, var(--status-success), transparent 90%);
+    --status-error-alpha: color-mix(in srgb, var(--status-error), transparent 90%);
+    --status-warning-alpha: color-mix(in srgb, var(--status-warning), transparent 90%);
+    --status-info-alpha: color-mix(in srgb, var(--status-info), transparent 90%);
 
     /* Dynamic UI Borders */
     --border-color: #f0f0f0;
+
+    /* Telegram Fallbacks */
+    --bg-app: var(--tg-theme-bg-color, #F8F9FD);
+    --bg-secondary: var(--tg-theme-secondary-bg-color, #ffffff);
 }
 
-/* === DARK MODE === */
+/* === DARK MODE OVERRIDES === */
 body.dark-mode {
-    /* Backgrounds - Premium Dark Blue / Slate */
-    --bg-color: #0f172a;
-    /* Slate 900 */
-    --card-bg: rgba(30, 41, 59, 0.7);
-    /* Slate 800-ish */
-    --glass-bg: rgba(51, 65, 85, 0.4);
-    /* Slate 700-ish */
-    --section-bg: #1e293b;
-    /* Slate 800 */
+    /* Backgrounds - Premium Dark Slate/Telegram Mix */
+    --bg-app: #0f172a;
+    /* Deeper slate for better contrast */
+    --bg-secondary: #1e293b;
+    --bg-card: rgba(30, 41, 59, 0.7);
+    --bg-glass: rgba(15, 23, 42, 0.6);
+    --bg-glass-strong: rgba(15, 23, 42, 0.9);
+    --bg-dark: #020617;
 
     /* Text */
-    --text-dark: #f1f5f9;
-    /* Slate 100 */
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
     --text-light: #ffffff;
-    --text-hint: #94a3b8;
-    /* Slate 400 */
+    --text-on-accent: #ffffff;
 
-    /* Glass Borders */
-    --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Status Colors - slightly more vibrant for dark mode */
+    --status-success: #00d1a0;
+    --status-error: #ff5e57;
+    --status-warning: #ffeaa7;
+    --status-info: #74b9ff;
 
-    /* Dynamic UI Borders */
-    --border-color: #334155;
-    /* Slate 700 */
+    --status-success-alpha: color-mix(in srgb, var(--status-success), transparent 85%);
+    --status-error-alpha: color-mix(in srgb, var(--status-error), transparent 85%);
+    --status-warning-alpha: color-mix(in srgb, var(--status-warning), transparent 85%);
+    --status-info-alpha: color-mix(in srgb, var(--status-info), transparent 85%);
 
-    /* Update gradients for dark mode */
+    /* Borders */
+    --border-main: rgba(255, 255, 255, 0.1);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --divider: rgba(255, 255, 255, 0.05);
+
+    /* Gradients */
     --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 30%) 100%);
     --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 30%) 100%);
+
+    /* Shadows */
+    --shadow-main: 0 10px 40px rgba(0, 0, 0, 0.4);
+    --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 25px color-mix(in srgb, var(--primary-color), transparent 40%);
 }
 
-/* Override Bootstrap Defaults */
-:root {
-    --bs-primary: var(--custom-primary, #6C5CE7);
-    --bs-primary-rgb: 108, 92, 231;
-    /* Ideally we need to decompose this in JS, but for now just fallback */
-}
-
-.btn-primary {
-    --bs-btn-bg: var(--primary-color);
-    --bs-btn-border-color: var(--primary-color);
-    --bs-btn-hover-bg: color-mix(in srgb, var(--primary-color), black 10%);
-    --bs-btn-hover-border-color: color-mix(in srgb, var(--primary-color), black 10%);
-}
-
-/* === FORCE DARK MODE OVERRIDES === */
-body.dark-mode {
-    --bg-color: #17212b;
-    /* Telegram Dark Bg */
-    --card-bg: rgba(30, 30, 30, 0.85);
-    --section-bg: #242f3d;
-    /* Telegram Dark Section */
-
-    --text-dark: #ffffff;
-    --text-hint: #aaaaaa;
-
-    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-    --border-color: rgba(255, 255, 255, 0.1);
-
-    /* In dark mode, mix with black instead of white */
-    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 20%) 100%);
-
-    /* Dark Glass - Darker and more opaque for readability */
-    --glass-bg: rgba(30, 30, 30, 0.6);
-}
 
 /* Hide Scrollbar Globally */
 ::-webkit-scrollbar {

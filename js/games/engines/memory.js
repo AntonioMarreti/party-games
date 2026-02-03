@@ -7,7 +7,7 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
     let html = `
         <div id="mem-phase-1" class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
             <div class="bb-game-badge">${task.title}</div>
-            <h2 class="mb-5 fw-bold text-dark">Запомни!</h2>
+            <h2 class="mb-5 fw-bold" style="color:var(--text-main);">Запомни!</h2>
             <div class="d-flex gap-4 mb-5">
                 ${task.shown_items.map(i => `
                     <div class="bb-glass-card d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold; color: var(--primary-color);">
@@ -15,7 +15,7 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
                     </div>
                 `).join('')}
             </div>
-            <div class="progress w-75 rounded-pill" style="height: 12px; background: rgba(0,0,0,0.05);">
+            <div class="progress w-75 rounded-pill" style="height: 12px; background: var(--bg-secondary);">
                 <div class="progress-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color), white 30%)); border-radius: 10px;"></div>
             </div>
         </div>
@@ -36,11 +36,11 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
         let html2 = `
             <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
                 <div class="bb-game-badge">${task.title}</div>
-                <h2 class="mb-5 animate__animated animate__fadeIn fw-bold text-center">${task.phase2_q}</h2>
+                <h2 class="mb-5 animate__animated animate__fadeIn fw-bold text-center" style="color:var(--text-main);">${task.phase2_q}</h2>
                 <div class="d-grid gap-3 w-100 px-3" style="grid-template-columns: 1fr 1fr;">
         `;
         task.options.forEach(opt => {
-            html2 += `<button class="btn bb-glass-card p-4 fs-3 fw-bold border-0 text-primary" 
+            html2 += `<button class="btn bb-glass-card p-4 fs-3 fw-bold border-0" style="color:var(--primary-color);" 
                 onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${opt}</button>`;
         });
         html2 += `</div></div>`;
@@ -57,7 +57,7 @@ window.BB_MECHANICS.blind_timer = function (wrapper, task) {
     let html = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center">
             <div class="bb-game-badge">${task.title}</div>
-            <h1 class="display-4 fw-bold mb-3 text-dark">${task.question}</h1>
+            <h1 class="display-4 fw-bold mb-3" style="color:var(--text-main);">${task.question}</h1>
             
             <div id="blind-timer-display" class="display-1 fw-bold font-monospace my-5 text-primary" style="font-variant-numeric: tabular-nums;">0.00</div>
             
@@ -89,7 +89,7 @@ window.bbBlindClick = function () {
 
             if (diff > 1.5) {
                 display.innerText = "???";
-                display.style.color = "#b2bec3";
+                display.style.color = "var(--text-muted)";
             } else {
                 display.innerText = diff.toFixed(2);
             }
@@ -134,18 +134,18 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
     wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
             <div class="bb-game-badge">${task.title}</div>
-            <h2 id="simon-status" class="mb-5 fw-bold text-center text-muted">ЗАПОМИНАЙ</h2>
+            <h2 id="simon-status" class="mb-5 fw-bold text-center" style="color:var(--text-muted);">ЗАПОМИНАЙ</h2>
             
             <div id="simon-display" class="mb-5 rounded-circle shadow-sm d-flex align-items-center justify-content-center animate__animated" 
                  style="width: 140px; height: 140px; background: white; border: 4px solid #f1f2f6;">
-                 <i class="bi bi-eye-fill text-muted" style="font-size: 3rem;"></i>
+                 <i class="bi bi-eye-fill" style="font-size: 3rem; color:var(--text-muted);"></i>
             </div>
 
             <div class="d-grid gap-3 w-100 px-3" style="grid-template-columns: 1fr 1fr;" id="simon-buttons">
                 ${Object.keys(colorMap).map(c => `
                     <button class="btn p-0 rounded-4 border-0 shadow-sm simon-btn disabled" 
                             id="btn-simon-${c}"
-                            style="background: ${colorMap[c].bg}; height: 100px; transition: transform 0.1s;" 
+                            style="background: ${colorMap[c].bg}; height: 100px; transition: transform 0.1s; border: 1px solid var(--border-glass) !important;" 
                             onclick="window.handleSimonClick('${c}', '${task.correct_val}')">
                     </button>
                 `).join('')}
@@ -184,7 +184,7 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
                 display.classList.remove('animate__pulse');
                 display.style.background = 'white';
                 display.style.borderColor = '#f1f2f6';
-                display.innerHTML = '<i class="bi bi-eye-fill text-muted" style="font-size: 3rem;"></i>';
+                display.innerHTML = '<i class="bi bi-eye-fill" style="font-size: 3rem; color:var(--text-muted);"></i>';
             }, 800); // Increased view time
             i++;
         } else {

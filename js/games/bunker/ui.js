@@ -54,14 +54,14 @@ window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {
         <div class="reveal-content text-center">
             <div class="reveal-header mb-3">
                 <img src="${window.getAvatarSrc(photoUrl)}" class="reveal-avatar rounded-circle border border-4 border-white shadow-lg mb-3">
-                <h2 class="text-white fw-bold mb-0">${playerName}</h2>
-                <div class="text-white-50 small text-uppercase letter-spacing-2">РАСКРЫВАЕТ КАРТУ</div>
+                <h2 class="fw-bold mb-0" style="color:var(--text-light);">${playerName}</h2>
+                <div class="small text-uppercase letter-spacing-2" style="color:var(--text-light); opacity:0.6;">РАСКРЫВАЕТ КАРТУ</div>
             </div>
             
             <div class="reveal-card glass-card p-4 mx-auto animate__animated animate__flipInX animate__delay-1s">
-                <div class="reveal-icon mb-2 display-1 text-primary">${window.BUNKER_ICONS[cardType]}</div>
-                <div class="reveal-type text-uppercase text-muted fw-bold small mb-2">${window.BUNKER_ROUND_NAMES[cardType]}</div>
-                <div class="reveal-text h2 fw-bold text-dark mb-0">${cardText}</div>
+                <div class="reveal-icon mb-2 display-1" style="color:var(--primary-color);">${window.BUNKER_ICONS[cardType]}</div>
+                <div class="reveal-type text-uppercase fw-bold small mb-2" style="color:var(--text-muted);">${window.BUNKER_ROUND_NAMES[cardType]}</div>
+                <div class="reveal-text h2 fw-bold mb-0" style="color:var(--text-main);">${cardText}</div>
             </div>
         </div>
     `;
@@ -103,8 +103,8 @@ window.renderRoundPhase = function (wrapper, state, res) {
                 </div>
                 <div class="turn-info">
                    ${isMyTurn
-            ? `<div class="turn-label text-uppercase fw-bold letter-spacing-1 text-warning">ВАШ ХОД!</div>`
-            : `<div class="turn-label text-uppercase small letter-spacing-1 opacity-75">Ходит сейчас</div><div class="turn-name fw-bold">${activeName}</div>`
+            ? `<div class="turn-label text-uppercase fw-bold letter-spacing-1" style="color:var(--status-warning);">ВАШ ХОД!</div>`
+            : `<div class="turn-label text-uppercase small letter-spacing-1" style="opacity:0.75; color:var(--text-main);">Ходит сейчас</div><div class="turn-name fw-bold" style="color:var(--text-main);">${activeName}</div>`
         }
                 </div>
                  ${isMyTurn ? '<div class="turn-badge pulsing"><i class="bi bi-lightning-fill"></i></div>' : ''}
@@ -120,7 +120,7 @@ window.renderRoundPhase = function (wrapper, state, res) {
                 </button>
             </div>
 
-            <div class="bunker-status-text text-center mb-2 small text-muted">
+            <div class="bunker-status-text text-center mb-2 small" style="color:var(--text-muted);">
                  ${state.turn_phase === 'reveal'
             ? (isMyTurn ? 'Выберите характеристику для раскрытия' : `Ожидаем хода игрока...`)
             : 'Время обсуждения и споров...'}
@@ -154,7 +154,7 @@ window.renderBunkerHeader = function (state) {
             </div>
             
             <div class="catastrophe-section glass-card">
-                <div class="cata-icon"><i class="bi bi-radioactive text-danger"></i></div>
+                <div class="cata-icon"><i class="bi bi-radioactive" style="color:var(--status-error);"></i></div>
                 <div class="cata-info">
                     <div class="cata-title">${catastrophe.title}</div>
                     ${catastrophe.duration ? `<div class="cata-duration small opacity-75 mt-1">Пробыть в бункере: <b>${catastrophe.duration}</b></div>` : ''}
@@ -166,7 +166,7 @@ window.renderBunkerHeader = function (state) {
 
             ${latestFeature ? `
                 <div class="bunker-feature-alert mt-3 glass-card clickable" onclick="window.showAlert('Бункер: ${latestFeature.text.replace(/'/g, "\\'")}', 'В этом раунде была открыта новая зона или факт о бункере.')">
-                    <span class="feature-icon"><i class="bi bi-bricks text-warning"></i></span>
+                    <span class="feature-icon"><i class="bi bi-bricks" style="color:var(--status-warning);"></i></span>
                     <span class="feature-text"><b>Бункер:</b> ${latestFeature.text || latestFeature}</span>
                 </div>
             ` : ''}
@@ -228,7 +228,7 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
         var tagsHtml = '';
         if (isRevealed && tags.length > 0) {
             tagsHtml = `<div class="trait-tags mt-2">` +
-                tags.map(function (t) { return `<span class="badge bg-light text-primary border me-1" style="font-size:10px; font-weight:normal;">${t}</span>`; }).join('') +
+                tags.map(function (t) { return `<span class="badge border me-1" style="background:var(--bg-secondary); color:var(--primary-color); font-size:10px; font-weight:normal;">${t}</span>`; }).join('') +
                 `</div>`;
         }
 
@@ -237,16 +237,16 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
                 <div class="trait-header d-flex align-items-center mb-2">
                     <span class="trait-icon me-2">${window.BUNKER_ICONS[key]}</span>
                     <span class="trait-name">${window.BUNKER_ROUND_NAMES[key]}</span>
-                    ${isRevealed ? '<i class="bi bi-check-circle-fill text-success ms-2"></i>' : ''}
-                    ${isLocked ? '<i class="bi bi-lock-fill text-muted ms-2"></i>' : ''}
+                    ${isRevealed ? '<i class="bi bi-check-circle-fill ms-2" style="color:var(--status-success);"></i>' : ''}
+                    ${isLocked ? '<i class="bi bi-lock-fill ms-2" style="color:var(--text-muted);"></i>' : ''}
                 </div>
                 <div class="trait-body">
                     <div class="trait-value">${cardText}</div>
                     ${cardSub ? `<div class="trait-sub">${cardSub}</div>` : ''}
                     ${tagsHtml}
                 </div>
-                ${(!isRevealed && !isLocked) ? '<div class="tap-hint mt-2 text-primary small fw-bold">НАЖМИ ЧТОБЫ РАСКРЫТЬ</div>' : ''}
-                ${(!isRevealed && isLocked) ? '<div class="mt-2 text-muted small">Ждите своего хода</div>' : ''}
+                ${(!isRevealed && !isLocked) ? '<div class="tap-hint mt-2 small fw-bold" style="color:var(--primary-color);">НАЖМИ ЧТОБЫ РАСКРЫТЬ</div>' : ''}
+                ${(!isRevealed && isLocked) ? '<div class="mt-2 small" style="color:var(--text-muted);">Ждите своего хода</div>' : ''}
                 
                 ${(isRevealed && isMyTurn && window.getAbilityForTags(tags)) ?
                 `<button class="btn btn-sm btn-outline-primary w-100 rounded-pill mt-2" onclick="event.stopPropagation(); window.triggerAbility('${key}', '${window.getAbilityForTags(tags)}')">
@@ -289,7 +289,7 @@ window.triggerAbility = function (cardKey, actionType) {
             <h3 class="fw-bold mb-3 text-center">Выберите цель</h3>
             <div class="d-grid gap-2">
                 ${players.map(p => `
-                    <button class="btn btn-outline-dark text-start py-2" onclick="window.sendAbility('${cardKey}', '${actionType}', '${p.id}', this)">
+                    <button class="btn text-start py-2" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-main);" onclick="window.sendAbility('${cardKey}', '${actionType}', '${p.id}', this)">
                         <img src="${window.getAvatarSrc(p.photo_url)}" class="rounded-circle me-2" style="width:30px; height:30px;">
                         ${p.first_name}
                     </button>
@@ -338,7 +338,7 @@ window.renderOtherPlayers = function (players, state, myId, activePlayerId) {
                     knownTraits += `
                         <div class="mini-trait mb-1 me-1 d-inline-block">
                             <span class="mt-icon">${window.BUNKER_ICONS[k]}</span>
-                            <span class="mt-text">${txt}${tagsStr}</span>
+                            <span class="mt-text" style="color:var(--text-main);">${txt}${tagsStr}</span>
                         </div>
                     `;
                 }
@@ -348,11 +348,11 @@ window.renderOtherPlayers = function (players, state, myId, activePlayerId) {
         if (!knownTraits) knownTraits = `<div class="text-muted small">Информации пока нет</div>`;
 
         html += `
-            <div class="survivor-item mb-3 ${isActive ? 'border-primary shadow' : ''}" style="${isActive ? 'border-width:2px;' : ''}">
-                <div class="survivor-head d-flex align-items-center mb-3">
-                    <img src="${window.getAvatarSrc(p.photo_url)}" class="survivor-avatar rounded-circle border border-2 ${isActive ? 'border-primary' : 'border-white'} shadow-sm me-3" style="width:40px; height:40px;">
-                    <div class="survivor-name fw-bold">${p.first_name} ${isActive ? '<span class="badge bg-primary ms-2">ХОДИТ</span>' : ''}</div>
-                </div>
+                <div class="survivor-item mb-3 ${isActive ? 'active-survivor' : ''}" style="${isActive ? 'border: 2px solid var(--primary-color) !important; box-shadow: var(--shadow-sm);' : 'border: 1px solid var(--border-main);'}">
+                    <div class="survivor-head d-flex align-items-center mb-3">
+                        <img src="${window.getAvatarSrc(p.photo_url)}" class="survivor-avatar rounded-circle border border-2 ${isActive ? 'border-primary' : 'border-white'} shadow-sm me-3" style="width:40px; height:40px;">
+                        <div class="survivor-name fw-bold" style="color:var(--text-main);">${p.first_name} ${isActive ? `<span class="badge ms-2" style="background:var(--primary-color); color:var(--text-on-accent);">ХОДИТ</span>` : ''}</div>
+                    </div>
                 <div class="survivor-body">
                     ${knownTraits}
                 </div>
@@ -374,16 +374,16 @@ window.renderVoteQuery = function (wrapper, state, res) {
         <div class="bunker-voting-screen text-center">
              
             <div class="voting-header mb-5">
-                <h1 class="display-1 text-primary"><i class="bi bi-box-seam-fill"></i></h1>
-                <h2 class="fw-bold">Голосование</h2>
-                <p class="text-muted">Провести голосование на изгнание?</p>
+                <h1 class="display-1" style="color:var(--primary-color);"><i class="bi bi-box-seam-fill"></i></h1>
+                <h2 class="fw-bold" style="color:var(--text-main);">Голосование</h2>
+                <p style="color:var(--text-muted);">Провести голосование на изгнание?</p>
             </div>
             
             ${hasVoted ?
-            `<div class="vote-status-msg pulse">Ваш голос принят</div>` :
+            `<div class="vote-status-msg pulse" style="color:var(--status-success);">Ваш голос принят</div>` :
             `<div class="vote-actions px-4">
-                    <button class="btn btn-success btn-lg w-100 rounded-pill mb-3 py-3 fw-bold" onclick="window.sendVoteQuery('yes')">ДА</button>
-                    <button class="btn btn-outline-danger btn-lg w-100 rounded-pill py-3 fw-bold" onclick="window.sendVoteQuery('no')">НЕТ</button>
+                    <button class="btn btn-lg w-100 rounded-pill mb-3 py-3 fw-bold" style="background:var(--status-success); color:var(--text-on-accent);" onclick="window.sendVoteQuery('yes')">ДА</button>
+                    <button class="btn btn-lg w-100 rounded-pill py-3 fw-bold" style="background:var(--status-error); color:var(--text-on-accent); border:1px solid var(--status-error);" onclick="window.sendVoteQuery('no')">НЕТ</button>
                  </div>`
         }
             <div class="mt-5 px-4">
@@ -404,8 +404,8 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
         <div class="bunker-voting-screen px-4 pb-5"> 
             <!-- Removed Top Exit Button -->
             <div class="text-center mb-4 pt-4">
-                <h2 class="fw-bold">${isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?"}</h2>
-                ${isRevote ? `<div class="alert alert-warning py-2 small fw-bold mt-2">При повторной ничьей - случайный вылет!</div>` : ''}
+                <h2 class="fw-bold" style="color:var(--text-main);">${isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?"}</h2>
+                ${isRevote ? `<div class="alert py-2 small fw-bold mt-2" style="background:var(--bg-secondary); color:var(--status-warning); border:1px solid var(--border-main);">При повторной ничьей - случайный вылет!</div>` : ''}
                 
                 ${res.is_host ? `
                     <button class="btn btn-sm btn-outline-warning mt-2" onclick="window.sendGameAction('force_skip_voting')">
@@ -430,7 +430,7 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
                 var pCards = state.players_cards[String(p.id)];
                 ['facts', 'luggage'].forEach(function (k) {
                     if (pCards[k]?.revealed) {
-                        argsHtml += `<div class="target-arg small text-primary mt-1"><b>${window.BUNKER_ROUND_NAMES[k]}:</b> ${pCards[k].text}</div>`;
+                        argsHtml += `<div class="target-arg small mt-1" style="color:var(--primary-color);"><b>${window.BUNKER_ROUND_NAMES[k]}:</b> ${pCards[k].text}</div>`;
                     }
                 });
             }
@@ -465,13 +465,13 @@ window.renderVoteResults = function (wrapper, state, res) {
 
     wrapper.innerHTML = `
         <div class="bunker-voting-screen text-center pt-5">
-            <h1 class="display-1 text-danger"><i class="bi bi-person-x-fill"></i></h1>
-            <h2 class="fw-bold mt-3">ИЗГНАН</h2>
+            <h1 class="display-1" style="color:var(--status-error);"><i class="bi bi-person-x-fill"></i></h1>
+            <h2 class="fw-bold mt-3" style="color:var(--text-main);">ИЗГНАН</h2>
             
-            <div class="kicked-card mt-4 mx-auto shadow-lg" style="max-width:300px;">
-                <img src="${window.getAvatarSrc(kickedUser?.photo_url)}" class="rounded-circle border border-4 border-danger mb-3" style="width:120px; height:120px; object-fit:cover;">
-                <div class="kicked-name text-danger fw-bold h4">${kickedUser?.first_name || 'Игрок'}</div>
-                ${results.is_random ? `<div class="badge bg-warning text-dark mt-2">Случайный жребий</div>` : ''}
+            <div class="kicked-card mt-4 mx-auto shadow-lg" style="max-width:300px; background:var(--bg-card); border-radius:24px; padding:20px;">
+                <img src="${window.getAvatarSrc(kickedUser?.photo_url)}" class="rounded-circle border border-4 mb-3" style="width:120px; height:120px; object-fit:cover; border-color:var(--status-error) !important;">
+                <div class="kicked-name fw-bold h4" style="color:var(--status-error);">${kickedUser?.first_name || 'Игрок'}</div>
+                ${results.is_random ? `<div class="badge mt-2" style="background:var(--status-warning); color:var(--bg-dark);">Случайный жребий</div>` : ''}
             </div>
             
             <div class="mt-5 px-4 mb-5">
@@ -494,9 +494,9 @@ window.renderOutro = function (wrapper, state, res) {
         <div class="bunker-outro-screen p-4" style="padding-top: calc(50px + env(safe-area-inset-top)) !important;">
             <h1 class="outro-title text-center fw-bold mb-4"><i class="bi bi-house-heart-fill me-2"></i>ИСТОРИЯ БУНКЕРА</h1>
             
-            <div class="outro-stats d-flex justify-content-around glass-card border rounded-pill p-3 mb-4 shadow-sm">
-                <div class="fw-bold text-success">Выжило: ${survivors.length}</div>
-                <div class="fw-bold text-primary">Мест: ${state.bunker_places}</div>
+            <div class="outro-stats d-flex justify-content-around rounded-pill p-3 mb-4 shadow-sm" style="background:var(--bg-secondary); border:1px solid var(--border-main);">
+                <div class="fw-bold" style="color:var(--status-success);">Выжило: ${survivors.length}</div>
+                <div class="fw-bold" style="color:var(--primary-color);">Мест: ${state.bunker_places}</div>
             </div>
             
             ${window.renderThreats(state)}
@@ -546,17 +546,17 @@ window.renderStories = function (players, state) {
         var cond = pCards.condition.data;
 
         return `
-            <div class="card glass-card border-0 shadow-sm mb-3 ${isKicked ? 'opacity-50' : ''}">
+            <div class="card border-0 shadow-sm mb-3 ${isKicked ? 'opacity-50' : ''}" style="background:var(--bg-card); border-radius:16px;">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-2">
                         <img src="${window.getAvatarSrc(p.photo_url)}" class="rounded-circle me-3" style="width:36px; height:36px;">
                         <div class="flex-grow-1">
-                            <div class="fw-bold">${p.first_name}</div>
+                            <div class="fw-bold" style="color:var(--text-main);">${p.first_name}</div>
                         </div>
-                        <span class="badge ${isKicked ? 'bg-secondary' : 'bg-success'}">${isKicked ? 'Изгнан' : 'Выжил'}</span>
+                        <span class="badge" style="background:${isKicked ? 'var(--status-error)' : 'var(--status-success)'}; color:var(--text-on-accent);">${isKicked ? 'Изгнан' : 'Выжил'}</span>
                     </div>
-                    <div class="small fw-bold text-primary mb-1">${cond.title}</div>
-                    <div class="small fst-italic text-muted">"${isKicked ? cond.fail_text : cond.win_text}"</div>
+                    <div class="small fw-bold mb-1" style="color:var(--primary-color);">${cond.title}</div>
+                    <div class="small fst-italic" style="color:var(--text-muted);">"${isKicked ? cond.fail_text : cond.win_text}"</div>
                 </div>
             </div>
         `;
@@ -631,8 +631,8 @@ window.renderTieReveal = function (wrapper, state, res) {
     var html = `
         <div class="bunker-voting-screen px-4 pb-5 pt-5 text-center">
             <h1 class="display-3 mb-4">⚖️</h1>
-            <h2 class="fw-bold mb-3">НИЧЬЯ!</h2>
-            <div class="alert alert-info rounded-4 shadow-sm mb-4">
+            <h2 class="fw-bold mb-3" style="color:var(--text-main);">НИЧЬЯ!</h2>
+            <div class="alert rounded-4 shadow-sm mb-4" style="background:var(--bg-secondary); color:var(--text-main); border:1px solid var(--border-main);">
                 Кандидаты должны раскрыть по одной дополнительной карте (Багаж или Факт), чтобы склонить чашу весов в свою пользу!
             </div>
     `;

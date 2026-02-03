@@ -1,0 +1,11 @@
+/* === SETTINGS GROUP === */
+.settings-group {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    box-shadow: var(--shadow-main);
+    overflow: hidden;
+    /* Ensure children don't bleed */
+}

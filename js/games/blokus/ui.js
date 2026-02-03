@@ -72,7 +72,7 @@ function updateHeader() {
         <!--Center: Title Only-->
             <div style="
                 font-weight: 900; 
-                color: #D1D5DB; 
+                color: var(--text-muted); 
                 letter-spacing: 2px; 
                 font-size: 18px;
                 cursor: pointer;
@@ -146,7 +146,7 @@ function updateHeader() {
                         <div style="
                             padding: 8px 16px; 
                             background: ${isCurrent ? bg : 'transparent'}; 
-                            color: ${isCurrent ? 'white' : '#444'}; 
+                            color: ${isCurrent ? 'white' : 'var(--text-main)'}; 
                             border-radius: 16px; 
                             font-weight: 700; 
                             font-size: 14px; 

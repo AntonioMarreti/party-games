@@ -239,7 +239,7 @@ window.renderSetupScreen = function (wrapper, state, res) {
                     <h2 class="fw-bold mb-4 text-white-shadow" style="letter-spacing: 1px; text-transform: uppercase; font-size: 1.5rem;">Настройка Бункера</h2>
                     
                     <div class="card border-0 p-4 mb-4" 
-                         style="background: rgba(255,255,255,0.08); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 32px;">
+                         style="background: var(--bg-glass-strong); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: var(--border-glass) !important; border-radius: 32px;">
                         
                         <div class="form-check form-switch mb-4 d-flex justify-content-between align-items-center px-0">
                             <label class="form-check-label fw-bold text-white opacity-90" for="modeHardcore" style="font-size: 1.1rem;">☠️ Хардкор (Beta)</label>
@@ -284,7 +284,7 @@ window.renderIntro = function (wrapper, state, res) {
                 <div class="bunker-intro-overlay" style="background-image: url('${bgImg}')"></div>
                 <div class="bunker-intro-gradient"></div>
              ` : `
-                <div class="bunker-intro-gradient" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);"></div>
+                <div class="bunker-intro-gradient" style="background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-dark) 100%);"></div>
              `}
 
              <div style="z-index: 10; width: 100%; max-width: 450px;" class="animate__animated animate__fadeInUp">
@@ -303,7 +303,7 @@ window.renderIntro = function (wrapper, state, res) {
                 
                 <div class="bunker-intro-info-block ${window.bunkerIntroCollapsed ? 'collapsed' : ''}">
                     <div class="card border-0 shadow-lg p-3 mb-3 rounded-4 w-100" 
-                         style="background: rgba(255,255,255,0.08); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1) !important;">
+                         style="background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: var(--border-glass) !important;">
                         
                         <h3 class="fw-bold mb-2 text-white" style="font-size: 1.3rem;">${catastrophe.title}</h3>
                         

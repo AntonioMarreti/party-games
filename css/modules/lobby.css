@@ -11,20 +11,24 @@
     font-size: 42px;
     color: var(--primary-color);
     margin-bottom: 12px;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.action-card:active .action-icon,
+.action-card:hover .action-icon {
+    /* Removed scale and shadow per user request */
 }
 
 .action-title {
     font-weight: 800;
     font-size: 18px;
     margin-bottom: 4px;
-    color: var(--text-dark);
-    /* Ensure dark text */
+    color: var(--text-main);
 }
 
 .action-desc {
     font-size: 12px;
-    color: #636E72;
-    /* Darker gray for readability */
+    color: var(--text-muted);
     line-height: 1.2;
     font-weight: 500;
 }
@@ -33,7 +37,7 @@
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 16px;
-    color: var(--text-dark);
+    color: var(--text-main);
     padding-left: 4px;
 }
 
@@ -48,10 +52,11 @@
 }
 
 .mini-game-card {
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-glass);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--border-glass);
+    /* Enforce border width/style if var is color only, or just reinforce it */
     min-width: 100px;
     height: 110px;
     border-radius: var(--radius-sm);
@@ -61,7 +66,7 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    /* box-shadow: var(--shadow-main); Remvoved shadow per user request */
 }
 
 .mini-icon-box {
@@ -69,7 +74,7 @@
     height: 40px;
     background: var(--primary-color);
     border-radius: 12px;
-    color: white;
+    color: var(--text-on-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,7 +85,7 @@
     font-size: 11px;
     font-weight: 600;
     line-height: 1.2;
-    color: var(--text-dark);
+    color: var(--text-main);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -89,11 +94,11 @@
 }
 
 .search-bar {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: var(--bg-glass);
+    border: var(--border-glass);
     border-radius: 12px;
     padding: 12px 16px;
-    color: white;
+    color: var(--text-main);
     width: 100%;
     outline: none;
     font-weight: 500;
@@ -105,22 +110,27 @@
 }
 
 .game-list-card {
-    background: rgba(255, 255, 255, 0.75);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    border: var(--border-glass);
     border-radius: 24px;
     padding: 20px;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.2s;
+    box-shadow: var(--shadow-main);
+    transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.game-list-card:hover {
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
 }
 
 .game-list-card:active {
     transform: scale(0.98);
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--bg-secondary);
 }
 
 .game-icon-large {
@@ -128,7 +138,7 @@
     height: 60px;
     background: var(--primary-color);
     border-radius: 16px;
-    color: white;
+    color: var(--text-on-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -141,18 +151,18 @@
     margin: 0;
     font-weight: 700;
     font-size: 16px;
-    color: var(--text-dark);
+    color: var(--text-main);
 }
 
 .game-info p {
     margin: 4px 0 0 0;
     font-size: 13px;
-    color: #888;
+    color: var(--text-muted);
 }
 
 .play-btn {
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-accent);
     border: none;
     padding: 8px 16px;
     border-radius: 20px;
@@ -170,7 +180,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: #0f0c29;
+    background: var(--bg-dark);
 }
 
 .login-bg-animated {
@@ -180,7 +190,7 @@
     z-index: -1;
     background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--primary-color), black 60%) 0%, transparent 50%),
         radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--primary-color), transparent 50%) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, #1A1A2E, transparent 50%),
+        radial-gradient(circle at 80% 80%, var(--bg-dark), transparent 50%),
         radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--primary-color), black 40%) 0%, transparent 50%);
     filter: blur(80px);
     animation: mesh-rotate 20s linear infinite;
@@ -221,7 +231,7 @@
 .splash-logo-circle {
     width: 90px;
     height: 90px;
-    background: white;
+    background: var(--bg-card);
     border-radius: 28px;
     margin: 0 auto 20px;
     display: flex;
@@ -269,6 +279,22 @@
     opacity: 0.6;
     margin-bottom: 35px;
     font-weight: 400;
+}
+
+.btn-lobby-primary {
+    background: var(--primary-gradient);
+    color: var(--text-on-accent);
+    padding: 16px 30px;
+    border-radius: 18px;
+    border: none;
+    font-weight: 700;
+    box-shadow: var(--shadow-main);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
 }
 
 .btn-premium-tg {
@@ -327,8 +353,9 @@
     text-align: left;
     max-height: 80px;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #a5d6a7;
+    border: 1px solid var(--border-glass);
+    color: var(--status-success);
+    backdrop-filter: blur(5px);
 }
 
 /* === LOBBY PLAYERS GRID === */
@@ -350,13 +377,18 @@
 .player-score {
     position: absolute;
     bottom: -10px;
-    background: #FFD700;
-    color: #333;
+    background: var(--primary-gradient);
+    color: var(--text-on-accent);
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 10px;
     font-weight: bold;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .player-score {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color), transparent 50%);
+    border: 1px solid var(--border-glass);
 }
 
 .player-name {
@@ -377,8 +409,8 @@
     position: absolute;
     top: -8px;
     right: -8px;
-    color: #FFD700;
-    background: white;
+    color: var(--status-warning);
+    background: var(--bg-card);
     border-radius: 50%;
     width: 20px;
     height: 20px;
@@ -389,26 +421,28 @@
     font-size: 12px;
 }
 
+body.dark-mode .host-crown {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--status-warning), transparent 50%);
+    border: 1px solid var(--border-glass);
+}
+
 /* Add Bot Button (Circle matching avatars) */
 .add-bot-avatar {
     width: 44px;
-    /* Matched to .lb-avatar and other avatars */
     height: 44px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
-    /* Slightly more opaque background */
+    background: var(--bg-glass);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px dashed rgba(255, 255, 255, 0.8);
+    border: 1px dashed var(--border-glass);
     color: var(--primary-color);
-    /* Visible icon color */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-main);
 }
 
 .add-bot-avatar:hover {
@@ -431,9 +465,9 @@
     border-radius: 12px;
     font-weight: 700;
     font-size: 14px;
-    background: rgba(255, 59, 48, 0.1);
-    color: #ff3b30;
-    border: 1px solid rgba(255, 59, 48, 0.2);
+    background: color-mix(in srgb, var(--status-error), transparent 90%);
+    color: var(--status-error);
+    border: 1px solid color-mix(in srgb, var(--status-error), transparent 80%);
     transition: all 0.2s;
     height: 40px;
 }
@@ -470,14 +504,14 @@
 
 /* === V1.2 LEADERBOARD STYLES === */
 .lb-card {
-    background: rgba(255, 255, 255, 0.7);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: 20px;
     padding: 12px 16px;
     margin-bottom: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: var(--shadow-main);
+    border: var(--border-glass);
     display: flex;
     align-items: center;
     transition: transform 0.1s, box-shadow 0.1s;
@@ -491,31 +525,38 @@
     width: 30px;
     font-weight: 900;
     font-size: 16px;
-    color: #b2bec3;
+    color: var(--text-muted);
     text-align: center;
     margin-right: 12px;
 }
 
 .lb-rank.top-1 {
-    color: #f1c40f;
+    color: var(--status-warning);
     font-size: 20px;
 }
 
 .lb-rank.top-2 {
-    color: #bdc3c7;
+    color: var(--text-muted);
     font-size: 19px;
 }
 
 .lb-rank.top-3 {
-    color: #e67e22;
+    color: var(--status-warning);
+    opacity: 0.8;
     font-size: 18px;
+}
+
+body.dark-mode .lb-rank.top-1,
+body.dark-mode .lb-rank.top-2,
+body.dark-mode .lb-rank.top-3 {
+    text-shadow: 0 0 8px color-mix(in srgb, currentColor, transparent 40%);
 }
 
 .lb-avatar {
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background-color: #eee;
+    background-color: var(--bg-secondary);
     margin-right: 15px;
     margin-right: 15px;
     background-size: cover;
@@ -539,7 +580,7 @@
 
 .lb-name {
     font-weight: 700;
-    color: #2d3436;
+    color: var(--text-main);
     font-size: 15px;
     margin-bottom: 2px;
     letter-spacing: -0.5px;
@@ -547,15 +588,15 @@
 
 .lb-detail {
     font-size: 12px;
-    color: #636e72;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
 .level-pill {
-    background: #eef2ff;
-    color: #667eea;
+    background: var(--bg-secondary);
+    color: var(--primary-color);
     padding: 1px 6px;
     border-radius: 6px;
     font-weight: 700;
@@ -565,14 +606,14 @@
 .lb-score {
     text-align: right;
     font-weight: 800;
-    color: #2d3436;
+    color: var(--text-main);
     font-size: 16px;
 }
 
 .lb-score small {
     display: block;
     font-size: 9px;
-    color: #b2bec3;
+    color: var(--text-muted);
     font-weight: 600;
 }
 
@@ -584,7 +625,7 @@
 
 .mini-game-card.clickable:active {
     transform: scale(0.92);
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--bg-secondary);
 }
 
 .game-detail-wrapper {
@@ -592,8 +633,8 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    background: #f8fbff;
-    color: #2d3436;
+    background: var(--bg-app);
+    color: var(--text-main);
     position: relative;
     -webkit-overflow-scrolling: touch;
 }
@@ -627,7 +668,7 @@
 }
 
 .bg-white-glass {
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-glass-strong);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
 }
@@ -653,6 +694,30 @@
 }
 
 /* === SHOWCASE 3.0 DEMO COMPONENTS === */
+
+.lobby-bg-gradient {
+    background: var(--bg-app);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.lobby-bg-gradient::before {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    top: -25%;
+    left: -25%;
+    background: radial-gradient(circle at 80% 80%, var(--primary-color), transparent 50%),
+        radial-gradient(circle at 20% 20%, var(--accent-color), transparent 50%);
+    opacity: 0.15;
+    filter: blur(80px);
+}
 
 /* Bunker Card Demo */
 .demo-bunker-card {
@@ -768,7 +833,7 @@
 .feature-icon-v3 {
     width: 32px;
     height: 32px;
-    background: rgba(0, 0, 0, 0.04);
+    background: var(--divider);
     border-radius: 8px;
     display: flex;
     align-items: center;

@@ -52,7 +52,7 @@ function buildWaiSkeleton(state, wrapper, isHost) {
             <div class="game-page-title mt-4">Кто из нас?</div>
             <div class="game-page-subtitle">Настройка игрового процесса</div>
             <div class="px-3 mb-4">
-                <label class="small fw-bold text-muted mb-2 d-block">СКОЛЬКО ВОПРОСОВ?</label>
+                <label class="small fw-bold mb-2 d-block" style="color:var(--text-muted);">СКОЛЬКО ВОПРОСОВ?</label>
                 <div class="d-flex gap-2 mb-2" id="round-selector-btns">
                     <button class="btn-round-opt ${window.waiSelectedLimit == 5 ? 'active' : ''}" onclick="setWaiLimit(5, this)">5</button>
                     <button class="btn-round-opt ${window.waiSelectedLimit == 10 ? 'active' : ''}" onclick="setWaiLimit(10, this)">10</button>
@@ -63,10 +63,10 @@ function buildWaiSkeleton(state, wrapper, isHost) {
                        value="${[5, 10, 15].includes(window.waiSelectedLimit) ? '' : window.waiSelectedLimit}"
                        oninput="setWaiLimit(this.value, null)">
             </div>
-            <label class="small fw-bold text-muted mb-2 d-block px-3">ВЫБЕРИТЕ ТЕМУ:</label>
+            <label class="small fw-bold mb-2 d-block px-3" style="color:var(--text-muted);">ВЫБЕРИТЕ ТЕМУ:</label>
             <div id="wai-theme-list" class="theme-select-list px-3"></div>
             <div class="fixed-bottom-actions">
-                ${isHost ? `<button id="wai-start-btn" class="btn-bottom-action">Начать игру</button>` : `<div class="text-center text-muted p-3">Хост выбирает тему...</div>`}
+                ${isHost ? `<button id="wai-start-btn" class="btn-bottom-action">Начать игру</button>` : `<div class="text-center p-3" style="color:var(--text-muted);">Хост выбирает тему...</div>`}
                 <button class="btn-bottom-secondary" onclick="backToLobby()">Выйти в лобби</button>
             </div>
         `;
@@ -81,12 +81,12 @@ function buildWaiSkeleton(state, wrapper, isHost) {
         wrapper.innerHTML = `
             <div class="px-3">
                 <div class="d-flex justify-content-center align-items-center mb-3">
-                    <span class="badge bg-light text-dark" id="wai-round-info">...</span>
+                    <span class="badge" id="wai-round-info" style="background:var(--bg-secondary); color:var(--text-main); border:1px solid var(--border-main);">...</span>
                 </div>
-                <h2 id="wai-q-text" class="fw-bold text-center mb-4 animate__animated animate__fadeIn" style="font-size: 24px; min-height: 80px;"></h2>
+                <h2 id="wai-q-text" class="fw-bold text-center mb-4 animate__animated animate__fadeIn" style="font-size: 24px; min-height: 80px; color:var(--text-main);"></h2>
             </div>
             <div id="wai-voting-grid" class="voting-grid px-3"></div>
-            <div id="wai-wait-msg" class="text-center text-muted mt-3" style="display:none">Ждем остальных игроков...</div>
+            <div id="wai-wait-msg" class="text-center mt-3" style="display:none; color:var(--text-muted);">Ждем остальных игроков...</div>
             
             <div class="fixed-bottom-actions">
                 ${isHost ?
@@ -105,7 +105,7 @@ function buildWaiSkeleton(state, wrapper, isHost) {
                 <h1 class="fw-bold text-center mb-1" style="font-size: 32px;">
                     ${phase === 'final_leaderboard' ? '🏆 Финал' : 'Итоги'}
                 </h1>
-                <p id="wai-res-q" class="text-center text-muted mb-4 px-2" style="font-size: 15px;"></p>
+                <p id="wai-res-q" class="text-center mb-4 px-2" style="font-size: 15px; color:var(--text-muted);"></p>
                 <div class="section-label mb-2">ПОБЕДИТЕЛЬ В РАУНДЕ:</div>
                 <div id="wai-current-results" class="mb-5"></div>
                 <div class="section-label mb-2">ОБЩИЙ СЧЕТ:</div>
@@ -116,7 +116,7 @@ function buildWaiSkeleton(state, wrapper, isHost) {
                 (phase === 'final_leaderboard' ?
                     `<button class="btn-bottom-action" onclick="whoamiFinish()">Вернуться в Лобби</button>` :
                     `<button class="btn-bottom-action" onclick="sendGameAction('next_round')">${buttonText}</button>`)
-                : `<div class="text-center text-muted p-3">Ждем хоста...</div>`}
+                : `<div class="text-center p-3" style="color:var(--text-muted);">Ждем хоста...</div>`}
             </div>
         `;
     }
@@ -219,7 +219,7 @@ function updateWaiData(state, res, wrapper) {
         const curDiv = document.getElementById('wai-current-results');
         if (curDiv) {
             if (state.phase === 'final_leaderboard') {
-                curDiv.innerHTML = `<div class="bg-white p-3 rounded-4 shadow-sm text-center text-muted">Игра завершена!</div>`;
+                curDiv.innerHTML = `<div class="p-3 rounded-4 shadow-sm text-center" style="background:var(--bg-card); color:var(--text-muted); border:1px solid var(--border-main);">Игра завершена!</div>`;
             } else {
                 let counts = {};
                 Object.values(state.votes || {}).forEach(vid => counts[vid] = (counts[vid] || 0) + 1);
@@ -241,7 +241,7 @@ function updateWaiData(state, res, wrapper) {
             totalDiv.innerHTML = sortedTotal.map((p, idx) => `
                 <div class="result-card mb-2" style="opacity: ${idx === 0 ? '1' : '0.8'}">
                     <div class="d-flex align-items-center">
-                        <span class="me-2 text-muted fw-bold" style="width:20px;">${idx + 1}.</span>
+                        <span class="me-2 fw-bold" style="width:20px; color:var(--text-muted);">${idx + 1}.</span>
                         <img src="${p.photo_url || ''}" class="result-avatar-sm">
                         <span class="${idx === 0 ? 'fw-bold' : 'small'}">${p.first_name}</span>
                     </div>
