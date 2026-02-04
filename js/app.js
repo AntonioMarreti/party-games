@@ -1771,27 +1771,100 @@ const COLOR_OPTIONS = [
 
 let pendingAvatar = null; // {type: 'emoji', value: '😎', bg: '...'} or null
 
+// Global cache for avatar click handling to avoid JSON/Quote escaping hell
+window.avatarDataMap = window.avatarDataMap || {};
+
 function renderAvatar(user, size = 'md') {
+    // Helper to wrap avatar in a clickable div
+    const wrap = (content) => {
+        // Generate unique ID and store user data
+        const uid = 'av_' + Math.random().toString(36).substr(2, 9);
+        window.avatarDataMap[uid] = user;
+
+        // Clean up old entries occasionally? For now, memory usage is negligible.
+        return `<div onclick="event.stopPropagation(); openAvatarViewer('${uid}')" style="cursor: pointer; display: inline-block;">${content}</div>`;
+    };
+
     // Check for custom avatar
     if (user.custom_avatar) {
         try {
             const config = JSON.parse(user.custom_avatar);
             if (config.type === 'emoji') {
-                return `<div class="avatar-${size}" style="background: ${config.bg || '#eee'}">${config.value}</div>`;
+                return wrap(`<div class="avatar-${size}" style="background: ${config.bg || '#eee'}">${config.value}</div>`);
             } else if (config.type === 'image') {
-                return `<div class="avatar-${size}" style="background-image: url('${config.src}')"></div>`;
+                return wrap(`<div class="avatar-${size}" style="background-image: url('${config.src}')"></div>`);
             }
-        } catch (e) { }
+        } catch (e) {
+            // Not JSON, assume string path (drawn avatar)
+            let path = user.custom_avatar;
+            if (!path.startsWith('http') && !path.startsWith('server/')) {
+                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
+                path = 'server/' + path;
+            }
+            return wrap(`<div class="avatar-${size}" style="background-image: url('${path}')"></div>`);
+        }
     }
 
     // Bot Default Avatar
     if (user.is_bot == 1 && (!user.photo_url || user.photo_url === '🤖')) {
+        // Bots: Not clickable for now or show generic
         return `<div class="avatar-${size}" style="background: #e0f7fa; display: flex; align-items: center; justify-content: center; font-size: ${size === 'lg' ? '24px' : '18px'};">🤖</div>`;
     }
 
     // Fallback to Photo URL or UI Avatars
     const src = user.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name || 'U')}&background=random`;
-    return `<div class="avatar-${size}" style="background-image: url('${src}')"></div>`;
+    return wrap(`<div class="avatar-${size}" style="background-image: url('${src}')"></div>`);
+}
+
+function openAvatarViewer(uidOrStr) {
+    let user;
+
+    // Check if it's a map key
+    if (window.avatarDataMap && window.avatarDataMap[uidOrStr]) {
+        user = window.avatarDataMap[uidOrStr];
+    } else {
+        // Fallback for legacy calls or direct object passing
+        if (typeof uidOrStr === 'string') {
+            try { user = JSON.parse(uidOrStr); } catch (e) { console.error("Avatar Viewer JSON Error", e); return; }
+        } else {
+            user = uidOrStr;
+        }
+    }
+
+    const container = document.getElementById('avatar-view-container');
+    if (!container) return;
+
+    // Reuse getAvatarStyle logic but refined for full img
+    let content = '';
+
+    // Check Photo
+    if (user.photo_url && user.photo_url !== '🤖') {
+        content = `<img src="${user.photo_url}" style="width:100%; height:100%; object-fit:cover;">`;
+    } else if (user.custom_avatar) {
+        try {
+            const cfg = JSON.parse(user.custom_avatar);
+            if (cfg.type === 'emoji') {
+                content = `<div style="width:100%; height:100%; background:${cfg.bg}; display:flex; align-items:center; justify-content:center; font-size:120px;">${cfg.value}</div>`;
+            } else {
+                content = `<img src="${cfg.src}" style="width:100%; height:100%; object-fit:cover;">`;
+            }
+        } catch (e) {
+            // Drawn avatar path
+            let path = user.custom_avatar;
+            if (!path.startsWith('http') && !path.startsWith('server/')) {
+                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
+                path = 'server/' + path;
+            }
+            content = `<img src="${path}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+    } else {
+        // UI Avatar fallback
+        const src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name || 'U')}&background=random&size=300`;
+        content = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">`;
+    }
+
+    container.innerHTML = content;
+    showModal('modal-avatar-view');
 }
 
 /**
@@ -1989,15 +2062,29 @@ function getAvatarStyle(user) {
     if (user.photo_url && user.photo_url !== '🤖') {
         return `background-image: url('${user.photo_url}')`;
     } else if (user.custom_avatar) {
-        // If it's a file path
-        if (user.custom_avatar.startsWith('avatars/')) {
-            return `background-image: url('server/${user.custom_avatar}')`;
+        // Try parsing JSON first
+        try {
+            const config = JSON.parse(user.custom_avatar);
+            if (config.type === 'emoji') {
+                // For background style, we can't easily preserve emoji BG logic here without inline styles.
+                // We'll rely on updateUserInfo to set innerHTML/Color. 
+                // Here we just return a neutral style or the color if possible.
+                return `background-color: ${config.bg || '#eee'}; display: flex; align-items: center; justify-content: center;`;
+            } else if (config.type === 'image') {
+                return `background-image: url('${config.src}')`;
+            }
+        } catch (e) {
+            // Not JSON, assume string path
+            let path = user.custom_avatar;
+            // If it doesn't look like a URL and doesn't start with server/, assume it's in server/avatars/
+            if (!path.startsWith('http') && !path.startsWith('server/')) {
+                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
+                path = 'server/' + path;
+            }
+            return `background-image: url('${path}')`;
         }
     }
-    // Fallback emoji/color
-    // Ideally we render emoji, but for background-image style we can't easily.
-    // So for "style='...'" usage, we might need to handle emoji differently or use background-color.
-    // Let's assume for now we use colored box. 
+    // Fallback
     return 'background-color: #bdc3c7; display: flex; align-items: center; justify-content: center;';
 }
 
@@ -2052,27 +2139,86 @@ function updateUserInfo(user) {
     safeText('profile-name-big', user.custom_name || user.first_name);
 
     // Avatar Big uses new style
+    // Avatar Big uses new style
+    // Avatar Big uses new style
     const bigAv = document.getElementById('profile-avatar-big');
     if (bigAv) {
-        // We set background instead of innerHTML for the new design
-        // Preserve the badge inside
+        // Use the shared renderAvatar function which includes the CLICK handler
+        // renderAvatar returns a string, so we need to inject it into a wrapper or replace content
+
+        // Use the shared renderAvatar function which includes the CLICK handler
+        // But we must preserve the original container class 'profile-avatar-xl' for layout
+
+        bigAv.style = ''; // Clear inline styles (background-image)
+        // Do NOT clear className completely, as it removes 'profile-avatar-xl'
+        // bigAv.className = ''; 
+
+        // Instead, just ensure it has the base class
+        bigAv.className = 'profile-avatar-xl';
+
+        // Just generate a unique ID for this user and attach the listener to bigAv directly!
+        const uid = 'av_profile_' + Math.random().toString(36).substr(2, 9);
+        window.avatarDataMap[uid] = user;
+
+        bigAv.onclick = (e) => {
+            e.stopPropagation();
+            openAvatarViewer(uid);
+        };
+        bigAv.style.cursor = 'pointer';
+
+        // Re-applying the existing logic for visuals from the original file (which I am replacing):
+
+        // Re-applying the existing logic for visuals from the original file (which I am replacing):
         const badge = bigAv.querySelector('#profile-level-badge');
         const badgeHTML = badge ? badge.outerHTML : '';
 
-        bigAv.style.cssText = getAvatarStyle(user);
+        // Determine layout
+        let isEmoji = false;
+        let emojiVal = '😎';
+        let bgStyle = '';
 
-        // If no image, show emoji inside?
-        if (!user.photo_url && (!user.custom_avatar || !user.custom_avatar.startsWith('avatars/'))) {
-            // It's emoji
-            bigAv.innerHTML = `<span style="font-size: 32px;">${user.custom_avatar || '😎'}</span>` + badgeHTML;
-            bigAv.style.backgroundColor = user.custom_color || '#eee';
+        if (!user.photo_url || user.photo_url === '🤖') {
+            if (user.custom_avatar) {
+                try {
+                    const cfg = JSON.parse(user.custom_avatar);
+                    if (cfg.type === 'emoji') {
+                        isEmoji = true;
+                        emojiVal = cfg.value;
+                        bgStyle = `background: ${cfg.bg || '#eee'};`;
+                    } else {
+                        // Image config
+                        bgStyle = `background-image: url('${cfg.src}');`;
+                    }
+                } catch (e) {
+                    // Raw path
+                    let path = user.custom_avatar;
+                    if (!path.startsWith('http') && !path.startsWith('server/')) {
+                        if (!path.startsWith('avatars/')) path = 'avatars/' + path;
+                        path = 'server/' + path;
+                    }
+                    bgStyle = `background-image: url('${path}');`;
+                }
+            } else {
+                // Fallback emoji
+                isEmoji = true;
+            }
+        } else {
+            bgStyle = `background-image: url('${user.photo_url}');`;
+        }
+
+        bigAv.style.cssText = bgStyle;
+
+        if (isEmoji) {
+            bigAv.innerHTML = `<span style="font-size: 32px;">${emojiVal}</span>` + badgeHTML;
             bigAv.style.display = 'flex';
             bigAv.style.alignItems = 'center';
             bigAv.style.justifyContent = 'center';
         } else {
             bigAv.innerHTML = badgeHTML;
         }
+
     }
+
 
     // Trigger async fetch for accurate stats (Achievements count etc)
     loadMyProfileStats();
@@ -3488,4 +3634,69 @@ window.tryGameNow = async function (gameId) {
     // 3. Create room
     if (window.triggerHaptic) triggerHaptic('impact', 'medium');
     await createRoom();
+};
+
+// === AVATAR EDITOR INTEGRATION ===
+
+window.avatarEditor = null;
+
+window.openAvatarEditor = function () {
+    const overlay = document.getElementById('avatar-editor-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = 'flex';
+
+    // Initialize if first time
+    if (!window.avatarEditor) {
+        // Checking if the script is loaded
+        if (typeof AvatarEditor === 'undefined') {
+            if (window.showAlert) showAlert('Ошибка', 'Модуль редактора не загружен', 'error');
+            return;
+        }
+        window.avatarEditor = new AvatarEditor('avatar-canvas', 'avatar-canvas-container');
+    } else {
+        window.avatarEditor.resize();
+    }
+    // Prevent background scrolling
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeAvatarEditor = function () {
+    const overlay = document.getElementById('avatar-editor-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+};
+
+window.saveDrawnAvatar = async function () {
+    if (!window.avatarEditor) return;
+
+    try {
+        const blob = await window.avatarEditor.getBlob();
+        const url = URL.createObjectURL(blob);
+
+        // Update local pending state (let pendingAvatar defined in app.js scope)
+        pendingAvatar = {
+            type: 'image',
+            src: url,
+            blob: blob
+        };
+        console.log("✅ saveDrawnAvatar: pendingAvatar set to:", pendingAvatar);
+
+        // Update the preview UI in the Profile Editor
+        if (typeof updatePreview === 'function') {
+            updatePreview();
+        } else {
+            console.error("❌ updatePreview function not found!");
+        }
+
+        // Close editor
+        closeAvatarEditor();
+
+        // Notify user they still need to click Save on the profile
+        if (window.showToast) showToast('Аватар обновлен. Нажмите "Сохранить"!', 'success');
+
+    } catch (e) {
+        console.error("Avatar Process Error:", e);
+        if (window.showAlert) showAlert('Ошибка', 'Не удалось обработать рисунок', 'error');
+    }
 };
