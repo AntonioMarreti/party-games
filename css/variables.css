@@ -53,6 +53,7 @@
     /* Telegram Fallbacks */
     --bg-app: var(--tg-theme-bg-color, #F8F9FD);
     --bg-secondary: var(--tg-theme-secondary-bg-color, #ffffff);
+    --bg-dark: #0f172a;
 }
 
 /* === DARK MODE OVERRIDES === */

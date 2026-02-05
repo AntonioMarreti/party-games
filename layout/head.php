@@ -11,12 +11,13 @@
     <title>Party Games</title>
 
     <!-- Libs -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="lib/bootstrap-icons.css">
+    <link rel="stylesheet" href="libs/bootstrap.min.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="libs/bootstrap-icons.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="libs/animate.min.css?v=<?php echo $v; ?>">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/variables.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/base.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="css/layout.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="css/components.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="css/modules/lobby.css?v=<?php echo $v; ?>">
