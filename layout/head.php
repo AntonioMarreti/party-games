@@ -16,11 +16,17 @@
     <link rel="stylesheet" href="lib/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=<?php echo $v; ?>">
-    <link rel="stylesheet" href="css/lobby.css?v=<?php echo $v; ?>">
-    <link rel="stylesheet" href="css/game.css?v=<?php echo $v; ?>">
-    <link rel="stylesheet" href="css/profile.css?v=<?php echo $v; ?>">
-    <link rel="stylesheet" href="css/animations.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/variables.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/layout.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/components.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/profile.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/room.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/modals.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/avatar.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="styles.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/dark-mode.css?v=<?php echo $v; ?>">
 
     <!-- Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>

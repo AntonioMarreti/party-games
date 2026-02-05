@@ -105,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const logoutGroup = document.getElementById('logout-menu-item-group');
     if (logoutGroup) {
-        if (tg && tg.initData && tg.initData.length > 0) logoutGroup.style.display = 'none';
-        else logoutGroup.style.display = 'block';
+        const isTMA = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0;
+        logoutGroup.style.display = isTMA ? 'none' : 'block';
     }
 });
 
