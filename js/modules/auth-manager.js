@@ -47,9 +47,20 @@ async function initApp(tg) {
             }
         }
 
-        // 3. Fallback: If we are not in a room (or deep link failed logic?), show lobby
+        // 3. Fallback: If we are not in a room, show lobby or the screen from hash
         if (res && res.status === 'no_room') {
-            if (window.showScreen) window.showScreen('lobby');
+            const hash = window.location.hash.substring(1);
+            const isGarbage = hash.includes('tgWebAppData=') || hash.includes('tgWebAppVersion=');
+
+            if (hash && !isGarbage && hash !== 'splash' && hash !== 'login' && !hash.startsWith('auth_token')) {
+                if (window.UIManager && window.UIManager.handleRouting) {
+                    window.UIManager.handleRouting();
+                } else if (window.showScreen) {
+                    window.showScreen(hash);
+                }
+            } else {
+                if (window.showScreen) window.showScreen('lobby');
+            }
             screenShown = true;
         }
 
@@ -62,9 +73,9 @@ async function initApp(tg) {
         // ULTIMATE FAILSAFE
         const splash = document.getElementById('screen-splash');
         if (splash && splash.classList.contains('active-screen')) {
-            console.warn("Init finished but Splash still active. Fallback to Lobby/Login.");
-            if (localStorage.getItem('pg_token')) window.showScreen('lobby');
-            else window.showScreen('login');
+            const hash = window.location.hash.substring(1);
+            const target = (hash && hash !== 'splash' && hash !== 'login') ? hash : (localStorage.getItem('pg_token') ? 'lobby' : 'login');
+            if (window.showScreen) window.showScreen(target);
         }
     }
 }

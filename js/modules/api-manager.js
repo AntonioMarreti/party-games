@@ -66,3 +66,4 @@ window.APIManager = {
 };
 
 window.apiRequest = apiRequest;
+window.API_URL = API_URL;

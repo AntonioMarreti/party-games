@@ -604,7 +604,7 @@ function openGameShowcase(gameId) {
     if (heroImg) {
         if (game.promoImage) {
             heroImg.innerHTML = `
-                <img src="${game.promoImage}?v=2260" class="h-100 w-100" style="object-fit: cover;">
+                <img src="${game.promoImage}?v=2326" class="h-100 w-100" style="object-fit: cover; object-position: center; display: block; border: none;">
                 <div style="position:absolute; bottom:0; left:0; width:100%; height:80px; background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%); z-index: 2;"></div>
             `;
         } else {

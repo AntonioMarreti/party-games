@@ -32,13 +32,20 @@ function showScreen(screenId) {
     void screen.offsetWidth;
     screen.classList.add('active-screen');
 
+    // Update Hash (Anti-loop check)
+    const currentHash = window.location.hash.substring(1);
+    const targetHash = finalId.replace('screen-', '');
+    if (currentHash !== targetHash && !['splash', 'login'].includes(targetHash)) {
+        window.history.pushState(null, null, '#' + targetHash);
+    }
+
     // Scroll to top
     window.scrollTo(0, 0);
 
     // Update Tab Bar visibility
     const tabBar = document.querySelector('.bottom-nav');
     if (tabBar) {
-        const navScreens = ['screen-lobby', 'screen-leaderboard', 'screen-friends'];
+        const navScreens = ['screen-lobby', 'screen-leaderboard', 'screen-friends', 'screen-games', 'screen-profile'];
         if (navScreens.includes(finalId)) {
             tabBar.style.display = 'flex';
         } else {
@@ -67,11 +74,53 @@ function showScreen(screenId) {
     }
 }
 
+/**
+ * Handle initial load and back/forward navigation
+ */
+function handleRouting() {
+    let hash = window.location.hash.substring(1);
+    if (!hash) return;
+
+    // 0. Filter out Telegram garbage and query params from hash
+    // Example: #game-detail?tgWebAppData=... or #game-detail&tgWebAppData=...
+    hash = hash.split('?')[0].split('&')[0];
+    if (!hash) return;
+
+    // 1. Check for Special Actions (e.g. initializing profile editor data)
+    const action = ROUTE_ACTIONS[hash];
+    if (action && typeof window[action] === 'function') {
+        window[action]();
+        return;
+    }
+
+    // 2. Check if it's a tab or a screen
+    if (TAB_SCREEN_MAP[hash]) {
+        if (window.switchTab) window.switchTab(hash);
+    } else {
+        const screen = document.getElementById('screen-' + hash) || document.getElementById(hash);
+        if (screen) {
+            if (window.showScreen) window.showScreen(hash);
+        }
+    }
+}
+
+// Global listener for routing
+window.addEventListener('popstate', handleRouting);
+window.addEventListener('load', handleRouting);
+
+
 const TAB_SCREEN_MAP = {
     'home': 'screen-lobby',
     'games': 'screen-lobby',
     'profile': 'screen-lobby',
     'leaderboard': 'screen-leaderboard'
+};
+
+const ROUTE_ACTIONS = {
+    'profile-edit': 'openProfileEditor',
+    'settings': 'openSettingsScreen',
+    'friends': 'openFriendsScreen',
+    'leaderboard': 'openLeaderboardScreen'
 };
 
 function switchTab(tabId) {
@@ -154,12 +203,24 @@ function closeModal(modalId) {
 }
 
 function setupModalClosing() {
+    // 1. Click on overlay to close
     document.querySelectorAll('.custom-modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
                 closeModal(overlay.id);
             }
         });
+    });
+
+    // 2. Global listener for dismiss buttons (Bootstrap compatibility)
+    document.addEventListener('click', (e) => {
+        const dismissBtn = e.target.closest('[data-bs-dismiss="modal"]');
+        if (dismissBtn) {
+            const modal = dismissBtn.closest('.modal, .custom-modal-overlay');
+            if (modal && modal.id) {
+                closeModal(modal.id);
+            }
+        }
     });
 }
 
@@ -375,7 +436,10 @@ window.UIManager = {
     toggleGameLike,
     toggleGameSelect,
     updateNotificationBadge,
-    setupSwipeGestures
+    setupSwipeGestures,
+    handleRouting,
+    TAB_SCREEN_MAP,
+    ROUTE_ACTIONS
 };
 
 // Global aliases for convenience and HTML inline events
@@ -393,4 +457,5 @@ window.safeSrc = safeSrc;
 window.setupModalClosing = setupModalClosing;
 window.updateNotificationBadge = updateNotificationBadge;
 window.setupSwipeGestures = setupSwipeGestures;
+window.handleRouting = handleRouting;
 window.showModal = openModal; // Alias for backward compatibility

@@ -146,10 +146,10 @@ window.checkState = async function () {
             window.currentRoomId = res.room.id;
             window.isHost = (res.is_host == 1);
 
-            const gameType = res.room.game_type;
+            const isMenuScreen = ['settings', 'profile-edit', 'game-detail', 'friends', 'leaderboard'].includes(window.location.hash.substring(1));
 
             if (gameType === 'lobby') {
-                if (!isScreenActive('room')) showScreen('room');
+                if (!isScreenActive('room') && !isMenuScreen) showScreen('room');
                 if (window.renderLobby) renderLobby(res);
             } else {
                 if (window.GameManager && window.GameManager.loadGameScript) {
@@ -174,7 +174,7 @@ window.checkState = async function () {
 
                 const renderFunc = window[`render_${gameType}`];
                 if (typeof renderFunc === 'function') {
-                    if (!isScreenActive('game')) showScreen('game');
+                    if (!isScreenActive('game') && !isMenuScreen) showScreen('game');
                     try {
                         renderFunc(res);
                     } catch (e) {
@@ -191,7 +191,17 @@ window.checkState = async function () {
             if (window.RoomManager) window.RoomManager.stopPolling();
             window.currentRoomCode = null;
             window.isHost = false;
-            showScreen('lobby');
+
+            // Fix: Respect hash if present, otherwise fallback to lobby
+            const hash = window.location.hash.substring(1);
+            const isGarbage = hash.includes('tgWebAppData=') || hash.includes('tgWebAppVersion=');
+
+            if (hash && !isGarbage && hash !== 'splash' && hash !== 'login') {
+                if (window.handleRouting) window.handleRouting();
+                else showScreen(hash);
+            } else {
+                showScreen('lobby');
+            }
 
             if (window.renderPopularGames) {
                 window.renderPopularGames();
