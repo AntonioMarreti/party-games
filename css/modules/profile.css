@@ -471,6 +471,17 @@ body.large-font .text-muted.small {
     background-size: cover;
     background-position: center;
     position: relative;
+    /* Ensure content box sizing is handled or consistent, but we rely on child sizing */
+}
+
+/* FIX: Ensure renderAvatar output fits inside the container */
+.profile-avatar-xl>div:not(.profile-level-badge-float):not(#profile-level-badge),
+.profile-avatar-xl .avatar-wrapper,
+.profile-avatar-xl .avatar-circle,
+.profile-avatar-xl img {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50%;
 }
 
 .profile-level-badge-float {

@@ -231,49 +231,55 @@
 
 
 
-/* Custom Overlay Modal (Stats) */
+/* Custom Overlay Modal (Stats, Alerts, Confirmations) */
 .custom-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     z-index: 100000;
     display: none;
     /* Flex when active */
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.3s ease;
+    padding: 0;
+    margin: 0;
 }
 
-.custom-modal-overlay.show {
+.custom-modal-overlay.active.show {
+    display: flex;
     opacity: 1;
 }
 
 .custom-modal-content {
     background: var(--bg-glass-strong);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
     border: 1px solid var(--border-glass);
-    border-radius: 32px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    /* Softer shadow */
-    width: 90%;
-    max-width: 350px;
-    animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 36px;
+    box-shadow: var(--shadow-strong);
+    width: 90% !important;
+    max-width: 400px !important;
+    margin: auto !important;
+    position: relative;
+    overflow: hidden;
+    animation: alertBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes slideUpFade {
+@keyframes alertBounceIn {
     from {
-        transform: translateY(20px);
         opacity: 0;
+        transform: scale(0.85) translateY(30px);
     }
 
     to {
-        transform: translateY(0);
         opacity: 1;
+        transform: scale(1) translateY(0);
     }
 }

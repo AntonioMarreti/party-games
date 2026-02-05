@@ -11,6 +11,10 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    position: relative;
+    /* Contain absolute/fixed children */
+    overflow: hidden;
+    /* Clip everything outside "phone" */
 }
 
 .device-content {

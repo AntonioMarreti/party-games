@@ -196,6 +196,8 @@
 
 .floating-emoji {
     position: fixed;
+    bottom: 120px;
+    /* Start from bottom area */
     pointer-events: none;
     z-index: 10001;
     animation: floatUp 4s cubic-bezier(0.2, 0, 0.2, 1) forwards;

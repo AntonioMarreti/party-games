@@ -197,3 +197,23 @@ class AvatarEditor {
         });
     }
 }
+
+// === Global helper to open editor ===
+window.openAvatarEditor = function () {
+    const modal = document.getElementById('avatar-editor-overlay');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Initialize if not exists
+        if (!window.avatarEditor) {
+            window.avatarEditor = new AvatarEditor('avatar-canvas', 'avatar-canvas-container');
+        } else {
+            // Resize in case of orientation change etc
+            window.avatarEditor.resize();
+        }
+    }
+};
+
+window.closeAvatarEditor = function () {
+    const modal = document.getElementById('avatar-editor-overlay');
+    if (modal) modal.style.display = 'none';
+};

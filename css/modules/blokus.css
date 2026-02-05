@@ -131,9 +131,10 @@ body.dark-mode .player-status-card.active.turn-GREEN {
     display: grid;
     grid-template-columns: repeat(20, 1fr);
     grid-template-rows: repeat(20, 1fr);
-    gap: 1.2px;
-    background: var(--border-main);
-    padding: 1.5px;
+    gap: 1.5px;
+    background: #d0d0d0;
+    /* Explicit dark grey for visibility */
+    padding: 2px;
     width: min(94vw, 440px);
     height: min(94vw, 440px);
     box-shadow: var(--shadow-main);
