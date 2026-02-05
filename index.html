@@ -19,20 +19,21 @@
     <link rel="stylesheet" href="libs/bootstrap-icons.css">
     <link rel="stylesheet" href="libs/animate.min.css">
 
-    <link rel="stylesheet" href="css/variables.css?v=2322">
-    <link rel="stylesheet" href="css/layout.css?v=2322">
-    <link rel="stylesheet" href="css/components.css?v=2322">
-    <link rel="stylesheet" href="css/modules/lobby.css?v=2322">
-    <link rel="stylesheet" href="css/modules/profile.css?v=2322">
-    <link rel="stylesheet" href="css/modules/room.css?v=2322">
-    <link rel="stylesheet" href="css/modules/modals.css?v=2322">
-    <link rel="stylesheet" href="css/modules/blokus.css?v=2322">
-    <link rel="stylesheet" href="css/modules/avatar.css?v=2322"> <!-- NEW -->
-    <link rel="stylesheet" href="styles.css?v=2322">
-    <link rel="stylesheet" href="css/dark-mode.css?v=2322">
-    <script src="js/audio.js?v=2322"></script>
-    <script src="js/modules/avatar-editor.js?v=2322"></script> <!-- NEW -->
-    <script src="js/app.js?v=2322"></script>
+    <link rel="stylesheet" href="css/variables.css?v=2323">
+    <link rel="stylesheet" href="css/layout.css?v=2323">
+    <link rel="stylesheet" href="css/components.css?v=2323">
+    <link rel="stylesheet" href="css/modules/lobby.css?v=2323">
+    <link rel="stylesheet" href="css/modules/profile.css?v=2323">
+    <link rel="stylesheet" href="css/modules/room.css?v=2323">
+    <link rel="stylesheet" href="css/modules/modals.css?v=2323">
+    <link rel="stylesheet" href="css/modules/blokus.css?v=2323">
+    <link rel="stylesheet" href="css/modules/avatar.css?v=2323">
+    <link rel="stylesheet" href="styles.css?v=2323">
+    <link rel="stylesheet" href="css/dark-mode.css?v=2323">
+    <script src="js/audio.js?v=2323"></script>
+    <script type="module" src="js/modules/display-avatars.js"></script>
+    <script src="js/modules/avatar-editor.js?v=2323"></script>
+    <script src="js/app.js?v=2323"></script>
 
     <!-- Скрипты -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1236,91 +1237,93 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <script src="libs/bootstrap.bundle.min.js"></script>
-        <script>
-            // Callback for the widget
-            async function onTelegramAuth(user) {
-                document.getElementById('browser-login-btn').style.display = 'none';
-                document.getElementById('login-loading').style.display = 'block';
-                const formData = new FormData();
-                formData.append('action', 'login_widget');
-                formData.append('user_data', JSON.stringify(user));
-                try {
-                    const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
-                    if (res.status === 'ok') {
-                        localStorage.setItem('pg_token', res.token);
-                        window.location.reload();
-                    } else {
-                        showAlert('Ошибка входа', res.message, 'error');
-                        document.getElementById('browser-login-btn').style.display = 'block';
-                    }
-                } catch (e) {
-                    console.error(e);
-                    showAlert('Ошибка сети', e.message, 'error');
+    <!-- Scripts -->
+    <script src="libs/bootstrap.bundle.min.js"></script>
+    <script>
+        // Callback for the widget
+        async function onTelegramAuth(user) {
+            document.getElementById('browser-login-btn').style.display = 'none';
+            document.getElementById('login-loading').style.display = 'block';
+            const formData = new FormData();
+            formData.append('action', 'login_widget');
+            formData.append('user_data', JSON.stringify(user));
+            try {
+                const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
+                if (res.status === 'ok') {
+                    localStorage.setItem('pg_token', res.token);
+                    window.location.reload();
+                } else {
+                    showAlert('Ошибка входа', res.message, 'error');
+                    document.getElementById('browser-login-btn').style.display = 'block';
                 }
+            } catch (e) {
+                console.error(e);
+                showAlert('Ошибка сети', e.message, 'error');
             }
+        }
 
-            async function loginViaBot() {
-                try {
-                    const res = await fetch('server/api.php', {
-                        method: 'POST',
-                        body: new URLSearchParams({ action: 'create_auth_session' })
-                    }).then(r => r.json());
+        async function loginViaBot() {
+            try {
+                const res = await fetch('server/api.php', {
+                    method: 'POST',
+                    body: new URLSearchParams({ action: 'create_auth_session' })
+                }).then(r => r.json());
 
-                    if (res.status === 'ok') {
-                        window.open(res.bot_url, '_blank');
+                if (res.status === 'ok') {
+                    window.open(res.bot_url, '_blank');
 
-                        // Start polling
-                        const poll = setInterval(async () => {
-                            const check = await fetch('server/api.php', {
-                                method: 'POST',
-                                body: new URLSearchParams({
-                                    action: 'poll_auth_session',
-                                    temp_code: res.temp_code
-                                })
-                            }).then(r => r.json());
+                    // Start polling
+                    const poll = setInterval(async () => {
+                        const check = await fetch('server/api.php', {
+                            method: 'POST',
+                            body: new URLSearchParams({
+                                action: 'poll_auth_session',
+                                temp_code: res.temp_code
+                            })
+                        }).then(r => r.json());
 
-                            if (check.status === 'ok') {
-                                clearInterval(poll);
-                                localStorage.setItem('pg_token', check.token);
-                                window.location.reload();
-                            }
-                        }, 2000);
+                        if (check.status === 'ok') {
+                            clearInterval(poll);
+                            localStorage.setItem('pg_token', check.token);
+                            window.location.reload();
+                        }
+                    }, 2000);
 
-                        // Stop polling after 5 mins
-                        setTimeout(() => clearInterval(poll), 300000);
+                    // Stop polling after 5 mins
+                    setTimeout(() => clearInterval(poll), 300000);
 
-                    } else {
-                        showAlert('Ошибка', 'Не удалось создать сессию авторизации', 'error');
-                    }
-                } catch (e) {
-                    console.error(e);
+                } else {
+                    showAlert('Ошибка', 'Не удалось создать сессию авторизации', 'error');
                 }
+            } catch (e) {
+                console.error(e);
             }
-        </script>
-        <!-- Avatar Viewer Modal -->
-        <div id="modal-avatar-view" class="custom-modal-overlay" onclick="closeModal('modal-avatar-view')">
-            <div class="modal-content animate__animated animate__zoomIn"
-                style="background: transparent; box-shadow: none; width: 100%; max-width: 350px;"
-                onclick="event.stopPropagation()">
-                <div class="d-flex justify-content-center align-items-center position-relative">
-                    <!-- Close Button -->
-                    <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-2 shadow"
-                        style="z-index: 10; width: 40px; height: 40px; flex-shrink: 0; padding: 0; display: flex; align-items: center; justify-content: center;"
-                        onclick="closeModal('modal-avatar-view')">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
+        }
+    </script>
+    <!-- Avatar Viewer Modal -->
+    <div id="modal-avatar-view" class="custom-modal-overlay" onclick="closeModal('modal-avatar-view')">
+        <div class="modal-content animate__animated animate__zoomIn"
+            style="background: transparent; box-shadow: none; width: 100%; max-width: 350px;"
+            onclick="event.stopPropagation()">
+            <div class="d-flex justify-content-center align-items-center position-relative">
+                <!-- Close Button -->
+                <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-2 shadow"
+                    style="z-index: 10; width: 40px; height: 40px; flex-shrink: 0; padding: 0; display: flex; align-items: center; justify-content: center;"
+                    onclick="closeModal('modal-avatar-view')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
 
-                    <!-- Avatar Container -->
-                    <div id="avatar-view-container"
-                        class="rounded-circle shadow-lg d-flex align-items-center justify-content-center overflow-hidden"
-                        style="width: 300px; height: 300px; background: white; border: 4px solid white;">
-                        <!-- Content injected by JS -->
-                    </div>
+                <!-- Avatar Container -->
+                <div id="avatar-view-container"
+                    class="rounded-circle shadow-lg d-flex align-items-center justify-content-center overflow-hidden"
+                    style="width: 300px; height: 300px; background: white; border: 4px solid white;">
+                    <!-- Content injected by JS -->
                 </div>
             </div>
         </div>
+    </div>
 </body>
 
 </html>

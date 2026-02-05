@@ -1771,102 +1771,6 @@ const COLOR_OPTIONS = [
 
 let pendingAvatar = null; // {type: 'emoji', value: '😎', bg: '...'} or null
 
-// Global cache for avatar click handling to avoid JSON/Quote escaping hell
-window.avatarDataMap = window.avatarDataMap || {};
-
-function renderAvatar(user, size = 'md') {
-    // Helper to wrap avatar in a clickable div
-    const wrap = (content) => {
-        // Generate unique ID and store user data
-        const uid = 'av_' + Math.random().toString(36).substr(2, 9);
-        window.avatarDataMap[uid] = user;
-
-        // Clean up old entries occasionally? For now, memory usage is negligible.
-        return `<div onclick="event.stopPropagation(); openAvatarViewer('${uid}')" style="cursor: pointer; display: inline-block;">${content}</div>`;
-    };
-
-    // Check for custom avatar
-    if (user.custom_avatar) {
-        try {
-            const config = JSON.parse(user.custom_avatar);
-            if (config.type === 'emoji') {
-                return wrap(`<div class="avatar-${size}" style="background: ${config.bg || '#eee'}">${config.value}</div>`);
-            } else if (config.type === 'image') {
-                return wrap(`<div class="avatar-${size}" style="background-image: url('${config.src}')"></div>`);
-            }
-        } catch (e) {
-            // Not JSON, assume string path (drawn avatar)
-            let path = user.custom_avatar;
-            if (!path.startsWith('http') && !path.startsWith('server/')) {
-                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
-                path = 'server/' + path;
-            }
-            return wrap(`<div class="avatar-${size}" style="background-image: url('${path}')"></div>`);
-        }
-    }
-
-    // Bot Default Avatar
-    if (user.is_bot == 1 && (!user.photo_url || user.photo_url === '🤖')) {
-        // Bots: Not clickable for now or show generic
-        return `<div class="avatar-${size}" style="background: #e0f7fa; display: flex; align-items: center; justify-content: center; font-size: ${size === 'lg' ? '24px' : '18px'};">🤖</div>`;
-    }
-
-    // Fallback to Photo URL or UI Avatars
-    const src = user.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name || 'U')}&background=random`;
-    return wrap(`<div class="avatar-${size}" style="background-image: url('${src}')"></div>`);
-}
-
-function openAvatarViewer(uidOrStr) {
-    let user;
-
-    // Check if it's a map key
-    if (window.avatarDataMap && window.avatarDataMap[uidOrStr]) {
-        user = window.avatarDataMap[uidOrStr];
-    } else {
-        // Fallback for legacy calls or direct object passing
-        if (typeof uidOrStr === 'string') {
-            try { user = JSON.parse(uidOrStr); } catch (e) { console.error("Avatar Viewer JSON Error", e); return; }
-        } else {
-            user = uidOrStr;
-        }
-    }
-
-    const container = document.getElementById('avatar-view-container');
-    if (!container) return;
-
-    // Reuse getAvatarStyle logic but refined for full img
-    let content = '';
-
-    // Check Photo
-    if (user.photo_url && user.photo_url !== '🤖') {
-        content = `<img src="${user.photo_url}" style="width:100%; height:100%; object-fit:cover;">`;
-    } else if (user.custom_avatar) {
-        try {
-            const cfg = JSON.parse(user.custom_avatar);
-            if (cfg.type === 'emoji') {
-                content = `<div style="width:100%; height:100%; background:${cfg.bg}; display:flex; align-items:center; justify-content:center; font-size:120px;">${cfg.value}</div>`;
-            } else {
-                content = `<img src="${cfg.src}" style="width:100%; height:100%; object-fit:cover;">`;
-            }
-        } catch (e) {
-            // Drawn avatar path
-            let path = user.custom_avatar;
-            if (!path.startsWith('http') && !path.startsWith('server/')) {
-                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
-                path = 'server/' + path;
-            }
-            content = `<img src="${path}" style="width:100%; height:100%; object-fit:cover;">`;
-        }
-    } else {
-        // UI Avatar fallback
-        const src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name || 'U')}&background=random&size=300`;
-        content = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">`;
-    }
-
-    container.innerHTML = content;
-    showModal('modal-avatar-view');
-}
-
 /**
  * Renders achievement list with premium styling and Bootstrap icons
  * @param {Array} achievements 
@@ -2216,6 +2120,14 @@ function updateUserInfo(user) {
         } else {
             bigAv.innerHTML = badgeHTML;
         }
+
+        // Restore Click Handler for Profile Avatar (Zoom)
+        // We use a unique ID for the map, or just pass user object directly (which openAvatarViewer supports)
+        bigAv.style.cursor = 'pointer';
+        bigAv.onclick = (e) => {
+            e.stopPropagation();
+            openAvatarViewer(user);
+        };
 
     }
 
@@ -2605,9 +2517,10 @@ function showModal(id) {
     const modal = document.getElementById(id);
     if (modal) {
         modal.style.display = 'flex';
-        // Force reflow
-        void modal.offsetWidth;
-        modal.classList.add('show');
+        // Force reflow using RAF to ensure display:flex is painted before opacity transition
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+        });
     } else {
         console.error('Modal not found:', id);
     }
