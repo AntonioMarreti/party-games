@@ -147,6 +147,7 @@ window.checkState = async function () {
             window.isHost = (res.is_host == 1);
 
             const isMenuScreen = ['settings', 'profile-edit', 'game-detail', 'friends', 'leaderboard'].includes(window.location.hash.substring(1));
+            const gameType = res.room.game_type; // Fix: Define gameType properly
 
             if (gameType === 'lobby') {
                 if (!isScreenActive('room') && !isMenuScreen) showScreen('room');
