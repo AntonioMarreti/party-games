@@ -7,7 +7,7 @@ require_once 'lib/TelegramLogger.php';
 // Error Handling
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-set_exception_handler(function($e) {
+set_exception_handler(function ($e) {
     TelegramLogger::logError('api', [
         'message' => $e->getMessage(),
         'code' => $e->getCode(),
@@ -88,7 +88,7 @@ if ($action === 'create_auth_session') {
     $tempCode = 'auth_' . bin2hex(random_bytes(16));
     $stmt = $pdo->prepare("INSERT INTO auth_sessions (temp_code) VALUES (?)");
     $stmt->execute([$tempCode]);
-    
+
     $botUrl = "https://t.me/" . BOT_USERNAME . "?start=" . $tempCode;
     echo json_encode(['status' => 'ok', 'temp_code' => $tempCode, 'bot_url' => $botUrl]);
     exit;
@@ -99,7 +99,7 @@ if ($action === 'poll_auth_session') {
     $stmt = $pdo->prepare("SELECT * FROM auth_sessions WHERE temp_code = ? AND expires_at > NOW()");
     $stmt->execute([$tempCode]);
     $session = $stmt->fetch();
-    
+
     if ($session && $session['status'] === 'authorized') {
         $user = getUserByToken($session['auth_token']);
         echo json_encode(['status' => 'ok', 'token' => $session['auth_token'], 'user' => $user]);
@@ -114,16 +114,17 @@ if ($action === 'poll_auth_session') {
 // === DEV LOGIN (TEMPORARY - REMOVE IN PRODUCTION) ===
 if ($action === 'dev_login') {
     try {
-        $index = isset($_POST['index']) ? (int)$_POST['index'] : 1;
-        if ($index < 1) $index = 1;
-        
+        $index = isset($_POST['index']) ? (int) $_POST['index'] : 1;
+        if ($index < 1)
+            $index = 1;
+
         $tgId = 999999990 + $index; // 999999991, 999999992...
-        
+
         // Create or get test user
         $stmt = $pdo->prepare("SELECT * FROM users WHERE telegram_id = ?");
         $stmt->execute([$tgId]);
         $testUser = $stmt->fetch();
-        
+
         if (!$testUser) {
             // Create test user
             $token = bin2hex(random_bytes(32));
@@ -138,7 +139,7 @@ if ($action === 'dev_login') {
             $pdo->prepare("UPDATE users SET auth_token = ? WHERE id = ?")->execute([$token, $testUser['id']]);
             $testUser['auth_token'] = $token;
         }
-        
+
         echo json_encode(['status' => 'ok', 'token' => $testUser['auth_token'], 'user' => $testUser]);
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
@@ -149,20 +150,22 @@ if ($action === 'dev_login') {
 // === HELPER FUNCTIONS (Available to Actions) ===
 require_once 'lib/shared_helpers.php';
 
-function getUserByToken($token) {
+function getUserByToken($token)
+{
     global $pdo;
     $stmt = $pdo->prepare("SELECT * FROM users WHERE auth_token = ?");
     $stmt->execute([$token]);
     $user = $stmt->fetch();
-    
+
     if ($user) {
-        $user['is_admin'] = in_array((int)$user['telegram_id'], ADMIN_IDS);
+        $user['is_admin'] = in_array((int) $user['telegram_id'], ADMIN_IDS);
     }
-    
+
     return $user;
 }
 
-function getRoom($userId) {
+function getRoom($userId)
+{
     global $pdo;
     $stmt = $pdo->prepare("SELECT r.*, rp.is_host FROM room_players rp JOIN rooms r ON r.id = rp.room_id WHERE rp.user_id = ? ORDER BY rp.id DESC LIMIT 1");
     $stmt->execute([$userId]);
@@ -172,17 +175,20 @@ function getRoom($userId) {
 /**
  * Обновляет состояние игры в базе данных
  */
-function updateGameState($roomId, $state) {
+function updateGameState($roomId, $state)
+{
     global $pdo;
     $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
         ->execute([json_encode($state), $roomId]);
 }
 
-function clearUserRooms($pdo, $userId) {
+function clearUserRooms($pdo, $userId)
+{
     $pdo->prepare("DELETE FROM room_players WHERE user_id = ?")->execute([$userId]);
 }
 
-function sendError($message) {
+function sendError($message)
+{
     $res = ['status' => 'error', 'message' => $message];
     if (class_exists('TelegramLogger') && TelegramLogger::$lastError) {
         $res['debug_log_error'] = TelegramLogger::$lastError;
@@ -194,68 +200,72 @@ function sendError($message) {
 // === AUTHENTICATION ===
 
 $currentUser = getUserByToken($token);
-if (!$currentUser) { 
-    echo json_encode(['status' => 'auth_error']); 
-    exit; 
+if (!$currentUser) {
+    echo json_encode(['status' => 'auth_error']);
+    exit;
 }
 
 // === ACTION ROUTING ===
 
 $routes = [
     'create_room' => 'actions/room.php',
-    'join_room'   => 'actions/room.php',
-    'leave_room'  => 'actions/room.php',
+    'join_room' => 'actions/room.php',
+    'leave_room' => 'actions/room.php',
     'kick_player' => 'actions/room.php',
-    'get_state'   => 'actions/room.php',
-    'add_bot'     => 'actions/room.php', // NEW
-    'remove_bot'  => 'actions/room.php', // NEW
-    
-    'start_game'          => 'actions/game.php',
-    'stop_game'           => 'actions/game.php',
+    'get_state' => 'actions/room.php',
+    'add_bot' => 'actions/room.php', // NEW
+    'remove_bot' => 'actions/room.php', // NEW
+
+    'start_game' => 'actions/game.php',
+    'stop_game' => 'actions/game.php',
     'finish_game_session' => 'actions/game.php',
-    'game_action'         => 'actions/game.php',
-    
+    'game_action' => 'actions/game.php',
+
     'update_profile' => 'actions/user.php',
-    'update_settings' => 'actions/user.php', // NEW
-    
+    'update_settings' => 'actions/user.php',
+    'toggle_like' => 'actions/user.php', // NEW
+
     // Social
-    'search_users'     => 'actions/social.php', // NEW
-    'add_friend'       => 'actions/social.php',
-    'accept_friend'    => 'actions/social.php',
-    'remove_friend'    => 'actions/social.php',
-    'get_friends'      => 'actions/social.php',
+    'search_users' => 'actions/social.php', // NEW
+    'add_friend' => 'actions/social.php',
+    'accept_friend' => 'actions/social.php',
+    'remove_friend' => 'actions/social.php',
+    'get_friends' => 'actions/social.php',
     'get_public_profile' => 'actions/social.php', // NEW
-    'invite_friends'   => 'actions/social.php', // NEW
-    'subscribe'        => 'actions/social.php',
-    'unsubscribe'      => 'actions/social.php',
+    'invite_friends' => 'actions/social.php', // NEW
+    'subscribe' => 'actions/social.php',
+    'unsubscribe' => 'actions/social.php',
     'get_social_graph' => 'actions/social.php',
     'get_notifications' => 'actions/social.php', // NEW
     'mark_notification_read' => 'actions/social.php', // NEW
-    
+
     'get_achievements' => 'actions/social.php',
-    
-    'game_finished'   => 'actions/stats.php',
+
+    'game_finished' => 'actions/stats.php',
     'get_leaderboard' => 'actions/stats.php',
-    'get_stats'       => 'actions/stats.php',
-    
+    'get_stats' => 'actions/stats.php',
+
     'make_room_public' => 'actions/room.php',
     'get_public_rooms' => 'actions/room.php',
-    
-    'admin_stats'      => 'actions/admin.php',
+
+    'admin_stats' => 'actions/admin.php',
     'reset_leaderboard' => 'actions/admin.php',
     'seed_achievements' => 'actions/admin.php',
-    'setup_reactions'  => 'actions/admin.php', // NEW
-    'db_doctor'        => 'actions/admin.php', // NEW
-    'db_repair'        => 'actions/admin.php', // NEW
+    'setup_reactions' => 'actions/admin.php', // NEW
+    'db_doctor' => 'actions/admin.php', // NEW
+    'db_repair' => 'actions/admin.php', // NEW
+
+    // AI
+    'generate_content' => 'actions/ai.php',
 
     // REACTIONS
-    'send_reaction'    => 'actions/game.php', // NEW
+    'send_reaction' => 'actions/game.php', // NEW
 ];
 
 if (isset($routes[$action])) {
     require_once $routes[$action];
     $funcName = "action_$action";
-    
+
     if (function_exists($funcName)) {
         try {
             $funcName($pdo, $currentUser, $_POST);

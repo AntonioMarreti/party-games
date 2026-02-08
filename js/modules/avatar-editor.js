@@ -46,23 +46,33 @@ class AvatarEditor {
 
         this.canvas.addEventListener('touchend', () => this.stopDrawing());
 
-        // Initial white background
-        this.clear();
+        // Match CSS size
+        this.resize();
+
+        // Initial fill white
+        this.ctx.fillStyle = "#FFFFFF";
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Initial save
+        this.saveState();
     }
 
     resize() {
         // Make canvas square and responsive
         const rect = this.container.getBoundingClientRect();
-        const size = Math.min(rect.width, 400); // Max 400px
+        // Use shorter side to ensure square fits in container
+        const width = Math.floor(rect.width);
+        const height = Math.floor(rect.height);
 
         // Only resize if significantly different to avoid clearing on mobile scroll
-        if (Math.abs(this.canvas.width - size) > 10) {
-            this.canvas.width = size;
-            this.canvas.height = size;
+        if (Math.abs(this.canvas.width - width) > 5 || Math.abs(this.canvas.height - height) > 5) {
+            this.canvas.width = width;
+            this.canvas.height = height;
 
             // Re-apply styles after resize
-            this.ctx.lineJoin = 'round';
             this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+
             this.restoreHistory();
         }
     }
@@ -70,7 +80,7 @@ class AvatarEditor {
     startDrawing(e) {
         this.isDrawing = true;
         [this.lastX, this.lastY] = this.getCoords(e);
-        this.saveState(); // Save state before new stroke
+        // We do NOT save state on start, we save on stop to capture the stroke
     }
 
     draw(e) {
@@ -82,14 +92,17 @@ class AvatarEditor {
         this.ctx.moveTo(this.lastX, this.lastY);
         this.ctx.lineTo(x, y);
 
-        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+
         if (this.mode === 'erase') {
-            this.ctx.globalCompositeOperation = 'destination-out';
-            this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-            this.ctx.lineWidth = 20; // Eraser is bigger
+            this.ctx.globalCompositeOperation = 'source-over';
+            this.ctx.strokeStyle = '#FFFFFF';
+            this.ctx.lineWidth = 20;
         } else {
             this.ctx.globalCompositeOperation = 'source-over';
             this.ctx.strokeStyle = this.color;
+            this.ctx.lineWidth = this.lineWidth;
         }
 
         this.ctx.stroke();
@@ -100,14 +113,23 @@ class AvatarEditor {
         if (this.isDrawing) {
             this.isDrawing = false;
             this.ctx.closePath();
+            this.saveState(); // Save state AFTER the stroke is done
         }
     }
 
     getCoords(e) {
         const rect = this.canvas.getBoundingClientRect();
+        // Handle both mouse and touch events
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+
+        // Account for any CSS scaling vs Canvas Resolution
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+
         return [
-            e.clientX - rect.left,
-            e.clientY - rect.top
+            (clientX - rect.left) * scaleX,
+            (clientY - rect.top) * scaleY
         ];
     }
 
@@ -115,8 +137,8 @@ class AvatarEditor {
         this.mode = 'draw';
         this.color = color;
 
-        // Remove selection from all
-        document.querySelectorAll('.avatar-color-option').forEach(el => el.classList.remove('selected'));
+        // Remove selection from all including eraser (if represented)
+        document.querySelectorAll('.avatar-color-option, .btn-eraser').forEach(el => el.classList.remove('selected', 'active'));
 
         // Add to current if passed
         if (element) {
@@ -124,57 +146,89 @@ class AvatarEditor {
         }
     }
 
-    setSize(size) {
-        this.lineWidth = size;
-    }
-
-    setEraser() {
+    setEraser(element) {
         this.mode = 'erase';
-        // Clear color selection to indicate eraser mode
         document.querySelectorAll('.avatar-color-option').forEach(el => el.classList.remove('selected'));
+        if (element) element.classList.add('active');
     }
 
     clear() {
         this.ctx.fillStyle = "#FFFFFF";
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.globalCompositeOperation = 'source-over';
-        this.history = [];
-        this.step = -1;
-        this.saveState();
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.saveState(); // Save the "cleared" state so we can undo it
     }
 
     // --- History System ---
     saveState() {
-        this.step++;
-        if (this.step < this.history.length) {
-            this.history.length = this.step; // Truncate redo
+        // If we are not at the end of history (undid something), remove future states
+        if (this.step < this.history.length - 1) {
+            this.history = this.history.slice(0, this.step + 1);
         }
+
         this.history.push(this.canvas.toDataURL());
+        this.step++;
     }
 
     undo() {
         if (this.step > 0) {
             this.step--;
-            this.restoreHistoryFromStep();
+            this.restoreHistoryFromStep(this.step);
         }
     }
 
-    restoreHistoryFromStep() {
+    setBrushSize(size) {
+        this.lineWidth = size;
+    }
+
+    restoreHistoryFromStep(stepIndex) {
         const img = new Image();
-        img.src = this.history[this.step];
+        img.src = this.history[stepIndex];
         img.onload = () => {
             this.ctx.globalCompositeOperation = 'source-over';
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.drawImage(img, 0, 0);
+            // Fill white instead of clearing (avoids transparency)
+            this.ctx.fillStyle = "#FFFFFF";
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Draw image SCALED to fit current canvas size (fixes resizing gaps)
+            this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
         };
     }
 
     restoreHistory() {
-        if (this.history.length > 0) {
-            this.restoreHistoryFromStep();
+        // Restore current step if resize happens
+        if (this.history.length > 0 && this.step >= 0) {
+            this.restoreHistoryFromStep(this.step);
         } else {
-            this.clear();
+            // White background default
+            this.ctx.fillStyle = "#FFFFFF";
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
+    }
+
+    async loadImageFromUrl(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; // Crucial for editing
+            img.onload = () => {
+                this.ctx.globalCompositeOperation = 'source-over';
+                // Clear/Fill White
+                this.ctx.fillStyle = "#FFFFFF";
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw Scaled
+                this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                this.saveState();
+                resolve();
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
+    setBrushSize(size) {
+        this.lineWidth = size;
     }
 
     getBlob() {
@@ -203,13 +257,15 @@ window.openAvatarEditor = function () {
     const modal = document.getElementById('avatar-editor-overlay');
     if (modal) {
         modal.style.display = 'flex';
-        // Initialize if not exists
-        if (!window.avatarEditor) {
-            window.avatarEditor = new AvatarEditor('avatar-canvas', 'avatar-canvas-container');
-        } else {
-            // Resize in case of orientation change etc
-            window.avatarEditor.resize();
-        }
+
+        // Force a layout reflow for accurate sizing
+        requestAnimationFrame(() => {
+            if (!window.avatarEditor) {
+                window.avatarEditor = new AvatarEditor('avatar-canvas', 'avatar-canvas-container');
+            } else {
+                window.avatarEditor.resize();
+            }
+        });
     }
 };
 

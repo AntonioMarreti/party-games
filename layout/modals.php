@@ -160,7 +160,7 @@
             <div class="modal-body pt-2">
                 <form onsubmit="joinRoom(); closeModal('joinModal'); return false;">
                     <input type="text" id="join-room-code"
-                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold" placeholder="A1B2"
+                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold" placeholder="A1B2C3"
                         style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
                     <input type="password" id="join-room-pass" class="form-control mb-3"
                         placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">

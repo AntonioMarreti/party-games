@@ -32,7 +32,7 @@ window.BUNKER_ROUND_NAMES = {
 };
 
 window.sendGameAction = async function (type, data = {}) {
-    console.log('[Debug] sendGameAction called:', type, data);
+
     try {
         await window.apiRequest({
             action: 'game_action',
@@ -188,21 +188,14 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
 
         var isCondition = key === 'condition';
         var cardText = isCondition ? cardData.data.title : cardData.text;
-        var cardSub = isCondition ? cardData.data.desc : '';
+        var cardSub = isCondition ? cardData.data.desc : (cardData.desc || (cardData.data && cardData.data.desc) || '');
         var isRevealed = cardData.revealed;
         var tags = cardData.tags || [];
+        var action = cardData.action || (cardData.data && cardData.data.action);
+        var isUsed = cardData.used;
 
         // Logic for Locking
         var isLocked = false;
-
-        // 1. If revealed, not locked (visible).
-        // 2. If not revealed:
-        //    - It must be my turn.
-        //    - It must be 'reveal' phase.
-        //    - (Optional) Round restrictions can apply here too.
-
-        // Limit: Determine if I have ANY revealed cards yet?
-        // Note: We check 'professions' specifically.
         var isProfessionRevealed = myCards['professions'].revealed;
 
         if (!isRevealed) {
@@ -211,9 +204,6 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
             } else if (state.turn_phase !== 'reveal') {
                 isLocked = true;
             } else {
-                // It IS my turn and it IS reveal phase.
-                // Rule: First reveal MUST be 'professions'.
-                // If profession is NOT revealed yet, lock everything else.
                 if (!isProfessionRevealed && key !== 'professions') {
                     isLocked = true;
                 }
@@ -223,13 +213,24 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
         var statusClass = 'bunker-trait-card';
         if (isRevealed) statusClass += ' revealed';
         else if (isLocked) statusClass += ' locked';
-        else statusClass += ' active pulse-border'; // New class for clickable
+        else statusClass += ' active pulse-border';
 
         var tagsHtml = '';
         if (isRevealed && tags.length > 0) {
             tagsHtml = `<div class="trait-tags mt-2">` +
                 tags.map(function (t) { return `<span class="badge border me-1" style="background:var(--bg-secondary); color:var(--primary-color); font-size:10px; font-weight:normal;">${t}</span>`; }).join('') +
                 `</div>`;
+        }
+
+        // Active Button Logic
+        var actionBtn = '';
+        if (isRevealed && isMyTurn && action && !isUsed) {
+            actionBtn = `
+                <button class="btn btn-sm btn-outline-primary w-100 rounded-pill mt-2" onclick="event.stopPropagation(); window.triggerAbility('${key}', '${action}')">
+                    ${window.getAbilityLabel(action)}
+                </button>`;
+        } else if (isRevealed && isUsed) {
+            actionBtn = `<div class="mt-2 text-center small text-muted fst-italic">Использовано</div>`;
         }
 
         html += `
@@ -247,12 +248,7 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
                 </div>
                 ${(!isRevealed && !isLocked) ? '<div class="tap-hint mt-2 small fw-bold" style="color:var(--primary-color);">НАЖМИ ЧТОБЫ РАСКРЫТЬ</div>' : ''}
                 ${(!isRevealed && isLocked) ? '<div class="mt-2 small" style="color:var(--text-muted);">Ждите своего хода</div>' : ''}
-                
-                ${(isRevealed && isMyTurn && window.getAbilityForTags(tags)) ?
-                `<button class="btn btn-sm btn-outline-primary w-100 rounded-pill mt-2" onclick="event.stopPropagation(); window.triggerAbility('${key}', '${window.getAbilityForTags(tags)}')">
-                        ${window.getAbilityLabel(window.getAbilityForTags(tags))}
-                     </button>`
-                : ''}
+                ${actionBtn}
             </div>
         `;
     });
@@ -263,27 +259,29 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
 
 /* --- Abilities Helpers --- */
 
-window.getAbilityForTags = function (tags) {
-    // Only items (medkit) give active abilities, not professions
-    if (tags.includes('medkit')) return 'heal';
-    if (tags.includes('gun')) return 'threat';
-    return null;
-};
-
 window.getAbilityLabel = function (type) {
     if (type === 'heal') return '❤️ Вылечить';
-    if (type === 'threat') return '🔫 Угрожать';
-    return 'Использовать';
+    if (type === 'heal_self') return '❤️ Вылечить себя';
+    if (type === 'threaten') return '🔫 Угрожать';
+    if (type === 'steal_luggage') return '🎒 Украсть багаж';
+    if (type === 'reveal_feature') return '🖥️ Взломать (Факт)';
+    return '⚡ Использовать';
 };
 
 window.triggerAbility = function (cardKey, actionType) {
-    // Show Target Picker
+    // Actions that don't require a target
+    if (['heal_self', 'reveal_feature', 'threaten'].includes(actionType)) {
+        if (!confirm('Вы уверены, что хотите использовать эту способность?')) return;
+        window.sendAbility(cardKey, actionType, null, { innerHTML: '' }); // Fake btn
+        return;
+    }
+
+    // Show Target Picker for others
     var players = window.bunkerState.lastRes.players.filter(p => !window.bunkerState.lastServerState.kicked_players.includes(String(p.id)));
 
-    // Choose Target Overlay
     var overlay = document.createElement('div');
-    overlay.className = 'bunker-reveal-overlay animate__animated animate__fadeIn'; // Reuse overlay style
-    overlay.style.pointerEvents = 'auto'; // Enable clicks
+    overlay.className = 'bunker-reveal-overlay animate__animated animate__fadeIn';
+    overlay.style.pointerEvents = 'auto';
     overlay.innerHTML = `
         <div class="glass-card p-4 rounded-4 shadow-lg" style="width: 90%; max-width: 400px;">
             <h3 class="fw-bold mb-3 text-center">Выберите цель</h3>
@@ -302,13 +300,13 @@ window.triggerAbility = function (cardKey, actionType) {
 };
 
 window.sendAbility = function (cardKey, actionType, targetId, btn) {
-    btn.innerHTML = 'Отправка...';
-    // Remove overlay
-    document.querySelector('.bunker-reveal-overlay').remove();
+    if (btn && btn.innerHTML) btn.innerHTML = 'Отправка...';
+    // Remove overlay if exists
+    const overlay = document.querySelector('.bunker-reveal-overlay');
+    if (overlay) overlay.remove();
 
-    window.sendGameAction('use_ability', {
-        action: actionType,
-        card_key: cardKey,
+    window.sendGameAction('use_card', {
+        card_type: cardKey,
         target_id: targetId
     });
 };

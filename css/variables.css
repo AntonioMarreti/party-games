@@ -19,7 +19,7 @@
     --divider: rgba(0, 0, 0, 0.05);
 
     /* 4. Brand & Accent (Synced with TG or Custom) */
-    --primary-color: var(--tg-theme-button-color, #6C5CE7);
+    --primary-color: #6C5CE7;
     --accent-color: var(--tg-theme-accent-text-color, #00CEC9);
 
     /* 5. Gradients & Dynamic Styles */

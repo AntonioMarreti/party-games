@@ -38,7 +38,7 @@ if (typeof window.blokusState === 'undefined') {
 }
 
 function render_blokus(res) {
-    console.log("[Blokus] Starting Render...", res);
+
     // 0. Check Local Game Mode
     if (blokusState.isLocalGame) {
         if (!blokusState.game) {
@@ -344,7 +344,7 @@ async function checkBotTurn() {
     }
 
     if (activePlayer && activePlayer.is_bot == 1) {
-        console.log(`[Bot] It is ${activePlayer.bot_difficulty} bot's turn (${currentColor}). Thinking...`);
+
 
         // Set lock immediately to prevent double-scheduling in next poll
         // But we MUST clear it if we fail to start the action
@@ -368,7 +368,7 @@ async function checkBotTurn() {
                 const bestMove = bot.findBestMove();
 
                 if (bestMove) {
-                    console.log("[Bot] Found move:", bestMove);
+
                     // Send to Server
                     await apiRequest({
                         action: 'game_action',
@@ -379,7 +379,7 @@ async function checkBotTurn() {
                         y: bestMove.y
                     });
                 } else {
-                    console.log("[Bot] No move found. Passing.");
+
                     await apiRequest({
                         action: 'game_action',
                         game_action: 'pass_turn'

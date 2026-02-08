@@ -35,9 +35,16 @@ function showScreen(screenId) {
     // Update Hash (Anti-loop check)
     const currentHash = window.location.hash.substring(1);
     const targetHash = finalId.replace('screen-', '');
-    if (currentHash !== targetHash && !['splash', 'login'].includes(targetHash)) {
+
+    // START: Deep Link Protection
+    // If we are on a specific game route (e.g. #/game/bunker) and showing game-detail, 
+    // DO NOT overwrite the hash with generic #game-detail
+    if (currentHash.startsWith('/game/') && targetHash === 'game-detail') {
+        // Keep the specific hash
+    } else if (currentHash.startsWith("/game/") && targetHash === "game-detail") { } else if (currentHash !== targetHash && !['splash', 'login'].includes(targetHash)) {
         window.history.pushState(null, null, '#' + targetHash);
     }
+    // END: Deep Link Protection
 
     // Scroll to top
     window.scrollTo(0, 0);
@@ -96,7 +103,31 @@ function handleRouting() {
     // 2. Check if it's a tab or a screen
     if (TAB_SCREEN_MAP[hash]) {
         if (window.switchTab) window.switchTab(hash);
-    } else {
+    }
+    // 3. Deep Link: Game Detail (e.g. #/game/bunker)
+    else if (hash.startsWith('/game/')) {
+        const gameId = hash.split('/game/')[1];
+        // Ensure games are loaded, then open
+        if (window.AVAILABLE_GAMES && window.AVAILABLE_GAMES.length > 0) {
+            // Wait for DOM to be ready just in case, though this runs usually late enough
+            if (window.openGameShowcase) {
+                // Determine if we need to show the 'games' tab first? 
+                // Actually openGameShowcase handles its own logic, but usually we need 'screen-game-detail' to be active.
+                // Checking openGameShowcase logic... it just populates the fields. It doesn't switch the screen!
+                // Wait, openGameShowcase in game-manager.js usually ends with showScreen('game-detail').
+                // Let's verify game-manager.js logic for screen switching.
+                window.openGameShowcase(gameId);
+                // We also need to show the screen explicitly if openGameShowcase doesn't do it? 
+                // Looking at game-manager.js (not fully visible), it likely handles it.
+                // But to be safe, we can call showScreen here too? 
+                // Actually, let openGameShowcase do its job. 
+                // BUT, openGameShowcase needs to know it's a deep link? No, it just sets the data.
+                // Assuming openGameShowcase calls showScreen('game-detail').
+            }
+            // If it's a deep link, we might need to invoke showScreen manually if openGameShowcase doesn't.
+        }
+    }
+    else {
         const screen = document.getElementById('screen-' + hash) || document.getElementById(hash);
         if (screen) {
             if (window.showScreen) window.showScreen(hash);
@@ -296,13 +327,109 @@ function showConfirmation(title, message, onConfirm, options = {}) {
 
     document.body.insertAdjacentHTML('beforeend', html);
 
-    const yesBtn = document.getElementById(`${confirmId}-yes`);
+    const yesBtn = document.getElementById(confirmId + '-yes');
     if (yesBtn) {
         yesBtn.onclick = () => {
             closeAlert(confirmId);
             if (typeof onConfirm === 'function') onConfirm();
         };
     }
+}
+
+function showPrompt(title, message, onConfirm, options = {}) {
+    const promptId = 'prompt-' + Date.now();
+    const confirmText = options.confirmText || 'OK';
+    const cancelText = options.cancelText || 'Отмена';
+    const placeholder = options.placeholder || '';
+    const defaultValue = options.defaultValue || '';
+    const presets = options.presets || [];
+
+    let presetsHtml = '';
+    if (presets.length > 0) {
+        presetsHtml = '<div class="d-flex flex-wrap gap-2 mb-3 justify-content-center">';
+        presets.forEach(p => {
+            const val = typeof p === 'string' ? p : p.value;
+            const label = typeof p === 'string' ? p : p.label;
+            const icon = p.icon ? `<i class="bi ${p.icon} me-1"></i>` : '';
+            presetsHtml += `<button class="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center" onclick="document.getElementById('${promptId}-input').value = '${val}'; document.getElementById('${promptId}-input').focus();">${icon}${label}</button>`;
+        });
+        presetsHtml += '</div>';
+    }
+
+    const html = `
+    <div id="${promptId}" class="custom-modal-overlay active show" style="z-index: 100000; display: flex;">
+        <div class="custom-modal-content p-4 text-center animate__animated animate__fadeInUp">
+            <h4 class="fw-bold mb-3">${title}</h4>
+            <p class="text-muted mb-3">${message}</p>
+            <input type="text" id="${promptId}-input" class="form-control mb-3" placeholder="${placeholder}" value="${defaultValue}" style="border-radius: 12px; padding: 12px;">
+            ${presetsHtml}
+            <div class="d-grid gap-2">
+                <button class="glass-btn glass-btn-primary w-100 py-3" id="${promptId}-yes">
+                    ${confirmText}
+                </button>
+                <button class="glass-btn w-100 py-3" onclick="closeAlert('${promptId}')" style="background: var(--divider);">
+                    ${cancelText}
+                </button>
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const input = document.getElementById(`${promptId}-input`);
+    if (input) {
+        input.focus();
+        input.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') document.getElementById(`${promptId}-yes`).click();
+        });
+    }
+
+    const yesBtn = document.getElementById(`${promptId}-yes`);
+    if (yesBtn) {
+        yesBtn.onclick = () => {
+            const val = input ? input.value : '';
+            if (val.trim()) {
+                closeAlert(promptId);
+                if (typeof onConfirm === 'function') onConfirm(val);
+            } else {
+                // animation shake?
+                input.style.border = '1px solid red';
+            }
+        };
+    }
+}
+
+function showLoading(title, message) {
+    const id = 'loader-' + Date.now();
+    const html = `
+    <div id="${id}" class="custom-modal-overlay active show" style="z-index: 100000; display: flex;">
+        <div class="custom-modal-content p-4 text-center animate__animated animate__fadeInUp" style="width: 300px;">
+            <h5 class="fw-bold mb-3">${title}</h5>
+            <div class="progress mb-2" style="height: 8px; border-radius: 4px; background: rgba(0,0,0,0.05);">
+                <div id="${id}-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 5%"></div>
+            </div>
+            <p id="${id}-text" class="text-muted small mb-0 animated flash infinite slow">${message}</p>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    return {
+        update: (percent, text) => {
+            const bar = document.getElementById(id + '-bar');
+            const txt = document.getElementById(id + '-text');
+            if (bar) bar.style.width = percent + '%';
+            if (txt && text) txt.innerText = text;
+        },
+        close: () => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('show');
+                setTimeout(() => el.remove(), 200);
+            }
+        }
+    };
 }
 
 // === SAFE DOM MANIPULATION ===
@@ -395,18 +522,70 @@ function handleSwipeBack() {
 
 // === GAME TOGGLES (UI) ===
 function toggleGameLike(gameId, el) {
+    // 1. Handle Legacy Icon Toggle (Lobby Cards)
     const icon = el.querySelector('i');
-    if (icon.classList.contains('bi-heart')) {
-        icon.classList.remove('bi-heart');
-        icon.classList.add('bi-heart-fill', 'text-danger');
-        icon.style.transform = 'scale(1.2)';
-        setTimeout(() => icon.style.transform = 'scale(1)', 200);
-        if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
-    } else {
-        icon.classList.add('bi-heart');
-        icon.classList.remove('bi-heart-fill', 'text-danger');
+    if (icon) {
+        if (icon.classList.contains('bi-heart')) {
+            icon.classList.remove('bi-heart');
+            icon.classList.add('bi-heart-fill', 'text-danger');
+            icon.style.transform = 'scale(1.2)';
+            setTimeout(() => icon.style.transform = 'scale(1)', 200);
+            if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
+        } else {
+            icon.classList.add('bi-heart');
+            icon.classList.remove('bi-heart-fill', 'text-danger');
+        }
     }
-    // TODO: Send to backend
+    // 2. Handle SVG Toggle (Game Detail) is handled by caller (optimistic), 
+    // but we function as the data layer here.
+
+    // Send to backend (Fire & Forget style, but with error logging)
+    if (window.apiRequest) {
+        return window.apiRequest({ action: 'toggle_like', game_id: gameId }).then(res => {
+            // Success - Update Global State
+            if (window.userFavorites) {
+                if (res.is_liked) {
+                    if (!window.userFavorites.includes(gameId)) window.userFavorites.push(gameId);
+                } else {
+                    window.userFavorites = window.userFavorites.filter(id => id !== gameId);
+                }
+            }
+
+            // === SYNC UI ACROSS APP (Lobby Cards, etc) ===
+            const allLikeBtns = document.querySelectorAll(`[data-like-game-id="${gameId}"]`);
+            allLikeBtns.forEach(btn => {
+                const i = btn.querySelector('i');
+                if (i) {
+                    if (res.is_liked) {
+                        i.classList.remove('bi-heart');
+                        i.classList.add('bi-heart-fill', 'text-danger');
+                        // Optional: Small pulse for feedback
+                        i.style.transform = 'scale(1.2)';
+                        setTimeout(() => i.style.transform = 'scale(1)', 200);
+                    } else {
+                        i.classList.add('bi-heart');
+                        i.classList.remove('bi-heart-fill', 'text-danger');
+                    }
+                }
+            });
+
+            return res;
+        }).catch(err => {
+            console.error("Like Error API:", err);
+            // Revert visual state on error (Legacy Only)
+            if (icon) {
+                if (icon.classList.contains('bi-heart')) {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill', 'text-danger');
+                } else {
+                    icon.classList.add('bi-heart');
+                    icon.classList.remove('bi-heart-fill', 'text-danger');
+                }
+            }
+            throw err; // Re-throw so caller (SVG logic) can revert too
+        });
+    }
+    return Promise.resolve(); // Fallback if no apiRequest
 }
 
 function toggleGameSelect(gameId, el) {
@@ -448,7 +627,10 @@ window.switchTab = switchTab;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.showAlert = showAlert;
+window.showAlert = showAlert;
 window.showConfirmation = showConfirmation;
+window.showPrompt = showPrompt;
+window.showLoading = showLoading;
 window.closeAlert = closeAlert;
 window.safeText = safeText;
 window.safeStyle = safeStyle;
@@ -459,3 +641,4 @@ window.updateNotificationBadge = updateNotificationBadge;
 window.setupSwipeGestures = setupSwipeGestures;
 window.handleRouting = handleRouting;
 window.showModal = openModal; // Alias for backward compatibility
+window.toggleGameLike = toggleGameLike; // Global export for inline events

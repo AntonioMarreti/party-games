@@ -14,11 +14,11 @@ if (checkWidgetAuth($data)) {
         'photo_url' => $data['photo_url'] ?? ''
     ];
     $token = registerOrLoginUser($userArr);
-    
+
     TelegramLogger::log("Web Auth Success", ['user_id' => $data['id'], 'first_name' => $data['first_name']]);
-    
+
     // Перенаправляем обратно в приложение с токеном
-    header("Location: https://lapin.live/mpg/index.html#auth_token=" . $token);
+    header("Location: https://lapin.live/mpg/index.php#auth_token=" . $token);
 } else {
     TelegramLogger::logError('auth', [
         'message' => 'Widget Auth Failed - Invalid signature',

@@ -8,9 +8,9 @@ require_once 'config.php';
 // Hard:   -300 to -309
 
 $pools = [
-    'easy' =>   ['start' => -100, 'end' => -109, 'name_prefix' => 'Bot Easy',   'avatar' => '🤖'],
-    'medium' => ['start' => -200, 'end' => -209, 'name_prefix' => 'Bot Medium', 'avatar' => '🦾'],
-    'hard' =>   ['start' => -300, 'end' => -309, 'name_prefix' => 'Bot Hard',   'avatar' => '👹'],
+    'easy' => ['start' => -100, 'end' => -109, 'name_prefix' => 'Vovan', 'avatar' => '🍺', 'persona' => 'vovan'],
+    'medium' => ['start' => -200, 'end' => -209, 'name_prefix' => 'Joker', 'avatar' => '🤡', 'persona' => 'joker'],
+    'hard' => ['start' => -300, 'end' => -309, 'name_prefix' => 'Albert', 'avatar' => '🧠', 'persona' => 'albert'],
 ];
 
 echo "Starting Bot Pool Seeding...\n";
@@ -20,14 +20,14 @@ try {
 
     foreach ($pools as $diff => $cfg) {
         echo "Processing $diff ({$cfg['start']} to {$cfg['end']})...\n";
-        
+
         // Iterate backwards because negative IDs (start is higher than end technically in numeric value, but logic handles range)
         // Actually, let's just loop 0 to 9 offsets.
-        
+
         for ($i = 0; $i < 10; $i++) {
             $id = $cfg['start'] - $i; // -100, -101 ... -109
             $name = $cfg['name_prefix'] . " " . ($i + 1);
-            
+
             // Upsert Bot User
             // We use ON DUPLICATE KEY UPDATE to ensure we just update existing ones if re-run
             $sql = "INSERT INTO users (telegram_id, first_name, is_bot, photo_url, custom_name, is_hidden_in_leaderboard) 
@@ -37,16 +37,17 @@ try {
                         custom_name = VALUES(custom_name),
                         is_bot = 1,
                         is_hidden_in_leaderboard = 1";
-            
+
             $stmt = $pdo->prepare($sql);
             $stmt->execute(['id' => $id, 'name' => $name]);
         }
     }
-    
+
     $pdo->commit();
     echo "✅ Bot Pool Seeding Complete.\n";
-    
+
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($pdo->inTransaction())
+        $pdo->rollBack();
     echo "❌ Error: " . $e->getMessage() . "\n";
 }

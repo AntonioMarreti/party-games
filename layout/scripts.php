@@ -20,6 +20,7 @@
 <script src="js/modules/social-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/game-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/room-manager.js?v=<?php echo $v; ?>"></script>
+<script src="js/modules/ai-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/avatar-editor.js?v=<?php echo $v; ?>"></script>
 
 <!-- Main App Logic -->

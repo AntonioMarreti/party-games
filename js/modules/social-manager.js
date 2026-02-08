@@ -590,30 +590,6 @@ function openProfileEditor() {
     // Show Edit Screen
     if (window.showScreen) window.showScreen('profile-edit');
 
-    // Set emoji input if exists
-    const emojiInput = document.getElementById('emoji-input');
-    if (emojiInput) {
-        // If user has emoji avatar, prefill
-        if (user.custom_avatar) {
-            try {
-                const cfg = JSON.parse(user.custom_avatar);
-                if (cfg.type === 'emoji') emojiInput.value = cfg.value;
-            } catch (e) { }
-        }
-        // Live preview on input
-        emojiInput.oninput = () => {
-            let val = emojiInput.value.trim();
-            if (val.length > 2) {
-                val = val.substring(0, 2);
-                emojiInput.value = val;
-            }
-            if (val) {
-                pendingAvatar = { type: 'emoji', value: val, bg: pendingAvatar?.bg || COLOR_OPTIONS[0] };
-                updatePreview();
-            }
-        };
-    }
-
     // Render Color Grid
     const colorGrid = document.getElementById('color-grid');
     if (colorGrid) {
@@ -624,16 +600,99 @@ function openProfileEditor() {
             el.style.background = bg;
             el.onclick = () => {
                 // selectColor Logic inline or helper? Inline for now
-                if (!pendingAvatar) pendingAvatar = { type: 'emoji', value: '😎', bg: bg };
-                else pendingAvatar.bg = bg;
+                if (!pendingEmoji) pendingEmoji = { type: 'emoji', value: '😎', bg: bg };
+                else pendingEmoji.bg = bg;
                 updatePreview();
             };
             colorGrid.appendChild(el);
         });
     }
 
+    // Render Emoji Picker
+    renderEmojiPicker();
+
     // Reset pending
-    pendingAvatar = user.custom_avatar ? JSON.parse(user.custom_avatar) : null;
+    const userConfig = user.custom_avatar ? JSON.parse(user.custom_avatar) : null;
+
+    // Split into separated states to preserve user input when switching tabs
+    if (userConfig && userConfig.type === 'image') {
+        pendingImage = userConfig;
+        pendingEmoji = { type: 'emoji', value: '😎', bg: COLOR_OPTIONS[0] };
+        activeAvatarTab = 'photo';
+    } else if (userConfig && userConfig.type === 'emoji') {
+        pendingImage = null;
+        pendingEmoji = userConfig;
+        activeAvatarTab = 'emoji';
+    } else {
+        // No avatar/default
+        pendingImage = null;
+        pendingEmoji = { type: 'emoji', value: '😎', bg: COLOR_OPTIONS[0] };
+        activeAvatarTab = 'emoji';
+    }
+
+    switchAvatarTab(activeAvatarTab);
+    updatePreview();
+}
+
+let activeAvatarTab = 'emoji';
+let pendingEmoji = null;
+let pendingImage = null;
+
+const POPULAR_EMOJIS = [
+    '😎', '🤩', '🥳', '🤯', '🥶', '🤠', '👻', '💀', '👽', '🤖',
+    '👾', '🎃', '😺', '🙈', '🙉', '🙊', '🐶', '🐺', '🦊', '🦁',
+    '🐯', '🦄', '🐲', '🐹', '🐰', '🐻', '🐼', '🐨', '🐸', '🐙',
+    '🔥', '✨', '⚡', '🌈', '💎', '👑', '🏆', '🎮', '🎨', '🚀'
+];
+
+function renderEmojiPicker() {
+    const container = document.getElementById('emoji-picker-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    POPULAR_EMOJIS.forEach(emoji => {
+        const el = document.createElement('div');
+        el.className = 'emoji-option';
+        el.innerText = emoji;
+        el.style.fontSize = '24px';
+        el.style.cursor = 'pointer';
+        el.style.textAlign = 'center';
+        el.style.padding = '5px';
+        el.style.borderRadius = '8px';
+        el.style.transition = 'background 0.2s';
+
+        el.onclick = () => selectEmoji(emoji, el);
+
+        // Highlight if selected
+        if (pendingEmoji && pendingEmoji.value === emoji) {
+            el.classList.add('selected');
+            el.style.background = 'var(--divider, #eee)';
+        }
+
+        container.appendChild(el);
+    });
+}
+
+function switchAvatarTab(tab) {
+    activeAvatarTab = tab;
+
+    // UI Updates
+    document.querySelectorAll('.avatar-tab-pane').forEach(el => el.style.display = 'none');
+
+    const pane = document.querySelector(`#tab-pane-${tab}`);
+    if (pane) pane.style.display = 'block';
+
+    document.querySelectorAll('[id^="tab-btn-"]').forEach(el => {
+        el.classList.remove('bg-white', 'shadow-sm', 'text-primary');
+        el.classList.add('text-muted');
+    });
+
+    const btn = document.getElementById(`tab-btn-${tab}`);
+    if (btn) {
+        btn.classList.add('bg-white', 'shadow-sm', 'text-primary');
+        btn.classList.remove('text-muted');
+    }
+
     updatePreview();
 }
 
@@ -641,17 +700,29 @@ function updatePreview() {
     const preview = document.getElementById('avatar-preview-area');
     if (!preview) return;
 
-    // Use current pending or specific default
-    // If pendingAvatar is image:
-    if (pendingAvatar && pendingAvatar.type === 'image') {
-        preview.innerHTML = `<img src="${pendingAvatar.src}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    let configToShow = null;
+
+    if (activeAvatarTab === 'emoji') {
+        configToShow = pendingEmoji;
+    } else if (activeAvatarTab === 'photo' || activeAvatarTab === 'draw') {
+        configToShow = pendingImage;
     }
-    else if (pendingAvatar && pendingAvatar.type === 'emoji') {
-        preview.innerHTML = `<div style="width:100%; height:100%; background: ${pendingAvatar.bg}; display:flex; align-items:center; justify-content:center; font-size: 60px;">${pendingAvatar.value}</div>`;
+
+    if (configToShow && configToShow.type === 'image') {
+        preview.innerHTML = `<img src="${configToShow.src}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    else if (configToShow && configToShow.type === 'emoji') {
+        preview.innerHTML = `<div style="width:100%; height:100%; background: ${configToShow.bg}; display:flex; align-items:center; justify-content:center; font-size: 40px;">${configToShow.value}</div>`;
     }
     else {
-        // Default fallbacks?
-        preview.innerHTML = `<div class="text-muted">Preview</div>`;
+        // Fallback for empty state based on tab
+        if ((activeAvatarTab === 'photo' || activeAvatarTab === 'draw') && !pendingImage) {
+            preview.innerHTML = `<div class="d-flex align-items-center justify-content-center w-100 h-100 bg-light text-muted"><i class="bi bi-image fs-1 opacity-25"></i></div>`;
+        } else if (activeAvatarTab === 'emoji' && !pendingEmoji) {
+            preview.innerHTML = `<div style="width:100%; height:100%; background: #ddd; display:flex; align-items:center; justify-content:center; font-size: 40px;">😎</div>`;
+        } else {
+            preview.innerHTML = `<div class="d-flex align-items-center justify-content-center w-100 h-100 bg-light text-muted"><i class="bi bi-person fs-1 opacity-25"></i></div>`;
+        }
     }
 }
 
@@ -687,12 +758,13 @@ function handleAvatarUpload(event) {
 
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
-                pendingAvatar = {
+                pendingImage = {
                     type: 'image',
                     src: url,
                     blob: blob // keep blob for upload
                 };
-                updatePreview();
+                // Auto switch to photo tab if uploaded
+                switchAvatarTab('photo');
             }, 'image/jpeg', 0.85);
         };
         img.src = e.target.result;
@@ -734,11 +806,13 @@ async function saveDrawnAvatar() {
     try {
         const blob = await window.avatarEditor.getBlob();
         const url = URL.createObjectURL(blob);
-        pendingAvatar = {
+        pendingImage = {
             type: 'image',
             src: url,
             blob: blob
         };
+        // For better UX during split tabs, we can just update preview.
+        // The user stays on 'draw' tab but sees the result in the top preview.
         updatePreview();
 
         // Close editor
@@ -764,9 +838,12 @@ function selectEmoji(emoji, el) {
     document.querySelectorAll('.emoji-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
 
-    if (!pendingAvatar) pendingAvatar = { type: 'emoji', value: emoji, bg: COLOR_OPTIONS[0] };
-    else pendingAvatar.value = emoji;
+    // Always update pendingEmoji
+    if (!pendingEmoji) pendingEmoji = { type: 'emoji', value: emoji, bg: COLOR_OPTIONS[0] };
+    else pendingEmoji.value = emoji;
 
+    // Note: If user click emoji while in 'photo' tab, should we switch? Maybe not.
+    // But preview will only update if on emoji tab.
     updatePreview();
 }
 
@@ -774,8 +851,8 @@ function selectColor(bg, el) {
     document.querySelectorAll('.color-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
 
-    if (!pendingAvatar) pendingAvatar = { type: 'emoji', value: '😎', bg: bg };
-    else pendingAvatar.bg = bg;
+    if (!pendingEmoji) pendingEmoji = { type: 'emoji', value: '😎', bg: bg };
+    else pendingEmoji.bg = bg;
 
     updatePreview();
 }
@@ -791,17 +868,30 @@ async function saveProfile() {
     formData.append('token', token);
     formData.append('name', name);
 
-    if (pendingAvatar) {
+    let avatarToSave = null;
+    if (activeAvatarTab === 'emoji') {
+        avatarToSave = pendingEmoji;
+        // Fix: Ensure we fallback to defaults if null but user was on this tab?
+        // Actually pendingEmoji is initialized in open.
+    } else if (activeAvatarTab === 'photo' || activeAvatarTab === 'draw') {
+        avatarToSave = pendingImage;
+    }
+
+    if (avatarToSave) {
         // If it's an image with a blob, send as file
-        if (pendingAvatar.type === 'image' && pendingAvatar.blob) {
-            formData.append('avatar_image', pendingAvatar.blob, 'avatar.jpg');
+        if (avatarToSave.type === 'image' && avatarToSave.blob) {
+            formData.append('avatar_image', avatarToSave.blob, 'avatar.jpg');
             // We send a config placeholder, the server will replace src with base64
             formData.append('avatar_config', JSON.stringify({ type: 'image', src: 'placeholder' }));
         } else {
-            formData.append('avatar_config', JSON.stringify(pendingAvatar));
+            formData.append('avatar_config', JSON.stringify(avatarToSave));
         }
     } else {
-        // No change
+        // No avatar selected for this tab?
+        // Maybe user wants to clear it? Or just keep old?
+        // Logic: if tab is active but empty, we might not send update?
+        // Or send null? Let's check logic.
+        // If photo tab active but no photo -> Don't update avatar?
     }
 
     if (window.apiRequest) {
@@ -867,6 +957,7 @@ window.SocialManager = {
     selectEmoji,
     selectColor,
     saveProfile,
+    switchAvatarTab,
     switchFriendsTab
 };
 

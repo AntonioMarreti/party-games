@@ -10,11 +10,12 @@
         'js/games/engines/attention.js',
         'js/games/engines/motor.js',
         'js/games/engines/memory.js',
-        'js/games/engines/erudition.js'
+        'js/games/engines/erudition.js',
+        'js/games/engines/quiz.js'
     ];
 
     function render_brainbattle(res) {
-        console.log("[BrainBattle] Render called. Engines loaded?", window.BB_ENGINES_LOADED);
+
         const container = document.getElementById('game-area');
 
         // 1. ЗАГРУЗЧИК
@@ -240,31 +241,11 @@
         const isCorrect = myRes.correct;
         const sorted = Object.entries(state.round_results).sort((a, b) => b[1].score - a[1].score);
 
-        let html = `
-        <div class="d-flex flex-column pt-4 px-2 pb-5">
-            <div class="bb-result-circle">
-                ${isCorrect ? '<i class="bi bi-check-lg text-success"></i>' : '<i class="bi bi-x-lg text-danger"></i>'}
-            </div>
-            <h2 class="fw-bold mb-1 text-center" style="color: ${isCorrect ? 'var(--status-success)' : 'var(--status-error)'}">${isCorrect ? 'Верно!' : 'Ошибка'}</h2>
-            <script>
-                if (${isCorrect}) window.audioManager.play('success');
-                else window.audioManager.play('error');
-            </script>
-            <p class="text-muted mb-4 text-center fw-bold">${(myRes.time / 1000).toFixed(2)} сек</p>
-            
-            <div class="bb-glass-card p-4 text-center mb-4 mx-3">
-                <div class="small text-uppercase text-muted fw-bold mb-1">Получено очков</div>
-                <h1 class="display-2 fw-bold mb-0" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">+${myRes.score}</h1>
-            </div>
-
-            <h6 class="text-start ms-4 mb-3 small text-uppercase text-muted fw-extrabold" style="letter-spacing: 1px;">Топ раунда</h6>
-            <div class="d-flex flex-column gap-2 px-3 mb-5">
-    `;
-
+        let listHtml = '';
         sorted.forEach(([uid, data], index) => {
             const p = res.players.find(pl => String(pl.id) === uid);
             if (p) {
-                html += `<div class="bb-result-card">
+                listHtml += `<div class="bb-result-card">
                 <div class="d-flex align-items-center">
                     <div class="bb-rank">#${index + 1}</div>
                     <img src="${p.photo_url}" class="rounded-circle me-3" style="width:40px;height:40px; border: 2px solid var(--bg-secondary); box-shadow: var(--shadow-sm);">
@@ -274,15 +255,46 @@
             </div>`;
             }
         });
-        html += `</div><div style="height: 100px;"></div></div>`;
 
+        const isLastRound = state.current_round >= state.total_rounds;
+        let btnHtml = '';
         if (res.is_host) {
-            const isLastRound = state.current_round >= state.total_rounds;
-            html += `<div class="fixed-bottom-actions"><button class="bb-start-btn" onclick="bbNext()">${isLastRound ? "🏁 Результаты" : "Следующий раунд"}</button></div>`;
+            btnHtml = `<button class="bb-start-btn w-100 py-3" onclick="bbNext()">${isLastRound ? "🏁 Результаты" : "Следующий раунд"}</button>`;
         } else {
-            html += `<div class="fixed-bottom-actions text-center text-muted fw-bold small"><div class="spinner-border spinner-border-sm me-2"></div> Ожидание хоста...</div>`;
+            btnHtml = `<div class="text-center text-muted fw-bold small"><div class="spinner-border spinner-border-sm me-2"></div> Ожидание хоста...</div>`;
         }
-        wrapper.innerHTML = html;
+
+        wrapper.innerHTML = `
+        <div class="d-flex flex-column h-100">
+            <!-- SCROLLABLE CONTENT -->
+            <div class="flex-grow-1 overflow-auto pt-4 px-2" style="-webkit-overflow-scrolling: touch;">
+                <div class="bb-result-circle mx-auto">
+                    ${isCorrect ? '<i class="bi bi-check-lg text-success"></i>' : '<i class="bi bi-x-lg text-danger"></i>'}
+                </div>
+                <h2 class="fw-bold mb-1 text-center" style="color: ${isCorrect ? 'var(--status-success)' : 'var(--status-error)'}">${isCorrect ? 'Верно!' : 'Ошибка'}</h2>
+                <p class="text-muted mb-4 text-center fw-bold">${(myRes.time / 1000).toFixed(2)} сек</p>
+                
+                <div class="bb-glass-card p-4 text-center mb-4 mx-3">
+                    <div class="small text-uppercase text-muted fw-bold mb-1">Получено очков</div>
+                    <h1 class="display-2 fw-bold mb-0" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">+${myRes.score}</h1>
+                </div>
+
+                <h6 class="text-start ms-4 mb-3 small text-uppercase text-muted fw-extrabold" style="letter-spacing: 1px;">Топ раунда</h6>
+                <div class="d-flex flex-column gap-2 px-3 pb-3">
+                    ${listHtml}
+                </div>
+            </div>
+
+            <!-- FIXED FOOTER -->
+            <div class="p-3 border-top bg-white bg-opacity-75 backdrop-blur shadow-lg flex-shrink-0" style="z-index: 100;">
+                ${btnHtml}
+            </div>
+        </div>
+        <script>
+            if (${isCorrect}) window.audioManager.play('success');
+            else window.audioManager.play('error');
+        </script>
+        `;
     }
 
     function renderFinal(wrapper, state, res) {

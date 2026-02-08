@@ -131,6 +131,10 @@ window.checkState = async function () {
         if (res.players) window.currentGamePlayers = res.players;
         if (res.events && res.events.length > 0) handleReactions(res.events);
 
+        // Handle Favorites
+        if (res.favorites) window.userFavorites = res.favorites;
+        else if (!window.userFavorites) window.userFavorites = []; // Default empty
+
         if (res.user) {
             if (window.SocialManager && window.SocialManager.renderCurrentUser) {
                 window.SocialManager.renderCurrentUser(res.user);
@@ -197,7 +201,7 @@ window.checkState = async function () {
             const hash = window.location.hash.substring(1);
             const isGarbage = hash.includes('tgWebAppData=') || hash.includes('tgWebAppVersion=');
 
-            if (hash && !isGarbage && hash !== 'splash' && hash !== 'login') {
+            if (hash && !isGarbage && hash !== 'splash' && hash !== 'login' && hash !== 'room') {
                 if (window.handleRouting) window.handleRouting();
                 else showScreen(hash);
             } else {

@@ -31,4 +31,26 @@
 
     <!-- Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Immediate Theme Init to prevent "Flash of Default Color"
+        (function () {
+            try {
+                var tg = window.Telegram.WebApp;
+                if (!tg) return;
+
+                // 1. Background Color
+                var settings = JSON.parse(localStorage.getItem('pgb_settings') || '{}');
+                var isDark = settings.darkMode || false;
+                var bg = isDark ? '#0f172a' : '#F8F9FD';
+                if (tg.setBackgroundColor) tg.setBackgroundColor(bg);
+
+                // 2. Header Color (Accent)
+                var accent = localStorage.getItem('pgb_accent_color') || '#6C5CE7';
+                if (tg.setHeaderColor) tg.setHeaderColor(accent);
+
+                // 3. Expand immediately
+                if (tg.expand) tg.expand();
+            } catch (e) { console.error('Early TG Init failed', e); }
+        })();
+    </script>
 </head>

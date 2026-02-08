@@ -17,7 +17,7 @@
 
         <!-- Bottom Action Button (Navbar style) -->
         <div class="position-absolute bottom-0 start-0 end-0 p-4 border-top"
-            style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;">
+            style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; border-bottom-left-radius: 44px; border-bottom-right-radius: 44px; overflow: hidden;">
             <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg" id="btn-try-game-now"
                 style="border: none; font-size: 16px; background: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%); letter-spacing: 0.5px;">
                 ПОПРОБОВАТЬ СЕЙЧАС
@@ -25,62 +25,102 @@
         </div>
     </div>
 
-    <div class="h-100"
-        style="overflow-y: auto; overflow-x: hidden; width: 100%; -webkit-overflow-scrolling: touch; z-index: 1;">
-        <div class="game-detail-wrapper"
-            style="background: #fff; padding-bottom: 200px; width: 100%; overflow-x: hidden;">
-            <!-- Cinematic Hero -->
-            <div class="game-detail-hero position-relative"
-                style="height: auto; aspect-ratio: 16/11; min-height: 300px; overflow:hidden; background: #000;">
-                <div id="game-detail-image-container" class="hero-image-wrap h-100 w-100 position-absolute"
-                    style="top:0; left:0; right:0; z-index:1; margin:0 auto;">
-                    <!-- Content injected via JS -->
+    <!-- 1. FIXED HERO IN BACKGROUND (Stays put) -->
+    <div id="game-detail-hero-fixed" class="position-absolute"
+        style="top: 0; left: 0; width: 100%; height: 50vh; z-index: 0; overflow: hidden;">
+        <div id="game-detail-image-container" class="w-100 h-100">
+            <!-- Content injected via JS -->
+        </div>
+        <!-- Gradient Overlay for readability if needed, usually image has it -->
+    </div>
+
+    <!-- 2. SCROLLABLE LAYER (Scrolls over the hero) -->
+    <div class="h-100 position-relative"
+        style="overflow-y: auto; overflow-x: hidden; width: 100%; -webkit-overflow-scrolling: touch; z-index: 10;">
+
+        <!-- Transparent Spacer to reveal Hero -->
+        <div style="height: 42vh; width: 100%; pointer-events: none;"></div>
+
+        <!-- Content Card -->
+        <div class="game-detail-wrapper position-relative bg-white px-4 pt-4 pb-5 shadow-lg"
+            style="min-height: 100vh; border-top-left-radius: 32px; border-top-right-radius: 32px;">
+
+            <!-- HEADER ROW: Icon + Title + SVG Like -->
+            <div class="d-flex align-items-center mb-4">
+                <!-- Icon -->
+                <div id="game-detail-icon-wrap"
+                    class="rounded-4 d-flex align-items-center justify-content-center me-3 shadow-sm"
+                    style="width: 64px; height: 64px; background: #666; color: white; font-size: 28px; flex-shrink: 0;">
+                    <i id="game-detail-icon" class="bi bi-controller"></i>
+                </div>
+
+                <!-- Title & Subtitle -->
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <h1 id="game-detail-header-title" class="fw-bold mb-1 text-dark"
+                        style="font-size: 22px; line-height: 1.2; letter-spacing: -0.5px;">
+                        Название
+                    </h1>
+                    <div id="game-detail-subtitle" class="text-muted small fw-medium text-truncate">
+                        Вечеринки • Для компании
+                    </div>
+                </div>
+
+                <!-- SVG Like Button -->
+                <div id="game-detail-like-btn" class="like-btn-svg-wrapper"
+                    style="width: 50px; height: 50px; cursor: pointer; margin-right: -10px;">
+                    <!-- SVG Injected via JS or Static -->
+                    <svg width="100%" height="100%" viewBox="0 0 500 500" style="overflow: visible;">
+                        <g transform="scale(0.9) translate(30 30)">
+                            <!-- Main Hearts -->
+                            <path class="main-heart"
+                                d="M211 226c9-9 21-14 34-14 29 0 50 26 50 54 0 34-53 77-78 95-5 3-7 3-12 0-25-18-78-61-78-95 0-28 21-54 50-54 13 0 25 5 34 14z"
+                                style="fill: none; stroke: #ff3b30; stroke-width: 30; transition: all 0.3s; transform-origin: center;" />
+                            <path class="fill-heart"
+                                d="M211 226c9-9 21-14 34-14 29 0 50 26 50 54 0 34-53 77-78 95-5 3-7 3-12 0-25-18-78-61-78-95 0-28 21-54 50-54 13 0 25 5 34 14z"
+                                style="fill: #ff3b30; transform: scale(0); transform-origin: center; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);" />
+
+                        </g>
+                    </svg>
                 </div>
             </div>
 
-            <!-- Content -->
-            <div class="p-4 bg-white">
-                <div class="d-flex overflow-auto pb-4 mb-4 border-bottom no-scrollbar" style="gap: 24px;">
-                    <div class="flex-shrink-0 text-center"
-                        style="min-width: 80px; border-right: 1px solid #f2f2f7; padding-right: 24px;">
-                        <div class="text-muted small mb-1"
-                            style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
-                            Игроков
-                        </div>
-                        <div class="fw-bold" id="stat-players" style="font-size: 17px; color: var(--text-main);">-
-                        </div>
-                    </div>
-                    <div class="flex-shrink-0 text-center"
-                        style="min-width: 80px; border-right: 1px solid #f2f2f7; padding-right: 24px;">
-                        <div class="text-muted small mb-1"
-                            style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Время
-                        </div>
-                        <div class="fw-bold" id="stat-time" style="font-size: 17px; color: var(--text-main);">-</div>
-                    </div>
-                    <div class="flex-shrink-0 text-center" style="min-width: 80px;">
-                        <div class="text-muted small mb-1"
-                            style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
-                            Сложность
-                        </div>
-                        <div class="fw-bold" id="stat-difficulty" style="font-size: 17px; color: var(--text-main);">-
-                        </div>
-                    </div>
+            <!-- STATS ROW (Fixed grid, no scroll) -->
+            <div class="d-flex justify-content-between align-items-center py-3 mb-4 border-top border-bottom">
+                <div class="text-center flex-grow-1">
+                    <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
+                        Игроков</div>
+                    <div class="fw-bold text-dark" id="stat-players" style="font-size: 16px;">-</div>
                 </div>
-
-                <div id="game-detail-lore" class="mb-5"
-                    style="line-height: 1.6; font-size: 17px; font-weight: 400; color: var(--text-main) !important;">
+                <div class="vr bg-secondary opacity-25"></div>
+                <div class="text-center flex-grow-1">
+                    <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
+                        Время</div>
+                    <div class="fw-bold text-dark" id="stat-time" style="font-size: 16px;">-</div>
                 </div>
-
-                <div class="mb-5">
-                    <h2 class="fw-bold mb-4" style="font-size: 22px; letter-spacing: -0.5px; color: var(--text-main);">
-                        Как
-                        играть?
-                    </h2>
-                    <div id="game-detail-rules" class="rules-list"></div>
+                <div class="vr bg-secondary opacity-25"></div>
+                <div class="text-center flex-grow-1">
+                    <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
+                        Сложность</div>
+                    <div class="fw-bold text-dark" id="stat-difficulty" style="font-size: 16px;">-</div>
                 </div>
-
-                <div id="game-detail-demo-area" class="mb-5"></div>
             </div>
+
+            <div id="game-detail-lore" class="mb-5"
+                style="line-height: 1.6; font-size: 17px; font-weight: 400; color: var(--text-main) !important;">
+            </div>
+
+            <div class="mb-5">
+                <h2 class="fw-bold mb-4" style="font-size: 22px; letter-spacing: -0.5px; color: var(--text-main);">
+                    Как
+                    играть?
+                </h2>
+                <div id="game-detail-rules" class="rules-list"></div>
+            </div>
+
+            <div id="game-detail-demo-area" class="mb-5"></div>
+
+            <!-- Spacer for Fixed Bottom Bar -->
+            <div style="height: 120px;"></div>
         </div>
     </div> <!-- /h-100 scroller layer -->
 </div> <!-- /screen-game-detail -->

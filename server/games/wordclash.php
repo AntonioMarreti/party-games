@@ -250,10 +250,163 @@ function handleGameAction($pdo, $room, $user, $postData)
         }
 
         updateGameState($room['id'], $state);
+
+        // Trigger Bots
+        processBots($pdo, $room['id'], $state);
+
         return ['status' => 'ok'];
     }
 
     return ['status' => 'ok'];
+}
+
+function processBots($pdo, $roomId, &$state)
+{
+    // Only process in 'playing' phase
+    if (($state['phase'] ?? '') !== 'playing')
+        return;
+
+    require_once __DIR__ . '/../lib/AI/Bot/BotManager.php';
+
+    // 1. Get Bots
+    $stmt = $pdo->prepare("SELECT u.* FROM room_players rp JOIN users u ON rp.user_id = u.id WHERE rp.room_id = ? AND u.is_bot = 1");
+    $stmt->execute([$roomId]);
+    $bots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($bots))
+        return;
+
+    $secretWord = $state['secret_word'];
+    $wordLength = $state['word_length'] ?? 5;
+    $dictionary = loadWords($wordLength);
+    $updated = false;
+
+    foreach ($bots as $bot) {
+        $botId = $bot['id'];
+
+        // Check if bot already won this round
+        if (($state['winner_id'] ?? null) == $botId)
+            continue;
+
+        // Check last move time
+        $lastMoveTime = 0;
+        if (isset($state['history'])) {
+            // Iterate backwards to find last move by this bot
+            // (Optimize this if history gets huge, but for Wordle it's usually < 30 items)
+            foreach (array_reverse($state['history']) as $entry) {
+                if ($entry['user_id'] == $botId) {
+                    $lastMoveTime = $entry['timestamp'];
+                    break;
+                }
+            }
+        }
+
+        // Determine Speed (Difficulty based)
+        // Easy: 5-8s, Hard: 3-5s
+        $brain = BotManager::getBot($botId, $bot['custom_name'] ?? $bot['first_name']);
+        $diff = $brain->getPersona()->difficulty;
+        $delay = rand(3, 8) - ($diff * 0.3);
+        if ($delay < 2)
+            $delay = 2;
+
+        if (time() - $lastMoveTime < $delay)
+            continue;
+
+        // --- MAKE MOVE ---
+
+        // Filter history for THIS bot to pass to Solver
+        $botHistory = [];
+        foreach ($state['history'] as $entry) {
+            if ($entry['user_id'] == $botId) {
+                $botHistory[] = $entry;
+            }
+        }
+
+        $guess = $brain->playWordClash($secretWord, $botHistory, $dictionary);
+
+        // Apply Guess (Duplicate logic from handleGameAction, formatted for function reuse if we refactored, but inline for now)
+        // 1. Pattern
+        $secretArr = mb_str_split($secretWord);
+        $guessArr = mb_str_split($guess);
+        $length = count($secretArr);
+
+        $pattern = array_fill(0, $length, 0);
+        $secretUsed = array_fill(0, $length, false);
+        $guessUsed = array_fill(0, $length, false);
+
+        // Pass 1: Greens
+        for ($i = 0; $i < $length; $i++) {
+            if ($guessArr[$i] === $secretArr[$i]) {
+                $pattern[$i] = 2;
+                $secretUsed[$i] = true;
+                $guessUsed[$i] = true;
+            }
+        }
+        // Pass 2: Yellows
+        for ($i = 0; $i < $length; $i++) {
+            if ($guessUsed[$i])
+                continue;
+            for ($j = 0; $j < $length; $j++) {
+                if (!$secretUsed[$j] && $guessArr[$i] === $secretArr[$j]) {
+                    $pattern[$i] = 1;
+                    $secretUsed[$j] = true;
+                    break;
+                }
+            }
+        }
+
+        // 2. Score
+        $points = 0;
+        foreach ($pattern as $p) {
+            if ($p === 2)
+                $points += 2;
+            elseif ($p === 1)
+                $points += 1;
+        }
+
+        if (!isset($state['scores'][$botId]))
+            $state['scores'][$botId] = 0;
+        $state['scores'][$botId] += $points;
+
+        $entry = [
+            'user_id' => $botId,
+            'word' => $guess,
+            'pattern' => $pattern,
+            'score_delta' => $points,
+            'timestamp' => time()
+        ];
+        $state['history'][] = $entry;
+        $updated = true;
+
+        // 3. Check Win
+        if ($guess === $secretWord) {
+            $state['winner_id'] = $botId;
+            $state['scores'][$botId] += 10;
+
+            // End Round logic
+            $isFinal = ($state['round_count'] !== null && $state['current_round'] >= $state['round_count']);
+            if ($isFinal) {
+                $state['phase'] = 'game_over';
+                $state['game_over'] = true;
+            } else {
+                $state['phase'] = 'intermission';
+                $state['game_over'] = false;
+            }
+            break; // Stop processing other bots if someone won
+        }
+    }
+
+    if ($updated) {
+        updateGameState($roomId, $state);
+
+        // Chat Chance
+        $chatData = BotManager::maybeChat($pdo, $roomId, []);
+        if ($chatData) {
+            $payload = json_encode(['text' => $chatData['message']]);
+            $pdo->prepare("INSERT INTO room_events (room_id, user_id, type, payload) VALUES (?, ?, 'chat', ?)")
+                ->execute([$roomId, $chatData['bot_id'], $payload]);
+        }
+    }
 }
 
 // Helper for splitting multibyte string

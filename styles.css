@@ -20,3 +20,74 @@
 @import 'css/modules/modals.css';
 @import 'css/modules/blokus.css';// Auto-bump test
 // Final automation verification
+
+/* Bot Chat Bubbles */
+.floating-chat-bubble {
+    position: absolute;
+    z-index: 9999;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px; /* Speech bubble tail effect */
+    padding: 8px 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 250px;
+    pointer-events: none;
+}
+
+.floating-chat-bubble.fading-out {
+    animation: fadeOutUp 0.5s forwards;
+}
+
+.chat-bubble-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.chat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.chat-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-name {
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+.chat-message {
+    font-size: 13px;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.5) translateY(20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes fadeOutUp {
+    to { transform: translateY(-20px); opacity: 0; }
+}

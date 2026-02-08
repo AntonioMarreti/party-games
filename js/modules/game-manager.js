@@ -16,7 +16,6 @@ async function loadGameScript(gameType) {
         return Promise.resolve();
     }
 
-    console.log(`[GameManager] Loading script for: ${gameType}`);
 
     // Config: Define complexity of games
     // "complex" means it's a folder with index.js + styles
@@ -48,12 +47,10 @@ async function loadGameScript(gameType) {
         // But let's stick to standard loading first.
 
         script.onload = () => {
-            console.log(`[GameManager] Loaded ${gameType}`);
             loadedGameScripts.add(gameType);
             resolve();
         };
         script.onerror = (e) => {
-            console.error(`[GameManager] Failed to load ${gameType}`, e);
             reject(e);
         };
         document.body.appendChild(script);
@@ -132,14 +129,28 @@ const GameManager = {
 
             const payload = JSON.parse(ev.payload || '{}');
 
-            // Special: Audio Pings (Global sound sync with delay compensation)
+            // Special: Audio Pings
             if (ev.type === 'audio_ping' || ev.type === 'catastrophe_audio') {
                 this.handleAudioPing(ev, payload);
                 return;
             }
 
+            // Special: Chat / Text Bubbles
+            if (ev.type === 'chat') {
+                const text = payload.text || '...';
+                const players = window.currentGamePlayers || [];
+                const player = players.find(p => p.id == ev.user_id);
+                const name = player ? (player.custom_name || player.first_name) : 'Bot';
+                const avatar = player ? (player.photo_url || player.avatar_emoji) : '🤖';
+
+                this.showFloatingText(text, { name, avatar });
+                return;
+            }
+
             const emoji = payload.emoji || '👍';
             const count = payload.count || 1;
+
+            // ... (rest of emoji logic) ...
 
             // Find player info for attribution
             const players = window.currentGamePlayers || [];
@@ -169,6 +180,7 @@ const GameManager = {
     },
 
     handleAudioPing(ev, payload) {
+        // ... (existing code) ...
         const sound = payload.sound || payload.emoji;
         const playAt = payload.playAt; // Shared target timestamp (ms)
         const serverTimeOffset = window.serverTimeOffset || 0;
@@ -182,14 +194,55 @@ const GameManager = {
                     setTimeout(() => window.audioManager.play(sound), wait);
                     console.log(`[Sync] Scheduled ${sound} in ${Math.round(wait)}ms`);
                 } else if (wait > -3000) {
-                    // Late by less than 3s: play now
                     window.audioManager.play(sound);
-                    console.log(`[Sync] Playing ${sound} immediately(Late by ${Math.round(-wait)}ms)`);
                 }
             } else {
                 window.audioManager.play(sound);
             }
         }
+    },
+
+    showFloatingText(text, producer) {
+        const el = document.createElement('div');
+        el.className = 'floating-chat-bubble';
+
+        let avatarHtml = '';
+        const isUrl = producer.avatar && (producer.avatar.startsWith('http') || producer.avatar.includes('/'));
+        if (isUrl) {
+            avatarHtml = `<img src="${producer.avatar}" class="reaction-avatar-img">`;
+        } else {
+            avatarHtml = producer.avatar || '👤';
+        }
+
+        el.innerHTML = `
+            <div class="chat-bubble-content">
+                <div class="chat-avatar">${avatarHtml}</div>
+                <div class="chat-text">
+                    <div class="chat-name">${producer.name}</div>
+                    <div class="chat-message">${text}</div>
+                </div>
+            </div>
+        `;
+
+        // Style
+        // Random position near top/center
+        const startX = 10 + Math.random() * 60; // 10% to 70% left
+        const startY = 10 + Math.random() * 20; // 10% to 30% top
+
+        el.style.left = startX + '%';
+        el.style.top = startY + '%';
+
+        const container = document.querySelector('.device-wrapper') || document.body;
+        container.appendChild(el);
+
+        // Sound
+        if (window.audioManager) window.audioManager.play('pop');
+
+        // Cleanup
+        setTimeout(() => {
+            el.classList.add('fading-out');
+            setTimeout(() => el.remove(), 500);
+        }, 5000); // Show for 5 seconds
     },
 
     /**
@@ -494,7 +547,12 @@ function renderPopularGames() {
     if (!list) return;
 
     list.innerHTML = '';
-    if (!window.AVAILABLE_GAMES) return;
+    if (!window.AVAILABLE_GAMES) {
+        console.warn('renderPopularGames: No games available');
+        return;
+    }
+
+    console.log('renderPopularGames: Favorites:', window.userFavorites);
 
     window.AVAILABLE_GAMES.forEach(game => {
         const card = document.createElement('div');
@@ -504,11 +562,19 @@ function renderPopularGames() {
         const iconColor = game.color || '#6c757d';
         const gradient = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
 
+        // Favorites Check
+        const isLiked = window.userFavorites && window.userFavorites.includes(game.id);
+        const heartClass = isLiked ? 'bi-heart-fill text-danger' : 'bi-heart';
+
         card.innerHTML = `
             <div class="mini-icon-box" style="background: ${iconColor}; background-image: ${gradient}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                 <i class="bi ${game.icon || 'bi-controller'}"></i>
             </div>
             <div class="mini-game-title">${game.name}</div>
+            <!-- Like Button (Floating) -->
+            <div class="position-absolute top-0 end-0 p-2" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)">
+                <i class="bi ${heartClass}" style="font-size:16px; color: ${isLiked ? '#dc3545' : 'rgba(0,0,0,0.3)'}"></i>
+            </div>
         `;
         list.appendChild(card);
     });
@@ -526,6 +592,8 @@ function openGameShowcase(gameId) {
     const heroImg = document.getElementById('game-detail-image-container');
     const iconWrap = document.getElementById('game-detail-icon-wrap');
     const icon = document.getElementById('game-detail-icon');
+    const subtitle = document.getElementById('game-detail-subtitle');
+    const likeBtn = document.getElementById('game-detail-like-btn');
 
     // Stats
     const statPlayers = document.getElementById('stat-players');
@@ -534,16 +602,47 @@ function openGameShowcase(gameId) {
 
     // Populate Data
     if (headerTitle) headerTitle.innerText = game.name;
+    if (subtitle) subtitle.innerText = game.category || 'Игры для компании';
     if (loreArea) loreArea.innerHTML = game.longDescription || game.description || 'Описание скоро появится!';
     if (icon) icon.className = `bi ${game.icon || 'bi-controller'}`;
     if (iconWrap) {
         const color = game.color || '#666';
         iconWrap.style.background = color;
         iconWrap.style.backgroundImage = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
-        iconWrap.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-        iconWrap.style.display = 'flex';
-        iconWrap.style.alignItems = 'center';
-        iconWrap.style.justifyContent = 'center';
+        iconWrap.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+    }
+
+    // Like Button Logic (Scalable SVG Animation)
+    if (likeBtn) {
+        const isLiked = window.userFavorites && window.userFavorites.includes(game.id);
+
+        // Initial State
+        if (isLiked) {
+            likeBtn.classList.add('active');
+        } else {
+            likeBtn.classList.remove('active');
+        }
+
+        likeBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (window.toggleGameLike) {
+                // Optimistic UI update for SVG
+                const isActive = likeBtn.classList.contains("active"); likeBtn.classList.add("animating"); setTimeout(() => likeBtn.classList.remove("animating"), 1000);
+
+                if (isActive) {
+                    likeBtn.classList.remove('active');
+                } else {
+                    likeBtn.classList.add('active');
+                }
+
+                window.toggleGameLike(game.id, likeBtn).catch((err) => {
+                    // Revert on error
+                    if (isActive) likeBtn.classList.add('active');
+                    else likeBtn.classList.remove('active');
+                });
+            } else {
+            }
+        };
     }
 
     // Populate Gallery
@@ -605,6 +704,9 @@ function openGameShowcase(gameId) {
         if (game.promoImage) {
             heroImg.innerHTML = `
                 <img src="${game.promoImage}?v=2326" class="h-100 w-100" style="object-fit: cover; object-position: center; display: block; border: none;">
+                <!-- Gradient Overlay for Header Readability -->
+                <div style="position:absolute; top:0; left:0; width:100%; height:120px; background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%); z-index: 1;"></div>
+                <!-- Bottom Gradient -->
                 <div style="position:absolute; bottom:0; left:0; width:100%; height:80px; background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%); z-index: 2;"></div>
             `;
         } else {
@@ -614,6 +716,7 @@ function openGameShowcase(gameId) {
                 </div>
             `;
         }
+
     }
 
     // Button Logic
