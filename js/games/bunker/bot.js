@@ -83,13 +83,42 @@ window.BunkerBot = {
             return null;
         }
 
-        // 2. Round Phase
-        if (state.phase === 'round') {
-            if (state.turn_phase === 'reveal') {
-                // Reveal a random closed card
+        // 2. Tie Reveal Phase (New)
+        if (state.phase === 'tie_reveal') {
+            // Check if I am a candidate
+            if (state.tie_candidates && state.tie_candidates.includes(String(player.id))) {
+                // Must reveal Fact or Luggage
                 var playerCards = state.players_cards[player.id];
                 if (!playerCards) return null;
 
+                var options = [];
+                if (playerCards['facts'] && !playerCards['facts'].revealed) options.push('facts');
+                if (playerCards['luggage'] && !playerCards['luggage'].revealed) options.push('luggage');
+
+                if (options.length > 0) {
+                    var choice = options[Math.floor(Math.random() * options.length)];
+                    return { type: 'reveal_card', data: { card_type: choice } };
+                }
+            }
+            return null;
+        }
+
+        // 3. Round Phase
+        if (state.phase === 'round') {
+            if (state.turn_phase === 'reveal') {
+                var playerCards = state.players_cards[player.id];
+                if (!playerCards) return null;
+
+                // Round 1 Logic: STRICTLY Profession
+                if (state.current_round === 1) {
+                    if (playerCards['professions'] && !playerCards['professions'].revealed) {
+                        return { type: 'reveal_card', data: { card_type: 'professions' } };
+                    }
+                    // Fallback: If profession somehow revealed, do nothing or random? 
+                    // Let's fallback to random to avoid getting stuck.
+                }
+
+                // Random reveal for other rounds
                 var closedKeys = [];
                 // Standard keys
                 ['professions', 'biology', 'health', 'hobby', 'advantages', 'disadvantages', 'luggage', 'facts', 'condition'].forEach(function (k) {

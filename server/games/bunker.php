@@ -206,18 +206,33 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         if ($state['phase'] === 'voting' || $state['phase'] === 'tie_voting') {
             $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
-            $candidates = ($state['phase'] === 'tie_voting') ? ($state['tie_candidates'] ?? []) : $aliveIds;
+            $candidates = ($state['phase'] === 'tie_voting')
+                ? ($state['tie_candidates'] ?? [])
+                : $aliveIds;
+
+            // Cast candidates to strings for consistent comparison
+            $candidatesStr = array_map('strval', $candidates);
+
             $botsChanged = false;
             foreach ($aliveIds as $pid) {
                 if (isset($state['votes'][$pid]))
                     continue;
+
+                $pidStr = (string) $pid;
+
                 $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
-                $stmt->execute([$room['id'], $pid]);
+                $stmt->execute([$room['id'], $pidStr]);
                 if ($stmt->fetchColumn()) {
-                    $targets = array_diff($candidates, [$pid]);
+                    // Filter out self from candidates
+                    $targets = array_diff($candidatesStr, [$pidStr]);
+
                     if (!empty($targets)) {
-                        $state['votes'][$pid] = $targets[array_rand($targets)];
+                        $voteTarget = $targets[array_rand($targets)];
+                        $state['votes'][$pid] = $voteTarget;
                         $botsChanged = true;
+                        error_log("Bot Voted: Room {$room['id']}, Bot {$pidStr} -> Target {$voteTarget} (Phase: {$state['phase']})");
+                    } else {
+                        error_log("Bot No Targets: Room {$room['id']}, Bot {$pidStr} (Phase: {$state['phase']})");
                     }
                 }
             }
@@ -229,6 +244,61 @@ function handleGameAction($pdo, $room, $user, $postData)
                 return ['status' => 'ok', 'action' => 'bot_voted'];
             }
         }
+
+        if ($state['phase'] === 'tie_reveal') {
+            $candidates = $state['tie_candidates'] ?? [];
+            $botsRevealed = false;
+
+            foreach ($state['tie_candidates'] as $cid) {
+                $cidStr = (string) $cid;
+
+                // Check if bot
+                $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+                $stmt->execute([$room['id'], $cidStr]);
+                if (!$stmt->fetchColumn())
+                    continue;
+
+                // LOGGING
+                error_log("Bot Check Tie Reveal: Room {$room['id']}, Bot {$cidStr}");
+
+                // Check if already revealed
+                $cards = $state['players_cards'][$cidStr] ?? null;
+                if (!$cards)
+                    continue;
+
+                $revealedSomething = false;
+                if (($cards['facts']['revealed'] ?? false) || ($cards['luggage']['revealed'] ?? false)) {
+                    $revealedSomething = true;
+                }
+
+
+                if (!$revealedSomething) {
+                    // Reveal Random
+                    $opts = [];
+                    if (!($cards['facts']['revealed'] ?? false))
+                        $opts[] = 'facts';
+                    if (!($cards['luggage']['revealed'] ?? false))
+                        $opts[] = 'luggage';
+
+                    if (!empty($opts)) {
+                        $pick = $opts[array_rand($opts)];
+                        $state['players_cards'][$cid][$pick]['revealed'] = true;
+                        $state['tie_revealed_count']++;
+                        $botsRevealed = true;
+                    }
+                }
+            }
+
+            if ($botsRevealed) {
+                if ($state['tie_revealed_count'] >= count($state['tie_candidates'])) {
+                    $state['phase'] = 'tie_voting';
+                    $state['votes'] = [];
+                }
+                updateGameState($room['id'], $state);
+                return ['status' => 'ok', 'action' => 'bot_tie_reveal'];
+            }
+        }
+
         return ['status' => 'ok'];
     }
 
@@ -240,7 +310,19 @@ function handleGameAction($pdo, $room, $user, $postData)
             if (!in_array($cardType, ['facts', 'luggage']))
                 return ['status' => 'error', 'message' => 'Только Факт или Багаж'];
             $state['players_cards'][$userId][$cardType]['revealed'] = true;
-            $state['tie_revealed_count']++;
+
+            // Recalculate how many candidates have revealed at least one card
+            $revealedCount = 0;
+            foreach ($state['tie_candidates'] as $cid) {
+                $cid = (string) $cid;
+                $pCards = $state['players_cards'][$cid] ?? null;
+                // Check if EITHER fact OR luggage is revealed
+                if ($pCards && (($pCards['facts']['revealed'] ?? false) || ($pCards['luggage']['revealed'] ?? false))) {
+                    $revealedCount++;
+                }
+            }
+            $state['tie_revealed_count'] = $revealedCount;
+
             if ($state['tie_revealed_count'] >= count($state['tie_candidates'])) {
                 $state['phase'] = 'tie_voting';
                 $state['votes'] = [];
@@ -256,10 +338,54 @@ function handleGameAction($pdo, $room, $user, $postData)
             $state['players_cards'][$userId][$cardType]['revealed'] = true;
             $state['turn_phase'] = 'discussion';
             $state['timer_start'] = time();
-            $state['history'][] = ['type' => 'reveal', 'user_id' => $userId, 'card_type' => $cardType, 'text' => $state['players_cards'][$userId][$cardType]['text'] ?? '...'];
+
+            // Fix for Condition cards which have data.title instead of text
+            $cardData = $state['players_cards'][$userId][$cardType];
+            $text = $cardData['text'] ?? ($cardData['data']['title'] ?? '...');
+
+            $state['history'][] = ['type' => 'reveal', 'user_id' => $userId, 'card_type' => $cardType, 'text' => $text];
             updateGameState($room['id'], $state);
             return ['status' => 'ok'];
         }
+    }
+
+    if ($type === 'skip_tie_reveal') {
+        if (!$room['is_host'])
+            return ['status' => 'error'];
+        if ($state['phase'] !== 'tie_reveal')
+            return ['status' => 'error'];
+
+        foreach ($state['tie_candidates'] as $cid) {
+            $cards = $state['players_cards'][$cid];
+            // Check if already revealed pertinent card?
+            // Logic: we need to find if they revealed fact or luggage.
+            // Simplified: just check if they have unrevealed options and reveal one.
+            // Or better: ensure everyone has 1 revealed from set.
+
+            $revealedSomething = false;
+            if (($cards['facts']['revealed'] ?? false) || ($cards['luggage']['revealed'] ?? false)) {
+                $revealedSomething = true;
+            }
+
+            if (!$revealedSomething) {
+                // Force reveal
+                $opts = [];
+                if (!($cards['facts']['revealed'] ?? false))
+                    $opts[] = 'facts';
+                if (!($cards['luggage']['revealed'] ?? false))
+                    $opts[] = 'luggage';
+
+                if (!empty($opts)) {
+                    $pick = $opts[array_rand($opts)];
+                    $state['players_cards'][$cid][$pick]['revealed'] = true;
+                }
+            }
+        }
+
+        $state['phase'] = 'tie_voting';
+        $state['votes'] = [];
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
     }
 
     if ($type === 'end_turn') {
@@ -294,6 +420,21 @@ function handleGameAction($pdo, $room, $user, $postData)
             }
         }
         processVotingResults($state, $aliveIds);
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    if ($type === 'next_phase') {
+        if (!$room['is_host'])
+            return ['status' => 'error'];
+
+        $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
+
+        // Check if game over (win condition for survivors?)
+        // Usually bunker lasts 5 rounds.
+        // goToNextRound handles round increment and checks < 5.
+
+        goToNextRound($state, $aliveIds);
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
@@ -406,6 +547,40 @@ function handleGameAction($pdo, $room, $user, $postData)
         return ['status' => 'ok'];
     }
 
+    if ($type === 'vote_query_answer') {
+        $answer = $postData['answer']; // 'yes' or 'no'
+        if ($state['phase'] !== 'vote_query')
+            return ['status' => 'error'];
+        if (isset($state['vote_query_result'][$userId]))
+            return ['status' => 'error', 'message' => 'Уже голосовали'];
+
+        $state['vote_query_result'][$userId] = $answer;
+
+        // Check if all alive players voted
+        $aliveIds = getAliveIds($pdo, $room['id'], $state['kicked_players'] ?? []);
+        if (count($state['vote_query_result']) >= count($aliveIds)) {
+            // Tally results
+            $yes = 0;
+            $no = 0;
+            foreach ($state['vote_query_result'] as $ans) {
+                if ($ans === 'yes')
+                    $yes++;
+                else
+                    $no++;
+            }
+
+            if ($yes > $no) {
+                // Proceed to Kick Voting
+                startVotingPhase($state);
+            } else {
+                // Skip Voting -> Next Round
+                goToNextRound($state, $aliveIds);
+            }
+        }
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
     return ['status' => 'ok'];
 }
 
@@ -449,34 +624,13 @@ function finishKick(&$state, $leaderId, $counts, $wasTie, $isRandom = false)
     $state['phase'] = 'vote_results';
 }
 
-function goToNextRound(&$state, $aliveIds)
-{
-    if ($state['current_round'] < 5) {
-        $state['current_round']++;
-        $state['phase'] = 'round';
-        $state['votes'] = [];
-        $state['vote_results'] = [];
-        $queue = array_values($aliveIds);
-        shuffle($queue);
-        $state['turn_queue'] = $queue;
-        $state['active_player_index'] = 0;
-        $state['current_player_id'] = $queue[0];
-        $state['turn_phase'] = 'reveal';
-        if (isset($state['bunker_features'][$state['current_round']])) {
-            $state['revealed_features'][] = $state['bunker_features'][$state['current_round']];
-        }
-    } else {
-        $state['phase'] = 'outro';
-        resolveThreats($state);
-    }
-}
-
 function resolveThreats(&$state)
 {
     $results = [];
     $survivorsIds = array_keys(array_filter($state['players_cards'], function ($k) use ($state) {
         return !in_array($k, $state['kicked_players']);
     }, ARRAY_FILTER_USE_KEY));
+
     $groupTags = [];
     foreach ($survivorsIds as $uid) {
         foreach ($state['players_cards'][$uid] as $v) {
@@ -492,6 +646,7 @@ function resolveThreats(&$state)
                 $groupTags[mb_strtolower($t)] = true;
         }
     }
+
     foreach (($state['threats'] ?? []) as $threat) {
         $reqs = $threat['requirements'] ?? [];
         $matches = 0;
@@ -504,17 +659,55 @@ function resolveThreats(&$state)
                 $matchedTags[] = $cleanReq;
             }
         }
+
         $chance = 40 + (count($survivorsIds) * 5) + ($matches * 20);
         $chance = max(5, min(95, $chance));
         $success = rand(0, 100) < $chance;
+
         $results[] = [
-            'title' => $threat['title'],
-            'desc' => $threat['desc'],
+            'title' => $threat['text'] ?? ($threat['title'] ?? 'Неизвестная угроза'),
+            'desc' => $threat['desc'] ?? '',
             'success' => $success,
             'result_text' => ($success ? "Группа справилась." : "Не хватило ресурсов.") . ($matches > 0 ? " (Использовано: " . implode(', ', $matchedTags) . ")" : ""),
             'chance' => $chance
         ];
     }
     $state['threat_results'] = $results;
+}
+
+function goToNextRound(&$state, $aliveIds)
+{
+    $survivorsCount = count($aliveIds);
+    $capacity = $state['bunker_places'];
+
+    if ($state['current_round'] < 5) {
+        $state['current_round']++;
+        $state['phase'] = 'round';
+        $state['votes'] = [];
+        $state['vote_results'] = [];
+        $queue = array_values($aliveIds);
+        shuffle($queue);
+        $state['turn_queue'] = $queue;
+        $state['active_player_index'] = 0;
+        $state['current_player_id'] = $queue[0];
+        $state['turn_phase'] = 'reveal';
+        if (isset($state['bunker_features'][$state['current_round'] - 1])) {
+            $state['revealed_features'][] = $state['bunker_features'][$state['current_round'] - 1];
+        }
+    } else {
+        // Round 5 reached. Check capacity.
+        if ($survivorsCount > $capacity) {
+            // Need to kick more people!
+            $state['phase'] = 'voting';
+            $state['phase_title'] = "Финальный отбор";
+            $state['votes'] = [];
+            $state['vote_results'] = [];
+            $state['current_player_id'] = null;
+            $state['timer_start'] = time();
+        } else {
+            $state['phase'] = 'outro';
+            resolveThreats($state);
+        }
+    }
 }
 ?>

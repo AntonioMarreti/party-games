@@ -57,8 +57,8 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false) {
     let isEmoji = false;
     let emojiVal = '';
 
-    // 1. Photo URL
-    if (user.photo_url && user.photo_url !== '🤖') {
+    // 1. Photo URL (Prioritize if valid URL)
+    if (user.photo_url && user.photo_url.includes('http')) {
         innerContent = `<img src="${user.photo_url}" style="${style}">`;
     }
     // 2. Custom Avatar

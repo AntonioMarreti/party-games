@@ -86,6 +86,74 @@ function action_generate_content($pdo, $currentUser, $params)
                 $prompt = "Дай подсказку к слову '$word', не называя его и однокоренные слова. Максимум 1 предложение.";
                 break;
 
+            case 'bunker_summary':
+                // --- SERVER-SIDE CACHING ---
+                $room = null;
+                if (function_exists('getRoom')) {
+                    $room = getRoom($currentUser['id']);
+                }
+
+                if ($room) {
+                    $state = json_decode($room['game_state'], true);
+                    if (isset($state['ai_summary'])) {
+                        echo json_encode(['status' => 'ok', 'data' => $state['ai_summary'], 'cached' => true]);
+                        return;
+                    }
+                }
+                // ---------------------------
+
+                $system = "Ты летописец постапокалиптического мира. Напиши краткий, атмосферный и выразительный эпилог для группы выживших в бункере. Будь серьезным или слегка ироничным (в зависимости от состава группы).";
+                $catastrophe = $data['catastrophe'] ?? 'Неизвестная катастрофа';
+                $players = $data['players'] ?? [];
+                $threats = $data['threats'] ?? [];
+                $capacity = $data['capacity'] ?? 0;
+
+                $survivorsText = "";
+                $kickedText = "";
+                $survivorsCount = 0;
+                foreach ($players as $p) {
+                    $txt = "- {$p['name']} ({$p['profession']}, здоровье: {$p['health']}, хобби: {$p['hobby']})";
+                    if (!empty($p['story']))
+                        $txt .= " [Итог: {$p['story']}]";
+
+                    if ($p['is_kicked']) {
+                        $kickedText .= $txt . "\n";
+                    } else {
+                        $survivorsText .= $txt . "\n";
+                        $survivorsCount++;
+                    }
+                }
+
+                $threatsText = "";
+                foreach ($threats as $t) {
+                    $threatsText .= "- {$t['title']}: " . ($t['success'] ? "Справились" : "Провал") . ". {$t['result_text']}\n";
+                }
+
+                $prompt = "### КАТАСТРОФА: $catastrophe
+                ### МЕСТ В БУНКЕРЕ: $capacity (Выжило: $survivorsCount)
+                
+                ### КТО ВНУТРИ (ТОЛЬКО ЭТИ ИМЕНА МОЖНО ИСПОЛЬЗОВАТЬ КАК ВЫЖИВШИХ):
+                $survivorsText
+                
+                ### КТО ОСТАЛСЯ СНАРУЖИ (ИЗГНАНЫ):
+                " . ($kickedText ?: "Никто\n") . "
+                
+                ### ИТОГИ УГРОЗ:
+                $threatsText
+                
+                ### ЗАДАНИЕ:
+                Напиши атмосферный эпилог (макс 800 символов), который подведет ИТОГ ИГРЫ. 
+                В центре истории — жизнь ВНУТРИ бункера, но обязательно вплети в повествование судьбу тех, кто остался СНАРУЖИ, и как их отсутствие или присутствие повлияло на финал.
+                
+                ### СТРОГИЕ ПРАВИЛА:
+                1. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать Markdown (никаких **, #, _, `). Только чистый текст.
+                2. Используй ТОЛЬКО реальные имена из списков.
+                3. Опиши быт и атмосферу внутри: как выжившие (имена из списка) справлялись с угрозами.
+                4. Упомяни изгнанных: к каким последствиям для тех, кто внутри, привело их отсутствие.
+                5. ФИНАЛЬНЫЙ ВЕРДИКТ: В самом конце (последним предложением) вынеси четкий вердикт: выжила ли группа в итоге или все погибли.
+                6. Тон: драматичный, живой, глубокий. Сделай так, чтобы игроки почувствовали вес своих решений.";
+                break;
+
             default:
                 echo json_encode(['status' => 'error', 'message' => 'Unknown type']);
                 return;
@@ -102,25 +170,35 @@ function action_generate_content($pdo, $currentUser, $params)
         if (isset($response['content'])) {
             $content = $response['content'];
 
+            // --- SAVE TO CACHE IF IT'S A BUNKER SUMMARY ---
+            if ($type === 'bunker_summary' && isset($room['id'])) {
+                $state = json_decode($room['game_state'], true);
+                $state['ai_summary'] = $content;
+                if (function_exists('updateGameState')) {
+                    updateGameState($room['id'], $state);
+                }
+            }
+            // ----------------------------------------------
+
             // Try to parse JSON if expected
-            if ($type !== 'word_hint') {
+            if ($type !== 'word_hint' && $type !== 'bunker_summary') {
                 if (preg_match('/```json(.*?)```/s', $content, $matches)) {
                     $content = trim($matches[1]);
                 }
 
                 $json = json_decode($content, true);
                 if ($json) {
-                    echo json_encode(['status' => 'ok', 'data' => $json]);
+                    echo json_encode(['status' => 'ok', 'data' => $json, 'debug_messages' => $messages]);
                     return;
                 }
             }
 
-            echo json_encode(['status' => 'ok', 'data' => $content]);
+            echo json_encode(['status' => 'ok', 'data' => $content, 'debug_messages' => $messages]);
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'API Error (No Content)', 'debug' => $response]);
+            echo json_encode(['status' => 'error', 'message' => 'API Error (No Content)', 'debug' => $response, 'debug_messages' => $messages]);
         }
 
     } catch (Exception $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage(), 'debug_messages' => $messages ?? []]);
     }
 }

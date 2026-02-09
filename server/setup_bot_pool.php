@@ -1,5 +1,5 @@
-<?php
 require_once 'config.php';
+require_once __DIR__ . '/lib/AI/Bot/BotPersona.php';
 
 // Bot Configuration
 // Ranges:
@@ -26,20 +26,22 @@ try {
 
         for ($i = 0; $i < 10; $i++) {
             $id = $cfg['start'] - $i; // -100, -101 ... -109
+            $persona = BotPersona::getPreset($cfg['persona']);
             $name = $cfg['name_prefix'] . " " . ($i + 1);
+            $photoUrl = $persona->photo_url;
 
             // Upsert Bot User
-            // We use ON DUPLICATE KEY UPDATE to ensure we just update existing ones if re-run
-            $sql = "INSERT INTO users (telegram_id, first_name, is_bot, photo_url, custom_name, is_hidden_in_leaderboard) 
-                    VALUES (:id, :name, 1, NULL, :name, 1)
+            $sql = "INSERT INTO users (id, telegram_id, first_name, is_bot, photo_url, custom_name, is_hidden_in_leaderboard) 
+                    VALUES (:id, :id, :name, 1, :photo, :name, 1)
                     ON DUPLICATE KEY UPDATE 
                         first_name = VALUES(first_name),
                         custom_name = VALUES(custom_name),
+                        photo_url = VALUES(photo_url),
                         is_bot = 1,
                         is_hidden_in_leaderboard = 1";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->execute(['id' => $id, 'name' => $name]);
+            $stmt->execute(['id' => $id, 'name' => $name, 'photo' => $photoUrl]);
         }
     }
 

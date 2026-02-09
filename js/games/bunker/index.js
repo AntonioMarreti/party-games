@@ -91,11 +91,10 @@ window.render_bunker = async function (res) {
                 wrapper.innerHTML = `<div class="alert alert-danger">Unknown phase: ${state.phase}</div>`;
         }
 
-        /* --- Bot Check moved to Server Tick ---
+        // Bot Check
         if (window.BunkerBot && res.is_host) {
             window.BunkerBot.check(state, res.players, true);
         }
-        */
     }
 };
 
@@ -229,108 +228,181 @@ window.toggleBunkerIntro = function () {
 };
 
 window.renderSetupScreen = function (wrapper, state, res) {
-    if (res.is_host == 1) {
-        wrapper.innerHTML = `
-            <div class="bunker-main-layout d-flex flex-column align-items-center justify-content-end px-4 pb-5 animate__animated animate__fadeIn" style="height: 100vh; position: relative;">
-                <div class="bunker-intro-gradient"></div>
+    // Safety check for catastrophe data
+    var catastrophe = state.catastrophe || {};
+    var title = catastrophe.title || 'Секретный сценарий';
+    var desc = catastrophe.desc || catastrophe.intro_text || 'Данные о катастрофе засекречены. Ожидайте брифинга.';
+    var duration = catastrophe.duration || '???';
+    var bgImg = window.getCatastropheImage(title);
+    var isHost = res.is_host == 1;
+
+    // Use a default tech/map background if specific catastrophe image isn't ready
+    var bgStyle = bgImg
+        ? `background: url('${bgImg}') no-repeat center center fixed; background-size: cover;`
+        : `background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);`;
+
+    var content = '';
+
+    if (isHost) {
+        content = `
+            <div style="z-index: 10; width: 100%; max-width: 500px;" class="animate__animated animate__fadeInUp">
                 
-                <div style="z-index: 10; width: 100%; max-width: 400px;" class="animate__animated animate__fadeInUp">
-                    <h1 class="display-4 text-white-shadow mb-2">☢️</h1>
-                    <h2 class="fw-bold mb-4 text-white-shadow" style="letter-spacing: 1px; text-transform: uppercase; font-size: 1.5rem;">Настройка Бункера</h2>
-                    
-                    <div class="card border-0 p-4 mb-4" 
-                         style="background: var(--bg-glass-strong); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: var(--border-glass) !important; border-radius: 32px;">
-                        
-                        <div class="form-check form-switch mb-4 d-flex justify-content-between align-items-center px-0">
-                            <label class="form-check-label fw-bold text-white opacity-90" for="modeHardcore" style="font-size: 1.1rem;">☠️ Хардкор (Beta)</label>
-                            <input class="form-check-input" type="checkbox" id="modeHardcore" style="width: 3.5em; height: 1.8em; cursor: pointer;">
-                        </div>
-                        
-                        <button class="btn-glass-primary w-100 rounded-pill py-3" onclick="window.startBunkerGame()">
-                            <span style="font-size: 1.2rem;">🚀 Начать выживание</span>
-                        </button>
+                <div class="glass-panel p-4 mb-4" style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-white text-dark shadow-sm">🚀 НАСТРОЙКА</span>
+                        <span class="text-white small fw-bold text-shadow"><i class="bi bi-clock"></i> ${duration}</span>
                     </div>
 
-                    <button class="btn btn-link text-white opacity-50 text-decoration-none small mb-4" onclick="window.bunkerFinish(event)">
-                        <i class="bi bi-arrow-left me-1"></i> Вернуться в лобби
+                    <h1 class="fw-bold text-white mb-3 text-shadow" style="font-size: 2rem; line-height: 1.2;">${title}</h1>
+                    
+                    <p class="text-white mb-4 text-shadow" style="line-height: 1.5; font-size: 1rem; opacity: 0.95;">
+                        ${desc}
+                    </p>
+
+                    ${catastrophe.survival_rate ? `
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between text-white small mb-1 fw-bold text-shadow">
+                            <span>Шанс выживания</span>
+                            <span>${Math.round(catastrophe.survival_rate * 100)}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                            <div class="progress-bar bg-${catastrophe.survival_rate < 0.3 ? 'danger' : (catastrophe.survival_rate > 0.7 ? 'success' : 'warning')}" 
+                                 role="progressbar" style="width: ${catastrophe.survival_rate * 100}%"></div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <hr class="border-white opacity-25 my-4">
+
+                    <div class="form-check form-switch mb-4 d-flex justify-content-between align-items-center px-0 clickable" onclick="document.getElementById('modeHardcore').click()">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-radioactive text-white me-2 fs-5 text-shadow"></i>
+                            <label class="form-check-label fw-bold text-white text-shadow" for="modeHardcore">Хардкор Режим</label>
+                        </div>
+                        <input class="form-check-input" type="checkbox" id="modeHardcore" style="width: 3em; height: 1.5em; cursor: pointer;">
+                    </div>
+                    
+                    <button class="btn btn-light w-100 rounded-pill py-3 fw-bold shadow-lg" 
+                            style="color: var(--primary-color); font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px;"
+                            onclick="window.startBunkerGame()">
+                        Начать игру
+                    </button>
+                </div>
+
+                <div class="text-center">
+                     <button class="btn btn-link text-white text-shadow text-decoration-none small" onclick="window.bunkerFinish(event)">
+                        <i class="bi bi-arrow-left me-1"></i> Вернуться
                     </button>
                 </div>
             </div>
         `;
     } else {
-        wrapper.innerHTML = `
-            <div class="bunker-main-layout d-flex flex-column align-items-center justify-content-center text-center px-4" style="height: 100vh;">
-                <div class="bunker-intro-gradient"></div>
-                <div style="z-index: 10;">
-                    <div class="spinner-border text-white mb-4" style="width: 3rem; height: 3rem; opacity: 0.5;"></div>
-                    <h2 class="fw-bold text-white text-white-shadow mb-2">Ожидание...</h2>
-                    <p class="text-white opacity-70 mb-5">Хост настраивает параметры Бункера</p>
-                    <button class="btn btn-glass-secondary rounded-pill px-5 py-2" onclick="window.bunkerFinish(event)">Покинуть</button>
+        content = `
+             <div style="z-index: 10; width: 100%; max-width: 500px; text-align: center;" class="animate__animated animate__fadeIn">
+                <div class="spinner-border text-white mb-4" style="width: 3rem; height: 3rem; opacity: 0.8;"></div>
+                <h2 class="fw-bold text-white mb-2 text-shadow">Ожидание...</h2>
+                <div class="glass-panel p-3 d-inline-block rounded-4 text-white mb-4 shadow-sm" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
+                    ${title}
                 </div>
-            </div>`;
+                <p class="text-white opacity-90 mb-5 text-shadow">Хост настраивает параметры...</p>
+                <button class="btn btn-outline-light rounded-pill px-5 py-2 btn-sm backdrop-blur" onclick="window.bunkerFinish(event)">Покинуть</button>
+            </div>
+        `;
     }
+
+    wrapper.innerHTML = `
+        <div class="bunker-main-layout d-flex flex-column align-items-center justify-content-center" 
+             style="height: 100vh; height: 100dvh; position: relative; overflow: hidden; ${bgStyle}">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 1;"></div>
+            ${content}
+        </div>
+    `;
 };
 
 window.renderIntro = function (wrapper, state, res) {
-    var catastrophe = state.catastrophe;
-    var bgImg = window.getCatastropheImage(catastrophe.title);
+    var catastrophe = state.catastrophe || {};
+    var title = catastrophe.title || 'Сценарий';
+    var intro_text = catastrophe.intro_text || 'Описание отсутствует.';
+    var duration = catastrophe.duration || '2 года';
+
+    var bgImg = window.getCatastropheImage(title);
 
     // Warm up the sound immediately
-    window.preloadCatastropheSound(catastrophe.title);
+    if (title) window.preloadCatastropheSound(title);
+
+    var bgStyle = bgImg
+        ? `background: url('${bgImg}') no-repeat center center; background-size: cover;`
+        : `background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);`;
 
     wrapper.innerHTML = `
-        <div class="bunker-main-layout d-flex flex-column align-items-center justify-content-end px-4 text-center animate__animated animate__fadeIn" style="height: 100vh; overflow: hidden; position: relative; padding-bottom: calc(40px + env(safe-area-inset-bottom));">
-             ${bgImg ? `
-                <div class="bunker-intro-overlay" style="background-image: url('${bgImg}')"></div>
-                <div class="bunker-intro-gradient"></div>
-             ` : `
-                <div class="bunker-intro-gradient" style="background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-dark) 100%);"></div>
-             `}
+        <div class="bunker-main-layout d-flex flex-column align-items-center justify-content-end animate__animated animate__fadeIn" 
+             style="height: 100vh; height: 100dvh; overflow: hidden; position: relative; padding-bottom: calc(40px + env(safe-area-inset-bottom)); ${bgStyle}">
+             
+             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 1;"></div>
 
              <div style="z-index: 10; width: 100%; max-width: 450px;" class="animate__animated animate__fadeInUp">
                 <div class="cursor-pointer mb-2 d-flex align-items-center justify-content-center p-2">
                     ${res.is_host == 1 ? `
-                    <div class="me-3 p-2" onclick="window.playCatastropheIntroSound('${catastrophe.title.replace(/'/g, "\\'")}', true)">
-                        <i class="bi bi-volume-up-fill text-white-shadow animate__animated bunker-intro-audio-icon" style="font-size: 1.5rem; opacity: 0.8;"></i>
+                    <div class="me-3 p-2" onclick="window.playCatastropheIntroSound('${title.replace(/'/g, "\\'")}', true)">
+                        <i class="bi bi-volume-up-fill text-white animate__animated bunker-intro-audio-icon text-shadow" style="font-size: 1.5rem; opacity: 0.9;"></i>
                     </div>
                     ` : ''}
                     
                     <div onclick="window.toggleBunkerIntro()" class="d-flex align-items-center">
-                        <h2 class="fw-bold mb-0 d-inline-block text-white-shadow" style="font-size: 1.5rem; letter-spacing: 3px; text-transform: uppercase; opacity: 0.9;">КАТАСТРОФА</h2>
-                        <i class="bi ${window.bunkerIntroCollapsed ? 'bi-chevron-compact-up' : 'bi-chevron-compact-down'} text-white-shadow ms-1 bunker-intro-toggle-icon" style="font-size: 1.5rem; vertical-align: middle;"></i>
+                        <h2 class="fw-bold mb-0 d-inline-block text-white text-shadow" style="font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; opacity: 1;">КАТАСТРОФА</h2>
+                        <i class="bi ${window.bunkerIntroCollapsed ? 'bi-chevron-compact-up' : 'bi-chevron-compact-down'} text-white ms-2 bunker-intro-toggle-icon text-shadow" style="font-size: 1.5rem; vertical-align: middle;"></i>
                     </div>
                 </div>
                 
                 <div class="bunker-intro-info-block ${window.bunkerIntroCollapsed ? 'collapsed' : ''}">
-                    <div class="card border-0 shadow-lg p-3 mb-3 rounded-4 w-100" 
-                         style="background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: var(--border-glass) !important;">
+                    <div class="card border-0 shadow-lg p-4 mb-3 rounded-4 w-100" 
+                         style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px;">
                         
-                        <h3 class="fw-bold mb-2 text-white" style="font-size: 1.3rem;">${catastrophe.title}</h3>
+                        <h3 class="fw-bold mb-3 text-white text-shadow" style="font-size: 1.5rem;">${title}</h3>
                         
-                        <p class="text-white opacity-80 mb-3" style="font-size: 14px; line-height: 1.4; font-weight: 300;">
-                            ${catastrophe.intro_text}
+                        <p class="text-white opacity-95 mb-4 text-shadow" style="font-size: 1rem; line-height: 1.5;">
+                            ${intro_text}
                         </p>
 
-                        <div class="d-flex justify-content-around align-items-center rounded-pill py-2 px-3" style="background: rgba(255,255,255,0.05);">
-                            <div class="small text-white opacity-70" style="font-size: 12px;"><i class="bi bi-people-fill me-1"></i> <b>${state.bunker_places}</b>/<b>${res.players.length}</b> мест</div>
-                            <div class="small text-white opacity-70" style="font-size: 12px;"><i class="bi bi-clock-history me-1"></i> <b>${catastrophe.duration || '2 года'}</b></div>
+                        <div class="d-flex justify-content-around align-items-center rounded-pill py-2 px-3 shadow-inner mb-3" style="background: rgba(0,0,0,0.2);">
+                            <div class="small text-white fw-bold" style="font-size: 13px;"><i class="bi bi-people-fill me-1"></i> ${state.bunker_places}/${res.players.length} мест</div>
+                            <div class="small text-white fw-bold" style="font-size: 13px;"><i class="bi bi-clock-history me-1"></i> ${duration}</div>
                         </div>
+
+                        ${catastrophe.win_conditions && catastrophe.win_conditions.length > 0 ? `
+                        <div class="text-start mb-3">
+                            <div class="text-white-50 small fw-bold text-uppercase mb-1" style="font-size: 10px; letter-spacing: 1px;">Цели выживания:</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                ${catastrophe.win_conditions.map(c => `<span class="badge bg-success bg-opacity-75 border border-white border-opacity-25 fw-normal text-wrap text-start text-shadow" style="font-size: 0.85rem;">${c}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${catastrophe.external_threats && catastrophe.external_threats.length > 0 ? `
+                        <div class="text-start">
+                            <div class="text-white-50 small fw-bold text-uppercase mb-1" style="font-size: 10px; letter-spacing: 1px;">Угрозы:</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                ${catastrophe.external_threats.slice(0, 3).map(t => `<span class="badge bg-danger bg-opacity-75 border border-white border-opacity-25 fw-normal text-wrap text-start text-shadow" style="font-size: 0.85rem;">${t}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
 
                 <div class="bunker-intro-actions">
                     ${res.is_host ? `
-                        <button class="btn btn-glass-primary fw-bold btn-lg w-100 rounded-pill shadow-lg pulse-btn py-3 mb-2" 
+                        <button class="btn btn-light fw-bold btn-lg w-100 rounded-pill shadow-lg pulse-btn py-3 mb-3" 
+                            style="color: var(--primary-color); letter-spacing: 1px;"
                             onclick="window.finishIntro()">
                             НАЧАТЬ ВЫЖИВАНИЕ <i class="bi bi-arrow-right-circle-fill ms-2"></i>
                         </button>
                     ` : `
-                        <div class="btn-glass-secondary w-100 rounded-pill py-3 mb-2 fw-bold disabled" style="cursor: default; font-size: 14px;">
+                        <div class="btn btn-outline-light w-100 rounded-pill py-3 mb-3 fw-bold disabled" style="cursor: default; font-size: 14px; opacity: 0.8;">
                             <i class="bi bi-hourglass-split me-2"></i> ОЖИДАЕМ ЛИДЕРА...
                         </div>
                     `}
 
-                    <button class="btn btn-link text-white opacity-40 text-decoration-none x-small" style="font-size: 12px;" onclick="window.bunkerFinish(event)">
+                    <button class="btn btn-link text-white text-shadow text-decoration-none x-small" style="font-size: 12px; opacity: 0.8;" onclick="window.bunkerFinish(event)">
                         <i class="bi bi-box-arrow-left me-1"></i> Покинуть игру
                     </button>
                 </div>

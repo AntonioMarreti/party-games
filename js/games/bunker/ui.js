@@ -146,7 +146,7 @@ window.renderBunkerHeader = function (state) {
         : null;
 
     return `
-        <div class="bunker-header-card">
+        <div class="bunker-header-card" style="border-radius: 24px; margin-top: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="bunker-round-badge">Раунд ${state.current_round}</div>
@@ -164,10 +164,17 @@ window.renderBunkerHeader = function (state) {
                 </div>
             </div>
 
-            ${latestFeature ? `
-                <div class="bunker-feature-alert mt-3 glass-card clickable" onclick="window.showAlert('Бункер: ${latestFeature.text.replace(/'/g, "\\'")}', 'В этом раунде была открыта новая зона или факт о бункере.')">
-                    <span class="feature-icon"><i class="bi bi-bricks" style="color:var(--status-warning);"></i></span>
-                    <span class="feature-text"><b>Бункер:</b> ${latestFeature.text || latestFeature}</span>
+            ${state.revealed_features && state.revealed_features.length > 0 ? `
+                <div class="bunker-features-list mt-3">
+                    ${state.revealed_features.slice().reverse().map((f, i) => `
+                        <div class="bunker-feature-alert glass-card clickable mb-2" onclick="window.showAlert('Бункер: ${f.text.replace(/'/g, "\\'")}', '${f.text.replace(/'/g, "\\'")}')">
+                            <span class="feature-icon"><i class="bi bi-bricks" style="color:var(--status-warning);"></i></span>
+                            <span class="feature-text">
+                                <span class="badge bg-secondary me-2" style="font-size: 10px; opacity: 0.8;">Раунд ${state.current_round - i}</span>
+                                ${f.text || f}
+                            </span>
+                        </div>
+                    `).join('')}
                 </div>
             ` : ''}
         </div>
@@ -402,7 +409,7 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
         <div class="bunker-voting-screen px-4 pb-5"> 
             <!-- Removed Top Exit Button -->
             <div class="text-center mb-4 pt-4">
-                <h2 class="fw-bold" style="color:var(--text-main);">${isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?"}</h2>
+                <h2 class="fw-bold" style="color:var(--text-main);">${state.phase_title || (isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?")}</h2>
                 ${isRevote ? `<div class="alert py-2 small fw-bold mt-2" style="background:var(--bg-secondary); color:var(--status-warning); border:1px solid var(--border-main);">При повторной ничьей - случайный вылет!</div>` : ''}
                 
                 ${res.is_host ? `
@@ -489,12 +496,29 @@ window.renderOutro = function (wrapper, state, res) {
     var survivors = res.players.filter(p => !state.kicked_players.includes(String(p.id)));
 
     var html = `
-        <div class="bunker-outro-screen p-4" style="padding-top: calc(50px + env(safe-area-inset-top)) !important;">
+        <div class="bunker-outro-screen p-4" style="padding-top: calc(50px + env(safe-area-inset-top)) !important; padding-bottom: 120px !important;">
             <h1 class="outro-title text-center fw-bold mb-4"><i class="bi bi-house-heart-fill me-2"></i>ИСТОРИЯ БУНКЕРА</h1>
             
-            <div class="outro-stats d-flex justify-content-around rounded-pill p-3 mb-4 shadow-sm" style="background:var(--bg-secondary); border:1px solid var(--border-main);">
+            <div class="outro-stats d-flex justify-content-around rounded-pill p-3 mb-3 shadow-sm" style="background:var(--bg-secondary); border:1px solid var(--border-main);">
                 <div class="fw-bold" style="color:var(--status-success);">Выжило: ${survivors.length}</div>
                 <div class="fw-bold" style="color:var(--primary-color);">Мест: ${state.bunker_places}</div>
+            </div>
+
+            <div class="text-center mb-4 px-2">
+                ${survivors.length === state.bunker_places
+            ? `<div class="badge bg-success opacity-75">Бункер заполнен идеально</div>`
+            : (survivors.length < state.bunker_places
+                ? `<div class="badge bg-primary opacity-75">Остались свободные места (${state.bunker_places - survivors.length})</div>`
+                : `<div class="badge bg-danger opacity-75">В бункере перенаселение!</div>`
+            )}
+            </div>
+
+            <div id="bunker-ai-summary" class="glass-card p-4 mb-4 animate__animated animate__fadeIn" style="display:none; border-left: 4px solid var(--primary-color);">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-stars me-2" style="color:var(--primary-color);"></i>
+                    <span class="fw-bold small text-uppercase letter-spacing-1">Эпилог (AI)</span>
+                </div>
+                <div class="ai-text fst-italic" style="color:var(--text-main); line-height:1.6;"></div>
             </div>
             
             ${window.renderThreats(state)}
@@ -514,6 +538,66 @@ window.renderOutro = function (wrapper, state, res) {
         </div>`;
 
     wrapper.innerHTML = html;
+
+    // Trigger AI Summary
+    window.fetchBunkerSummary(state, res);
+};
+
+window.fetchBunkerSummary = async function (state, res) {
+    if (!state || !state.catastrophe) return;
+
+    var container = document.getElementById('bunker-ai-summary');
+    if (!container) return;
+
+    // Use session cache if available to avoid unnecessary network calls
+    if (window.bunkerState.aiSummary) {
+        var text = window.bunkerState.aiSummary;
+        var formattedText = text.trim().split('\n\n').map(p => `<p class="mb-2">${p.replace(/\n/g, '<br>')}</p>`).join('');
+        container.querySelector('.ai-text').innerHTML = formattedText;
+        container.style.display = 'block';
+        return;
+    }
+
+    try {
+        var allPlayers = res.players.map(p => {
+            var cards = state.players_cards[String(p.id)];
+            var isKicked = state.kicked_players.includes(String(p.id));
+            var condition = cards?.condition?.data;
+
+            return {
+                name: p.first_name,
+                profession: cards?.professions?.text || 'Неизвестно',
+                health: cards?.health?.text || 'Здоров',
+                hobby: cards?.hobby?.text || 'Нет',
+                is_kicked: isKicked,
+                // Add the "story" from the condition reveal (seen in screenshot)
+                story: isKicked ? (condition?.fail_text || condition?.text) : (condition?.win_text || condition?.text)
+            };
+        });
+
+        var response = await window.AIManager.generate('bunker_summary', {
+            catastrophe: state.catastrophe?.title,
+            capacity: state.bunker_places,
+            players: allPlayers,
+            threats: state.threat_results
+        });
+
+        console.log("Bunker Summary AI Response:", response);
+
+        if (response && response.status === 'ok' && response.data) {
+            var text = typeof response.data === 'string' ? response.data : (response.data.text || JSON.stringify(response.data));
+
+            // Convert newlines to paragraphs for better look
+            var formattedText = text.trim().split('\n\n').map(p => `<p class="mb-2">${p.replace(/\n/g, '<br>')}</p>`).join('');
+
+            window.bunkerState.aiSummary = text;
+
+            container.querySelector('.ai-text').innerHTML = formattedText;
+            container.style.display = 'block';
+        }
+    } catch (e) {
+        console.error("AI Summary Error:", e);
+    }
 };
 
 /* --- Helpers --- */
@@ -525,7 +609,7 @@ window.renderThreats = function (state) {
         return `
         <div class="alert ${t.success ? 'alert-success' : 'alert-danger'} border-0 shadow-sm mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-bold">${t.title}</span>
+                <span class="fw-bold">${t.title || t.text || 'Угроза'}</span>
                 <span>${t.success ? '✅ Success' : '❌ Failure'}</span>
             </div>
             <div class="small opacity-75">${t.desc}</div>
@@ -578,13 +662,14 @@ window.renderFooterActions = function (isHost, state, isMyTurn) {
         `;
     }
 
-    // Only Admin (Host), in Discussion (start vote)
-    if (isHost && state.turn_phase === 'discussion') {
+    // Only Admin (Host), in Discussion (start vote or next player)
+    // HIDE if it's my turn (standard 'Finish' button will show)
+    if (isHost && !isMyTurn && state.turn_phase === 'discussion') {
         buttons += `
-            <button class="action-btn-circle success pulsing" onclick="window.sendGameAction('end_turn')" title="Начать голосование">
+            <button class="action-btn-circle success pulsing" onclick="window.sendGameAction('end_turn')" title="Перейти к следующему этапу">
                 <i class="bi bi-play-fill" style="font-size: 1.5rem;"></i>
             </button>
-            <div class="action-label">Голосовать</div>
+            <div class="action-label">Далее</div>
         `;
     }
 
@@ -595,28 +680,26 @@ window.renderFooterActions = function (isHost, state, isMyTurn) {
             <button class="action-btn-circle success" onclick="window.sendGameAction('end_turn')">
                 <i class="bi bi-check-lg" style="font-size: 1.5rem;"></i>
             </button>
-            <div class="action-label">Завершить</div>
+            <div class="action-label text-nowrap mt-2" style="font-size: 11px;">Закончить ход</div>
         `;
     }
 
-    // -- 3. EXIT BUTTON (Always available) --
-    let exitButton = `
-        <div class="action-group">
-            <button class="action-btn-circle secondary" onclick="window.bunkerFinish()">
-                <i class="bi bi-door-open-fill"></i>
-            </button>
-            <div class="action-label">Выход</div>
-        </div>
-    `;
+    // -- 3. EXIT BUTTON (Handled in return) --
 
     return `
         <div class="bunker-footer-bar">
-            <div class="footer-actions-container">
-                ${exitButton}
+            <div class="footer-actions-container d-flex justify-content-center align-items-start gap-4" style="height: 100px;">
+                <!-- Exit Container -->
+                <div class="action-group d-flex flex-column align-items-center" style="width: 80px;">
+                    <button class="action-btn-circle secondary shadow-lg" onclick="window.bunkerFinish()">
+                        <i class="bi bi-door-open-fill"></i>
+                    </button>
+                    <div class="action-label text-nowrap mt-2">Выход</div>
+                </div>
                 
-                ${buttons ? `<div class="action-divider"></div>` : ''}
+                ${buttons ? `<div class="action-divider mx-2" style="height: 50px; border-right: 1px solid rgba(255,255,255,0.1); margin-top: 10px;"></div>` : ''}
                 
-                ${buttons ? `<div class="action-group">${buttons}</div>` : ''}
+                ${buttons ? `<div class="action-group d-flex flex-column align-items-center" style="width: 80px;">${buttons}</div>` : ''}
             </div>
         </div>
     `;

@@ -16,45 +16,72 @@ async function loadGameScript(gameType) {
         return Promise.resolve();
     }
 
+    // 1. Try to find config
+    const gameConfig = window.AVAILABLE_GAMES
+        ? window.AVAILABLE_GAMES.find(g => g.id === gameType)
+        : null;
 
-    // Config: Define complexity of games
-    // "complex" means it's a folder with index.js + styles
-    const complexGames = ['bunker', 'wordclash'];
-    const isComplex = complexGames.includes(gameType);
+    // 2. Determine files to load
+    let filesToLoad = [];
 
-    const scriptPath = isComplex
-        ? `js/games/${gameType}/index.js?v=${window.appVersion || Date.now()}`
-        : `js/games/${gameType}.js?v=${window.appVersion || Date.now()}`;
+    if (gameConfig && gameConfig.files && gameConfig.files.length > 0) {
+        filesToLoad = gameConfig.files;
+    } else {
+        // Fallback for legacy/simple games
+        const complexGames = ['bunker', 'wordclash'];
+        const isComplex = complexGames.includes(gameType);
 
-    // Load CSS for complex games
-    if (isComplex) {
-        const cssPath = `js/games/${gameType}/${gameType}.css?v=${window.appVersion || Date.now()}`;
-        if (!document.querySelector(`link[href^="js/games/${gameType}"]`)) {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = cssPath;
-            document.head.appendChild(link);
+        if (isComplex) {
+            filesToLoad = [`js/games/${gameType}/index.js`];
+            // Also try to load CSS if not implicitly handled? 
+            // Better to just rely on files array for complex games. 
+            // But let's keep fallback logic just in case.
+        } else {
+            filesToLoad = [`js/games/${gameType}.js`];
         }
     }
 
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = scriptPath;
-        script.type = isComplex ? 'module' : 'text/javascript'; // Bunker uses ES modules? Let's check. 
-        // Actually, looking at current files, most use window globals. 
-        // But folders like 'bunker/index.js' might rely on purely global effects or import/export.
-        // Giving the file list: index.js, ui.js, handlers.js... likely not modules if they assign to window.
-        // But let's stick to standard loading first.
+    // 3. Helper to load a single script
+    const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+            // Check if CSS
+            if (src.endsWith('.css')) {
+                if (!document.querySelector(`link[href^="${src}"]`)) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = `${src}?v=${window.appVersion || Date.now()}`;
+                    document.head.appendChild(link);
+                }
+                resolve(); // CSS doesn't block
+                return;
+            }
 
-        script.onload = () => {
-            loadedGameScripts.add(gameType);
-            resolve();
-        };
-        script.onerror = (e) => {
-            reject(e);
-        };
-        document.body.appendChild(script);
-    });
+            // Check if already loaded
+            if (document.querySelector(`script[src^="${src}"]`)) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = `${src}?v=${window.appVersion || Date.now()}`;
+            script.async = false; // Important: Load in order!
+
+            script.onload = () => resolve();
+            script.onerror = (e) => reject(new Error(`Failed to load ${src}`));
+            document.body.appendChild(script);
+        });
+    };
+
+    // 4. Load all files sequentially
+    try {
+        for (const file of filesToLoad) {
+            await loadScript(file);
+        }
+        loadedGameScripts.add(gameType);
+    } catch (e) {
+        console.error("Failed to load game scripts:", e);
+        throw e;
+    }
 }
 
 
