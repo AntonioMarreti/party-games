@@ -268,6 +268,17 @@ function showScreen(id) {
         }, { passive: true });
         showcase.dataset.swipeBound = "true";
     }
+
+    const catalog = document.getElementById('screen-game-catalog');
+    if (id === 'game-catalog' && catalog && !catalog.dataset.swipeBound) {
+        let touchStartX = 0;
+        catalog.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+        catalog.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX < window.innerWidth * 0.2 && touchEndX - touchStartX > 100) window.showScreen('lobby');
+        }, { passive: true });
+        catalog.dataset.swipeBound = "true";
+    }
 }
 
 async function fetchAppVersion() {

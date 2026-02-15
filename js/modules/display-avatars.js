@@ -14,8 +14,9 @@ if (!window.avatarDataMap) {
  * @param {Object} user User object
  * @param {String} sizeStr 'sm', 'md', 'lg', 'xl' (default: md)
  * @param {Boolean} isLink If true, only returns the URL/Style, not the <img> tag (Legacy mode)
+ * @param {Boolean} disableClick If true, won't add onclick for fullscreen viewer
  */
-export function renderAvatar(user, sizeStr = 'md', isLink = false) {
+export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick = false) {
     if (!user) return '';
 
     // Generate unique ID for this instance to attach data
@@ -70,7 +71,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false) {
                 emojiVal = cfg.value;
                 bgColor = cfg.bg || '#eee';
             } else {
-                innerContent = `<img src="${cfg.src}" style="${style}">`;
+                innerContent = `<img src="${cfg.src}\" style=\"${style}\">`;
             }
         } catch (e) {
             // Legacy path string
@@ -91,12 +92,15 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false) {
     }
 
     // Render Container
+    const clickHandler = disableClick ? '' : `onclick="event.stopPropagation(); openAvatarViewer('${tempUid}')"`;
+    const cursorStyle = disableClick ? '' : 'cursor:pointer;';
+
     if (isEmoji) {
         const fontSize = Math.floor(sizePx * 0.6);
         return `
             <div class="avatar-circle" 
-                 onclick="event.stopPropagation(); openAvatarViewer('${tempUid}')"
-                 style="width:${sizePx}px; height:${sizePx}px; background:${bgColor}; display:flex; align-items:center; justify-content:center; border-radius:50%; cursor:pointer; overflow:hidden;">
+                 ${clickHandler}
+                 style="width:${sizePx}px; height:${sizePx}px; background:${bgColor}; display:flex; align-items:center; justify-content:center; border-radius:50%; ${cursorStyle} overflow:hidden;">
                 <span style="font-size:${fontSize}px; line-height:1;">${emojiVal}</span>
             </div>
         `;
@@ -104,7 +108,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false) {
         // Wrap img in a clickable div or just format the img
         // To ensure clickability we wrap
         return `
-            <div class="avatar-wrapper" style="display:inline-block; cursor:pointer;" onclick="event.stopPropagation(); openAvatarViewer('${tempUid}')">
+            <div class="avatar-wrapper" style="display:inline-block; ${cursorStyle}" ${clickHandler}>
                 ${innerContent}
             </div>
         `;

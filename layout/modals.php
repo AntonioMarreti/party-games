@@ -55,8 +55,8 @@
                     <div class="d-flex justify-content-between align-items-end mb-1">
                         <div>
                             <div class="text-muted"
-                                style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Level &
-                                Progress</div>
+                                style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Уровень и
+                                Прогресс</div>
                             <div class="fw-bold fs-5 text-primary"><span id="detail-level-val">1</span> LVL</div>
                         </div>
                         <div class="text-muted" style="font-size: 11px;" id="detail-xp-range">0 / 100 XP</div>
@@ -71,14 +71,14 @@
             <div class="col-6">
                 <div class="p-2 bg-white bg-opacity-50 rounded-4 text-center border border-white shadow-sm">
                     <i class="bi bi-controller text-primary mb-1 d-block" style="font-size: 1.1rem;"></i>
-                    <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Games</div>
+                    <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Игр</div>
                     <div class="fw-bold fs-6 text-dark" id="detail-total-games">0</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="p-2 bg-white bg-opacity-50 rounded-4 text-center border border-white shadow-sm">
                     <i class="bi bi-graph-up-arrow text-success mb-1 d-block" style="font-size: 1.1rem;"></i>
-                    <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Winrate</div>
+                    <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Винрейт</div>
                     <div class="fw-bold fs-6 text-success" id="detail-winrate">0%</div>
                 </div>
             </div>
@@ -160,7 +160,8 @@
             <div class="modal-body pt-2">
                 <form onsubmit="joinRoom(); closeModal('joinModal'); return false;">
                     <input type="text" id="join-room-code"
-                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold" placeholder="A1B2C3"
+                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold"
+                        placeholder="A1B2C3"
                         style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
                     <input type="password" id="join-room-pass" class="form-control mb-3"
                         placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
@@ -201,7 +202,7 @@
 
 <!-- 9. QR Invite Modal -->
 <div class="modal fade" id="qrInviteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered" style="width: 85%; max-width: 480px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 32px; padding: 20px; position: relative;">
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3"
                 onclick="closeModal('qrInviteModal')" data-bs-dismiss="modal" aria-label="Close"
@@ -210,19 +211,23 @@
                 <div style="width: 40px; height: 4px; background: #E0E0E0; border-radius: 2px;"></div>
             </div>
             <div class="text-center">
-                <h5 class="fw-bold mb-4" style="color: var(--text-dark);">Комната <span
+                <h5 class="fw-bold mb-4" style="color: var(--text-dark); font-size: 18px;">Комната <span
                         id="modal-room-code-title">...</span></h5>
                 <div class="d-flex justify-content-center mb-3">
-                    <div id="modal-qr-code" style="padding: 10px; border-radius: 20px; border: 2px solid #F0F0F0;">
+                    <div id="modal-qr-code"
+                        style="padding: 12px; border-radius: 20px; border: 2px solid #F8F9FA; background: white; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));">
                     </div>
                 </div>
-                <h2 class="fw-bold mb-4" style="font-size: 32px; color: var(--primary-color); letter-spacing: 1px;"
+                <h2 class="fw-bold mb-4"
+                    style="font-size: 32px; color: var(--primary-color); letter-spacing: 1.5px; font-family: 'Outfit', sans-serif;"
                     id="modal-room-code-text">...</h2>
                 <div class="d-grid gap-3">
-                    <button class="btn btn-primary py-3 rounded-4 fw-bold shadow-sm"
-                        style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); border: none; font-size: 18px; min-width: 250px;"
-                        onclick="copyInviteLink()">
-                        <i class="bi bi-link-45deg me-2"></i> Скопировать ссылку
+                    <button
+                        class="btn btn-primary py-3 rounded-4 fw-bold shadow-sm d-flex align-items-center justify-content-center"
+                        style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); border: none; font-size: 17px; height: 56px;"
+                        id="btn-copy-invite" onclick="copyInviteLink()">
+                        <i class="bi bi-link-45deg me-2" id="btn-copy-icon" style="font-size: 20px;"></i>
+                        <span id="btn-copy-text">Скопировать ссылку</span>
                     </button>
                     <button class="btn py-3 rounded-4 fw-bold shadow-sm"
                         style="background: #24A1DE; color: white; border: none; font-size: 18px;"

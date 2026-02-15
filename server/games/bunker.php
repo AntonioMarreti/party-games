@@ -84,20 +84,104 @@ function handleGameAction($pdo, $room, $user, $postData)
         $allIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         shuffle($allIds);
         $aliveIds = array_map('strval', $allIds);
+        shuffle($allIds);
+        $aliveIds = array_map('strval', $allIds);
+
         $scenario = $data['catastrophes'][array_rand($data['catastrophes'])];
+
+        // === AI GENERATION ===
+        if (!empty($postData['ai_mode'])) {
+            require_once __DIR__ . '/../lib/GigaChat.php';
+            try {
+                $gc = GigaChat::getInstance();
+                $prompt = "Придумай уникальную глобальную катастрофу для игры Бункер. 
+                Формат JSON:
+                {
+                    \"title\": \"Название\",
+                    \"intro_text\": \"Описание 2-3 предложения\",
+                    \"duration\": \"длительность (напр. 5 лет)\",
+                    \"survival_rate\": 0.5 (число от 0.1 до 0.9),
+                    \"win_conditions\": [\"Цель 1\", \"Цель 2\"],
+                    \"external_threats\": [\"Угроза 1\", \"Угроза 2\"]
+                }
+                Не используй Markdown. Только чистый JSON.";
+
+                $response = $gc->chat([['role' => 'user', 'content' => $prompt]]);
+                $content = $response['choices'][0]['message']['content'] ?? '';
+
+                // Clean MD code blocks if present
+                $content = str_replace(['```json', '```'], '', $content);
+
+                $aiData = json_decode($content, true);
+                if ($aiData && isset($aiData['title'])) {
+                    $scenario = array_merge($scenario, $aiData);
+                    $scenario['desc'] = $scenario['intro_text']; // Compatibility
+                    $state['ai_generated'] = true;
+
+                    // Convert AI textual threats to Game Objects
+                    if (!empty($aiData['external_threats']) && is_array($aiData['external_threats'])) {
+                        $generatedThreats = [];
+                        foreach ($aiData['external_threats'] as $tTitle) {
+                            $generatedThreats[] = [
+                                'title' => $tTitle,
+                                'desc' => 'Глобальная угроза, сгенерированная ИИ',
+                                'requirements' => [] // No specific tags for now
+                            ];
+                            // Save Threat
+                            saveGameContent($pdo, 'bunker', 'threat', $tTitle, ['ai_generated']);
+                        }
+                        // Override default random threats
+                        if (!empty($generatedThreats)) {
+                            $state['threats'] = array_slice($generatedThreats, 0, 3);
+                        }
+                    }
+
+                    // Save Catastrophe
+                    saveGameContent($pdo, 'bunker', 'catastrophe', $scenario, ['ai_generated']);
+                }
+            } catch (Exception $e) {
+                TelegramLogger::logError('bunker_ai', ['error' => $e->getMessage()]);
+            }
+        }
+
         $state['catastrophe'] = $scenario;
-        $state['bunker_places'] = ceil(count($allIds) * $scenario['survival_rate']);
+        $allPlayersCount = count($allIds);
+        $calcPlaces = ceil($allPlayersCount * ($scenario['survival_rate'] ?? 0.5));
+        // Trust the catastrophe survival rate, but ensure at least 1 person survives
+        $state['bunker_places'] = max(1, $calcPlaces);
         $state['game_mode'] = $postData['mode'] ?? 'normal';
-        $feats = $data['bunker_features'] ?? [];
-        shuffle($feats);
-        $state['bunker_features'] = array_slice($feats, 0, 5);
+
+        // 1. Prepare Bunker Features & Events (Study Phase)
+        $potentialFeatures = $data['bunker_features'] ?? [];
+        $potentialIncidents = $data['study_events'] ?? [];
+
+        $mixedFeatures = [];
+        shuffle($potentialFeatures);
+        shuffle($potentialIncidents);
+
+        // Select 5 items for the 5 rounds: 3 features + 2 incidents (weighted)
+        for ($i = 0; $i < 5; $i++) {
+            if ($i > 0 && rand(0, 100) < 40 && !empty($potentialIncidents)) {
+                $item = array_shift($potentialIncidents);
+            } else {
+                $item = array_shift($potentialFeatures);
+            }
+            if ($item)
+                $mixedFeatures[] = $item;
+        }
+
+        $state['bunker_features'] = $mixedFeatures;
         $state['revealed_features'] = [];
         if (!empty($state['bunker_features'])) {
             $state['revealed_features'][] = $state['bunker_features'][0];
         }
-        $threats = $data['threats'] ?? [];
-        shuffle($threats);
-        $state['threats'] = array_slice($threats, 0, 2);
+
+        // If prompts didn't override threats, load defaults
+        if (empty($state['threats'])) {
+            $threats = $data['threats'] ?? [];
+            shuffle($threats);
+            $state['threats'] = array_slice($threats, 0, 2);
+        }
         $state['players_cards'] = [];
         $cats = array_keys($data['cards']);
         foreach ($aliveIds as $uid) {
@@ -115,6 +199,54 @@ function handleGameAction($pdo, $room, $user, $postData)
             $cards['condition'] = ['data' => $cond, 'revealed' => false];
             $state['players_cards'][$uid] = $cards;
         }
+
+        // === AI BACKSTORIES ===
+        if (!empty($state['ai_generated']) && isset($gc) && isset($aiData)) {
+            try {
+                // Collect basic info for all players to give context to AI
+                $playersContext = [];
+                foreach ($aliveIds as $uid) {
+                    $c = $state['players_cards'][$uid];
+                    $playersContext[] = [
+                        'id' => $uid,
+                        'prof' => $c['professions']['text'],
+                        'health' => $c['health']['text'],
+                        'hobby' => $c['hobby']['text']
+                    ];
+                }
+
+                $prompt = "Катастрофа: " . $scenario['title'] . ". " . $scenario['intro_text'] . "\n\n";
+                $prompt .= "Для каждого игрока придумай короткий (1 предложение) и смешной/ироничный факт (Судьбу), связывающий его профессию/хобби с этой катастрофой. Почему он оказался в бункере?
+                Формат JSON:
+                {
+                    \"backstories\": {
+                        \"USER_ID_1\": \"Текст судьбы...\",
+                        \"USER_ID_2\": \"Текст судьбы...\"
+                    }
+                }
+                Игроки:\n" . json_encode($playersContext, JSON_UNESCAPED_UNICODE);
+
+                $response2 = $gc->chat([['role' => 'user', 'content' => $prompt]]);
+                $content2 = $response2['choices'][0]['message']['content'] ?? '';
+                $content2 = str_replace(['```json', '```'], '', $content2);
+                $bsData = json_decode($content2, true);
+
+                if ($bsData && isset($bsData['backstories'])) {
+                    foreach ($bsData['backstories'] as $uid => $text) {
+                        if (isset($state['players_cards'][$uid])) {
+                            $state['players_cards'][$uid]['backstory'] = [
+                                'text' => $text,
+                                'revealed' => false,
+                                'tags' => ['AI']
+                            ];
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                TelegramLogger::logError('bunker_ai_backstory', ['error' => $e->getMessage()]);
+            }
+        }
+
         $state['current_round'] = 0;
         $state['turn_queue'] = [];
         $state['active_player_index'] = -1;
@@ -508,28 +640,100 @@ function handleGameAction($pdo, $room, $user, $postData)
             } else {
                 return ['status' => 'error', 'message' => 'Всё уже раскрыто'];
             }
-        } else if ($action === 'steal_luggage') {
+        } else if ($action === 'steal_luggage' || $action === 'swap_luggage') {
             if (!$targetId || $targetId === $userId)
                 return ['status' => 'error', 'message' => 'Нужна цель'];
 
             $myLuggage = $state['players_cards'][$userId]['luggage'];
             $targetLuggage = $state['players_cards'][$targetId]['luggage'];
 
-            // Swap
-            $state['players_cards'][$userId]['luggage'] = $targetLuggage; // Takes their luggage
-            $state['players_cards'][$targetId]['luggage'] = $myLuggage; // Gives mine
-
-            // Mark both as revealed? Or keep state? 
-            // Better keep state. If I stole hidden luggage, it's hidden for me? 
-            // Let's say we swap Objects, but 'revealed' status stays with the CARD or the SLOT?
-            // Usually in Bunker you swap the physical card. unique item.
-            // So we swap the entire object including revealed status.
+            $state['players_cards'][$userId]['luggage'] = $targetLuggage;
+            $state['players_cards'][$targetId]['luggage'] = $myLuggage;
 
             $stmt = $pdo->prepare("SELECT first_name FROM users WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetName = $stmt->fetchColumn();
 
             $msg = "незаметно обменялся багажом с {$targetName}!";
+        } else if ($action === 'fix_system') {
+            // Fix most recent incident
+            $fixed = false;
+            foreach (array_reverse($state['revealed_features'], true) as $idx => $feat) {
+                if (isset($feat['type']) && $feat['type'] === 'incident' && empty($feat['fixed'])) {
+                    $state['revealed_features'][$idx]['fixed'] = true;
+                    $state['revealed_features'][$idx]['text'] .= ' (ИСПРАВЛЕНО)';
+                    $msg = "починил неисправность: " . $feat['text'];
+                    $fixed = true;
+                    break;
+                }
+            }
+            if (!$fixed)
+                return ['status' => 'error', 'message' => 'Нечего чинить'];
+        } else if ($action === 'spy_card') {
+            if (!$targetId || $targetId === $userId)
+                return ['status' => 'error', 'message' => 'Нужна цель'];
+            $targetCards = &$state['players_cards'][$targetId];
+            $candidates = [];
+            foreach ($targetCards as $k => $c) {
+                if (is_array($c) && empty($c['revealed']))
+                    $candidates[] = $k;
+            }
+            if (empty($candidates))
+                return ['status' => 'error', 'message' => 'Игроку нечего скрывать'];
+
+            $toSpy = $candidates[array_rand($candidates)];
+            $text = $targetCards[$toSpy]['text'] ?? ($targetCards[$toSpy]['data']['title'] ?? '...');
+            $msg = "подсмотрел тайную карту игрока!"; // Message for others
+            // Private message/info would be better, but for now we log it for the user
+            $state['history'][] = ['type' => 'private', 'user_id' => $userId, 'text' => "Вы узнали секрет ({$toSpy}): {$text}"];
+        } else if ($action === 'override_event') {
+            // Replace next incident in bunker_features with a fresh feature
+            $replaced = false;
+            $json = file_get_contents(BUNKER_PACK);
+            $data = json_decode($json, true);
+            $potentialFeatures = $data['bunker_features'] ?? [];
+
+            for ($i = count($state['revealed_features']); $i < count($state['bunker_features']); $i++) {
+                if (isset($state['bunker_features'][$i]['type']) && $state['bunker_features'][$i]['type'] === 'incident') {
+                    $state['bunker_features'][$i] = $potentialFeatures[array_rand($potentialFeatures)];
+                    $msg = "перехватил управление бункером и предотвратил будущую поломку!";
+                    $replaced = true;
+                    break;
+                }
+            }
+            if (!$replaced)
+                return ['status' => 'error', 'message' => 'В будущем не предвидится поломок'];
+        } else if ($action === 'force_reveal') {
+            if (!$targetId || $targetId === $userId)
+                return ['status' => 'error', 'message' => 'Нужна цель'];
+            $targetCards = &$state['players_cards'][$targetId];
+            $candidates = [];
+            foreach ($targetCards as $k => $c) {
+                if (is_array($c) && empty($c['revealed']))
+                    $candidates[] = $k;
+            }
+            if (empty($candidates))
+                return ['status' => 'error', 'message' => 'Игроку нечего скрывать'];
+
+            $toReveal = $candidates[array_rand($candidates)];
+            $targetCards[$toReveal]['revealed'] = true;
+
+            $stmt = $pdo->prepare("SELECT first_name FROM users WHERE id = ?");
+            $stmt->execute([$targetId]);
+            $targetName = $stmt->fetchColumn();
+
+            $val = $targetCards[$toReveal]['text'] ?? ($targetCards[$toReveal]['data']['title'] ?? '...');
+            $msg = "разоблачил игрока {$targetName}! Раскрыта карта: {$val}";
+        } else if ($action === 'copy_luggage') {
+            if (!$targetId || $targetId === $userId)
+                return ['status' => 'error', 'message' => 'Нужна цель'];
+            $myLuggage = $state['players_cards'][$userId]['luggage'];
+            $state['players_cards'][$targetId]['luggage'] = $myLuggage;
+
+            $stmt = $pdo->prepare("SELECT first_name FROM users WHERE id = ?");
+            $stmt->execute([$targetId]);
+            $targetName = $stmt->fetchColumn();
+            $msg = "поделился своим багажом с игроком {$targetName}!";
         } else {
             return ['status' => 'error', 'message' => 'Неизвестное действие'];
         }
@@ -621,7 +825,16 @@ function finishKick(&$state, $leaderId, $counts, $wasTie, $isRandom = false)
 {
     $state['kicked_players'][] = (string) $leaderId;
     $state['vote_results'] = ['kicked_id' => $leaderId, 'counts' => $counts, 'is_tie' => $wasTie, 'is_random' => $isRandom];
-    $state['phase'] = 'vote_results';
+
+    // Check if game should end immediately after kick
+    // If we have enough places for everyone left, or no one left
+    $aliveIds = array_diff($state['turn_queue'] ?? [], $state['kicked_players']);
+    if (count($aliveIds) <= ($state['bunker_places'] ?? 1)) {
+        $state['phase'] = 'outro';
+        resolveThreats($state);
+    } else {
+        $state['phase'] = 'vote_results';
+    }
 }
 
 function resolveThreats(&$state)
@@ -640,7 +853,17 @@ function resolveThreats(&$state)
             }
         }
     }
+    // 3. Survival modifiers from features and incidents
+    $featureBonus = 0;
     foreach (($state['revealed_features'] ?? []) as $f) {
+        if (isset($f['bonus'])) {
+            // Negative bonus for incidents unless fixed
+            if (isset($f['type']) && $f['type'] === 'incident' && !empty($f['fixed'])) {
+                continue; // Skip fixed incidents
+            }
+            $featureBonus += $f['bonus'];
+        }
+
         if (isset($f['tags']) && is_array($f['tags'])) {
             foreach ($f['tags'] as $t)
                 $groupTags[mb_strtolower($t)] = true;
@@ -660,7 +883,8 @@ function resolveThreats(&$state)
             }
         }
 
-        $chance = 40 + (count($survivorsIds) * 5) + ($matches * 20);
+        // Base chance + survivors + feature bonuses + match bonuses
+        $chance = 20 + $featureBonus + (count($survivorsIds) * 5) + ($matches * 20);
         $chance = max(5, min(95, $chance));
         $success = rand(0, 100) < $chance;
 
@@ -689,8 +913,17 @@ function goToNextRound(&$state, $aliveIds)
         shuffle($queue);
         $state['turn_queue'] = $queue;
         $state['active_player_index'] = 0;
-        $state['current_player_id'] = $queue[0];
+        $state['current_player_id'] = !empty($queue) ? $queue[0] : null;
         $state['turn_phase'] = 'reveal';
+
+        if (!$state['current_player_id']) {
+            // Safety: if no one left to take turns, go to voting/outro
+            $state['phase'] = (count($aliveIds) > $capacity) ? 'voting' : 'outro';
+            if ($state['phase'] === 'outro')
+                resolveThreats($state);
+            return;
+        }
+
         if (isset($state['bunker_features'][$state['current_round'] - 1])) {
             $state['revealed_features'][] = $state['bunker_features'][$state['current_round'] - 1];
         }

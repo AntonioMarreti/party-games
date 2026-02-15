@@ -370,7 +370,7 @@ async function loadLeaderboardList(type = 'global') {
             else { rankClass = 'text-muted'; rankContent = index + 1; }
 
             const div = document.createElement('div');
-            div.className = 'lb-card mx-1';
+            div.className = 'lb-card';
             div.onclick = () => openUserProfile(u.user_id || u.id);
             div.style.cursor = 'pointer';
 
@@ -526,10 +526,10 @@ function renderCurrentUser(user) {
     // Header Name
     if (window.safeText) window.safeText('user-name-display', user.custom_name || user.first_name);
 
-    // Header Avatar
+    // Header Avatar (disable fullscreen click to preserve profile navigation)
     const headAv = document.getElementById('lobby-user-avatar');
     // Assuming renderAvatar is available globally (from display-avatars.js)
-    if (headAv && window.renderAvatar) headAv.innerHTML = window.renderAvatar(user, 'sm');
+    if (headAv && window.renderAvatar) headAv.innerHTML = window.renderAvatar(user, 'sm', false, true);
 
     // === PROFILE TAB UPDATES ===
     if (window.safeText) window.safeText('profile-name-big', user.custom_name || user.first_name);

@@ -19,7 +19,8 @@ window.sendGameAction = async function (type, data = {}) {
 window.BUNKER_ROUND_NAMES = {
     professions: 'Профессия', biology: 'Биология', health: 'Здоровье',
     hobby: 'Хобби', advantages: 'Сильная черта', disadvantages: 'Слабость',
-    luggage: 'Багаж', facts: 'Факт', condition: 'Особое условие'
+    luggage: 'Багаж', facts: 'Факт', condition: 'Особое условие',
+    backstory: 'Судьба'
 };
 
 window.switchBunkerTab = function (tab) {

@@ -569,6 +569,8 @@ function renderLibrary() {
     });
 }
 
+const HOME_GAMES_LIMIT = 5;
+
 function renderPopularGames() {
     const list = document.getElementById('popular-games-list');
     if (!list) return;
@@ -579,9 +581,10 @@ function renderPopularGames() {
         return;
     }
 
-    console.log('renderPopularGames: Favorites:', window.userFavorites);
+    // Show first N games on home grid
+    const gamesToShow = window.AVAILABLE_GAMES.slice(0, HOME_GAMES_LIMIT);
 
-    window.AVAILABLE_GAMES.forEach(game => {
+    gamesToShow.forEach(game => {
         const card = document.createElement('div');
         card.className = 'mini-game-card clickable';
         card.onclick = () => openGameShowcase(game.id);
@@ -594,17 +597,69 @@ function renderPopularGames() {
         const heartClass = isLiked ? 'bi-heart-fill text-danger' : 'bi-heart';
 
         card.innerHTML = `
-            <div class="mini-icon-box" style="background: ${iconColor}; background-image: ${gradient}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div class="mini-icon-box" style="background-color: ${iconColor};">
                 <i class="bi ${game.icon || 'bi-controller'}"></i>
             </div>
             <div class="mini-game-title">${game.name}</div>
             <!-- Like Button (Floating) -->
-            <div class="position-absolute top-0 end-0 p-2" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)">
-                <i class="bi ${heartClass}" style="font-size:16px; color: ${isLiked ? '#dc3545' : 'rgba(0,0,0,0.3)'}"></i>
+            <div class="position-absolute top-0 end-0 p-1" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)">
+                <i class="bi ${heartClass}" style="font-size:12px; color: ${isLiked ? '#dc3545' : 'rgba(0,0,0,0.2)'}"></i>
             </div>
         `;
         list.appendChild(card);
     });
+
+    // 6th cell: "All Games" button
+    const allBtn = document.createElement('button');
+    allBtn.className = 'show-all-games-btn';
+    allBtn.onclick = () => openGameCatalog();
+    const gradient = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
+    allBtn.innerHTML = `
+        <div style="width: 34px; height: 34px; background: var(--primary-color); background-image: ${gradient}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; pointer-events: none; color: white;">
+            <i class="bi bi-grid-3x3-gap" style="font-size: 16px;"></i>
+        </div>
+        <div style="font-size: 10px; font-weight: 600; color: var(--text-main); pointer-events: none;">Все игры</div>
+    `;
+    list.appendChild(allBtn);
+}
+
+function renderAllGames() {
+    const list = document.getElementById('all-games-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+    if (!window.AVAILABLE_GAMES) return;
+
+    window.AVAILABLE_GAMES.forEach(game => {
+        const card = document.createElement('div');
+        card.className = 'catalog-game-card';
+        card.onclick = () => openGameShowcase(game.id);
+
+        const iconColor = game.color || '#6c757d';
+        const isLiked = window.userFavorites && window.userFavorites.includes(game.id);
+        const heartIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
+        const heartColor = isLiked ? '#dc3545' : 'var(--text-muted)';
+
+        card.innerHTML = `
+            <div class="catalog-game-icon" style="background-color: ${iconColor};">
+                <i class="bi ${game.icon || 'bi-controller'}"></i>
+            </div>
+            <div class="catalog-game-info">
+                <div class="catalog-game-name">${game.name}</div>
+                <div class="catalog-game-desc">${game.description || ''}</div>
+            </div>
+            <div class="catalog-game-like" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)">
+                <i class="bi ${heartIcon}" style="color: ${heartColor}"></i>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+function openGameCatalog() {
+    renderAllGames();
+    showScreen('game-catalog');
+    if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'light');
 }
 
 function openGameShowcase(gameId) {
@@ -746,12 +801,47 @@ function openGameShowcase(gameId) {
 
     }
 
-    // Button Logic
+    // Button Logic - Direct assignment for maximum reliability
     const tryBtn = document.getElementById('btn-try-game-now');
     const headerBtn = document.getElementById('btn-header-try-now');
-    const tryHandler = () => tryGameNow(gameId);
-    if (tryBtn) tryBtn.onclick = tryHandler;
-    if (headerBtn) headerBtn.onclick = tryHandler;
+
+    const tryHandler = (e) => {
+        if (e) e.stopPropagation();
+
+        // 1. Force hide the detail screen immediately from the handler
+        const detail = document.getElementById('screen-game-detail');
+        if (detail) {
+            detail.style.setProperty('display', 'none', 'important');
+            detail.style.zIndex = '-1'; // Push to back
+            detail.classList.remove('active-screen');
+        }
+
+        // 2. Clear Telegram BackButton
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.BackButton.hide();
+        }
+
+        // 3. Navigation
+        if (window.switchTab) window.switchTab('home');
+        else if (window.showScreen) window.showScreen('lobby');
+
+        // 4. Create Room
+        if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'light');
+        tryGameNow(gameId);
+    };
+
+    if (tryBtn) {
+        tryBtn.onclick = tryHandler;
+        // Visual feedback
+        tryBtn.onmousedown = () => tryBtn.style.transform = 'scale(0.98)';
+        tryBtn.onmouseup = () => tryBtn.style.transform = '';
+        tryBtn.ontouchstart = () => tryBtn.style.transform = 'scale(0.98)';
+        tryBtn.ontouchend = () => tryBtn.style.transform = '';
+    }
+
+    if (headerBtn) {
+        headerBtn.onclick = tryHandler;
+    }
 
     // Telegram Native BackButton
     if (window.Telegram && window.Telegram.WebApp) {
@@ -762,22 +852,20 @@ function openGameShowcase(gameId) {
             tg.BackButton.hide();
         });
     }
-
     window.showScreen('game-detail');
 }
 
 async function tryGameNow(gameId) {
-    if (window.selectedGameId) window.selectedGameId = gameId; // Global var usually
+    if (window.selectedGameId) window.selectedGameId = gameId;
 
-    // Clear pass input
+    // 1. Clear pass input for new room
     const passInput = document.getElementById('create-room-pass');
     if (passInput) passInput.value = '';
 
-    // Create room
-    if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'medium');
-
-    // Call createRoom (From RoomManager alias)
-    if (window.createRoom) await window.createRoom();
+    // 2. Create the room
+    if (window.createRoom) {
+        await window.createRoom();
+    }
 }
 
 async function startGame(gameName) {
@@ -847,6 +935,8 @@ window.EMOJI_OPTIONS = EMOJI_OPTIONS;
 // Game Discovery Exports
 window.renderLibrary = renderLibrary;
 window.renderPopularGames = renderPopularGames;
+window.renderAllGames = renderAllGames;
+window.openGameCatalog = openGameCatalog;
 window.openGameShowcase = openGameShowcase;
 window.tryGameNow = tryGameNow;
 window.startGame = startGame;

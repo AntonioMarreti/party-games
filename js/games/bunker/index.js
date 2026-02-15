@@ -239,15 +239,15 @@ window.renderSetupScreen = function (wrapper, state, res) {
     // Use a default tech/map background if specific catastrophe image isn't ready
     var bgStyle = bgImg
         ? `background: url('${bgImg}') no-repeat center center fixed; background-size: cover;`
-        : `background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);`;
+        : `background: url('img/games/bunker/bunker_global_bg_1769853095597.png') no-repeat center center fixed; background-size: cover;`;
 
     var content = '';
 
     if (isHost) {
         content = `
-            <div style="z-index: 10; width: 100%; max-width: 500px;" class="animate__animated animate__fadeInUp">
+            <div style="z-index: 10; width: 100%; max-width: 500px;" class="animate__animated animate__fadeInUp px-3">
                 
-                <div class="glass-panel p-4 mb-4" style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+                <div class="glass-panel p-4 mb-4" style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="badge bg-white text-dark shadow-sm">🚀 НАСТРОЙКА</span>
                         <span class="text-white small fw-bold text-shadow"><i class="bi bi-clock"></i> ${duration}</span>
@@ -274,12 +274,21 @@ window.renderSetupScreen = function (wrapper, state, res) {
 
                     <hr class="border-white opacity-25 my-4">
 
-                    <div class="form-check form-switch mb-4 d-flex justify-content-between align-items-center px-0 clickable" onclick="document.getElementById('modeHardcore').click()">
-                        <div class="d-flex align-items-center">
+                    <div class="form-check form-switch mb-4 d-flex justify-content-between align-items-center px-0 clickable" onclick="if(event.target.tagName !== 'INPUT') document.getElementById('modeHardcore').click()">
+                        <div class="d-flex align-items-center" style="pointer-events: none;">
                             <i class="bi bi-radioactive text-white me-2 fs-5 text-shadow"></i>
                             <label class="form-check-label fw-bold text-white text-shadow" for="modeHardcore">Хардкор Режим</label>
                         </div>
                         <input class="form-check-input" type="checkbox" id="modeHardcore" style="width: 3em; height: 1.5em; cursor: pointer;">
+                    </div>
+
+                    <div class="form-check form-switch mb-4 d-flex justify-content-between align-items-center px-0 clickable" onclick="if(event.target.tagName !== 'INPUT') document.getElementById('modeAI').click()">
+                        <div class="d-flex align-items-center" style="pointer-events: none;">
+                            <i class="bi bi-stars text-warning me-2 fs-5 text-shadow"></i>
+                            <label class="form-check-label fw-bold text-white text-shadow" for="modeAI">AI Режиссер</label>
+                            <span class="badge bg-warning text-dark ms-2 small">BETA</span>
+                        </div>
+                        <input class="form-check-input" type="checkbox" id="modeAI" style="width: 3em; height: 1.5em; cursor: pointer;">
                     </div>
                     
                     <button class="btn btn-light w-100 rounded-pill py-3 fw-bold shadow-lg" 
@@ -298,10 +307,10 @@ window.renderSetupScreen = function (wrapper, state, res) {
         `;
     } else {
         content = `
-             <div style="z-index: 10; width: 100%; max-width: 500px; text-align: center;" class="animate__animated animate__fadeIn">
+             <div style="z-index: 10; width: 100%; max-width: 500px; text-align: center;" class="animate__animated animate__fadeIn px-3">
                 <div class="spinner-border text-white mb-4" style="width: 3rem; height: 3rem; opacity: 0.8;"></div>
                 <h2 class="fw-bold text-white mb-2 text-shadow">Ожидание...</h2>
-                <div class="glass-panel p-3 d-inline-block rounded-4 text-white mb-4 shadow-sm" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
+                <div class="glass-panel p-3 d-inline-block rounded-4 text-white mb-4 shadow-sm" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
                     ${title}
                 </div>
                 <p class="text-white opacity-90 mb-5 text-shadow">Хост настраивает параметры...</p>
@@ -332,7 +341,7 @@ window.renderIntro = function (wrapper, state, res) {
 
     var bgStyle = bgImg
         ? `background: url('${bgImg}') no-repeat center center; background-size: cover;`
-        : `background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);`;
+        : `background: url('img/games/bunker/bunker_global_bg_1769853095597.png') no-repeat center center; background-size: cover;`;
 
     wrapper.innerHTML = `
         <div class="bunker-main-layout d-flex flex-column align-items-center justify-content-end animate__animated animate__fadeIn" 
@@ -340,7 +349,7 @@ window.renderIntro = function (wrapper, state, res) {
              
              <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 1;"></div>
 
-             <div style="z-index: 10; width: 100%; max-width: 450px;" class="animate__animated animate__fadeInUp">
+             <div style="z-index: 10; width: 100%; max-width: 450px;" class="animate__animated animate__fadeInUp px-3">
                 <div class="cursor-pointer mb-2 d-flex align-items-center justify-content-center p-2">
                     ${res.is_host == 1 ? `
                     <div class="me-3 p-2" onclick="window.playCatastropheIntroSound('${title.replace(/'/g, "\\'")}', true)">
@@ -349,23 +358,23 @@ window.renderIntro = function (wrapper, state, res) {
                     ` : ''}
                     
                     <div onclick="window.toggleBunkerIntro()" class="d-flex align-items-center">
-                        <h2 class="fw-bold mb-0 d-inline-block text-white text-shadow" style="font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; opacity: 1;">КАТАСТРОФА</h2>
-                        <i class="bi ${window.bunkerIntroCollapsed ? 'bi-chevron-compact-up' : 'bi-chevron-compact-down'} text-white ms-2 bunker-intro-toggle-icon text-shadow" style="font-size: 1.5rem; vertical-align: middle;"></i>
+                        <h2 class="fw-bold mb-0 d-inline-block text-white" style="font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; opacity: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">КАТАСТРОФА</h2>
+                        <i class="bi ${window.bunkerIntroCollapsed ? 'bi-chevron-compact-up' : 'bi-chevron-compact-down'} text-white ms-2 bunker-intro-toggle-icon" style="font-size: 1.5rem; vertical-align: middle; text-shadow: 0 2px 10px rgba(0,0,0,0.5);"></i>
                     </div>
                 </div>
                 
                 <div class="bunker-intro-info-block ${window.bunkerIntroCollapsed ? 'collapsed' : ''}">
-                    <div class="card border-0 shadow-lg p-4 mb-3 rounded-4 w-100" 
-                         style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px;">
+                    <div class="card border-0 shadow-lg p-3 mb-3 rounded-4 w-100" 
+                         style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1);">
                         
-                        <h3 class="fw-bold mb-3 text-white text-shadow" style="font-size: 1.5rem;">${title}</h3>
+                        <h3 class="fw-bold mb-2 text-white text-shadow" style="font-size: 1.4rem;">${title}</h3>
                         
-                        <p class="text-white opacity-95 mb-4 text-shadow" style="font-size: 1rem; line-height: 1.5;">
+                        <p class="text-white opacity-95 mb-3 text-shadow" style="font-size: 0.95rem; line-height: 1.4;">
                             ${intro_text}
                         </p>
 
-                        <div class="d-flex justify-content-around align-items-center rounded-pill py-2 px-3 shadow-inner mb-3" style="background: rgba(0,0,0,0.2);">
-                            <div class="small text-white fw-bold" style="font-size: 13px;"><i class="bi bi-people-fill me-1"></i> ${state.bunker_places}/${res.players.length} мест</div>
+                        <div class="d-flex justify-content-around align-items-center rounded-pill py-2 px-3 shadow-inner mb-3" style="background: rgba(0,0,0,0.15);">
+                            <div class="small text-white fw-bold" style="font-size: 13px;"><i class="bi bi-people-fill me-1"></i> Мест в бункере: ${state.bunker_places}</div>
                             <div class="small text-white fw-bold" style="font-size: 13px;"><i class="bi bi-clock-history me-1"></i> ${duration}</div>
                         </div>
 
@@ -389,7 +398,7 @@ window.renderIntro = function (wrapper, state, res) {
                     </div>
                 </div>
 
-                <div class="bunker-intro-actions">
+                <div class="bunker-intro-actions p-3">
                     ${res.is_host ? `
                         <button class="btn btn-light fw-bold btn-lg w-100 rounded-pill shadow-lg pulse-btn py-3 mb-3" 
                             style="color: var(--primary-color); letter-spacing: 1px;"
@@ -429,7 +438,20 @@ window.startBunkerGame = function () {
     // 6. Host clicks "Begin" -> calls finish_intro -> sets phase='round'.
 
     // So window.startBunkerGame should call 'init_bunker'.
-    window.sendGameAction('init_bunker', {});
+    var hardcore = document.getElementById('modeHardcore')?.checked;
+    var aiMode = document.getElementById('modeAI')?.checked;
+
+    // Show spinner on button
+    var btn = document.querySelector('button[onclick="window.startBunkerGame()"]');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Генерация...';
+        btn.disabled = true;
+    }
+
+    window.sendGameAction('init_bunker', {
+        mode: hardcore ? 'hardcore' : 'normal',
+        ai_mode: aiMode
+    });
 };
 
 // Safe finish/leave function

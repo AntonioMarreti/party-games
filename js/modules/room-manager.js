@@ -94,6 +94,7 @@ function leaveRoom() {
                 if (gameArea) gameArea.innerHTML = '';
 
                 isLeavingProcess = false;
+                if (window.showScreen) window.showScreen('lobby');
                 if (typeof window.checkState === 'function') await window.checkState();
             } else {
                 isLeavingProcess = false;
@@ -334,6 +335,7 @@ function renderPlayerList(players, containerId) {
     let botLimit = 0;
     if (sgId === 'blokus') botLimit = 4;
     else if (sgId === 'bunker') botLimit = 12;
+    else if (sgId === 'tictactoe') botLimit = 2;
 
     if (amIHost && botLimit > 0 && players.length < botLimit) {
         const div = document.createElement('div');
@@ -386,14 +388,21 @@ function openQrModal() {
 function copyInviteLink() {
     const inviteLink = "https://t.me/mpartygamebot/app?startapp=" + window.currentRoomCode;
     navigator.clipboard.writeText(inviteLink).then(() => {
-        const btn = document.querySelector('#qrInviteModal .btn-primary');
-        if (btn) {
-            const originalText = btn.innerText;
-            btn.innerText = "Скопировать ссылку ✅";
-            btn.style.backgroundColor = "#28a745";
+        const btn = document.getElementById('btn-copy-invite');
+        const icon = document.getElementById('btn-copy-icon');
+
+        if (btn && icon) {
+            const originalBg = btn.style.background;
+
+            // Stable feedback: Swap icon and background color only
+            icon.classList.remove('bi-link-45deg');
+            icon.classList.add('bi-check-lg');
+            btn.style.background = "#28a745";
+
             setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.backgroundColor = "";
+                icon.classList.remove('bi-check-lg');
+                icon.classList.add('bi-link-45deg');
+                btn.style.background = originalBg;
             }, 2000);
         }
     });

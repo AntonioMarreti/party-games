@@ -26,9 +26,9 @@
         </div>
 
         <div class="section-title mt-4">Популярные игры</div>
-        <div class="horizontal-scroll" id="popular-games-list">
+        <div class="games-grid" id="popular-games-list">
             <!-- Dynamically loaded via app.js -->
-            <div class="text-center w-100 opacity-50 py-3">
+            <div class="text-center w-100 opacity-50 py-3" style="grid-column: 1 / -1;">
                 <div class="spinner-border spinner-border-sm"></div>
             </div>
         </div>

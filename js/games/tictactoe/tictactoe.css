@@ -1,0 +1,129 @@
+/* js/games/tictactoe/tictactoe.css */
+
+.tictactoe-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+    width: 100%;
+    color: var(--text-main);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tictactoe-board-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 350px;
+}
+
+.tictactoe-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 12px;
+    width: 92vw;
+    max-width: 340px;
+    aspect-ratio: 1 / 1;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 28px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    place-content: center;
+    box-sizing: border-box;
+}
+
+.tictactoe-cell {
+    background: white;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    user-select: none;
+    aspect-ratio: 1/1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    line-height: 1;
+}
+
+.tictactoe-cell:active {
+    transform: scale(0.92);
+    background: #f8f9fa;
+}
+
+.tictactoe-cell.occupied {
+    cursor: default;
+}
+
+.tictactoe-cell.winner {
+    background: #6aaa64;
+    box-shadow: 0 0 20px rgba(106, 170, 100, 0.4);
+    border-color: #5f995a;
+    color: white;
+}
+
+.tictactoe-symbol-x {
+    color: #FF6B6B;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tictactoe-symbol-o {
+    color: #4D96FF;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tictactoe-info {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.tictactoe-turn-badge {
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tictactoe-turn-badge.my-turn {
+    background: var(--primary-color);
+    color: white;
+    animation: pulseGlow 2s infinite;
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(106, 170, 100, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(106, 170, 100, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(106, 170, 100, 0);
+    }
+}

@@ -88,7 +88,7 @@
 
             <div class="settings-item border-0 pb-0">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold text-danger">Режим охлаждения ❄️</div>
+                    <div class="fw-bold text-danger">Режим охлаждения</div>
                     <div class="text-muted small">Максимальная экономия</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">

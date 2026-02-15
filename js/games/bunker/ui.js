@@ -14,7 +14,8 @@ window.BUNKER_ICONS = {
     facts: '<i class="bi bi-patch-question-fill"></i>',
     condition: '<i class="bi bi-exclamation-triangle-fill"></i>',
     feature: '<i class="bi bi-bricks"></i>',
-    threat: '<i class="bi bi-radioactive"></i>'
+    threat: '<i class="bi bi-radioactive"></i>',
+    backstory: '<i class="bi bi-journal-richtext"></i>'
 };
 
 // Simple grey silhouette for default avatar
@@ -28,7 +29,8 @@ window.getAvatarSrc = function (url) {
 window.BUNKER_ROUND_NAMES = {
     professions: 'Профессия', biology: 'Биология', health: 'Здоровье',
     hobby: 'Хобби', advantages: 'Сильная черта', disadvantages: 'Слабость',
-    luggage: 'Багаж', facts: 'Факт', condition: 'Особое условие'
+    luggage: 'Багаж', facts: 'Факт', condition: 'Особое условие',
+    backstory: 'Судьба'
 };
 
 window.sendGameAction = async function (type, data = {}) {
@@ -89,26 +91,28 @@ window.renderRoundPhase = function (wrapper, state, res) {
     if (!window.bunkerState.activeTab) window.bunkerState.activeTab = 'others';
 
     // Get active player name
-    var activePlayer = res.players.find(function (p) { return String(p.id) === activePlayerId; });
-    var activeName = activePlayer ? activePlayer.first_name : 'Unknown';
+    var activePlayer = activePlayerId && activePlayerId !== 'null' ? res.players.find(function (p) { return String(p.id) === activePlayerId; }) : null;
+    var activeName = activePlayer ? activePlayer.first_name : (state.phase === 'voting' ? 'Голосование' : 'Ожидание...');
 
     wrapper.innerHTML = `
-        <div class="bunker-main-layout">
+        <div class="bunker-main-layout px-3">
             ${window.renderBunkerHeader(state)}
             
             <!-- Floating Turn Indicator -->
+            ${(activePlayerId && activePlayerId !== 'null' && state.phase === 'round') ? `
             <div class="turn-indicator-floating ${isMyTurn ? 'my-turn' : ''}">
                 <div class="turn-avatar-ring">
                     <img src="${window.getAvatarSrc(activePlayer?.photo_url)}" class="turn-avatar">
                 </div>
                 <div class="turn-info">
                    ${isMyTurn
-            ? `<div class="turn-label text-uppercase fw-bold letter-spacing-1" style="color:var(--status-warning);">ВАШ ХОД!</div>`
-            : `<div class="turn-label text-uppercase small letter-spacing-1" style="opacity:0.75; color:var(--text-main);">Ходит сейчас</div><div class="turn-name fw-bold" style="color:var(--text-main);">${activeName}</div>`
-        }
+                ? `<div class="turn-label text-uppercase fw-bold letter-spacing-1" style="color:var(--status-warning);">ВАШ ХОД!</div>`
+                : `<div class="turn-label text-uppercase small letter-spacing-1" style="opacity:0.75; color:var(--text-main);">Ходит сейчас</div><div class="turn-name fw-bold" style="color:var(--text-main);">${activeName}</div>`
+            }
                 </div>
                  ${isMyTurn ? '<div class="turn-badge pulsing"><i class="bi bi-lightning-fill"></i></div>' : ''}
             </div>
+            ` : ''}
 
             <!-- Segmented Control Tabs -->
             <div class="bunker-segmented-control mb-3 mx-3">
@@ -141,12 +145,9 @@ window.renderRoundPhase = function (wrapper, state, res) {
 
 window.renderBunkerHeader = function (state) {
     var catastrophe = state.catastrophe;
-    var latestFeature = state.revealed_features && state.revealed_features.length > 0
-        ? state.revealed_features[state.revealed_features.length - 1]
-        : null;
 
     return `
-        <div class="bunker-header-card" style="border-radius: 24px; margin-top: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <div class="bunker-header-card" style="border-radius: 24px; margin-top: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); background: rgba(255,255,255,0.6);">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="bunker-round-badge">Раунд ${state.current_round}</div>
@@ -166,19 +167,43 @@ window.renderBunkerHeader = function (state) {
 
             ${state.revealed_features && state.revealed_features.length > 0 ? `
                 <div class="bunker-features-list mt-3">
-                    ${state.revealed_features.slice().reverse().map((f, i) => `
-                        <div class="bunker-feature-alert glass-card clickable mb-2" onclick="window.showAlert('Бункер: ${f.text.replace(/'/g, "\\'")}', '${f.text.replace(/'/g, "\\'")}')">
-                            <span class="feature-icon"><i class="bi bi-bricks" style="color:var(--status-warning);"></i></span>
+                    ${state.revealed_features.slice().reverse().map((f, i) => {
+        const isIncident = f.type === 'incident';
+        const isFixed = f.fixed;
+        const icon = isIncident ? 'bi-exclamation-triangle-fill' : 'bi-bricks';
+        const iconColor = isIncident ? (isFixed ? 'var(--status-success)' : 'var(--status-error)') : 'var(--status-warning)';
+        const realIdx = state.revealed_features.length - 1 - i;
+
+        return `
+                        <div class="bunker-feature-alert glass-card clickable mb-2" 
+                             style="border-left: 4px solid ${isIncident ? (isFixed ? 'var(--status-success)' : 'var(--status-error)') : 'var(--primary-color)'};"
+                             onclick="window.showBunkerFeatureDetails(${realIdx})">
+                            <span class="feature-icon"><i class="bi ${icon}" style="color:${iconColor};"></i></span>
                             <span class="feature-text">
-                                <span class="badge bg-secondary me-2" style="font-size: 10px; opacity: 0.8;">Раунд ${state.current_round - i}</span>
-                                ${f.text || f}
+                                <span class="badge bg-secondary opacity-75 me-2" style="font-size: 10px; font-weight: normal;">Раунд ${realIdx + 1}</span>
+                                <span class="${isIncident && !isFixed ? 'text-danger fw-bold' : ''}">${f.text}</span>
                             </span>
                         </div>
-                    `).join('')}
+                    `}).join('')}
                 </div>
             ` : ''}
         </div>
     `;
+};
+
+window.showBunkerFeatureDetails = function (index) {
+    const state = window.bunkerState.lastServerState;
+    const f = state.revealed_features[index];
+    if (!f) return;
+
+    const isIncident = f.type === 'incident';
+    const bonusColor = f.bonus > 0 ? 'var(--status-success)' : 'var(--status-error)';
+    const effectHtml = f.bonus ? `<br><br><b>Эффект:</b> <span style="color:${bonusColor}">${f.bonus > 0 ? '+' : ''}${f.bonus}% к выживанию</span>` : '';
+
+    window.showAlert(
+        isIncident ? 'Происшествие' : 'Объект бункера',
+        `<b>${f.text}</b><br><br>${f.desc || 'Нет дополнительного описания.'}${effectHtml}`
+    );
 };
 
 /* --- My Cards Component --- */
@@ -187,7 +212,7 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
     if (!myCards) return '<div class="bunker-empty">Данные загружаются...</div>';
 
     var html = `<div class="bunker-grid pb-5">`;
-    var MY_CARDS_ORDER = ['professions', 'biology', 'health', 'hobby', 'advantages', 'disadvantages', 'luggage', 'facts', 'condition'];
+    var MY_CARDS_ORDER = ['professions', 'biology', 'health', 'hobby', 'advantages', 'disadvantages', 'luggage', 'facts', 'backstory', 'condition'];
 
     MY_CARDS_ORDER.forEach(function (key) {
         var cardData = myCards[key];
@@ -270,14 +295,19 @@ window.getAbilityLabel = function (type) {
     if (type === 'heal') return '❤️ Вылечить';
     if (type === 'heal_self') return '❤️ Вылечить себя';
     if (type === 'threaten') return '🔫 Угрожать';
-    if (type === 'steal_luggage') return '🎒 Украсть багаж';
+    if (type === 'steal_luggage' || type === 'swap_luggage') return '🎒 Обменять багаж';
     if (type === 'reveal_feature') return '🖥️ Взломать (Факт)';
+    if (type === 'fix_system') return '🔧 Починить';
+    if (type === 'spy_card') return '🕵️ Подсмотреть';
+    if (type === 'override_event') return '💻 Хакнуть будущее';
+    if (type === 'force_reveal') return '🪄 Разоблачить';
+    if (type === 'copy_luggage') return '💰 Отдать багаж';
     return '⚡ Использовать';
 };
 
 window.triggerAbility = function (cardKey, actionType) {
     // Actions that don't require a target
-    if (['heal_self', 'reveal_feature', 'threaten'].includes(actionType)) {
+    if (['heal_self', 'reveal_feature', 'threaten', 'fix_system', 'override_event'].includes(actionType)) {
         if (!confirm('Вы уверены, что хотите использовать эту способность?')) return;
         window.sendAbility(cardKey, actionType, null, { innerHTML: '' }); // Fake btn
         return;
@@ -333,7 +363,7 @@ window.renderOtherPlayers = function (players, state, myId, activePlayerId) {
         var knownTraits = '';
 
         if (pCards) {
-            var REVEAL_ORDER = ['professions', 'biology', 'health', 'hobby', 'advantages', 'disadvantages', 'luggage', 'facts', 'condition'];
+            var REVEAL_ORDER = ['professions', 'biology', 'health', 'hobby', 'advantages', 'disadvantages', 'luggage', 'facts', 'backstory', 'condition'];
             REVEAL_ORDER.forEach(function (k) {
                 var card = pCards[k];
                 if (card?.revealed) {
@@ -579,7 +609,8 @@ window.fetchBunkerSummary = async function (state, res) {
             catastrophe: state.catastrophe?.title,
             capacity: state.bunker_places,
             players: allPlayers,
-            threats: state.threat_results
+            threats: state.threat_results,
+            features: state.revealed_features
         });
 
         console.log("Bunker Summary AI Response:", response);

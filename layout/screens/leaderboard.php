@@ -20,7 +20,7 @@
         </ul>
 
         <!-- Leaderboard List -->
-        <div id="leaderboard-screen-container" class="px-3 pb-5">
+        <div id="leaderboard-screen-container" class="px-2 pb-5">
             <div class="text-center py-5">
                 <div class="spinner-border text-primary spinner-border-sm"></div>
             </div>

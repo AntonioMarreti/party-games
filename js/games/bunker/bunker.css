@@ -1,8 +1,8 @@
 /* === BUNKER LIGHT THEME (Neon-Frosted) === */
 :root {
     --bunker-bg: transparent;
-    --bunker-bg-alt: rgba(255, 255, 255, 0.6);
-    --bunker-card-bg: rgba(255, 255, 255, 0.6);
+    --bunker-bg-alt: rgba(255, 255, 255, 0.45);
+    --bunker-card-bg: rgba(255, 255, 255, 0.45);
     --bunker-accent: #6C5CE7;
     /* Indigo accent */
     --bunker-danger: #EF4444;
@@ -160,13 +160,12 @@
 /* Header */
 .bunker-header-card {
     background: var(--bunker-bg-alt);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
-    padding: 20px;
-    padding-top: calc(50px + env(safe-area-inset-top));
-    /* Increased clearance */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 18px;
+    padding-top: calc(15px + env(safe-area-inset-top));
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
     margin-bottom: 20px;
 }
 
