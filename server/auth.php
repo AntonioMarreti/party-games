@@ -108,7 +108,7 @@ function registerOrLoginUser($tg_user) {
 
         // LOG NEW USER
         TelegramLogger::logEvent('user', "New User Registered", [
-            'id' => $newUserId,
+            'id' => intval($newUserId),
             'name' => $first_name,
             'telegram_id' => $telegram_id
         ]);
