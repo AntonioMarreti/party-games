@@ -1,7 +1,8 @@
 <!-- ТАБ 3: ПРОФИЛЬ -->
 <div id="tab-profile" class="tab-content" style="display: none;">
     <!-- Modern Header -->
-    <div class="profile-header-modern" style="padding-top: 60px;"> <!-- Added padding for notch -->
+    <div class="profile-header-modern" style="padding-top: calc(60px + env(safe-area-inset-top));">
+        <!-- Added padding for notch -->
         <div class="profile-avatar-xl" id="profile-avatar-big">
             <div class="profile-level-badge-float" id="profile-level-badge">1</div>
         </div>
@@ -62,6 +63,17 @@
                     <div class="icon-wrap me-3" style="width:32px; text-align:center; color: var(--primary-color);"><i
                             class="bi bi-gear-fill fs-5"></i></div>
                     <span class="fw-bold" style="color: var(--text-main)">Настройки</span>
+                </div>
+                <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
+            </div>
+
+            <!-- Donate -->
+            <div class="settings-item clickable" onclick="showScreen('donate')">
+                <div class="d-flex align-items-center">
+                    <div class="icon-wrap me-3" style="width:32px; text-align:center; color: #ff4757;">
+                        <i class="bi bi-heart-fill fs-5"></i>
+                    </div>
+                    <span class="fw-bold" style="color: var(--text-main)">Поддержать проект</span>
                 </div>
                 <i class="bi bi-chevron-right text-muted opacity-50 pe-2"></i>
             </div>

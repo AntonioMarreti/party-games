@@ -10,6 +10,8 @@
 <script src="js/config/games-config.js?v=<?php echo $v; ?>"></script>
 
 <!-- API & Framework -->
+<script src="js/modules/mock-tma.js?v=<?php echo $v; ?>"></script>
+<script src="js/modules/storage-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/api-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/theme-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/ui-manager.js?v=<?php echo $v; ?>"></script>

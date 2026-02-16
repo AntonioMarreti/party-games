@@ -52,7 +52,7 @@ function closeSettingsScreen() {
 }
 
 // === INITIALIZATION ===
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const AVAILABLE_GAMES = window.AVAILABLE_GAMES;
     if (AVAILABLE_GAMES && AVAILABLE_GAMES.length > 0) {
         window.selectedGameId = AVAILABLE_GAMES[0].id;
@@ -68,7 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
             tg.requestFullscreen();
         }
-        if (tg.isVerticalSwipesEnabled !== undefined) tg.isVerticalSwipesEnabled = false;
+
+        // Swipe Behavior
+        if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
+            tg.swipeBehavior.disableVertical();
+        } else if (tg.isVerticalSwipesEnabled !== undefined) {
+            tg.isVerticalSwipesEnabled = false;
+        }
+
         if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
         if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
         if (tg.ready) tg.ready();
@@ -82,18 +89,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hash.includes('auth_token=')) {
         const token = hash.split('auth_token=')[1].trim();
         if (window.AuthManager) window.AuthManager.setAuthToken(token);
+        else if (window.StorageManager) await window.StorageManager.set('pg_token', token);
         else localStorage.setItem('pg_token', token);
         window.history.replaceState(null, null, window.location.pathname);
     }
 
     safeStyle('login-loading', 'display', 'none');
 
-    const savedColor = localStorage.getItem('pgb_accent_color');
+    let savedColor;
+    if (window.StorageManager) savedColor = await window.StorageManager.get('pgb_accent_color');
+    else savedColor = localStorage.getItem('pgb_accent_color');
+
     if (savedColor && window.ThemeManager) {
         window.ThemeManager.applyAccentColor(savedColor);
     }
 
-    const currentToken = window.AuthManager ? window.AuthManager.getAuthToken() : localStorage.getItem('pg_token');
+    // Load Token
+    let currentToken;
+    if (window.AuthManager && window.AuthManager.getAuthToken()) {
+        currentToken = window.AuthManager.getAuthToken();
+    } else {
+        // Try StorageManager
+        if (window.StorageManager) currentToken = await window.StorageManager.get('pg_token');
+        else currentToken = localStorage.getItem('pg_token');
+    }
+
+    // Sync back to AuthManager execution context if found
+    if (currentToken && window.AuthManager && !window.AuthManager.getAuthToken()) {
+        window.AuthManager.setAuthToken(currentToken);
+    }
+
     if (currentToken) {
         if (window.AuthManager) window.AuthManager.initApp(tg);
     } else if (tg && tg.initData) {

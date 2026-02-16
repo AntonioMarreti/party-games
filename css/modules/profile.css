@@ -608,6 +608,10 @@ body.dark-mode .menu-btn-item i.bi-chevron-right {
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-glass);
     border-radius: 20px;
-    box-shadow: var(--shadow-main);
     overflow: hidden;
+    padding: 0 16px;
+    /* Reset padding to 0 horizontal, but actually we need vertical padding 0 for list items to touch edges if they have padding, or container padding? */
+    /* Let's look at .settings-item. It has padding 16px 0. */
+    /* And .settings-group had padding 8px 16px. */
+    padding: 0 16px;
 }

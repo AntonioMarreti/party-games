@@ -24,6 +24,7 @@ require_once 'layout/version.php';
                 <?php include 'layout/screens/settings.php'; ?>
                 <?php include 'layout/screens/game-detail.php'; ?>
                 <?php include 'layout/screens/game-catalog.php'; ?>
+                <?php include 'layout/screens/donate.php'; ?>
             </div>
 
             <?php include 'layout/nav.php'; ?>

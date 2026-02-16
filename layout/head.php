@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="css/modules/modals.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="css/modules/blokus.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="css/modules/avatar.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="css/modules/donate.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="styles.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="css/dark-mode.css?v=<?php echo $v; ?>">
 

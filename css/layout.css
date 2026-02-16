@@ -1,3 +1,11 @@
+/* Global Touch Optimization */
+* {
+    /* Disable double-tap zoom on EVERYTHING */
+    touch-action: manipulation;
+    /* Remove grey highlight on tap */
+    -webkit-tap-highlight-color: transparent;
+}
+
 html,
 body {
     overflow-x: hidden;

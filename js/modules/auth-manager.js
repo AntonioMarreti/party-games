@@ -94,13 +94,31 @@ async function loginTMA(tg) {
 
 function logout() {
     if (window.showConfirmation) {
-        window.showConfirmation('Выход', 'Вы уверены, что хотите выйти?', () => {
-            localStorage.removeItem('pg_token');
-            authToken = null;
+        window.showConfirmation('Выход', 'Вы уверены, что хотите выйти?', async () => {
+            // 1. Clear Token
+            if (window.StorageManager) await window.StorageManager.remove('pg_token');
+            else localStorage.removeItem('pg_token');
+
+            // 2. Clear Global State
+            window.authToken = null;
+            window.globalUser = null;
+
+            // 3. Force navigate to login
+            // Using replace to ensure history doesn't keep the protected page
+            window.location.hash = 'login';
             window.location.reload();
         }, { isDanger: true, confirmText: 'Выйти' });
     } else {
-        localStorage.removeItem('pg_token');
+        // 1. Clear Token
+        if (window.StorageManager) window.StorageManager.remove('pg_token');
+        else localStorage.removeItem('pg_token');
+
+        // 2. Clear Global State
+        window.authToken = null;
+        window.globalUser = null;
+
+        // 3. Force navigate to login
+        window.location.hash = 'login';
         window.location.reload();
     }
 }
@@ -157,7 +175,8 @@ async function devLogin(index = 1) {
 
 function setAuthToken(token) {
     authToken = token;
-    localStorage.setItem('pg_token', token);
+    if (window.StorageManager) window.StorageManager.set('pg_token', token);
+    else localStorage.setItem('pg_token', token);
     window.authToken = token; // Sync global
 }
 

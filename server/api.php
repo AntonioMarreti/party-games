@@ -223,6 +223,7 @@ $routes = [
 
     'update_profile' => 'actions/user.php',
     'update_settings' => 'actions/user.php',
+    'get_me' => 'actions/user.php', // NEW
     'toggle_like' => 'actions/user.php', // NEW
 
     // Social
@@ -260,6 +261,9 @@ $routes = [
 
     // REACTIONS
     'send_reaction' => 'actions/game.php', // NEW
+
+    // PAYMENTS
+    'create_invoice' => 'actions/payment.php',
 ];
 
 if (isset($routes[$action])) {

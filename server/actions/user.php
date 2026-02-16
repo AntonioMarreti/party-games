@@ -67,3 +67,10 @@ function action_toggle_like($pdo, $user, $data)
         echo json_encode(['status' => 'ok', 'is_liked' => true]);
     }
 }
+
+function action_get_me($pdo, $user, $data)
+{
+    // Return fresh user data
+    // calculated columns or specific fields can be added here
+    echo json_encode(['status' => 'ok', 'user' => $user]);
+}

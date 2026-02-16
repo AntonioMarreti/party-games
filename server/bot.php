@@ -1,31 +1,73 @@
 <?php
 // server/bot.php
+
 require_once 'config.php'; // Подключаем твой конфиг с PDO и BOT_TOKEN
 require_once 'auth.php';   // НУЖНО для регистрации юзеров
 require_once 'lib/shared_helpers.php'; // Missing helper functions (check_achievements, etc)
 require_once 'actions/admin.php'; // For db repair tool
 
 // Получаем данные от Telegram
-$content = file_get_contents("php://input");
-$update = json_decode($content, true);
+$rawInput = file_get_contents("php://input");
+$update = json_decode($rawInput, true);
 
 // Если это не сообщение (например, пустой запрос) — выходим
-if (!$update) exit;
+if (!$update)
+    exit;
 
-// ВРЕМЕННЫЙ ДЕБАГ: Пишем всё в лог
-file_put_contents(__DIR__ . '/bot_debug.log', date('Y-m-d H:i:s') . " - " . $content . "\n", FILE_APPEND);
-
-if (!isset($update['message'])) {
+if (!isset($update['message']) && !isset($update['pre_checkout_query']) && !isset($update['callback_query'])) {
     exit;
 }
 
-$message = $update['message'];
-$chatId = $message['chat']['id'];
+$message = $update['message'] ?? null;
+$chatId = $message['chat']['id'] ?? ($update['callback_query']['message']['chat']['id'] ?? 0);
 $text = $message['text'] ?? '';
 
 // Логика команды /start
+if (isset($update['pre_checkout_query'])) {
+    $pcq = $update['pre_checkout_query'];
+    $id = $pcq['id'];
+
+    // Auto-approve as we don't hold physical stock
+    $res = sendTelegram('answerPreCheckoutQuery', [
+        'pre_checkout_query_id' => $id,
+        'ok' => true
+    ]);
+    exit;
+}
+
+if (isset($message['successful_payment'])) {
+    $sp = $message['successful_payment'];
+    $amount = $sp['total_amount']; // XTR amount (Stars)
+    $payload = $sp['invoice_payload']; // donation_USERID_TIME
+
+    // Extract User ID from payload
+    $parts = explode('_', $payload);
+    $userId = isset($parts[1]) ? (int) $parts[1] : 0;
+
+    if ($userId > 0) {
+        try {
+            // Update User Total Donation
+            $stmt = $pdo->prepare("UPDATE users SET total_donated_stars = total_donated_stars + ? WHERE id = ?");
+            $stmt->execute([$amount, $userId]);
+
+            // Log transaction
+            TelegramLogger::logEvent('payment', 'Payment Success', [
+                'user_id' => $userId,
+                'amount' => $amount,
+                'tg_id' => $message['from']['id']
+            ]);
+
+            // Send Thank You Message
+            reply($chatId, getSfEmoji('success') . " <b>Спасибо за поддержку!</b>\n\nВы пожертвовали <b>$amount Stars</b>. Ваша поддержка помогает нам развиваться! 💖");
+
+        } catch (Exception $e) {
+            TelegramLogger::logError('payment_db', ['error' => $e->getMessage()]);
+        }
+    }
+    exit;
+}
+
 if (strpos($text, '/start') === 0) {
-    
     // Извлекаем код комнаты (startapp параметр)
     // Telegram присылает это как "/start ABCD"
     $parts = explode(' ', $text);
@@ -35,11 +77,11 @@ if (strpos($text, '/start') === 0) {
     // ЗАМЕНИ mpartygamebot на юзернейм своего бота
     $appUrl = "https://t.me/" . BOT_USERNAME . "/app";
     if (!empty($startParam)) {
-        
+
         // --- НОВАЯ ЛОГИКА: АВТОРИЗАЦИЯ ЧЕРЕЗ БОТА ---
         if (strpos($startParam, 'auth_') === 0) {
             $tempCode = $startParam;
-            
+
             // 1. Регистрируем/логиним юзера в нашей системе
             $tgUser = [
                 'id' => $message['from']['id'],
@@ -47,11 +89,11 @@ if (strpos($text, '/start') === 0) {
                 'photo_url' => '' // Фото через бота сложнее достать сразу
             ];
             $token = registerOrLoginUser($tgUser);
-            
+
             // 2. Обновляем сессию в БД
             $stmt = $pdo->prepare("UPDATE auth_sessions SET telegram_id = ?, auth_token = ?, status = 'authorized' WHERE temp_code = ? AND status = 'pending'");
             $stmt->execute([$tgUser['id'], $token, $tempCode]);
-            
+
             if ($stmt->rowCount() > 0) {
                 reply($chatId, getSfEmoji('success') . " <b>Авторизация успешна!</b>\n\nВернитесь в браузер, вы уже вошли в свой аккаунт.");
             } else {
@@ -59,7 +101,7 @@ if (strpos($text, '/start') === 0) {
             }
             exit;
         }
-        
+
         $appUrl .= "?startapp=" . $startParam;
     }
 
@@ -141,9 +183,11 @@ if (strpos($cmd, '/users') === 0) {
 
     // Parse limit
     $parts = explode(' ', $cmd);
-    $limit = isset($parts[1]) ? (int)$parts[1] : 5;
-    if ($limit < 1) $limit = 5;
-    if ($limit > 50) $limit = 50; // Cap at 50
+    $limit = isset($parts[1]) ? (int) $parts[1] : 5;
+    if ($limit < 1)
+        $limit = 5;
+    if ($limit > 50)
+        $limit = 50; // Cap at 50
 
     try {
         $top = $pdo->query("SELECT * FROM users ORDER BY id DESC LIMIT $limit")->fetchAll();
@@ -157,18 +201,18 @@ if (strpos($cmd, '/users') === 0) {
             $uId = $u['id'];
             $fName = htmlspecialchars($u['first_name'] ?? 'Аноним');
             $uName = !empty($u['username']) ? "@" . htmlspecialchars($u['username']) : "";
-            
+
             $displayName = $uName ?: $fName;
-            
+
             // Make name a link to profile
             if (!empty($u['username'])) {
-                 $link = "<a href=\"https://t.me/" . htmlspecialchars($u['username']) . "\">{$displayName}</a>";
+                $link = "<a href=\"https://t.me/" . htmlspecialchars($u['username']) . "\">{$displayName}</a>";
             } elseif (!empty($u['telegram_id'])) {
-                 $link = "<a href=\"tg://user?id={$u['telegram_id']}\">{$displayName}</a>";
+                $link = "<a href=\"tg://user?id={$u['telegram_id']}\">{$displayName}</a>";
             } else {
-                 $link = $displayName; // No link for users without TG ID
+                $link = $displayName; // No link for users without TG ID
             }
-            
+
             $msg .= "• {$link} (ID: {$uId})\n";
         }
         reply($chatId, $msg);
@@ -201,13 +245,13 @@ if (strpos($cmd, '/repair') === 0 || strpos($cmd, '/db_repair') === 0) {
         reply($chatId, getSfEmoji('error') . " Доступ запрещен");
         exit;
     }
-    
+
     reply($chatId, "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> <b>Запуск диагностики и ремонта БД...</b>");
-    
+
     try {
         // Reuse logic from actions/admin.php
         $res = perform_db_repair($pdo);
-        
+
         if ($res['status'] === 'ok') {
             $msg = getSfEmoji('success') . " <b>Ремонт завершен!</b>\n\n";
             if (empty($res['fixes'])) {
@@ -218,10 +262,10 @@ if (strpos($cmd, '/repair') === 0 || strpos($cmd, '/db_repair') === 0) {
                 }
             }
         } else {
-             $msg = getSfEmoji('error') . " <b>Ошибка:</b> " . htmlspecialchars($res['error']);
+            $msg = getSfEmoji('error') . " <b>Ошибка:</b> " . htmlspecialchars($res['error']);
         }
         reply($chatId, $msg);
-        
+
     } catch (Throwable $e) {
         reply($chatId, getSfEmoji('error') . " Критическая Ошибка: " . htmlspecialchars($e->getMessage()));
     }
@@ -237,8 +281,10 @@ if (strpos($cmd, '/clear') === 0) {
     ]);
 }
 
+// === HELPER FUNCTIONS (Must be triggering-safe) ===
 
-function reply($chatId, $text) {
+function reply($chatId, $text)
+{
     sendTelegram('sendMessage', [
         'chat_id' => $chatId,
         'text' => $text,
@@ -250,7 +296,8 @@ function reply($chatId, $text) {
  * Универсальная функция отправки в Telegram
  * Использует константу BOT_TOKEN из config.php
  */
-function sendTelegram($method, $data) {
+function sendTelegram($method, $data)
+{
     $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/$method";
 
     $ch = curl_init();
@@ -263,8 +310,10 @@ function sendTelegram($method, $data) {
     return $res;
 }
 
-function getSfEmoji($key) {
-    if ($key === 'empty') return '<tg-emoji emoji-id="6021770695631969012">📭</tg-emoji>';
+function getSfEmoji($key)
+{
+    if ($key === 'empty')
+        return '<tg-emoji emoji-id="6021770695631969012">📭</tg-emoji>';
 
     $emojis = [
         'success' => '6021868492037298942',
@@ -280,10 +329,10 @@ function getSfEmoji($key) {
         'rocket' => '5258332798409783582',
     ];
     $id = $emojis[$key] ?? '';
-    
+
     if ($id) {
         // Using '🔹' as fallback/alt char
-        return '<tg-emoji emoji-id="' . $id . '">🔹</tg-emoji>'; 
+        return '<tg-emoji emoji-id="' . $id . '">🔹</tg-emoji>';
     }
     return '';
 }
