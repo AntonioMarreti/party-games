@@ -170,6 +170,61 @@ async function loadPublicRooms() {
     }
 }
 
+async function loadLocalRooms() {
+    const container = document.getElementById('public-rooms-list');
+    if (!container) return;
+    container.innerHTML = '<p class="text-center text-muted small">Поиск в сети...</p>';
+
+    const res = await window.apiRequest({ action: 'get_local_rooms' });
+    if (res.status === 'ok') {
+        const backBtn = `
+            <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm position-absolute d-flex align-items-center justify-content-center" 
+                    style="top: -10px; right: 0px; width: 36px; height: 36px; z-index: 10;">
+                <i class="bi bi-globe" style="font-size: 18px;"></i>
+            </button>
+        `;
+
+        const title = `<h6 class="text-start ms-2 mb-3 text-primary"><i class="bi bi-wifi me-2"></i>Комнаты рядом</h6>`;
+
+        if (!res.rooms || res.rooms.length === 0) {
+            container.innerHTML = `
+                ${backBtn}
+                ${title}
+                <div class="text-center py-4 rounded-4 shadow-sm position-relative" style="background: var(--bg-glass); backdrop-filter: blur(10px); border: 1px solid var(--border-glass);">
+                     <div class="mb-2 text-primary opacity-50"><i class="bi bi-router" style="font-size: 40px;"></i></div>
+                     <div class="fw-bold" style="color: var(--text-main)">Никого рядом</div>
+                     <div class="text-muted small mb-3">В вашей сети нет активных комнат</div>
+                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="loadPublicRooms()">Показать всё</button>
+                </div>
+            `;
+            return;
+        }
+
+        let html = backBtn + title;
+
+        res.rooms.forEach(r => {
+            html += `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-3 shadow-sm clickable" onclick="joinRoom('${r.room_code}')"
+                 style="border-radius: 16px; border: 1px solid var(--border-glass); background: var(--bg-glass); backdrop-filter: blur(10px); cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-sm" style="background-image: url('${r.host_avatar || ''}')"></div>
+                        <div>
+                            <div class="fw-bold" style="color:var(--text-main);">${r.host_name}</div>
+                            <div class="small text-success"><i class="bi bi-wifi"></i> В вашей сети</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                         <div class="badge bg-success rounded-pill mb-1">Рядом</div>
+                         <div class="small fw-bold text-primary">#${r.room_code}</div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+}
+
 // === POLLING ===
 
 function startPolling() {
@@ -228,44 +283,8 @@ function renderLobby(res) {
             if (gameIcon) gameIcon.className = 'bi bi-lightning-fill';
         }
 
-        const list = document.getElementById('game-selector-list');
-        if (list && window.AVAILABLE_GAMES) {
-            list.innerHTML = '';
-            window.AVAILABLE_GAMES.forEach(game => {
-                const btn = document.createElement('button');
-                btn.className = 'game-option-btn';
-
-                const bgColor = game.bgColor || '#F8F9FA';
-                const iconColor = game.color || '#6c757d';
-                const iconClass = game.icon || 'bi-controller';
-
-                const checkMark = game.id === window.selectedGameId
-                    ? '<i class="bi bi-check-circle-fill text-success fs-4"></i>'
-                    : '<i class="bi bi-chevron-right text-muted"></i>';
-
-                btn.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <div class="game-option-icon" style="background: ${bgColor}; color: ${iconColor}">
-                            <i class="bi ${iconClass}"></i>
-                        </div>
-                        <div class="text-start">
-                            <div class="fw-bold text-dark" style="font-size: 16px;">${game.name}</div>
-                        </div>
-                    </div>
-                    ${checkMark}
-                `;
-
-                btn.onclick = () => {
-                    window.selectedGameId = game.id;
-                    const modalEl = document.getElementById('gameSelectorModal');
-                    if (window.bootstrap) {
-                        const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
-                        modal.hide();
-                    }
-                    renderLobby(res);
-                };
-                list.appendChild(btn);
-            });
+        if (window.AVAILABLE_GAMES) {
+            renderGameSelectorUI(res);
         }
 
         const startBtn = document.getElementById('btn-start-game');
@@ -406,6 +425,73 @@ function copyInviteLink() {
             }, 2000);
         }
     });
+}
+
+
+// === QR SCANNER ===
+
+function scanQrCode() {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showScanQrPopup) {
+        window.Telegram.WebApp.showScanQrPopup({
+            text: 'Наведите камеру на QR-код комнаты'
+        }, (data) => {
+            if (!data) return;
+
+            // Handle URL format: https://t.me/bot?startapp=ROOMCODE
+            // or just ROOMCODE
+            let code = data;
+
+            // Basic URL parsing to extract 'startapp' param if present
+            try {
+                if (data.includes('startapp=')) {
+                    const url = new URL(data);
+                    const params = new URLSearchParams(url.search);
+                    const startapp = params.get('startapp');
+                    if (startapp) code = startapp;
+                } else if (data.includes('tg://resolve') && data.includes('startapp=')) {
+                    // Handle tg:// links if necessary, though usually raw text comes in
+                    const parts = data.split('startapp=');
+                    if (parts.length > 1) code = parts[1].split('&')[0];
+                }
+            } catch (e) {
+                console.log("QR Parse error", e);
+            }
+
+            // Cleanup code (keep only alphanumeric if typical room code)
+            // Assuming room codes are alphanumeric. 
+            // If it's a direct link to something else, we might want to respect it, 
+            // but here we expect a room code.
+
+            // Close popup
+            window.Telegram.WebApp.closeScanQrPopup();
+
+            // Fill input
+            const input = document.getElementById('join-room-code');
+            if (input) {
+                input.value = code;
+                // Visual feedback
+                input.style.borderColor = '#28a745';
+                setTimeout(() => input.style.borderColor = '', 1000);
+            }
+
+            // Auto-join
+            joinRoom(code);
+
+            // Explicitly close the join modal
+            if (window.closeModal) window.closeModal('joinModal');
+
+            // Force cleanup of stuck backdrops (Bootstrap issue)
+            setTimeout(() => {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+            }, 300);
+
+            return true; // standard callback return
+        });
+    } else {
+        if (window.showAlert) window.showAlert('Ошибка', 'Сканер QR доступен только в Telegram', 'warning');
+    }
 }
 
 // === INVITE SYSTEM (Moved from app.js) ===
@@ -690,6 +776,7 @@ window.RoomManager = {
     // NEW
     openQrModal,
     copyInviteLink,
+    scanQrCode,
 
     // Moved from app.js
     openInviteModal,
@@ -719,6 +806,8 @@ window.renderPlayerList = renderPlayerList;
 // New Aliases
 window.openQrModal = openQrModal;
 window.copyInviteLink = copyInviteLink;
+window.scanQrCode = scanQrCode;
+window.loadLocalRooms = loadLocalRooms;
 
 // Moved Aliases
 window.openInviteModal = openInviteModal;
@@ -733,3 +822,194 @@ window.backToLobby = backToLobby;
 window.sendToTelegram = sendToTelegram;
 
 
+// === GAME SELECTOR UI ===
+
+let _gameSelectorInitialized = false;
+let _gameSelectorState = {
+    search: '',
+    category: 'all'
+};
+
+function renderGameSelectorUI(lobbyState) {
+    const list = document.getElementById('game-selector-list');
+    if (!list) return;
+
+    // Initialize once structure
+    if (!_gameSelectorInitialized) {
+        _gameSelectorInitialized = true;
+
+        // Structure:
+        // - Sticky Header (Search + Filters)
+        // - Grid Container (Scrollable content)
+        list.innerHTML = `
+            <div class="bg-white sticky-top border-bottom" style="z-index: 10;">
+                <div class="px-3 py-3">
+                    <div class="position-relative">
+                         <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                         <input type="text" id="game-search-input" class="form-control form-control-lg rounded-4 border-1 bg-light text-dark shadow-sm" 
+                                placeholder="Поиск игр..." 
+                                style="padding-left: 45px; font-size: 16px; border-color: #f0f0f0;">
+                    </div>
+                </div>
+
+                <!-- Scrollable Filters with proper padding -->
+                <div class="d-flex gap-2 overflow-auto px-3 pb-3 no-scrollbar" id="game-cat-filters" style="white-space: nowrap;">
+                    <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab active" data-cat="all">Все</button>
+                    <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="party">Вечеринка</button>
+                    <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="logic">Логика</button>
+                    <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="strategy">Стратегия</button>
+                </div>
+            </div>
+            
+            <div id="game-grid-container" class="p-3" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 80px !important; background: #f8f9fa;">
+                <!-- Games rendered here -->
+            </div>
+            <style>
+                .filter-tab {
+                    background: white;
+                    color: #6c757d;
+                    border: 1px solid #dee2e6;
+                    transition: all 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .filter-tab:hover {
+                    background: #f8f9fa;
+                    color: #495057;
+                }
+                .filter-tab.active {
+                    background: var(--primary-color);
+                    border-color: var(--primary-color);
+                    color: white;
+                    box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);
+                }
+                
+                .game-card-select {
+                    background: white;
+                    border: none;
+                    border-radius: 24px;
+                    transition: all 0.2s;
+                    cursor: pointer;
+                    overflow: hidden;
+                    position: relative;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+                    height: 100%;
+                }
+                .game-card-select:active {
+                   transform: scale(0.97);
+                }
+                .game-card-select.selected {
+                    box-shadow: 0 0 0 3px var(--primary-color);
+                }
+                .game-card-select .checked-badge {
+                    display: none;
+                    z-index: 5;
+                }
+                .game-card-select.selected .checked-badge {
+                    display: block;
+                }
+
+                /* Ensure modal override is clean */
+                 #gameSelectorModal .modal-content {
+                    background: #f8f9fa !important; /* Light gray bg for modal to contrast with white cards */
+                    backdrop-filter: none !important;
+                    border: none !important;
+                }
+                #gameSelectorModal .modal-header {
+                    background: white;
+                    border-bottom: 1px solid #eee !important;
+                }
+            </style>
+        `;
+
+        // Bind Events
+        document.getElementById('game-search-input').oninput = (e) => {
+            _gameSelectorState.search = e.target.value.toLowerCase();
+            _refreshGameGrid(lobbyState);
+        };
+
+        const cats = document.querySelectorAll('#game-cat-filters button');
+        cats.forEach(btn => {
+            btn.onclick = () => {
+                _gameSelectorState.category = btn.getAttribute('data-cat');
+                // Update active class
+                cats.forEach(b => {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
+
+                _refreshGameGrid(lobbyState);
+            };
+        });
+    }
+
+    _refreshGameGrid(lobbyState);
+}
+
+function _refreshGameGrid(lobbyState) {
+    const container = document.getElementById('game-grid-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Filter
+    const games = window.AVAILABLE_GAMES.filter(g => {
+        const matchesSearch = g.name.toLowerCase().includes(_gameSelectorState.search) ||
+            (g.description && g.description.toLowerCase().includes(_gameSelectorState.search));
+        const matchesCat = _gameSelectorState.category === 'all' || g.category === _gameSelectorState.category;
+        return matchesSearch && matchesCat;
+    });
+
+    if (games.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted small w-100 py-5" style="grid-column: span 2;">Ничего не найдено</div>';
+        return;
+    }
+
+    games.forEach(game => {
+        const isSelected = game.id === window.selectedGameId;
+
+        const card = document.createElement('div');
+        card.className = `game-card-select p-3 ${isSelected ? 'selected' : ''}`;
+
+        const iconColor = game.color || '#333';
+        // Use very light bg for icon container
+        const iconBg = game.bgColor || '#f8f9fa';
+
+        const playerCount = game.stats ? game.stats.players : '';
+
+        card.innerHTML = `
+            <div class="position-absolute top-0 end-0 p-3 checked-badge">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 24px; height: 24px;">
+                     <i class="bi bi-check text-white" style="font-size: 16px;"></i>
+                </div>
+            </div>
+            <div class="d-flex flex-column align-items-center text-center pt-3 pb-2 h-100 justify-content-between">
+                <div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-3 mx-auto" 
+                        style="width: 64px; height: 64px; background: ${iconBg}; color: ${iconColor}; font-size: 32px; box-shadow: inset 0 0 10px rgba(0,0,0,0.03);">
+                        <i class="bi ${game.icon}"></i>
+                    </div>
+                    <div class="fw-bold text-dark lh-sm mb-2" style="font-size: 16px;">${game.name}</div>
+                </div>
+                <div class="d-flex align-items-center gap-1 text-muted" style="font-size: 13px;">
+                    <i class="bi bi-people-fill"></i><span>${playerCount}</span>
+                </div>
+            </div>
+        `;
+
+        card.onclick = () => {
+            window.selectedGameId = game.id;
+            _refreshGameGrid(lobbyState);
+
+            const modalEl = document.getElementById('gameSelectorModal');
+            if (window.bootstrap) {
+                const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                modal.hide();
+            }
+            renderLobby(lobbyState);
+        };
+
+        container.appendChild(card);
+    });
+}

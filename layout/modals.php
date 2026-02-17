@@ -165,6 +165,12 @@
                         style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
                     <input type="password" id="join-room-pass" class="form-control mb-3"
                         placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
+                    
+                    <button type="button" class="btn btn-light w-100 mb-2 fw-bold text-primary"
+                        onclick="scanQrCode()" style="border-radius: 16px; border: 1px solid var(--primary-color);">
+                        <i class="bi bi-qr-code-scan me-2"></i>Сканировать QR
+                    </button>
+
                     <button type="submit" class="btn btn-primary w-100 btn-lg"
                         style="border-radius: 16px;">Присоединиться</button>
                 </form>

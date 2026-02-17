@@ -16,7 +16,14 @@ function action_create_room($pdo, $user, $data)
         $code = strtoupper(substr(md5(uniqid()), 0, 6)); // 6 chars
         $pass = !empty($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
 
-        $pdo->prepare("INSERT INTO rooms (room_code, host_user_id, password) VALUES (?, ?, ?)")->execute([$code, $user['id'], $pass]);
+        // IP Hash for Local Discovery
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $ipHash = null;
+        if ($ip && defined('IP_SALT')) {
+            $ipHash = hash('sha256', $ip . IP_SALT);
+        }
+
+        $pdo->prepare("INSERT INTO rooms (room_code, host_user_id, password, ip_hash) VALUES (?, ?, ?, ?)")->execute([$code, $user['id'], $pass, $ipHash]);
         $rid = $pdo->lastInsertId();
 
         $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_host) VALUES (?, ?, 1)")->execute([$rid, $user['id']]);
@@ -383,3 +390,36 @@ function action_get_public_rooms($pdo, $user, $data)
 
     echo json_encode(['status' => 'ok', 'rooms' => $rooms]);
 }
+
+function action_get_local_rooms($pdo, $user, $data)
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+
+    if (!$ip || !defined('IP_SALT')) {
+        echo json_encode(['status' => 'ok', 'rooms' => []]);
+        return;
+    }
+
+    $ipHash = hash('sha256', $ip . IP_SALT);
+
+    // Get rooms created with Same IP Hash
+    // AND specify status=waiting
+    // AND specify not locked/private? (Maybe allow private too if they have password)
+    // AND limit to recent? (already handled by creating_at cleanup)
+
+    $stmt = $pdo->prepare("
+        SELECT r.room_code, r.game_type, r.game_state,
+               (SELECT COUNT(*) FROM room_players WHERE room_id = r.id) as players_count,
+               u.photo_url as host_avatar, u.first_name as host_name
+        FROM rooms r
+        JOIN users u ON u.id = r.host_user_id
+        WHERE r.ip_hash = ? 
+        AND r.status = 'waiting'
+        LIMIT 10
+    ");
+    $stmt->execute([$ipHash]);
+    $rooms = $stmt->fetchAll();
+
+    echo json_encode(['status' => 'ok', 'rooms' => $rooms]);
+}
+

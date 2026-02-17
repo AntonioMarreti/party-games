@@ -1,0 +1,13 @@
+# Protect sensitive files
+<FilesMatch "\.(db|log|sh|sql)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+<Files "config.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Disable directory listing
+Options -Indexes

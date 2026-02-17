@@ -6,6 +6,7 @@
 window.AVAILABLE_GAMES = [
     {
         id: 'bunker',
+        category: 'party',
         name: 'Бункер',
         icon: 'bi-shield-check',
         color: '#E67E22',
@@ -94,6 +95,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'brainbattle',
+        category: 'logic',
         name: 'Мозговая Битва',
         icon: 'bi-lightbulb-fill',
         color: '#9B59B6',
@@ -172,6 +174,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'whoami',
+        category: 'party',
         name: 'Кто из нас?',
         icon: 'bi-question-circle-fill',
         color: '#1ABC9C',
@@ -265,6 +268,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'tictactoe_ultimate',
+        category: 'strategy',
         name: 'Крестики-нолики Ultimate',
         icon: 'bi-grid-3x3-gap-fill',
         color: '#4D96FF',
@@ -317,6 +321,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'blokus',
+        category: 'strategy',
         name: 'Blokus',
         icon: 'bi-grid-3x3',
         color: '#3498db',
@@ -381,6 +386,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'wordclash',
+        category: 'logic',
         name: 'Битва Слов',
         icon: 'bi-fonts',
         color: '#6aaa64',
@@ -502,6 +508,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'memebattle',
+        category: 'party',
         name: 'Битва Мемов',
         icon: 'bi-emoji-laughing-fill',
         color: '#FF6B6B',
@@ -587,6 +594,7 @@ window.AVAILABLE_GAMES = [
     },
     {
         id: 'tictactoe',
+        category: 'strategy',
         name: 'Крестики-Нолики',
         icon: 'bi-x-lg',
         color: '#FFD93D',

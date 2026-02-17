@@ -11,3 +11,4 @@ composer.lock
 vendor/
 node_modules/
 server/config.php
+*.db
