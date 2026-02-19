@@ -225,6 +225,7 @@ $routes = [
     'update_settings' => 'actions/user.php',
     'get_me' => 'actions/user.php', // NEW
     'toggle_like' => 'actions/user.php', // NEW
+    'get_favorites' => 'actions/user.php', // NEW
 
     // Social
     'search_users' => 'actions/social.php', // NEW

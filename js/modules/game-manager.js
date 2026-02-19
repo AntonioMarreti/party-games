@@ -602,7 +602,7 @@ function renderPopularGames() {
             </div>
             <div class="mini-game-title">${game.name}</div>
             <!-- Like Button (Floating) -->
-            <div class="position-absolute top-0 end-0 p-1" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)">
+            <div class="position-absolute top-0 end-0 p-1" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)" data-like-game-id="${game.id}">
                 <i class="bi ${heartClass}" style="font-size:12px; color: ${isLiked ? '#dc3545' : 'rgba(0,0,0,0.2)'}"></i>
             </div>
         `;
@@ -648,7 +648,7 @@ function renderAllGames() {
                 <div class="catalog-game-name">${game.name}</div>
                 <div class="catalog-game-desc">${game.description || ''}</div>
             </div>
-            <div class="catalog-game-like" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)">
+            <div class="catalog-game-like" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)" data-like-game-id="${game.id}">
                 <i class="bi ${heartIcon}" style="color: ${heartColor}"></i>
             </div>
         `;

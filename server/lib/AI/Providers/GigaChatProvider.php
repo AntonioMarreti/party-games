@@ -85,7 +85,21 @@ class GigaChatProvider implements AIProvider
             $msg = $json['message'] ?? 'Unknown Error';
             // Log error
             if (class_exists('TelegramLogger')) {
-                TelegramLogger::logError('gigachat_error', ['response' => $response, 'code' => $httpCode]);
+                $context = [
+                    'response' => $response,
+                    'code' => $httpCode,
+                    'user_id' => $options['user_id'] ?? 'N/A',
+                    'user_name' => $options['user_name'] ?? 'N/A',
+                    'ip' => $options['client_ip'] ?? 'N/A',
+                    'request_type' => $options['request_type'] ?? 'N/A',
+                    'input_messages' => json_encode($messages, JSON_UNESCAPED_UNICODE)
+                ];
+
+                if ($httpCode === 429) {
+                    TelegramLogger::logError('gigachat_rate_limit', $context);
+                } else {
+                    TelegramLogger::logError('gigachat_error', $context);
+                }
             }
             throw new Exception("GigaChat API Error: $msg");
         }

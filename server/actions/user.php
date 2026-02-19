@@ -74,3 +74,21 @@ function action_get_me($pdo, $user, $data)
     // calculated columns or specific fields can be added here
     echo json_encode(['status' => 'ok', 'user' => $user]);
 }
+
+function action_get_favorites($pdo, $user, $data)
+{
+    // 0. Ensure Table Exists (Lazy Migration)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_favorites (
+        user_id INT NOT NULL,
+        game_id VARCHAR(32) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, game_id),
+        INDEX idx_user (user_id)
+    )");
+
+    $stmt = $pdo->prepare("SELECT game_id FROM user_favorites WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    $favorites = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    echo json_encode(['status' => 'ok', 'favorites' => $favorites]);
+}

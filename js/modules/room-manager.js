@@ -822,57 +822,93 @@ window.backToLobby = backToLobby;
 window.sendToTelegram = sendToTelegram;
 
 
-// === GAME SELECTOR UI ===
+// === GAME SELECTOR UI (Refactored to List View with Favorites) ===
 
 let _gameSelectorInitialized = false;
 let _gameSelectorState = {
     search: '',
-    category: 'all'
+    category: 'all',
+    favorites: []
 };
+let _lastLobbyState = null;
+
+// Initial Fetch of Favorites
+async function _fetchFavorites() {
+    try {
+        if (typeof window.apiRequest === 'function') {
+            const res = await window.apiRequest({ action: 'get_favorites' });
+            if (res.status === 'ok') {
+                const favs = res.favorites || [];
+                _gameSelectorState.favorites = favs;
+                window.userFavorites = favs; // Sync global state
+
+                // Update hearts on main screen if they exist
+                if (window.UIManager && window.UIManager.toggleGameLike) {
+                    // We can't easily trigger the visual update without an event, 
+                    // but we can manually update icons if they exist.
+                    favs.forEach(id => {
+                        const btns = document.querySelectorAll(`[data-like-game-id="${id}"] i`);
+                        btns.forEach(i => {
+                            i.classList.remove('bi-heart');
+                            i.classList.add('bi-heart-fill', 'text-danger');
+                        });
+                    });
+                }
+
+                // Refresh if _lastLobbyState is available
+                if (_lastLobbyState) {
+                    _refreshGameList(_lastLobbyState);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch favorites", e);
+    }
+}
 
 function renderGameSelectorUI(lobbyState) {
+    _lastLobbyState = lobbyState;
+
     const list = document.getElementById('game-selector-list');
     if (!list) return;
+
+    // Refresh data every time modal opens to be safe
+    _fetchFavorites();
 
     // Initialize once structure
     if (!_gameSelectorInitialized) {
         _gameSelectorInitialized = true;
 
-        // Structure:
-        // - Sticky Header (Search + Filters)
-        // - Grid Container (Scrollable content)
+        // Structure: Fixed Header + Scrollable Content
         list.innerHTML = `
             <div class="bg-white sticky-top border-bottom" style="z-index: 10;">
-                <div class="px-3 py-3">
+                <div class="px-3 pt-2 pb-2"> <!-- Reduced top padding for search -->
                     <div class="position-relative">
                          <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                         <input type="text" id="game-search-input" class="form-control form-control-lg rounded-4 border-1 bg-light text-dark shadow-sm" 
-                                placeholder="Поиск игр..." 
-                                style="padding-left: 45px; font-size: 16px; border-color: #f0f0f0;">
+                         <input type="text" id="game-search-input" class="form-control rounded-4 border-1 bg-light text-dark shadow-sm" 
+                                placeholder="Поиск..." 
+                                style="padding-left: 45px; height: 42px; font-size: 16px; border-color: #f0f0f0;">
                     </div>
                 </div>
 
-                <!-- Scrollable Filters with proper padding -->
+                <!-- Tabs -->
                 <div class="d-flex gap-2 overflow-auto px-3 pb-3 no-scrollbar" id="game-cat-filters" style="white-space: nowrap;">
                     <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab active" data-cat="all">Все</button>
                     <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="party">Вечеринка</button>
                     <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="logic">Логика</button>
-                    <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="strategy">Стратегия</button>
                 </div>
             </div>
             
-            <div id="game-grid-container" class="p-3" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 80px !important; background: #f8f9fa;">
-                <!-- Games rendered here -->
+            <div id="game-list-container" class="p-0" style="background: white; padding-bottom: 80px !important;">
+                <!-- Games rendered here as list -->
             </div>
+            
             <style>
                 .filter-tab {
                     background: white;
                     color: #6c757d;
                     border: 1px solid #dee2e6;
                     transition: all 0.2s;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
                 }
                 .filter-tab:hover {
                     background: #f8f9fa;
@@ -882,125 +918,210 @@ function renderGameSelectorUI(lobbyState) {
                     background: var(--primary-color);
                     border-color: var(--primary-color);
                     color: white;
-                    box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);
-                }
-                
-                .game-card-select {
-                    background: white;
-                    border: none;
-                    border-radius: 24px;
-                    transition: all 0.2s;
-                    cursor: pointer;
-                    overflow: hidden;
-                    position: relative;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-                    height: 100%;
-                }
-                .game-card-select:active {
-                   transform: scale(0.97);
-                }
-                .game-card-select.selected {
-                    box-shadow: 0 0 0 3px var(--primary-color);
-                }
-                .game-card-select .checked-badge {
-                    display: none;
-                    z-index: 5;
-                }
-                .game-card-select.selected .checked-badge {
-                    display: block;
                 }
 
-                /* Ensure modal override is clean */
-                 #gameSelectorModal .modal-content {
-                    background: #f8f9fa !important; /* Light gray bg for modal to contrast with white cards */
-                    backdrop-filter: none !important;
-                    border: none !important;
+                .game-list-item {
+                    display: flex;
+                    align-items: center;
+                    padding: 8px 16px; /* Reduced vertical padding item */
+                    cursor: pointer;
+                    transition: background 0.2s;
+                    position: relative;
                 }
-                #gameSelectorModal .modal-header {
-                    background: white;
-                    border-bottom: 1px solid #eee !important;
+                .game-list-item:active {
+                    background: #f5f5f5;
                 }
+                
+                /* Inset border via pseudoelement to look like iOS */
+                .game-list-item::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    right: 0;
+                    left: 70px; /* Inset from icon width */
+                    height: 1px;
+                    background: #f0f0f0;
+                }
+                .game-list-item:last-child::after {
+                    display: none;
+                }
+                
+                .game-list-icon {
+                    width: 42px; 
+                    height: 42px;
+                    flex-shrink: 0; /* Prevent squishing */
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 22px;
+                    margin-right: 14px;
+                }
+                
+                .game-list-content {
+                    flex-grow: 1;
+                    min-width: 0; /* Fix flex text overflow */
+                }
+                
+                .game-list-check {
+                    color: #28a745; 
+                    font-size: 18px;
+                    display: none;
+                    margin-left: 10px;
+                }
+                 .game-list-arrow {
+                    color: #ccc; 
+                    font-size: 16px;
+                    margin-left: 10px;
+                }
+
+                .game-list-item.selected .game-list-check {
+                    display: block;
+                }
+                .game-list-item.selected .game-list-arrow {
+                    display: none;
+                }
+                
+                /* Star Button */
+                .game-fav-btn {
+                    padding: 8px;
+                    margin-right: 2px;
+                    color: #e0e0e0;
+                    transition: transform 0.2s, color 0.2s;
+                    z-index: 5;
+                }
+                .game-fav-btn:active {
+                    transform: scale(0.8);
+                }
+                .game-fav-btn.active {
+                    color: #ffc107;
+                }
+
+                .section-title {
+                    padding: 24px 16px 0px; /* Strong top separation, zero bottom */
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    color: #999;
+                    font-weight: 700;
+                    background: #fff;
+                    letter-spacing: 0.5px;
+                }
+                
+                #gameSelectorModal .modal-content {
+                    background: white !important;
+                    border-radius: 20px 20px 0 0; 
+                    height: 70vh; /* Reduced height as requested */
+                    display: flex;
+                    flex-direction: column;
+                }
+                 #gameSelectorModal .modal-body {
+                    padding: 0 !important;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    flex: 1; 
+                }
+                 #gameSelectorModal .modal-header {
+                   border-bottom: none !important;
+                   padding-bottom: 0px !important;
+                   padding-top: 18px !important; /* Slightly increased top padding */
+                 }
+                 #gameSelectorModal .modal-title {
+                   font-size: 1.25rem;
+                   font-weight: 700;
+                 }
+                 #game-selector-list {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                 }
+                 #game-list-container {
+                     overflow-y: auto;
+                     flex: 1;
+                 }
             </style>
         `;
 
         // Bind Events
         document.getElementById('game-search-input').oninput = (e) => {
             _gameSelectorState.search = e.target.value.toLowerCase();
-            _refreshGameGrid(lobbyState);
+            _refreshGameList(lobbyState);
         };
 
         const cats = document.querySelectorAll('#game-cat-filters button');
         cats.forEach(btn => {
             btn.onclick = () => {
                 _gameSelectorState.category = btn.getAttribute('data-cat');
-                // Update active class
-                cats.forEach(b => {
-                    b.classList.remove('active');
-                });
+                cats.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-
-                _refreshGameGrid(lobbyState);
+                _refreshGameList(lobbyState);
             };
         });
     }
 
-    _refreshGameGrid(lobbyState);
+    _refreshGameList(lobbyState);
 }
 
-function _refreshGameGrid(lobbyState) {
-    const container = document.getElementById('game-grid-container');
+function _refreshGameList(lobbyState) {
+    const container = document.getElementById('game-list-container');
     if (!container) return;
 
     container.innerHTML = '';
 
-    // Filter
-    const games = window.AVAILABLE_GAMES.filter(g => {
+    // Filter logic
+    const allGames = window.AVAILABLE_GAMES.filter(g => {
         const matchesSearch = g.name.toLowerCase().includes(_gameSelectorState.search) ||
             (g.description && g.description.toLowerCase().includes(_gameSelectorState.search));
         const matchesCat = _gameSelectorState.category === 'all' || g.category === _gameSelectorState.category;
         return matchesSearch && matchesCat;
     });
 
-    if (games.length === 0) {
-        container.innerHTML = '<div class="text-center text-muted small w-100 py-5" style="grid-column: span 2;">Ничего не найдено</div>';
+    if (allGames.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted small w-100 py-5">Ничего не найдено</div>';
         return;
     }
 
-    games.forEach(game => {
+    // -- Favorites Logic --
+    // Show Favorites section first if manual favorites exist.
+
+    // 1. Identify Favorite Games objects
+    let favGames = [];
+    if (_gameSelectorState.category === 'all' && !_gameSelectorState.search) {
+        favGames = _gameSelectorState.favorites
+            .map(id => window.AVAILABLE_GAMES.find(g => g.id === id))
+            .filter(g => g);
+    }
+
+    const renderItem = (game) => {
         const isSelected = game.id === window.selectedGameId;
-
-        const card = document.createElement('div');
-        card.className = `game-card-select p-3 ${isSelected ? 'selected' : ''}`;
-
-        const iconColor = game.color || '#333';
-        // Use very light bg for icon container
+        const isFav = _gameSelectorState.favorites.includes(game.id);
         const iconBg = game.bgColor || '#f8f9fa';
+        const iconColor = game.color || '#333';
 
-        const playerCount = game.stats ? game.stats.players : '';
+        const div = document.createElement('div');
+        div.className = `game-list-item ${isSelected ? 'selected' : ''}`;
 
-        card.innerHTML = `
-            <div class="position-absolute top-0 end-0 p-3 checked-badge">
-                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 24px; height: 24px;">
-                     <i class="bi bi-check text-white" style="font-size: 16px;"></i>
-                </div>
+        // Items: Star | Icon | Text | Check/Arrow
+        // Note: Star should capture click separately to avoid selecting game
+        div.innerHTML = `
+            <div class="game-fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleGameFavorite('${game.id}', this)">
+                <i class="bi ${isFav ? 'bi-star-fill' : 'bi-star'}"></i>
             </div>
-            <div class="d-flex flex-column align-items-center text-center pt-3 pb-2 h-100 justify-content-between">
-                <div>
-                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-3 mx-auto" 
-                        style="width: 64px; height: 64px; background: ${iconBg}; color: ${iconColor}; font-size: 32px; box-shadow: inset 0 0 10px rgba(0,0,0,0.03);">
-                        <i class="bi ${game.icon}"></i>
-                    </div>
-                    <div class="fw-bold text-dark lh-sm mb-2" style="font-size: 16px;">${game.name}</div>
-                </div>
-                <div class="d-flex align-items-center gap-1 text-muted" style="font-size: 13px;">
-                    <i class="bi bi-people-fill"></i><span>${playerCount}</span>
-                </div>
+            <div class="game-list-icon" style="background: ${iconBg}; color: ${iconColor};">
+                <i class="bi ${game.icon}"></i>
             </div>
+            <div class="game-list-content">
+                <div class="fw-bold text-dark" style="font-size: 15px;">${game.name}</div>
+                ${game.description ? `<div class="text-muted small text-truncate" style="font-size:12px; max-width: 200px;">${game.description}</div>` : ''}
+            </div>
+            <i class="bi bi-check-lg game-list-check"></i>
+            <i class="bi bi-chevron-right game-list-arrow"></i>
         `;
 
-        card.onclick = () => {
+        div.onclick = () => {
             window.selectedGameId = game.id;
-            _refreshGameGrid(lobbyState);
+            _refreshGameList(lobbyState);
 
             const modalEl = document.getElementById('gameSelectorModal');
             if (window.bootstrap) {
@@ -1009,7 +1130,96 @@ function _refreshGameGrid(lobbyState) {
             }
             renderLobby(lobbyState);
         };
+        return div;
+    };
 
-        container.appendChild(card);
+    // Render Favorites Section
+    if (favGames.length > 0) {
+        const title = document.createElement('div');
+        title.className = 'section-title';
+        title.innerText = 'ИЗБРАННОЕ';
+        container.appendChild(title);
+
+        favGames.forEach(g => {
+            container.appendChild(renderItem(g));
+        });
+    }
+
+    // Render All Section
+    if (_gameSelectorState.category === 'all' && !_gameSelectorState.search && favGames.length > 0) {
+        const title = document.createElement('div');
+        title.className = 'section-title';
+        title.innerText = 'ВСЕ ИГРЫ';
+        container.appendChild(title);
+    }
+
+    // Sort all games so favorites in 'All' list might appear top? No, just alpha or default order.
+    // Filter out favorites from Main list to avoid duplicates? Users usually prefer no duplicates.
+    const nonFavGames = allGames.filter(g => !favGames.includes(g));
+
+    const listToRender = (favGames.length > 0 && _gameSelectorState.category === 'all' && !_gameSelectorState.search) ? nonFavGames : allGames;
+
+    listToRender.forEach(g => {
+        container.appendChild(renderItem(g));
     });
 }
+
+// Make globally accessible for onClick
+window.toggleGameFavorite = async function (id, btn) {
+    let list = _gameSelectorState.favorites;
+
+    // Optimistic Update
+    if (list.includes(id)) {
+        list = list.filter(x => x !== id);
+    } else {
+        list.push(id);
+    }
+    _gameSelectorState.favorites = list;
+
+    // Sync to window.userFavorites
+    window.userFavorites = list;
+
+    // Visual Feedback on Button Immediate
+    if (btn) {
+        const icon = btn.querySelector('i');
+        if (list.includes(id)) {
+            btn.classList.add('active');
+            icon.classList.remove('bi-star');
+            icon.classList.add('bi-star-fill');
+        } else {
+            btn.classList.remove('active');
+            icon.classList.remove('bi-star-fill');
+            icon.classList.add('bi-star');
+        }
+    }
+
+    // Update Hearts in Background (Lobby)
+    const hearts = document.querySelectorAll(`[data-like-game-id="${id}"] i`);
+    hearts.forEach(i => {
+        if (list.includes(id)) {
+            i.classList.remove('bi-heart');
+            i.classList.add('bi-heart-fill', 'text-danger');
+        } else {
+            i.classList.add('bi-heart');
+            i.classList.remove('bi-heart-fill', 'text-danger');
+        }
+    });
+
+    // Refresh UI to update sections
+    if (_lastLobbyState) {
+        _refreshGameList(_lastLobbyState);
+    } else {
+        const activeBtn = document.querySelector('#game-cat-filters button.active');
+        if (activeBtn) activeBtn.click();
+    }
+
+    // API Call
+    try {
+        if (typeof window.apiRequest === 'function') {
+            await window.apiRequest({ action: 'toggle_like', game_id: id });
+        }
+    } catch (e) {
+        console.error("Like Error", e);
+        // Revert on error? For now, simpler not to.
+    }
+};

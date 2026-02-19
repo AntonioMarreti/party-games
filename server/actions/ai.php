@@ -183,7 +183,14 @@ function action_generate_content($pdo, $currentUser, $params)
         ];
 
         // Call API via AIService
-        $response = AIService::getProvider('text')->text($messages);
+        $aiOptions = [
+            'user_id' => $currentUser['id'] ?? 'N/A',
+            'user_name' => $currentUser['name'] ?? 'N/A',
+            'client_ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
+            'request_type' => $type
+        ];
+
+        $response = AIService::getProvider('text')->text($messages, $aiOptions);
 
         if (isset($response['content'])) {
             $content = $response['content'];
