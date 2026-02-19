@@ -20,15 +20,15 @@
             <div class="mb-4">
                 <div class="fw-bold mb-2" style="font-size: 15px;">Цветовой акцент</div>
                 <div class="d-flex gap-3 justify-content-between px-1">
-                    <div class="color-option-btn selected" style="background: #6C5CE7;"
+                    <div class="color-option-btn selected" style="background: #6C5CE7;" data-color="#6C5CE7"
                         onclick="applyAccentColor('#6C5CE7'); highlightColorBtn(this);"></div>
-                    <div class="color-option-btn" style="background: #0984e3;"
+                    <div class="color-option-btn" style="background: #0984e3;" data-color="#0984e3"
                         onclick="applyAccentColor('#0984e3'); highlightColorBtn(this);"></div>
-                    <div class="color-option-btn" style="background: #fdcb6e;"
+                    <div class="color-option-btn" style="background: #fdcb6e;" data-color="#fdcb6e"
                         onclick="applyAccentColor('#fdcb6e'); highlightColorBtn(this);"></div>
-                    <div class="color-option-btn" style="background: #00b894;"
+                    <div class="color-option-btn" style="background: #00b894;" data-color="#00b894"
                         onclick="applyAccentColor('#00b894'); highlightColorBtn(this);"></div>
-                    <div class="color-option-btn" style="background: #e17055;"
+                    <div class="color-option-btn" style="background: #e17055;" data-color="#e17055"
                         onclick="applyAccentColor('#e17055'); highlightColorBtn(this);"></div>
                 </div>
             </div>

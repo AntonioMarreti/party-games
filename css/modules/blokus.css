@@ -68,7 +68,7 @@
 }
 
 .player-status-card.turn-YELLOW {
-    color: #000;
+    color: var(--text-main);
 }
 
 .player-status-card.active {
@@ -132,8 +132,8 @@ body.dark-mode .player-status-card.active.turn-GREEN {
     grid-template-columns: repeat(20, 1fr);
     grid-template-rows: repeat(20, 1fr);
     gap: 1.5px;
-    background: #d0d0d0;
-    /* Explicit dark grey for visibility */
+    background: color-mix(in srgb, var(--border-main), var(--text-muted) 30%);
+    /* Explicit darker grey for grid visibility */
     padding: 2px;
     width: min(94vw, 440px);
     height: min(94vw, 440px);

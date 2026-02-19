@@ -548,21 +548,21 @@ window.AVAILABLE_GAMES = [
                 type: 'html',
                 label: 'Выбор реакции',
                 content: `
-                    <div class="p-3 rounded-4" style="background: #f8f9fa; border: 1px solid #ddd;">
+                    <div class="p-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border-main);">
                         <div class="small fw-bold text-muted text-uppercase mb-3" style="font-size: 10px; letter-spacing: 1px;">Выбор мема:</div>
                         <div class="row g-2">
                             <div class="col-4">
-                                <div class="rounded-3 shadow-sm border border-white border-2 overflow-hidden" style="aspect-ratio: 1; background: #333;">
+                                <div class="rounded-3 shadow-sm border border-2 overflow-hidden" style="border-color: var(--border-glass) !important; aspect-ratio: 1; background: #333;">
                                     <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHpibXRhMzR6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/H54feNXf6Y4n6/giphy.gif" style="width:100%; height:100%; object-fit:cover;">
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="rounded-3 shadow-sm border border-white border-2 overflow-hidden" style="aspect-ratio: 1; background: #444;">
+                                <div class="rounded-3 shadow-sm border border-2 overflow-hidden" style="border-color: var(--border-glass) !important; aspect-ratio: 1; background: #444;">
                                      <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHpibXRhMzR6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/vFKqnCdLPNOKc/giphy.gif" style="width:100%; height:100%; object-fit:cover;">
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="rounded-3 shadow-sm border border-white border-2 overflow-hidden d-flex flex-column align-items-center justify-content-center" style="aspect-ratio: 1; background: white; color: #6c5ce7;">
+                                <div class="rounded-3 shadow-sm border border-2 overflow-hidden d-flex flex-column align-items-center justify-content-center" style="border-color: var(--border-glass) !important; aspect-ratio: 1; background: var(--bg-secondary); color: var(--primary-color);">
                                     <i class="bi bi-search fs-4"></i>
                                     <div style="font-size: 8px; font-weight: 800;">ПОИСК</div>
                                 </div>
@@ -624,15 +624,15 @@ window.AVAILABLE_GAMES = [
                 content: `
                     <div class="p-3 rounded-4 shadow-sm" style="background: var(--bg-card); border: 1px solid var(--border-main);">
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 120px; margin: 0 auto;">
-                            <div class="p-2 bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="aspect-ratio:1; font-size:24px;">X</div>
-                            <div class="p-2 bg-light rounded-3" style="aspect-ratio:1;"></div>
-                            <div class="p-2 bg-light rounded-3" style="aspect-ratio:1;"></div>
-                            <div class="p-2 bg-light rounded-3" style="aspect-ratio:1;"></div>
-                            <div class="p-2 bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="aspect-ratio:1; font-size:24px;">X</div>
-                            <div class="p-2 bg-light rounded-3" style="aspect-ratio:1;"></div>
-                            <div class="p-2 bg-light rounded-3" style="aspect-ratio:1;"></div>
-                            <div class="p-2 bg-light rounded-3" style="aspect-ratio:1;"></div>
-                            <div class="p-2 bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="aspect-ratio:1; font-size:24px;">X</div>
+                            <div class="p-2 text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="background: var(--primary-color); aspect-ratio:1; font-size:24px;">X</div>
+                            <div class="p-2 rounded-3" style="background: var(--bg-secondary); aspect-ratio:1;"></div>
+                            <div class="p-2 rounded-3" style="background: var(--bg-secondary); aspect-ratio:1;"></div>
+                            <div class="p-2 rounded-3" style="background: var(--bg-secondary); aspect-ratio:1;"></div>
+                            <div class="p-2 text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="background: var(--primary-color); aspect-ratio:1; font-size:24px;">X</div>
+                            <div class="p-2 rounded-3" style="background: var(--bg-secondary); aspect-ratio:1;"></div>
+                            <div class="p-2 rounded-3" style="background: var(--bg-secondary); aspect-ratio:1;"></div>
+                            <div class="p-2 rounded-3" style="background: var(--bg-secondary); aspect-ratio:1;"></div>
+                            <div class="p-2 text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="background: var(--primary-color); aspect-ratio:1; font-size:24px;">X</div>
                         </div>
                     </div>
                 `

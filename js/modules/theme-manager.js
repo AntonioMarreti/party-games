@@ -135,10 +135,25 @@ function syncUI() {
     const savedColor = localStorage.getItem('pgb_accent_color');
     if (savedColor) {
         setTimeout(() => {
+            const normalizedSavedColor = savedColor.toLowerCase().replace(/\s/g, '');
             document.querySelectorAll('.color-option-btn').forEach(btn => {
                 btn.classList.remove('selected');
+
+                // First try data-color for absolute reliability
+                const dataColor = btn.getAttribute('data-color');
+                if (dataColor) {
+                    if (dataColor.toLowerCase().replace(/\s/g, '') === normalizedSavedColor) {
+                        btn.classList.add('selected');
+                    }
+                    return; // Skip reading style.background if we matched via data-color
+                }
+
+                // Fallback for older code that doesn't have data-color
                 const btnColor = btn.style.background || btn.style.backgroundColor;
-                if (btnColor && btnColor.toLowerCase().replace(/\s/g, '') === savedColor.toLowerCase().replace(/\s/g, '')) {
+                if (!btnColor) return;
+
+                const normalizedBtnColor = btnColor.toLowerCase().replace(/\s/g, '');
+                if (normalizedBtnColor === normalizedSavedColor) {
                     btn.classList.add('selected');
                 }
             });

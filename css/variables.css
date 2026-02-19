@@ -36,16 +36,29 @@
     --radius-md: 24px;
     --radius-sm: 16px;
 
-    /* Status Colors */
+    /* Brand Elements & Status (Buttons, Badges, Highlighting) */
     --status-success: #00b894;
     --status-error: #d63031;
     --status-warning: #fdcb6e;
     --status-info: #0984e3;
 
-    --status-success-alpha: color-mix(in srgb, var(--status-success), transparent 90%);
-    --status-error-alpha: color-mix(in srgb, var(--status-error), transparent 90%);
-    --status-warning-alpha: color-mix(in srgb, var(--status-warning), transparent 90%);
-    --status-info-alpha: color-mix(in srgb, var(--status-info), transparent 90%);
+    /* Specific Component Backgrounds (for Buttons, Avatars, etc to avoid hardcoding #hex) */
+    --btn-success-bg: var(--status-success);
+    --btn-success-text: #ffffff;
+    --btn-danger-bg: var(--status-error);
+    --btn-danger-text: #ffffff;
+    --btn-warning-bg: var(--status-warning);
+    --btn-warning-text: #000000;
+    --btn-info-bg: var(--status-info);
+    --btn-info-text: #ffffff;
+
+    --btn-back-bg: var(--bg-secondary);
+    --btn-back-text: var(--text-main);
+
+    /* Theming & Highlight tokens */
+    --accent-gold: #FFD700;
+    --accent-gold-text: #000000;
+    --accent-gold-gradient: linear-gradient(45deg, #FFD700, #FFA500);
 
     /* Dynamic UI Borders */
     --border-color: #f0f0f0;
@@ -79,6 +92,23 @@ body.dark-mode {
     --status-warning: #ffeaa7;
     --status-info: #74b9ff;
 
+    --btn-success-bg: var(--status-success);
+    --btn-success-text: #000000;
+    --btn-danger-bg: var(--status-error);
+    --btn-danger-text: #ffffff;
+    --btn-warning-bg: var(--status-warning);
+    --btn-warning-text: #000000;
+    --btn-info-bg: var(--status-info);
+    --btn-info-text: #000000;
+
+    --btn-back-bg: var(--bg-glass-strong);
+    --btn-back-text: var(--text-main);
+
+    /* Theming & Highlight tokens */
+    --accent-gold: #FFD700;
+    --accent-gold-text: #000000;
+    --accent-gold-gradient: linear-gradient(45deg, #FFD700, #b37400);
+
     --status-success-alpha: color-mix(in srgb, var(--status-success), transparent 85%);
     --status-error-alpha: color-mix(in srgb, var(--status-error), transparent 85%);
     --status-warning-alpha: color-mix(in srgb, var(--status-warning), transparent 85%);
@@ -90,8 +120,8 @@ body.dark-mode {
     --divider: rgba(255, 255, 255, 0.05);
 
     /* Gradients */
-    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 30%) 100%);
-    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 30%) 100%);
+    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 60%) 100%);
+    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 60%) 100%);
 
     /* Shadows */
     --shadow-main: 0 10px 40px rgba(0, 0, 0, 0.4);

@@ -1,84 +1,70 @@
 /* === PREMIUM DARK MODE SPECIFIC ADJUSTMENTS === */
 /* Most base styles are now handled by tokens in variables.css */
 
-/* Navigation bar - Specific Shadow tweak */
-body.dark-mode .bottom-nav {
-    box-shadow: none !important;
+/* Close & Header Buttons - Icon Inversion for solid icons that are hardcoded black */
+body.dark-mode .btn-close,
+body.dark-mode .close-btn,
+body.dark-mode .modal-handle-close,
+body.dark-mode .btn-back img {
+    filter: invert(1) brightness(2);
+}
+
+/* Modals extra tweaks */
+body.dark-mode .modal-handle-close {
+    background: var(--text-muted);
+    opacity: 0.5;
 }
 
 /* Action Cards - Deep gradient for dark mode */
 body.dark-mode .action-card {
-    background: linear-gradient(165deg, var(--bg-secondary) 0%, var(--bg-card) 100%) !important;
-    border: 1px solid var(--border-glass) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    background: linear-gradient(165deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
 }
 
 body.dark-mode .action-card:active {
-    background: var(--bg-secondary) !important;
+    background: var(--bg-secondary);
 }
 
-/* Forms & Inputs - Dark theme adjustments if needed beyond tokens */
+/* Modals & Inputs */
+body.dark-mode .modal-content,
+body.dark-mode .custom-modal-content {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    box-shadow: var(--shadow-strong);
+}
+
+body.dark-mode .form-control {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-glass);
+    color: var(--text-main);
+}
+
+body.dark-mode .form-control::placeholder {
+    color: var(--text-muted);
+}
+
 body.dark-mode .form-control:focus {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 80%) !important;
+    background-color: var(--bg-secondary);
+    color: var(--text-main);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 80%);
 }
 
-/* Dropdowns & Pickers (Specific dark look) */
-body.dark-mode .dropdown-menu,
-body.dark-mode #screen-room .dropdown-menu {
-    background: var(--bg-secondary) !important;
-    border: var(--border-glass) !important;
-    box-shadow: var(--shadow-strong) !important;
+body.dark-mode .form-switch .form-check-input {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-glass);
 }
 
+/* Dropdowns & Pickers */
 body.dark-mode .dropdown-item:hover,
 body.dark-mode .dropdown-item:active {
-    background: var(--divider) !important;
-    color: var(--text-on-accent) !important;
+    background: var(--divider);
+    color: var(--text-on-accent);
 }
 
-/* Close & Header Buttons - Icon Inversion */
-body.dark-mode .btn-close,
-body.dark-mode .close-btn,
-body.dark-mode .modal-handle-close,
-body.dark-mode .btn-back {
-    filter: invert(1) brightness(2);
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-
-/* === GAME MODULES === */
-
-/* Blokus Premium Dark Blue */
-body.dark-mode .blokus-wrapper,
-body.dark-mode .blokus-board-container {
-    background: var(--bg-app) !important;
-}
-
-body.dark-mode .blokus-header,
-body.dark-mode .blokus-hand-area {
-    background: var(--bg-glass-strong) !important;
-    border-color: var(--divider) !important;
-}
-
-body.dark-mode .blokus-cell:not(.filled) {
-    background: var(--bg-secondary) !important;
-}
-
-body.dark-mode .blokus-board {
-    background: var(--border-main) !important;
-    border: 2px solid var(--border-main) !important;
-}
-
-body.dark-mode .blokus-modal-content {
-    background: var(--bg-app) !important;
-    border-top: var(--border-glass) !important;
-}
-
-/* Better Card Backgrounds for Games */
+/* Specific Game Touches */
 body.dark-mode .bb-glass-card,
 body.dark-mode .theme-card,
 body.dark-mode .voting-card,
@@ -88,24 +74,7 @@ body.dark-mode .game-setting-card,
 body.dark-mode .bunker-trait-card,
 body.dark-mode .catastrophe-section,
 body.dark-mode .kicked-card {
-    background: linear-gradient(165deg, var(--bg-glass-strong) 0%, var(--bg-card) 100%) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border: 1px solid var(--border-glass) !important;
-    color: var(--text-main) !important;
-    box-shadow: var(--shadow-main) !important;
-}
-
-body.dark-mode .bb-game-badge,
-body.dark-mode .bb-round-btn,
-body.dark-mode .bb-category-item,
-body.dark-mode .filter-pill,
-body.dark-mode .capsule-filter,
-body.dark-mode .btn-round-opt,
-body.dark-mode .custom-round-input {
-    background: var(--bg-secondary) !important;
-    border: var(--border-glass) !important;
-    color: var(--text-main) !important;
+    background: linear-gradient(165deg, var(--bg-glass-strong) 0%, var(--bg-card) 100%);
 }
 
 /* Bunker & Who Am I Overlays */
@@ -113,13 +82,6 @@ body.dark-mode .bunker-header-card,
 body.dark-mode .bunker-footer-bar,
 body.dark-mode .bunker-voting-screen,
 body.dark-mode .bunker-reveal-overlay {
-    background: var(--bg-glass-strong) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border-color: var(--divider) !important;
-}
-
-body.dark-mode .modal-handle-close {
-    background: var(--text-muted) !important;
-    opacity: 0.5;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
 }

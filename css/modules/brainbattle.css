@@ -199,6 +199,6 @@
     inset: 0 !important;
     z-index: 2000 !important;
     /* Above header and bottom nav */
-    background: #F8F9FD;
+    background: var(--bg-app);
     touch-action: none;
 }

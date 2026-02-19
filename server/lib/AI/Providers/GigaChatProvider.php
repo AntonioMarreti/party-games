@@ -128,7 +128,7 @@ class GigaChatProvider implements AIProvider
     {
         // 1. Try to load from file
         if (file_exists($this->tokenFile)) {
-            $data = json_decode(file_get_contents($this->tokenFile), true);
+            $data = $this->lockedReadFile($this->tokenFile);
             if ($data && isset($data['access_token']) && isset($data['expires_at'])) {
                 if (time() < ($data['expires_at'] - 60)) { // Buffer 60s
                     return $data['access_token'];
@@ -190,7 +190,7 @@ class GigaChatProvider implements AIProvider
         if (!is_dir(dirname($this->tokenFile))) {
             mkdir(dirname($this->tokenFile), 0777, true);
         }
-        file_put_contents($this->tokenFile, json_encode($cache));
+        $this->lockedWriteFile($this->tokenFile, $cache);
 
         return $cache['access_token'];
     }
@@ -213,7 +213,7 @@ class GigaChatProvider implements AIProvider
         // 1. Check Global Limit
         $usage = 0;
         if (file_exists($this->usageFile)) {
-            $data = json_decode(file_get_contents($this->usageFile), true);
+            $data = $this->lockedReadFile($this->usageFile);
             $usage = $data['total'] ?? 0;
         }
 
@@ -228,37 +228,56 @@ class GigaChatProvider implements AIProvider
 
         // 2. Check Rate Limit (RPM & TPM)
         $audit = [];
-        if (file_exists($this->auditFile)) {
-            $audit = json_decode(file_get_contents($this->auditFile), true) ?? [];
+        // We use lock for audit update to prevent concurrent requests from messing up the array
+        $fp = fopen($this->auditFile, 'c+');
+        if ($fp) {
+            flock($fp, LOCK_EX);
+            $filesize = filesize($this->auditFile);
+            if ($filesize > 0) {
+                $content = fread($fp, $filesize);
+                $audit = json_decode($content, true) ?? [];
+            } else {
+                $audit = [];
+            }
+
+            $now = microtime(true);
+            // Filter last 60 seconds
+            $audit = array_filter($audit, function ($entry) use ($now) {
+                return ($now - $entry[0]) <= 60;
+            });
+
+            // RPM Check
+            if (count($audit) >= 20) {
+                flock($fp, LOCK_UN);
+                fclose($fp);
+                $this->alertAdmin("⚠️ Rate Limit Hit (RPM > 20)", 'rpm_limit');
+                throw new Exception("Rate Limit Exceeded (RPM)");
+            }
+
+            // TPM Check
+            $tokensInMinute = array_reduce($audit, function ($carry, $item) {
+                return $carry + ($item[1] ?? 0);
+            }, 0);
+
+            if ($tokensInMinute > 10000) {
+                flock($fp, LOCK_UN);
+                fclose($fp);
+                $this->alertAdmin("⚠️ Rate Limit Hit (TPM > 10k)", 'tpm_limit');
+                throw new Exception("Rate Limit Exceeded (TPM)");
+            }
+
+            // Log start
+            $audit[] = [$now, 0];
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode(array_values($audit)));
+            flock($fp, LOCK_UN);
+            fclose($fp);
+
+            return $now;
         }
 
-        $now = microtime(true);
-        // Filter last 60 seconds
-        $audit = array_filter($audit, function ($entry) use ($now) {
-            return ($now - $entry[0]) <= 60;
-        });
-
-        // RPM Check
-        if (count($audit) >= 20) {
-            $this->alertAdmin("⚠️ Rate Limit Hit (RPM > 20)", 'rpm_limit');
-            throw new Exception("Rate Limit Exceeded (RPM)");
-        }
-
-        // TPM Check
-        $tokensInMinute = array_reduce($audit, function ($carry, $item) {
-            return $carry + ($item[1] ?? 0);
-        }, 0);
-
-        if ($tokensInMinute > 10000) {
-            $this->alertAdmin("⚠️ Rate Limit Hit (TPM > 10k)", 'tpm_limit');
-            throw new Exception("Rate Limit Exceeded (TPM)");
-        }
-
-        // Log start
-        $audit[] = [$now, 0];
-        file_put_contents($this->auditFile, json_encode(array_values($audit)));
-
-        return $now;
+        return microtime(true);
     }
 
     private function trackUsage($response, $requestTimestamp = null)
@@ -268,25 +287,53 @@ class GigaChatProvider implements AIProvider
 
         $tokens = $response['usage']['total_tokens'];
 
-        // 1. Update Global Usage
-        $data = ['total' => 0, 'alerts' => []];
-        if (file_exists($this->usageFile)) {
-            $data = json_decode(file_get_contents($this->usageFile), true);
-        }
-        $data['total'] = ($data['total'] ?? 0) + $tokens;
-        $data['last_updated'] = time();
-        file_put_contents($this->usageFile, json_encode($data));
-
-        // 2. Update Audit Log
-        if ($requestTimestamp && file_exists($this->auditFile)) {
-            $audit = json_decode(file_get_contents($this->auditFile), true) ?? [];
-            foreach ($audit as &$entry) {
-                if (abs($entry[0] - $requestTimestamp) < 0.0001) {
-                    $entry[1] = $tokens;
-                    break;
-                }
+        // 1. Update Global Usage (Thread-safe)
+        $fpUsage = fopen($this->usageFile, 'c+');
+        if ($fpUsage) {
+            flock($fpUsage, LOCK_EX);
+            $filesize = filesize($this->usageFile);
+            $data = ['total' => 0, 'alerts' => []];
+            if ($filesize > 0) {
+                $content = fread($fpUsage, $filesize);
+                $parsed = json_decode($content, true);
+                if ($parsed)
+                    $data = $parsed;
             }
-            file_put_contents($this->auditFile, json_encode($audit));
+            $data['total'] = ($data['total'] ?? 0) + $tokens;
+            $data['last_updated'] = time();
+
+            ftruncate($fpUsage, 0);
+            rewind($fpUsage);
+            fwrite($fpUsage, json_encode($data));
+            flock($fpUsage, LOCK_UN);
+            fclose($fpUsage);
+        }
+
+        // 2. Update Audit Log (Thread-safe)
+        if ($requestTimestamp) {
+            $fpAudit = fopen($this->auditFile, 'c+');
+            if ($fpAudit) {
+                flock($fpAudit, LOCK_EX);
+                $filesize = filesize($this->auditFile);
+                $audit = [];
+                if ($filesize > 0) {
+                    $content = fread($fpAudit, $filesize);
+                    $audit = json_decode($content, true) ?? [];
+                }
+
+                foreach ($audit as &$entry) {
+                    if (abs($entry[0] - $requestTimestamp) < 0.0001) {
+                        $entry[1] = $tokens;
+                        break;
+                    }
+                }
+
+                ftruncate($fpAudit, 0);
+                rewind($fpAudit);
+                fwrite($fpAudit, json_encode($audit));
+                flock($fpAudit, LOCK_UN);
+                fclose($fpAudit);
+            }
         }
     }
 
@@ -295,7 +342,7 @@ class GigaChatProvider implements AIProvider
         if (!defined('GIGACHAT_ALERT_ID') || !class_exists('TelegramLogger'))
             return;
 
-        $data = file_exists($this->usageFile) ? json_decode(file_get_contents($this->usageFile), true) : [];
+        $data = $this->lockedReadFile($this->usageFile);
         $today = date('Y-m-d');
 
         if (isset($data['alerts'][$alertType]) && $data['alerts'][$alertType] === $today) {
@@ -304,7 +351,58 @@ class GigaChatProvider implements AIProvider
 
         TelegramLogger::sendToUser(GIGACHAT_ALERT_ID, $msg);
 
-        $data['alerts'][$alertType] = $today;
-        file_put_contents($this->usageFile, json_encode($data));
+        // Save new alert state
+        $fp = fopen($this->usageFile, 'c+');
+        if ($fp) {
+            flock($fp, LOCK_EX);
+            $filesize = filesize($this->usageFile);
+            if ($filesize > 0) {
+                $content = fread($fp, $filesize);
+                $data = json_decode($content, true) ?? [];
+            }
+            if (!isset($data['alerts']))
+                $data['alerts'] = [];
+            $data['alerts'][$alertType] = $today;
+
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode($data));
+            flock($fp, LOCK_UN);
+            fclose($fp);
+        }
+    }
+
+    // === UTILS ===
+    private function lockedReadFile($path)
+    {
+        if (!file_exists($path))
+            return [];
+        $fp = fopen($path, 'r');
+        if (!$fp)
+            return [];
+        flock($fp, LOCK_SH);
+        $filesize = filesize($path);
+        if ($filesize === 0) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            return [];
+        }
+        $content = fread($fp, $filesize);
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return json_decode($content, true) ?? [];
+    }
+
+    private function lockedWriteFile($path, $data)
+    {
+        $fp = fopen($path, 'c+');
+        if ($fp) {
+            flock($fp, LOCK_EX);
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode($data));
+            flock($fp, LOCK_UN);
+            fclose($fp);
+        }
     }
 }

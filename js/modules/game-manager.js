@@ -7,7 +7,7 @@
 let reactionBuffer = { emoji: null, count: 0 };
 let reactionThrottleTimer = null;
 const lastSourceShowTime = new Map(); // Track when we last showed a user's nameplate
-let seenReactionIds = new Set(); // Prevent duplicate event processing
+let seenReactionIds = new Map(); // Prevent duplicate event processing (TTL based)
 const loadedGameScripts = new Set(); // Track loaded scripts to prevent duplicates
 
 // === DYNAMIC LOADING ===
@@ -143,12 +143,16 @@ const GameManager = {
             // Unique ID check. 
             const key = ev.created_at + '_' + ev.user_id + '_' + ev.type;
             if (seenReactionIds.has(key)) return;
-            seenReactionIds.add(key);
+            seenReactionIds.set(key, Date.now());
 
-            // Memory Leak Fix: Prune seenReactionIds if it gets too large
+            // Memory Leak Fix: Cleanup old entries by TTL (e.g., 30 seconds) instead of Set array shifting
             if (seenReactionIds.size > 500) {
-                const firstEntry = seenReactionIds.values().next().value;
-                seenReactionIds.delete(firstEntry);
+                const now = Date.now();
+                for (const [k, timestamp] of seenReactionIds.entries()) {
+                    if (now - timestamp > 30000) {
+                        seenReactionIds.delete(k);
+                    }
+                }
             }
 
             // Skip our own reactions (already shown locally and instantly)
@@ -167,7 +171,7 @@ const GameManager = {
                 const text = payload.text || '...';
                 const players = window.currentGamePlayers || [];
                 const player = players.find(p => p.id == ev.user_id);
-                const name = player ? (player.custom_name || player.first_name) : 'Bot';
+                const name = player ? (window.safeHTML(player.custom_name) || window.safeHTML(player.first_name)) : 'Bot';
                 const avatar = player ? (player.photo_url || player.avatar_emoji) : '🤖';
 
                 this.showFloatingText(text, { name, avatar });
@@ -182,8 +186,8 @@ const GameManager = {
             // Find player info for attribution
             const players = window.currentGamePlayers || [];
             const player = players.find(p => p.id == ev.user_id);
-            const name = player ? (player.custom_name || player.first_name) : 'Игрок';
-            const avatar = player ? (player.photo_url || player.avatar_emoji) : '👤';
+            const name = player ? (window.safeHTML(player.custom_name) || window.safeHTML(player.first_name)) : 'Игрок';
+            const avatar = player ? (window.safeHTML(player.photo_url) || window.safeHTML(player.avatar_emoji)) : '👤';
 
             // Rate limit the "Source Bubble" (nameplate) to avoid stacking during continuous bursts
             const sourceKey = ev.user_id + '_' + emoji;
@@ -245,8 +249,8 @@ const GameManager = {
             <div class="chat-bubble-content">
                 <div class="chat-avatar">${avatarHtml}</div>
                 <div class="chat-text">
-                    <div class="chat-name">${producer.name}</div>
-                    <div class="chat-message">${text}</div>
+                    <div class="chat-name">${window.safeHTML(producer.name)}</div>
+                    <div class="chat-message">${window.safeHTML(text)}</div>
                 </div>
             </div>
         `;
@@ -291,8 +295,8 @@ const GameManager = {
             el.innerHTML = `
                 <div class="reaction-bubble">
                     <span class="reaction-avatar">${avatarHtml}</span>
-                    <span class="reaction-name">${producer.name}</span>
-                    <span class="reaction-symbol">${emoji}</span>
+                    <span class="reaction-name">${window.safeHTML(producer.name)}</span>
+                    <span class="reaction-symbol">${window.safeHTML(emoji)}</span>
                 </div>
         `;
         } else {
@@ -732,8 +736,8 @@ function openGameShowcase(gameId) {
         demoArea.innerHTML = '';
         if (game.gallery && game.gallery.length > 0) {
             const galleryHeader = document.createElement('h2');
-            galleryHeader.className = 'fw-bold mb-4 text-dark';
-            galleryHeader.style.cssText = 'font-size: 22px; letter-spacing: -0.5px;';
+            galleryHeader.className = 'fw-bold mb-4';
+            galleryHeader.style.cssText = 'font-size: 22px; letter-spacing: -0.5px; color: var(--text-main);';
             galleryHeader.innerText = 'Примеры игры';
             demoArea.appendChild(galleryHeader);
 
@@ -760,7 +764,7 @@ function openGameShowcase(gameId) {
                 const item = document.createElement('div');
                 item.className = 'rule-v3-item d-flex align-items-start py-3';
                 if (idx < game.rules.length - 1) {
-                    item.style.borderBottom = '1px solid #f2f2f7';
+                    item.style.borderBottom = '1px solid var(--divider)';
                 }
 
                 item.innerHTML = `
@@ -768,7 +772,7 @@ function openGameShowcase(gameId) {
                          style="width: 28px; height: 28px; background: transparent; color: ${game.color}; font-size: 18px; flex-shrink: 0;">
                         <i class="bi ${rule.icon}"></i>
                     </div>
-                    <div class="rule-text text-dark" style="font-size: 16px; font-weight: 500; line-height: 1.4; flex: 1; padding-top: 2px;">
+                    <div class="rule-text" style="color: var(--text-main); font-size: 16px; font-weight: 500; line-height: 1.4; flex: 1; padding-top: 2px;">
                         ${rule.text}
                     </div>
                 `;
@@ -846,11 +850,13 @@ function openGameShowcase(gameId) {
     // Telegram Native BackButton
     if (window.Telegram && window.Telegram.WebApp) {
         const tg = window.Telegram.WebApp;
-        tg.BackButton.show();
-        tg.BackButton.onClick(() => {
-            window.showScreen('lobby');
-            tg.BackButton.hide();
-        });
+        if (tg.BackButton) {
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => {
+                window.showScreen('lobby');
+                tg.BackButton.hide();
+            });
+        }
     }
     window.showScreen('game-detail');
 }

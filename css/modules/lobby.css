@@ -328,10 +328,10 @@
     position: absolute;
     inset: -50%;
     z-index: -1;
-    background: radial-gradient(circle at 70% 30%, #6C5CE7 0%, transparent 60%),
-        radial-gradient(circle at 30% 70%, #00CEC9 0%, transparent 60%),
-        radial-gradient(circle at 80% 80%, #a29bfe 0%, transparent 60%),
-        radial-gradient(circle at 20% 20%, #fd79a8 0%, transparent 60%);
+    background: radial-gradient(circle at 70% 30%, var(--primary-color) 0%, transparent 60%),
+        radial-gradient(circle at 30% 70%, var(--status-info) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, var(--primary-color) 0%, transparent 60%),
+        radial-gradient(circle at 20% 20%, var(--status-warning) 0%, transparent 60%);
     filter: blur(80px);
     animation: mesh-rotate 25s linear infinite;
     opacity: 0.6;
@@ -379,7 +379,7 @@
     justify-content: center;
     font-size: 45px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    color: #6C5CE7;
+    color: var(--primary-color);
 }
 
 .splash-logo-circle {
@@ -408,7 +408,7 @@
     font-size: 32px;
     font-weight: 800;
     margin-bottom: 8px;
-    background: linear-gradient(135deg, #fff 0%, #d1c4e9 100%);
+    background: linear-gradient(135deg, var(--text-main) 0%, color-mix(in srgb, var(--primary-color), var(--bg-app) 50%) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -550,7 +550,7 @@ body.dark-mode .player-score {
     position: absolute;
     top: -12px;
     right: -8px;
-    color: #FFD700;
+    color: var(--accent-gold);
     /* Gold color for the star */
     display: flex;
     align-items: center;
@@ -562,8 +562,8 @@ body.dark-mode .player-score {
 }
 
 body.dark-mode .host-crown {
-    color: #FFD700;
-    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+    color: var(--accent-gold);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-gold), transparent 50%));
 }
 
 /* Add Bot Button (Circle matching avatars) */
@@ -800,7 +800,7 @@ body.dark-mode .lb-rank.top-3 {
 
 .game-detail-icon-wrap {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    border: 3px solid #fff;
+    border: 3px solid var(--border-color);
     flex-shrink: 0;
 }
 
@@ -867,7 +867,7 @@ body.dark-mode .lb-rank.top-3 {
 
 /* Bunker Card Demo */
 .demo-bunker-card {
-    background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-app) 100%);
     border-radius: 16px;
     padding: 15px;
     color: white;
@@ -994,7 +994,7 @@ body.dark-mode .lb-rank.top-3 {
 }
 
 .like-btn-svg-wrapper.active .main-heart {
-    stroke: #ff3b30 !important;
+    stroke: var(--status-error) !important;
     animation: heart-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -1007,7 +1007,7 @@ body.dark-mode .lb-rank.top-3 {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 2px solid #ff3b30;
+    border: 2px solid var(--status-error);
     transform: translate(-50%, -50%) scale(0.5);
     opacity: 1;
     animation: heart-ring 0.6s ease-out forwards;

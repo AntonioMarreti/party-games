@@ -1,6 +1,6 @@
 <!-- Screen: Game Detail -->
 <div id="screen-game-detail" class="screen"
-    style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; height: 100% !important; overflow: hidden !important; background: #fff; width: 100%; z-index: 1000;">
+    style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; height: 100% !important; overflow: hidden !important; background: var(--bg-app); width: 100%; z-index: 1000;">
 
     <!-- FIXED UI LAYER -->
     <div class="fixed-ui-layer position-absolute w-100 h-100"
@@ -17,7 +17,7 @@
 
         <!-- Bottom Action Button (Navbar style) -->
         <div class="position-absolute bottom-0 start-0 end-0 p-4 border-top"
-            style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; border-bottom-left-radius: 44px; border-bottom-right-radius: 44px; overflow: hidden;">
+            style="background: var(--bg-glass-strong); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; border-bottom-left-radius: 44px; border-bottom-right-radius: 44px; overflow: hidden; border-color: var(--border-glass) !important;">
             <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg" id="btn-try-game-now"
                 style="border: none; font-size: 16px; background: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%); letter-spacing: 0.5px;">
                 ПОПРОБОВАТЬ СЕЙЧАС
@@ -42,8 +42,8 @@
         <div style="height: 42vh; width: 100%; pointer-events: none;"></div>
 
         <!-- Content Card -->
-        <div class="game-detail-wrapper position-relative bg-white px-4 pt-4 pb-5 shadow-lg"
-            style="min-height: 100vh; border-top-left-radius: 32px; border-top-right-radius: 32px;">
+        <div class="game-detail-wrapper position-relative px-4 pt-4 pb-5 shadow-lg"
+            style="background: var(--bg-secondary); min-height: 100vh; border-top-left-radius: 32px; border-top-right-radius: 32px;">
 
             <!-- HEADER ROW: Icon + Title + SVG Like -->
             <div class="d-flex align-items-center mb-4">
@@ -56,8 +56,8 @@
 
                 <!-- Title & Subtitle -->
                 <div class="flex-grow-1" style="min-width: 0;">
-                    <h1 id="game-detail-header-title" class="fw-bold mb-1 text-dark"
-                        style="font-size: 22px; line-height: 1.2; letter-spacing: -0.5px;">
+                    <h1 id="game-detail-header-title" class="fw-bold mb-1"
+                        style="font-size: 22px; line-height: 1.2; letter-spacing: -0.5px; color: var(--text-main);">
                         Название
                     </h1>
                     <div id="game-detail-subtitle" class="text-muted small fw-medium text-truncate">
@@ -85,23 +85,24 @@
             </div>
 
             <!-- STATS ROW (Fixed grid, no scroll) -->
-            <div class="d-flex justify-content-between align-items-center py-3 mb-4 border-top border-bottom">
+            <div class="d-flex justify-content-between align-items-center py-3 mb-4 border-top border-bottom"
+                style="border-color: var(--divider) !important;">
                 <div class="text-center flex-grow-1">
                     <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
                         Игроков</div>
-                    <div class="fw-bold text-dark" id="stat-players" style="font-size: 16px;">-</div>
+                    <div class="fw-bold" id="stat-players" style="font-size: 16px; color: var(--text-main);">-</div>
                 </div>
                 <div class="vr bg-secondary opacity-25"></div>
                 <div class="text-center flex-grow-1">
                     <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
                         Время</div>
-                    <div class="fw-bold text-dark" id="stat-time" style="font-size: 16px;">-</div>
+                    <div class="fw-bold" id="stat-time" style="font-size: 16px; color: var(--text-main);">-</div>
                 </div>
                 <div class="vr bg-secondary opacity-25"></div>
                 <div class="text-center flex-grow-1">
                     <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
                         Сложность</div>
-                    <div class="fw-bold text-dark" id="stat-difficulty" style="font-size: 16px;">-</div>
+                    <div class="fw-bold" id="stat-difficulty" style="font-size: 16px; color: var(--text-main);">-</div>
                 </div>
             </div>
 

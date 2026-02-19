@@ -155,8 +155,8 @@ async function loadPublicRooms() {
                     <div class="d-flex align-items-center gap-3">
                         <div class="avatar-sm" style="background-image: url('${r.host_avatar || ''}')"></div>
                         <div>
-                            <div class="fw-bold" style="color:var(--text-main);">${r.title || ('Комната ' + r.host_name)}</div>
-                            <div class="small text-muted">${r.description || 'Присоединяйтесь!'}</div>
+                            <div class="fw-bold" style="color:var(--text-main);">${window.safeHTML(r.title) || ('Комната ' + window.safeHTML(r.host_name))}</div>
+                            <div class="small text-muted">${window.safeHTML(r.description) || 'Присоединяйтесь!'}</div>
                         </div>
                     </div>
                     <div class="text-end">
@@ -210,7 +210,7 @@ async function loadLocalRooms() {
                     <div class="d-flex align-items-center gap-3">
                         <div class="avatar-sm" style="background-image: url('${r.host_avatar || ''}')"></div>
                         <div>
-                            <div class="fw-bold" style="color:var(--text-main);">${r.host_name}</div>
+                            <div class="fw-bold" style="color:var(--text-main);">${window.safeHTML(r.host_name)}</div>
                             <div class="small text-success"><i class="bi bi-wifi"></i> В вашей сети</div>
                         </div>
                     </div>
@@ -334,7 +334,7 @@ function renderPlayerList(players, containerId) {
                 ${crown}
                 ${botBadge}
             </div>
-            <div class="player-name">${p.custom_name || p.first_name}</div>
+            <div class="player-name">${window.safeHTML(p.custom_name) || window.safeHTML(p.first_name)}</div>
         `;
 
         if (amIHost && p.is_host != 1) {
@@ -571,7 +571,7 @@ function renderInviteList(friends) {
                     ${isSelected ? '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary border border-white" style="z-index:2;"><i class="bi bi-check"></i></span>' : ''}
                 </div>
                 <div class="flex-grow-1 ms-3">
-                    <div class="fw-bold small text-dark">${f.custom_name || f.first_name}</div>
+                    <div class="fw-bold small text-dark">${window.safeHTML(f.custom_name) || window.safeHTML(f.first_name)}</div>
                 </div>
                 <div class="invite-checkbox-wrapper">
                     <input class="form-check-input shadow-sm" type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none; border-radius: 6px;">
@@ -881,13 +881,13 @@ function renderGameSelectorUI(lobbyState) {
 
         // Structure: Fixed Header + Scrollable Content
         list.innerHTML = `
-            <div class="bg-white sticky-top border-bottom" style="z-index: 10;">
+            <div class="sticky-top" style="z-index: 10; background: var(--bg-card); border-bottom: 1px solid var(--divider);">
                 <div class="px-3 pt-2 pb-2"> <!-- Reduced top padding for search -->
                     <div class="position-relative">
                          <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                         <input type="text" id="game-search-input" class="form-control rounded-4 border-1 bg-light text-dark shadow-sm" 
+                         <input type="text" id="game-search-input" class="form-control rounded-4 border-1 shadow-sm" 
                                 placeholder="Поиск..." 
-                                style="padding-left: 45px; height: 42px; font-size: 16px; border-color: #f0f0f0;">
+                                style="padding-left: 45px; height: 42px; font-size: 16px; border-color: var(--border-glass);">
                     </div>
                 </div>
 
@@ -899,20 +899,20 @@ function renderGameSelectorUI(lobbyState) {
                 </div>
             </div>
             
-            <div id="game-list-container" class="p-0" style="background: white; padding-bottom: 80px !important;">
+            <div id="game-list-container" class="p-0" style="padding-bottom: 80px !important;">
                 <!-- Games rendered here as list -->
             </div>
             
             <style>
                 .filter-tab {
-                    background: white;
-                    color: #6c757d;
-                    border: 1px solid #dee2e6;
+                    background: var(--bg-glass);
+                    color: var(--text-muted);
+                    border: 1px solid var(--border-glass);
                     transition: all 0.2s;
                 }
                 .filter-tab:hover {
-                    background: #f8f9fa;
-                    color: #495057;
+                    background: var(--bg-secondary);
+                    color: var(--text-main);
                 }
                 .filter-tab.active {
                     background: var(--primary-color);
@@ -929,7 +929,7 @@ function renderGameSelectorUI(lobbyState) {
                     position: relative;
                 }
                 .game-list-item:active {
-                    background: #f5f5f5;
+                    background: var(--bg-secondary);
                 }
                 
                 /* Inset border via pseudoelement to look like iOS */
@@ -940,7 +940,7 @@ function renderGameSelectorUI(lobbyState) {
                     right: 0;
                     left: 70px; /* Inset from icon width */
                     height: 1px;
-                    background: #f0f0f0;
+                    background: var(--border-main);
                 }
                 .game-list-item:last-child::after {
                     display: none;
@@ -997,18 +997,20 @@ function renderGameSelectorUI(lobbyState) {
                     color: #ffc107;
                 }
 
-                .section-title {
+                #gameSelectorModal .section-title {
                     padding: 24px 16px 0px; /* Strong top separation, zero bottom */
                     font-size: 11px;
                     text-transform: uppercase;
-                    color: #999;
+                    color: var(--text-muted);
                     font-weight: 700;
-                    background: #fff;
+                    background: transparent;
                     letter-spacing: 0.5px;
                 }
                 
                 #gameSelectorModal .modal-content {
-                    background: white !important;
+                    background: var(--bg-card) !important;
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
                     border-radius: 20px 20px 0 0; 
                     height: 70vh; /* Reduced height as requested */
                     display: flex;

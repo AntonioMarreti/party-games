@@ -90,13 +90,14 @@ body {
     background-color: var(--bg-app) !important;
 }
 
+
+
 .thermal-safe .glass,
 .thermal-safe .glass-card,
 .thermal-safe .modal-content,
 .thermal-safe .bottom-nav,
 .thermal-safe .action-card,
 .thermal-safe .achievement-card,
-.thermal-safe .glass-btn,
 .thermal-safe .game-list-card,
 .thermal-safe .lb-card,
 .thermal-safe .room-header-dropdown-btn,
@@ -105,9 +106,18 @@ body {
 .thermal-safe .glass-input,
 .thermal-safe .game-setting-card,
 .thermal-safe #guest-waiting-msg,
-.thermal-safe .reaction-trigger,
 .thermal-safe .reaction-palette,
-.thermal-safe .reaction-bubble {
+.thermal-safe .reaction-bubble,
+.thermal-safe .stats-card-modern,
+.thermal-safe .settings-group,
+.thermal-safe .profile-card-new,
+.thermal-safe .profile-stats-card-premium,
+.thermal-safe .menu-card-premium,
+.thermal-safe .menu-btn-item,
+.thermal-safe .custom-modal-content,
+.thermal-safe .custom-modal-overlay,
+.thermal-safe .game-catalog-header,
+.thermal-safe .catalog-game-card {
     /* Use solid backgrounds without blur to save power but maintain legibility */
     background: var(--bg-secondary) !important;
     border: 1px solid var(--border-main) !important;

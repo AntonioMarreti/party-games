@@ -44,14 +44,15 @@
 <div id="modal-detailed-stats" class="custom-modal-overlay" style="display: none;">
     <div class="custom-modal-content glass-panel p-3" style="max-width: 400px; width: 90%;">
         <div class="position-relative mb-3 text-center">
-            <h5 class="fw-bold mb-0 text-dark">Статистика</h5>
+            <h5 class="fw-bold mb-0 text-main" style="color: var(--text-main);">Статистика</h5>
             <button class="btn-close position-absolute top-50 end-0 translate-middle-y"
                 onclick="closeModal('modal-detailed-stats')" style="font-size: 0.8rem;"></button>
         </div>
 
         <div class="row g-2 mb-3">
             <div class="col-12">
-                <div class="p-2 bg-white bg-opacity-50 rounded-4 border border-white shadow-sm">
+                <div class="p-2 rounded-4 shadow-sm"
+                    style="background: var(--bg-glass-strong); border: 1px solid var(--border-glass);">
                     <div class="d-flex justify-content-between align-items-end mb-1">
                         <div>
                             <div class="text-muted"
@@ -69,14 +70,16 @@
                 </div>
             </div>
             <div class="col-6">
-                <div class="p-2 bg-white bg-opacity-50 rounded-4 text-center border border-white shadow-sm">
+                <div class="p-2 rounded-4 text-center shadow-sm"
+                    style="background: var(--bg-glass-strong); border: 1px solid var(--border-glass);">
                     <i class="bi bi-controller text-primary mb-1 d-block" style="font-size: 1.1rem;"></i>
                     <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Игр</div>
-                    <div class="fw-bold fs-6 text-dark" id="detail-total-games">0</div>
+                    <div class="fw-bold fs-6" style="color: var(--text-main);" id="detail-total-games">0</div>
                 </div>
             </div>
             <div class="col-6">
-                <div class="p-2 bg-white bg-opacity-50 rounded-4 text-center border border-white shadow-sm">
+                <div class="p-2 rounded-4 text-center shadow-sm"
+                    style="background: var(--bg-glass-strong); border: 1px solid var(--border-glass);">
                     <i class="bi bi-graph-up-arrow text-success mb-1 d-block" style="font-size: 1.1rem;"></i>
                     <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Винрейт</div>
                     <div class="fw-bold fs-6 text-success" id="detail-winrate">0%</div>
@@ -84,10 +87,11 @@
             </div>
         </div>
 
-        <h6 class="fw-bold mb-3 text-dark text-center" style="font-size: 14px;">Достижения</h6>
-        <div id="detail-achievements-list" class="overflow-auto" style="max-height: 280px; min-height: 60px;"></div>
+        <h6 class="fw-bold mb-2 text-center" style="font-size: 14px; color: var(--text-main);">Достижения</h6>
+        <div id="detail-achievements-list" class="overflow-auto px-3 pb-4 pt-2"
+            style="margin: 0 -16px; max-height: 250px; min-height: 60px;"></div>
 
-        <button class="btn btn-primary w-100 mt-4 rounded-pill py-3 fw-bold shadow-sm"
+        <button class="btn btn-primary w-100 mt-2 rounded-pill py-2 fw-bold shadow-sm"
             onclick="closeModal('modal-detailed-stats')">Закрыть</button>
     </div>
 </div>
@@ -165,9 +169,9 @@
                         style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
                     <input type="password" id="join-room-pass" class="form-control mb-3"
                         placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
-                    
-                    <button type="button" class="btn btn-light w-100 mb-2 fw-bold text-primary"
-                        onclick="scanQrCode()" style="border-radius: 16px; border: 1px solid var(--primary-color);">
+
+                    <button type="button" class="btn btn-light w-100 mb-2 fw-bold text-primary" onclick="scanQrCode()"
+                        style="border-radius: 16px; border: 1px solid var(--primary-color);">
                         <i class="bi bi-qr-code-scan me-2"></i>Сканировать QR
                     </button>
 

@@ -488,9 +488,9 @@ body.large-font .text-muted.small {
     position: absolute;
     bottom: -5px;
     right: -5px;
-    background: linear-gradient(45deg, #FFD700, #FFA500);
+    background: var(--accent-gold-gradient);
     /* Keeping gold for now as it's a specific badge, but could be tokenized later */
-    color: #000;
+    color: var(--accent-gold-text);
     font-weight: 800;
     font-size: 12px;
     padding: 2px 8px;
@@ -500,7 +500,7 @@ body.large-font .text-muted.small {
 }
 
 body.dark-mode .profile-level-badge-float {
-    box-shadow: 0 0 10px color-mix(in srgb, #FFA500, transparent 40%);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent-gold), transparent 40%);
     border-color: rgba(255, 255, 255, 0.2);
 }
 

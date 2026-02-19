@@ -434,6 +434,19 @@ function showLoading(title, message) {
 
 // === SAFE DOM MANIPULATION ===
 
+function safeHTML(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>"']/g, function (m) {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#039;';
+        }
+    });
+}
+
 function safeText(id, text) {
     const el = document.getElementById(id);
     if (el) el.innerText = text;
@@ -632,6 +645,7 @@ window.showConfirmation = showConfirmation;
 window.showPrompt = showPrompt;
 window.showLoading = showLoading;
 window.closeAlert = closeAlert;
+window.safeHTML = safeHTML;
 window.safeText = safeText;
 window.safeStyle = safeStyle;
 window.safeClass = safeClass;
