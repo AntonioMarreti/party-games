@@ -13,7 +13,7 @@ window.onerror = function (msg, url, line, col, error) {
 };
 
 // === CONFIGURATION ===
-var loadedGames = {};
+let loadedGames = {};
 const APP_REPO = 'AntonioMarreti/party-games';
 
 function getAppVersionFromDOM() {

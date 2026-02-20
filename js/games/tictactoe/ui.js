@@ -93,28 +93,34 @@ window.renderTicTacToe = function (wrapper, state, res) {
     `;
 };
 
-window.startTicTacToe = function () {
+window.startTicTacToe = async function () {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'medium');
-    window.apiRequest({
-        action: 'game_action',
-        type: 'start_game'
-    }).then(() => {
+    try {
+        await window.apiRequest({
+            action: 'game_action',
+            type: 'start_game'
+        });
         if (window.checkState) window.checkState();
-    });
+    } catch (e) {
+        console.error("Start TTT Error:", e);
+    }
 };
 
-window.makeTicTacToeMove = function (index) {
+window.makeTicTacToeMove = async function (index) {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'light');
-    window.apiRequest({
-        action: 'game_action',
-        type: 'make_move',
-        index: index
-    }).then((res) => {
+    try {
+        const res = await window.apiRequest({
+            action: 'game_action',
+            type: 'make_move',
+            index: index
+        });
         if (res.game_over && res.players_data) {
             window.handleTicTacToeGameOver(res.players_data);
         }
         if (window.checkState) window.checkState();
-    });
+    } catch (e) {
+        console.error("Move Error:", e);
+    }
 };
 
 window.handleTicTacToeGameOver = function (playersData) {
@@ -128,12 +134,15 @@ window.handleTicTacToeGameOver = function (playersData) {
     }
 };
 
-window.restartTicTacToe = function () {
+window.restartTicTacToe = async function () {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'medium');
-    window.apiRequest({
-        action: 'game_action',
-        type: 'restart_game'
-    }).then(() => {
+    try {
+        await window.apiRequest({
+            action: 'game_action',
+            type: 'restart_game'
+        });
         if (window.checkState) window.checkState();
-    });
+    } catch (e) {
+        console.error("Restart Error:", e);
+    }
 };

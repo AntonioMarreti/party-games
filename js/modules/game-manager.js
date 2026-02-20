@@ -627,14 +627,19 @@ function renderPopularGames() {
     list.appendChild(allBtn);
 }
 
-function renderAllGames() {
+function renderAllGames(category = 'all') {
     const list = document.getElementById('all-games-list');
     if (!list) return;
 
     list.innerHTML = '';
     if (!window.AVAILABLE_GAMES) return;
 
-    window.AVAILABLE_GAMES.forEach(game => {
+    let filteredGames = window.AVAILABLE_GAMES;
+    if (category !== 'all') {
+        filteredGames = filteredGames.filter(g => g.categoryCode === category);
+    }
+
+    filteredGames.forEach(game => {
         const card = document.createElement('div');
         card.className = 'catalog-game-card';
         card.onclick = () => openGameShowcase(game.id);
@@ -663,6 +668,25 @@ function renderAllGames() {
 function openGameCatalog() {
     renderAllGames();
     showScreen('game-catalog');
+
+    // Bind Filter Tabs for Catalog
+    const catalogFilters = document.querySelectorAll('#game-cat-filters-catalog .filter-tab');
+    catalogFilters.forEach(btn => {
+        // Remove old listeners to prevent duplicates
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+
+        newBtn.addEventListener('click', (e) => {
+            const act = document.querySelector('#game-cat-filters-catalog .filter-tab.active');
+            if (act) act.classList.remove('active');
+            newBtn.classList.add('active');
+
+            const cat = newBtn.getAttribute('data-cat');
+            renderAllGames(cat);
+            if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection', 'light');
+        });
+    });
+
     if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'light');
 }
 

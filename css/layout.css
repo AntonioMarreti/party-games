@@ -111,7 +111,7 @@ body {
     justify-content: space-around;
     align-items: center;
     box-shadow: var(--shadow-main);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     /* Glass border */
     z-index: 10000;
     margin-bottom: env(safe-area-inset-bottom);

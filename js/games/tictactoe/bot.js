@@ -39,20 +39,25 @@ window.TicTacToeBot = {
 
             console.log("[TicTacToeBot] Selected move index:", index);
             if (index !== -1) {
-                window.apiRequest({
-                    action: 'game_action',
-                    type: 'make_move',
-                    index: index
-                }).then((res) => {
-                    if (res.game_over && res.players_data) {
-                        if (window.handleTicTacToeGameOver) {
-                            window.handleTicTacToeGameOver(res.players_data);
+                (async () => {
+                    try {
+                        const res = await window.apiRequest({
+                            action: 'game_action',
+                            type: 'make_move',
+                            index: index
+                        });
+                        if (res.game_over && res.players_data) {
+                            if (window.handleTicTacToeGameOver) {
+                                window.handleTicTacToeGameOver(res.players_data);
+                            }
                         }
+                        if (window.checkState) window.checkState();
+                    } catch (e) {
+                        console.error('Bot move failed:', e);
+                    } finally {
+                        this.isThinking = false;
                     }
-                    if (window.checkState) window.checkState();
-                }).finally(() => {
-                    this.isThinking = false;
-                });
+                })();
             } else {
                 this.isThinking = false;
             }

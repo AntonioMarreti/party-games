@@ -27,7 +27,7 @@
     background: var(--bg-glass-strong);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     padding: 10px 24px;
     border-radius: 50px;
     font-weight: 700;
@@ -174,7 +174,7 @@
 .game-setting-card {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: 24px;
     padding: 16px 20px;
     display: flex;

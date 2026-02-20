@@ -13,13 +13,13 @@
 
     <div class="content-wrapper pt-4">
         <div class="actions-grid">
-            <button class="action-card" data-bs-toggle="modal" data-bs-target="#joinModal">
-                <i class="bi bi-qr-code-scan action-icon"></i>
+            <button type="button" class="btn-unstyled action-card" data-bs-toggle="modal" data-bs-target="#joinModal">
+                <i class="bi bi-qr-code-scan action-icon" aria-hidden="true"></i>
                 <div class="action-title">Войти</div>
                 <div class="action-desc">В комнату<br>по коду</div>
             </button>
-            <button class="action-card" data-bs-toggle="modal" data-bs-target="#createModal">
-                <i class="bi bi-controller action-icon"></i>
+            <button type="button" class="btn-unstyled action-card" data-bs-toggle="modal" data-bs-target="#createModal">
+                <i class="bi bi-controller action-icon" aria-hidden="true"></i>
                 <div class="action-title">Создать</div>
                 <div class="action-desc">Новую комнату</div>
             </button>

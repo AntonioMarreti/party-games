@@ -100,7 +100,7 @@
     border-radius: 50%;
     background: var(--bg-glass);
     backdrop-filter: blur(10px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     box-shadow: var(--shadow-main);
     font-size: 24px;
     display: flex;
@@ -224,7 +224,7 @@
     padding: 6px 12px;
     border-radius: 20px;
     box-shadow: var(--shadow-main);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     white-space: nowrap;
 }
 
@@ -388,7 +388,7 @@ body.dark-mode .badge-info {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: var(--radius-md);
     padding: 24px 16px;
     text-align: center;
@@ -403,9 +403,15 @@ body.dark-mode .badge-info {
     width: 100%;
 }
 
+.action-card:hover {
+    background: var(--bg-glass-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-main);
+}
+
 .action-card:active {
     transform: scale(0.96);
-    box-shadow: var(--shadow-main);
+    background: var(--bg-glass);
 }
 
 .action-icon {
@@ -483,7 +489,7 @@ body.dark-mode .badge-info {
     background: var(--bg-card);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: 18px;
     padding: 10px 14px;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -562,7 +568,7 @@ body.dark-mode .badge-info {
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
     background: var(--bg-glass);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: 16px;
     padding: 12px 20px;
     font-weight: 700;

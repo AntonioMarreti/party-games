@@ -88,23 +88,29 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
     `;
 };
 
-window.startUltimateGame = function () {
-    window.apiRequest({ action: 'game_action', type: 'start_game' }).then(() => {
+window.startUltimateGame = async function () {
+    try {
+        await window.apiRequest({ action: 'game_action', type: 'start_game' });
         if (window.checkState) window.checkState();
-    });
+    } catch (e) {
+        console.error(e);
+    }
 };
 
-window.makeUltimateMove = function (bIdx, cIdx) {
+window.makeUltimateMove = async function (bIdx, cIdx) {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'light');
-    window.apiRequest({
-        action: 'game_action',
-        type: 'make_move',
-        board_index: bIdx,
-        cell_index: cIdx
-    }).then(res => {
+    try {
+        const res = await window.apiRequest({
+            action: 'game_action',
+            type: 'make_move',
+            board_index: bIdx,
+            cell_index: cIdx
+        });
         if (res.game_over && res.players_data && window.isHost) {
             window.apiRequest({ action: 'game_finished', players_data: JSON.stringify(res.players_data), duration: 0 });
         }
         if (window.checkState) window.checkState();
-    });
+    } catch (e) {
+        console.error(e);
+    }
 };

@@ -14,7 +14,7 @@
         'js/games/engines/quiz.js'
     ];
 
-    function render_brainbattle(res) {
+    async function render_brainbattle(res) {
 
         const container = document.getElementById('game-area');
 
@@ -41,14 +41,13 @@
                 });
             };
 
-            Promise.all(ENGINE_FILES.map(loadScript))
-                .then(() => {
-                    window.BB_ENGINES_LOADED = true;
-                    render_brainbattle(res);
-                })
-                .catch(err => {
-                    container.innerHTML = `<div class="alert alert-danger">Ошибка загрузки модулей: ${err.message}</div>`;
-                });
+            try {
+                await Promise.all(ENGINE_FILES.map(loadScript));
+                window.BB_ENGINES_LOADED = true;
+                render_brainbattle(res);
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-danger">Ошибка загрузки модулей: ${err.message}</div>`;
+            }
             return;
         }
 

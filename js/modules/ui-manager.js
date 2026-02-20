@@ -534,7 +534,7 @@ function handleSwipeBack() {
 }
 
 // === GAME TOGGLES (UI) ===
-function toggleGameLike(gameId, el) {
+async function toggleGameLike(gameId, el) {
     // 1. Handle Legacy Icon Toggle (Lobby Cards)
     const icon = el.querySelector('i');
     if (icon) {
@@ -554,7 +554,8 @@ function toggleGameLike(gameId, el) {
 
     // Send to backend (Fire & Forget style, but with error logging)
     if (window.apiRequest) {
-        return window.apiRequest({ action: 'toggle_like', game_id: gameId }).then(res => {
+        try {
+            const res = await window.apiRequest({ action: 'toggle_like', game_id: gameId });
             // Success - Update Global State
             if (window.userFavorites) {
                 if (res.is_liked) {
@@ -583,7 +584,7 @@ function toggleGameLike(gameId, el) {
             });
 
             return res;
-        }).catch(err => {
+        } catch (err) {
             console.error("Like Error API:", err);
             // Revert visual state on error (Legacy Only)
             if (icon) {
@@ -596,7 +597,7 @@ function toggleGameLike(gameId, el) {
                 }
             }
             throw err; // Re-throw so caller (SVG logic) can revert too
-        });
+        }
     }
     return Promise.resolve(); // Fallback if no apiRequest
 }

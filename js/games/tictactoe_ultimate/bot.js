@@ -46,19 +46,24 @@ window.TicTacToeUltimateBot = {
 
             if (bIdx !== -1) {
                 console.log("[TicTacToeU-Bot] Moving:", bIdx, cIdx);
-                window.apiRequest({
-                    action: 'game_action',
-                    type: 'make_move',
-                    board_index: bIdx,
-                    cell_index: cIdx
-                }).then(res => {
-                    if (res.game_over && res.players_data && window.isHost) {
-                        window.apiRequest({ action: 'game_finished', players_data: JSON.stringify(res.players_data), duration: 0 });
+                (async () => {
+                    try {
+                        const res = await window.apiRequest({
+                            action: 'game_action',
+                            type: 'make_move',
+                            board_index: bIdx,
+                            cell_index: cIdx
+                        });
+                        if (res.game_over && res.players_data && window.isHost) {
+                            window.apiRequest({ action: 'game_finished', players_data: JSON.stringify(res.players_data), duration: 0 });
+                        }
+                        if (window.checkState) window.checkState();
+                    } catch (e) {
+                        console.error('Bot ultimate move failed', e);
+                    } finally {
+                        this.isThinking = false;
                     }
-                    if (window.checkState) window.checkState();
-                }).finally(() => {
-                    this.isThinking = false;
-                });
+                })();
             } else {
                 this.isThinking = false;
             }

@@ -1,6 +1,7 @@
 docs/
 logs/
 fedbackbot/
+.agents/
 .DS_Store
 *.swp
 *.swo

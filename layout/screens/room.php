@@ -7,7 +7,8 @@
             <div class="dropdown">
                 <button class="btn room-header-dropdown-btn" type="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
-                    Комната <i class="bi bi-chevron-down ms-1" style="font-size: 10px; opacity: 0.6;"></i>
+                    Комната <i class="bi bi-chevron-down ms-1" style="font-size: 10px; opacity: 0.6;"
+                        aria-hidden="true"></i>
                 </button>
                 <ul class="dropdown-menu border-0 shadow-lg rounded-4 p-2 mt-2" style="min-width: 200px;">
                     <li>
@@ -28,13 +29,13 @@
 
         <!-- Карточка с кодом -->
         <div class="room-code-card">
-            <div class="room-code-text" id="room-code-display" onclick="openQrModal()" style="cursor: pointer;"
+            <button type="button" class="btn-unstyled room-code-text" id="room-code-display" onclick="openQrModal()"
                 title="Нажми, чтобы показать QR">
                 ...
-            </div>
+            </button>
 
-            <button class="btn-share-code" onclick="openQrModal()">
-                <i class="bi bi-share-fill"></i>
+            <button class="btn-share-code" onclick="openQrModal()" aria-label="Поделиться">
+                <i class="bi bi-share-fill" aria-hidden="true"></i>
             </button>
         </div>
 
@@ -45,18 +46,19 @@
 
         <!-- Выбор игры (только Хост) -->
         <div id="host-controls" style="display:none; width: 100%; margin-top: auto;">
-            <div class="game-setting-card" data-bs-toggle="modal" data-bs-target="#gameSelectorModal">
+            <button type="button" class="btn-unstyled game-setting-card" data-bs-toggle="modal"
+                data-bs-target="#gameSelectorModal">
                 <div class="d-flex align-items-center">
                     <div class="game-setting-icon" id="selected-game-icon-bg"><i class="bi bi-lightning-fill"
-                            id="selected-game-icon"></i></div>
-                    <div>
+                            id="selected-game-icon" aria-hidden="true"></i></div>
+                    <div style="text-align: left;">
                         <div style="font-size: 12px; color: #888;">Выбрать игру</div>
                         <div style="font-weight: 700; font-size: 16px;" id="selected-game-name">...
                         </div>
                     </div>
                 </div>
-                <i class="bi bi-chevron-right text-muted"></i>
-            </div>
+                <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
+            </button>
             <button class="btn-start-floating" id="btn-start-game">Начать игру</button>
         </div>
 

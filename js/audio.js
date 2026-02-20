@@ -40,20 +40,21 @@ class AudioManager {
     }
 
     // Modern browsers require a user gesture to start audio
-    unlock() {
+    async unlock() {
         if (this.unlocked) return;
 
         // Play a silent buffer to unlock
         const silent = new Audio();
-        silent.play().then(() => {
+        try {
+            await silent.play();
             this.unlocked = true;
             console.log("[Audio] System unlocked by user gesture");
-        }).catch(e => {
+        } catch (e) {
             console.warn("[Audio] Unlock failed:", e);
-        });
+        }
     }
 
-    play(key) {
+    async play(key) {
         if (!this.enabled) return;
 
         const sound = this.sounds[key];
@@ -61,9 +62,11 @@ class AudioManager {
             // Clone node to allow overlapping sounds
             const clone = sound.cloneNode();
             clone.volume = sound.volume;
-            clone.play().catch(e => {
+            try {
+                await clone.play();
+            } catch (e) {
                 console.warn('Audio play restricted:', e);
-            });
+            }
         } else {
             console.warn(`Sound '${key}' not found in library.`);
         }

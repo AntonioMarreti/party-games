@@ -35,12 +35,11 @@ async function loadMyProfileStats() {
     }
 }
 
-function openDetailedStatsModal() {
+async function openDetailedStatsModal() {
     if (!cachedUserStats) {
         if (window.showToast) window.showToast("Загрузка статистики...", "info");
-        loadMyProfileStats().then(() => {
-            if (cachedUserStats && window.showModal) window.showModal('modal-detailed-stats');
-        });
+        await loadMyProfileStats();
+        if (cachedUserStats && window.showModal) window.showModal('modal-detailed-stats');
         return;
     }
 

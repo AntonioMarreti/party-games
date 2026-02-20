@@ -18,12 +18,30 @@ body {
     -webkit-user-select: none;
 }
 
+/* Button Reset for Semantic UI */
+.btn-unstyled {
+    background: none;
+    color: inherit;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    outline: inherit;
+    text-align: inherit;
+    display: block;
+}
+
+.btn-unstyled:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
 /* Glassmorphism Utilities */
 .glass {
     background: var(--bg-glass);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     box-shadow: var(--shadow-main);
 }
 
@@ -31,7 +49,7 @@ body {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     box-shadow: var(--shadow-main);
 }
 

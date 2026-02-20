@@ -55,7 +55,7 @@
 .profile-quick-stats {
     background: var(--bg-card);
     backdrop-filter: blur(10px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: 16px;
     padding: 14px 18px;
     display: flex;
@@ -111,7 +111,7 @@
     background: var(--bg-card);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: 30px;
     padding: 10px 15px 15px 15px;
     margin: 0 15px;
@@ -153,7 +153,7 @@
 .profile-stats-card-premium {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     margin: 0 15px;
     border-radius: 24px;
     padding: 20px;
@@ -193,7 +193,7 @@
 .menu-card-premium {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     margin: 0 15px;
     border-radius: 24px;
     overflow: hidden;
@@ -320,7 +320,7 @@ body.dark-mode .stat-label {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     border-radius: 24px;
     padding: 8px 16px;
     margin-bottom: 24px;
@@ -377,9 +377,14 @@ body.dark-mode .stat-label {
     cursor: pointer;
     transition: background 0.2s;
     margin: 0 -16px;
+    width: calc(100% + 32px);
     /* negative margin to fill container width if needed, or adjust padding */
     padding: 16px 16px;
     /* Restore padding because of negative margin */
+}
+
+.settings-item.clickable:hover {
+    background: color-mix(in srgb, var(--divider), transparent 50%);
 }
 
 .settings-item.clickable:active {
@@ -508,8 +513,9 @@ body.dark-mode .profile-level-badge-float {
     background: var(--bg-card);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: var(--border-glass);
+    border: 1px solid var(--border-glass);
     margin: -30px 20px 20px;
+    width: calc(100% - 40px);
     border-radius: 24px;
     padding: 15px;
     box-shadow: var(--shadow-main);
@@ -535,6 +541,11 @@ body.dark-mode .profile-level-badge-float {
     height: 30px;
     background: var(--divider);
     margin: 0 5px;
+}
+
+.stats-card-modern:hover {
+    background: var(--bg-glass-strong);
+    transform: translateY(-2px);
 }
 
 .stats-card-modern:active {

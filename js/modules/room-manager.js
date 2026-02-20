@@ -404,9 +404,10 @@ function openQrModal() {
     if (window.showModal) window.showModal('qrInviteModal');
 }
 
-function copyInviteLink() {
+async function copyInviteLink() {
     const inviteLink = "https://t.me/mpartygamebot/app?startapp=" + window.currentRoomCode;
-    navigator.clipboard.writeText(inviteLink).then(() => {
+    try {
+        await navigator.clipboard.writeText(inviteLink);
         const btn = document.getElementById('btn-copy-invite');
         const icon = document.getElementById('btn-copy-icon');
 
@@ -424,7 +425,9 @@ function copyInviteLink() {
                 btn.style.background = originalBg;
             }, 2000);
         }
-    });
+    } catch (e) {
+        console.error('Failed to copy invite link: ', e);
+    }
 }
 
 
@@ -904,22 +907,6 @@ function renderGameSelectorUI(lobbyState) {
             </div>
             
             <style>
-                .filter-tab {
-                    background: var(--bg-glass);
-                    color: var(--text-muted);
-                    border: 1px solid var(--border-glass);
-                    transition: all 0.2s;
-                }
-                .filter-tab:hover {
-                    background: var(--bg-secondary);
-                    color: var(--text-main);
-                }
-                .filter-tab.active {
-                    background: var(--primary-color);
-                    border-color: var(--primary-color);
-                    color: white;
-                }
-
                 .game-list-item {
                     display: flex;
                     align-items: center;

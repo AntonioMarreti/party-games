@@ -69,12 +69,12 @@ window.finishWordClash = async function () {
 
 function renderWordClash(res) {
     window.lastWCRes = res;
-    var container = document.getElementById('game-area');
+    let container = document.getElementById('game-area');
     if (!container) return;
     if (!res || !res.room) return;
 
     // Handle both old and new state formats
-    var state = res.game_state || (typeof res.room.game_state === 'string'
+    let state = res.game_state || (typeof res.room.game_state === 'string'
         ? JSON.parse(res.room.game_state)
         : res.room.game_state);
     window.lastWCState = state;
@@ -115,7 +115,7 @@ function renderWordClash(res) {
         // wrapper.style.paddingTop = 'max(35px, env(safe-area-inset-top) + 10px)'; // Moved to header
 
         // Force background to cover full screen
-        wrapper.style.background = 'var(--bg-app)'; // Use app bg or specific WC gradient if needed
+        wrapper.style.background = 'let(--bg-app)'; // Use app bg or specific WC gradient if needed
         wrapper.style.zIndex = '100'; // Ensure it sits on top
         wrapper.style.position = 'relative';
 
@@ -140,7 +140,7 @@ function renderWordClash(res) {
     }
 
     // --- HEADER ---
-    var header = document.getElementById('wc-header');
+    let header = document.getElementById('wc-header');
     if (!header) {
         header = document.createElement('div');
         header.id = 'wc-header';
@@ -155,17 +155,17 @@ function renderWordClash(res) {
         header.style.right = '16px';
         header.style.padding = '16px'; // Uniform padding
         header.style.borderRadius = '32px';
-        header.style.background = 'var(--bg-glass-strong)'; // Match input area
+        header.style.background = 'let(--bg-glass-strong)'; // Match input area
         header.style.backdropFilter = 'blur(20px)';
         header.style.zIndex = '1000';
-        header.style.boxShadow = 'var(--shadow-main)';
-        header.style.border = 'var(--border-glass)';
+        header.style.boxShadow = 'let(--shadow-main)';
+        header.style.border = 'let(--border-glass)';
         wrapper.appendChild(header);
     }
 
     // Update Header Content (Score)
     // Update Header Content (Score)
-    var myScore = (state.scores && state.scores[res.user.id]) || 0;
+    let myScore = (state.scores && state.scores[res.user.id]) || 0;
     // Only update header if score changed to prevent flickering
     // Only update header if score changed (though now it's static, keeping logic for safety or future)
     if (header.dataset.score !== String(myScore)) {
@@ -204,9 +204,9 @@ function renderWordClash(res) {
     }
 
     // --- GAME OVER / INTERMISSION MODAL ---
-    var isIntermission = state.phase === 'intermission';
-    var isGameOver = state.phase === 'game_over';
-    var modal = document.getElementById('wc-victory-modal');
+    let isIntermission = state.phase === 'intermission';
+    let isGameOver = state.phase === 'game_over';
+    let modal = document.getElementById('wc-victory-modal');
 
     if ((isIntermission || isGameOver) && state.winner_id) {
         if (!modal) {
@@ -217,26 +217,26 @@ function renderWordClash(res) {
             wrapper.appendChild(modal);
         }
 
-        var winner = res.players.find(p => String(p.id) === String(state.winner_id));
-        var wName = winner ? (winner.first_name || winner.username) : 'Гений слов';
-        var isMe = String(state.winner_id) === String(res.user.id);
+        let winner = res.players.find(p => String(p.id) === String(state.winner_id));
+        let wName = winner ? (winner.first_name || winner.username) : 'Гений слов';
+        let isMe = String(state.winner_id) === String(res.user.id);
 
         // Only update if content/winner changed
-        var modalHash = `v2-${state.phase}-${state.winner_id}-${state.secret_word}-${JSON.stringify(state.scores)}`;
+        let modalHash = `v2-${state.phase}-${state.winner_id}-${state.secret_word}-${JSON.stringify(state.scores)}`;
         if (modal.dataset.hash !== modalHash) {
             modal.dataset.hash = modalHash;
 
             // Build Leaderboard
-            var sortedPlayers = [...res.players].sort((a, b) => (state.scores[b.id] || 0) - (state.scores[a.id] || 0));
-            var lbHtml = sortedPlayers.slice(0, 4).map(p => `
+            let sortedPlayers = [...res.players].sort((a, b) => (state.scores[b.id] || 0) - (state.scores[a.id] || 0));
+            let lbHtml = sortedPlayers.slice(0, 4).map(p => `
                 <div class="wc-lb-row">
                     <span class="wc-lb-name">${p.first_name || p.username}</span>
                     <span class="wc-lb-score">${state.scores[p.id] || 0}</span>
                 </div>
             `).join('');
 
-            var title = isGameOver ? (isMe ? 'ТЫ ЧЕМПИОН! 🏆' : 'ИГРА ОКОНЧЕНА 💀') : 'РАУНД ЗАВЕРШЕН! 🎉';
-            var roundSubtitle = state.round_count ? `Раунд ${state.current_round} из ${state.round_count}` : `Завершено раундов: ${state.current_round}`;
+            let title = isGameOver ? (isMe ? 'ТЫ ЧЕМПИОН! 🏆' : 'ИГРА ОКОНЧЕНА 💀') : 'РАУНД ЗАВЕРШЕН! 🎉';
+            let roundSubtitle = state.round_count ? `Раунд ${state.current_round} из ${state.round_count}` : `Завершено раундов: ${state.current_round}`;
 
             modal.innerHTML = `
                 <div class="wc-victory-card">
@@ -304,7 +304,7 @@ function renderWordClash(res) {
     }
 
     // --- STREAM (GUESSES) ---
-    var stream = document.getElementById('wc-stream');
+    let stream = document.getElementById('wc-stream');
     if (!stream) {
         stream = document.createElement('div');
         stream.id = 'wc-stream';
@@ -313,8 +313,8 @@ function renderWordClash(res) {
     }
 
     // Render History (INCREMENTAL)
-    var currentHistoryLen = state.history ? state.history.length : 0;
-    var lastHistoryLen = parseInt(stream.dataset.historyLen || '0');
+    let currentHistoryLen = state.history ? state.history.length : 0;
+    let lastHistoryLen = parseInt(stream.dataset.historyLen || '0');
 
     // Handle Reset (New Game)
     if (currentHistoryLen < lastHistoryLen) {
@@ -331,13 +331,13 @@ function renderWordClash(res) {
         // Clear "Start" message if it exists
         if (lastHistoryLen === 0) stream.innerHTML = '';
 
-        var newItems = state.history.slice(lastHistoryLen);
+        let newItems = state.history.slice(lastHistoryLen);
         newItems.forEach(function (entry) {
-            var p = res.players.find(pl => String(pl.id) === String(entry.user_id));
-            var avatar = (p && p.photo_url) ? p.photo_url : `https://api.dicebear.com/7.x/bottts/svg?seed=${entry.user_id}`;
-            var score = (parseInt(entry.score_delta) || 0);
+            let p = res.players.find(pl => String(pl.id) === String(entry.user_id));
+            let avatar = (p && p.photo_url) ? p.photo_url : `https://api.dicebear.com/7.x/bottts/svg?seed=${entry.user_id}`;
+            let score = (parseInt(entry.score_delta) || 0);
 
-            var row = document.createElement('div');
+            let row = document.createElement('div');
             row.className = 'wc-guess-row';
 
             // Avatar + Score Bubble
@@ -349,12 +349,12 @@ function renderWordClash(res) {
             `;
 
             // Tiles
-            var grid = document.createElement('div');
+            let grid = document.createElement('div');
             grid.className = 'wc-word-grid';
 
-            var letters = entry.word.split('');
+            let letters = entry.word.split('');
             letters.forEach(function (char, idx) {
-                var tile = document.createElement('div');
+                let tile = document.createElement('div');
                 tile.className = `wc-tile res-${entry.pattern[idx]}`;
                 tile.innerText = char;
                 grid.appendChild(tile);
@@ -376,8 +376,8 @@ function renderWordClash(res) {
     }
 
     // --- INPUT AREA (DUAL KEYBOARD SYSTEM) ---
-    var inputArea = document.getElementById('wc-input-area');
-    var customMode = useCustomKeyboard();
+    let inputArea = document.getElementById('wc-input-area');
+    let customMode = useCustomKeyboard();
 
     if (!inputArea) {
         inputArea = document.createElement('div');
@@ -385,7 +385,7 @@ function renderWordClash(res) {
 
         if (customMode) {
             // CUSTOM KEYBOARD MODE
-            var wordLength = state.word_length || 5;
+            let wordLength = state.word_length || 5;
             window.currentWordLength = wordLength; // Store for keyboard handler
             inputArea.innerHTML = `
                 <div class="wc-virtual-display-row" style="position: relative;">
@@ -441,7 +441,7 @@ function renderWordClash(res) {
         }
     } else {
         // Update disabled state
-        var shouldDisable = !!state.game_over || state.phase === 'intermission';
+        let shouldDisable = !!state.game_over || state.phase === 'intermission';
         if (customMode) {
             document.querySelectorAll('.wc-key').forEach(btn => {
                 btn.disabled = shouldDisable;
@@ -456,10 +456,10 @@ function renderWordClash(res) {
 };
 
 // Virtual Input State
-var virtualWord = '';
+let virtualWord = '';
 
 function handleKeyPress(e) {
-    var key = e.currentTarget.dataset.key;
+    let key = e.currentTarget.dataset.key;
     if (!key) return;
 
     // Remove focus immediately
@@ -471,7 +471,7 @@ function handleKeyPress(e) {
     }
 
     // Get current word length from last render
-    var maxLength = window.currentWordLength || 5;
+    let maxLength = window.currentWordLength || 5;
 
     if (key === 'BACK') {
         virtualWord = virtualWord.slice(0, -1);
@@ -487,12 +487,12 @@ function handleKeyPress(e) {
 }
 
 function updateVirtualDisplay() {
-    var display = document.querySelector('.wc-virtual-input');
+    let display = document.querySelector('.wc-virtual-input');
     if (!display) return;
 
-    var maxLength = window.currentWordLength || 5;
-    var chars = [];
-    for (var i = 0; i < maxLength; i++) {
+    let maxLength = window.currentWordLength || 5;
+    let chars = [];
+    for (let i = 0; i < maxLength; i++) {
         chars.push(virtualWord[i] ? virtualWord[i].toUpperCase() : '_');
     }
 
@@ -501,8 +501,8 @@ function updateVirtualDisplay() {
 
 // Helper for visual feedback
 window.showInvalidWord = function (message) {
-    var area = document.getElementById('wc-input-area');
-    var errLabel = document.getElementById('wc-error-label');
+    let area = document.getElementById('wc-input-area');
+    let errLabel = document.getElementById('wc-error-label');
 
     if (area) {
         area.classList.remove('input-error');
@@ -551,13 +551,17 @@ function closeWcMenu() {
     document.removeEventListener('click', closeWcMenu);
 }
 
-window.exitToLobby = function () {
+window.exitToLobby = async function () {
     // 1. Host stops the game for everyone
     if (window.isHost) {
-        window.apiRequest({ action: 'stop_game' }).then(() => {
+        try {
+            await window.apiRequest({ action: 'stop_game' });
+        } catch (e) {
+            console.error('Stop game error:', e);
+        } finally {
             document.body.classList.remove('wordclash-active');
             location.reload();
-        });
+        }
     } else {
         // 2. Guests just reload to get room state
         document.body.classList.remove('wordclash-active');
@@ -573,7 +577,7 @@ window.confirmExitGame = function () {
 window.submitWordClash = async function (e) {
     if (e) e.preventDefault();
 
-    var word = virtualWord.trim().toLowerCase();
+    let word = virtualWord.trim().toLowerCase();
 
     if (word.length !== 5) {
         window.showInvalidWord('Нужно 5 букв!');
@@ -584,7 +588,7 @@ window.submitWordClash = async function (e) {
     document.querySelectorAll('.wc-key').forEach(btn => btn.disabled = true);
 
     try {
-        var res = await window.sendGameAction('submit_guess', { word: word });
+        let res = await window.sendGameAction('submit_guess', { word: word });
 
         if (res && res.status === 'ok') {
             virtualWord = ''; // Success! Clear virtual input.
@@ -602,8 +606,8 @@ window.submitWordClash = async function (e) {
 window.submitWordClashSystem = async function (e) {
     if (e) e.preventDefault();
 
-    var input = document.getElementById('wc-input');
-    var word = input.value.trim().toLowerCase();
+    let input = document.getElementById('wc-input');
+    let word = input.value.trim().toLowerCase();
 
     if (word.length !== 5) {
         window.showInvalidWord('Нужно 5 букв!');
@@ -611,7 +615,7 @@ window.submitWordClashSystem = async function (e) {
     }
 
     try {
-        var res = await window.sendGameAction('submit_guess', { word: word });
+        let res = await window.sendGameAction('submit_guess', { word: word });
 
         if (res && res.status === 'ok') {
             input.value = ''; // Clear on success
@@ -626,7 +630,7 @@ window.submitWordClashSystem = async function (e) {
 // ===== SETUP SCREEN =====
 
 function renderSetupScreen(res, container) {
-    var state = res.game_state || (typeof res.room.game_state === 'string'
+    let state = res.game_state || (typeof res.room.game_state === 'string'
         ? JSON.parse(res.room.game_state)
         : res.room.game_state);
 
@@ -637,24 +641,24 @@ function renderSetupScreen(res, container) {
     window.setupSettings.roundCount = state.round_count;
 
     // --- PREVENT FLICKER / RE-ANIMATION ---
-    var stateHash = `${state.word_length}-${state.round_count}-${state.phase}-${res.is_host}`;
+    let stateHash = `${state.word_length}-${state.round_count}-${state.phase}-${res.is_host}`;
     if (container.dataset.wcHash === stateHash) return;
 
-    var isHost = res.is_host || (res.room && res.room.host_user_id === window.currentUserId);
-    var setupCard = document.querySelector('.wc-setup-card');
+    let isHost = res.is_host || (res.room && res.room.host_user_id === window.currentUserId);
+    let setupCard = document.querySelector('.wc-setup-card');
 
     // If card exists and we just need logic update (host selection), don't clear everything
     if (setupCard && container.dataset.wcHash) {
         container.dataset.wcHash = stateHash;
         // Update button active states without replacing the whole DOM
-        var selectedLength = state.word_length || 5;
-        var selectedRounds = state.round_count;
+        let selectedLength = state.word_length || 5;
+        let selectedRounds = state.round_count;
 
         document.querySelectorAll('[data-length]').forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.length) == selectedLength);
         });
         document.querySelectorAll('[data-rounds]').forEach(btn => {
-            var roundsVal = btn.dataset.rounds === 'null' ? null : parseInt(btn.dataset.rounds);
+            let roundsVal = btn.dataset.rounds === 'null' ? null : parseInt(btn.dataset.rounds);
             btn.classList.toggle('active', roundsVal == selectedRounds);
         });
         return;
@@ -663,13 +667,13 @@ function renderSetupScreen(res, container) {
     container.dataset.wcHash = stateHash;
     container.innerHTML = '';
 
-    var setupScreen = document.createElement('div');
+    let setupScreen = document.createElement('div');
     setupScreen.id = 'wc-setup-screen';
     setupScreen.className = 'wc-setup-screen';
     container.appendChild(setupScreen);
 
-    var selectedLength = state.word_length || 5;
-    var selectedRounds = state.round_count;
+    let selectedLength = state.word_length || 5;
+    let selectedRounds = state.round_count;
 
     setupScreen.innerHTML = `
         <div class="wc-setup-card">
@@ -747,7 +751,7 @@ window.selectRoundCount = function (rounds) {
 };
 
 window.startGameWithSettings = function () {
-    var settings = window.setupSettings;
+    let settings = window.setupSettings;
     window.sendGameAction('configure_game', {
         word_length: settings.wordLength,
         round_count: settings.roundCount,
