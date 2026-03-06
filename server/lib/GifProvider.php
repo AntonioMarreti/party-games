@@ -36,7 +36,6 @@ class GiphyProvider implements GifProviderInterface
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 200) {
             TelegramLogger::logError('giphy_api', ['code' => $httpCode, 'response' => substr($response, 0, 200)]);
@@ -105,7 +104,6 @@ class KlipyProvider implements GifProviderInterface
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 200) {
             throw new Exception("Klipy API Error: $httpCode");

@@ -13,9 +13,13 @@ define('BOT_TOKEN', '123456789:ABCDefGhIjKlMnOpQrStUvWxYz');
 define('LOG_CHANNEL_ID', '-100xxxxxxxxxx'); // Optional: Channel for logs
 define('BOT_USERNAME', 'your_bot_username');
 
+// Telegram Login (OIDC) — from BotFather > Web Login
+define('TG_CLIENT_ID', 'your_bot_id');
+define('TG_CLIENT_SECRET', 'your_client_secret');
+
 // Admin IDs (Integer Telegram IDs)
 define('ADMIN_IDS', [
-    123456789, 
+    123456789,
 ]);
 
 // Telegram Logger (Optional)

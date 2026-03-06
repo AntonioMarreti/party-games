@@ -27,7 +27,9 @@ if ($action === 'login_tma') {
     try {
         $userData = checkTmaAuth($_POST['initData']);
         if ($userData) {
-            $token = registerOrLoginUser($userData);
+            $platform = $_POST['platform'] ?? 'tma';
+            $device = $_POST['device'] ?? null;
+            $token = registerOrLoginUser($userData, $platform, $device);
             $user = getUserByToken($token);
             echo json_encode(['status' => 'ok', 'token' => $token, 'user' => $user]);
         } else {
@@ -54,19 +56,29 @@ if ($action === 'login_tma') {
     exit;
 }
 
-if ($action === 'login_widget') {
+// === TELEGRAM LOGIN (NEW OIDC) ===
+if ($action === 'login_telegram') {
     try {
-        $userData = checkWidgetAuth(json_decode($_POST['user_data'], true));
-        if ($userData) {
-            $token = registerOrLoginUser($userData);
+        require_once 'auth_telegram_login.php';
+        $idToken = $_POST['id_token'] ?? '';
+        if (!$idToken) {
+            echo json_encode(['status' => 'error', 'message' => 'Missing id_token']);
+            exit;
+        }
+        $userData = validateTelegramIdToken($idToken);
+        if ($userData && $userData['id']) {
+            $platform = $_POST['platform'] ?? 'web';
+            $device = $_POST['device'] ?? null;
+            $token = registerOrLoginUser($userData, $platform, $device);
             $user = getUserByToken($token);
+            TelegramLogger::logEvent('auth', "Telegram Login Success", ['user_id' => $userData['id'], 'name' => $userData['first_name']]);
             echo json_encode(['status' => 'ok', 'token' => $token, 'user' => $user]);
         } else {
-            TelegramLogger::log("Widget Auth Failed", ['data' => $_POST['user_data']]);
-            echo json_encode(['status' => 'error', 'message' => 'Invalid Widget signature']);
+            TelegramLogger::logError('auth', ['message' => 'Telegram Login Failed - Invalid id_token', 'code' => 'TG_LOGIN_INVALID']);
+            echo json_encode(['status' => 'error', 'message' => 'Invalid Telegram token']);
         }
     } catch (Exception $e) {
-        TelegramLogger::log("Login Widget Error", ['error' => $e->getMessage()]);
+        TelegramLogger::logError('auth', ['message' => $e->getMessage(), 'code' => $e->getCode(), 'stack' => $e->getTraceAsString()]);
         echo json_encode(['status' => 'error', 'message' => 'Login Error']);
     }
     exit;
@@ -120,27 +132,24 @@ if ($action === 'dev_login') {
 
         $tgId = 999999990 + $index; // 999999991, 999999992...
 
-        // Create or get test user
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE telegram_id = ?");
-        $stmt->execute([$tgId]);
-        $testUser = $stmt->fetch();
+        $tgUser = [
+            'id' => $tgId,
+            'first_name' => "DevPlayer " . $index,
+            'username' => "dev" . $index,
+            'photo_url' => ''
+        ];
 
-        if (!$testUser) {
-            // Create test user
-            $token = bin2hex(random_bytes(32));
-            $name = "DevPlayer " . $index;
-            $username = "dev" . $index;
-            $stmt = $pdo->prepare("INSERT INTO users (telegram_id, first_name, username, auth_token, custom_name) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$tgId, $name, $username, $token, $name]);
-            $testUser = getUserByToken($token);
-        } else {
-            // Update token
-            $token = bin2hex(random_bytes(32));
-            $pdo->prepare("UPDATE users SET auth_token = ? WHERE id = ?")->execute([$token, $testUser['id']]);
-            $testUser['auth_token'] = $token;
-        }
+        // Ensure user exists and get token from new session system
+        require_once 'auth.php';
+        $token = registerOrLoginUser($tgUser, 'dev', 'Dev Device ' . $index);
 
-        echo json_encode(['status' => 'ok', 'token' => $testUser['auth_token'], 'user' => $testUser]);
+        // Ensure username and custom_name are set
+        $pdo->prepare("UPDATE users SET username = ?, custom_name = ? WHERE telegram_id = ?")
+            ->execute([$tgUser['username'], $tgUser['first_name'], $tgId]);
+
+        $testUser = getUserByToken($token);
+
+        echo json_encode(['status' => 'ok', 'token' => $token, 'user' => $testUser]);
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
@@ -149,20 +158,7 @@ if ($action === 'dev_login') {
 
 // === HELPER FUNCTIONS (Available to Actions) ===
 require_once 'lib/shared_helpers.php';
-
-function getUserByToken($token)
-{
-    global $pdo;
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE auth_token = ?");
-    $stmt->execute([$token]);
-    $user = $stmt->fetch();
-
-    if ($user) {
-        $user['is_admin'] = in_array((int) $user['telegram_id'], ADMIN_IDS);
-    }
-
-    return $user;
-}
+// getUserByToken and registerOrLoginUser are now in auth.php
 
 function getRoom($userId)
 {
@@ -205,6 +201,11 @@ if (!$currentUser) {
     exit;
 }
 
+// Lazy cleanup of expired sessions (only on get_state to avoid overhead on every action)
+if ($action === 'get_state') {
+    cleanupExpiredSessions($currentUser['id']);
+}
+
 // === ACTION ROUTING ===
 
 $routes = [
@@ -213,8 +214,15 @@ $routes = [
     'leave_room' => 'actions/room.php',
     'kick_player' => 'actions/room.php',
     'get_state' => 'actions/room.php',
-    'add_bot' => 'actions/room.php', // NEW
-    'remove_bot' => 'actions/room.php', // NEW
+    'add_bot' => 'actions/room.php',
+    'remove_bot' => 'actions/room.php',
+
+    // Sessions
+    'get_sessions' => 'actions/sessions.php',
+    'revoke_session' => 'actions/sessions.php',
+    'revoke_all_sessions' => 'actions/sessions.php',
+    'update_session_ttl' => 'actions/sessions.php',
+    'update_session_info' => 'actions/sessions.php',
 
     'start_game' => 'actions/game.php',
     'stop_game' => 'actions/game.php',
@@ -246,6 +254,7 @@ $routes = [
     'game_finished' => 'actions/stats.php',
     'get_leaderboard' => 'actions/stats.php',
     'get_stats' => 'actions/stats.php',
+    'get_history' => 'actions/stats.php',
 
     'make_room_public' => 'actions/room.php',
     'get_public_rooms' => 'actions/room.php',
@@ -268,27 +277,39 @@ $routes = [
 ];
 
 if (isset($routes[$action])) {
-    require_once $routes[$action];
-    $funcName = "action_$action";
+    $routeFile = $routes[$action];
+    if (file_exists($routeFile)) {
+        require_once $routeFile;
+        $funcName = "action_$action";
 
-    if (function_exists($funcName)) {
-        try {
-            $funcName($pdo, $currentUser, $_POST);
-        } catch (Exception $e) {
-            TelegramLogger::logError('api', [
-                'message' => $e->getMessage(),
-                'code' => $e->getCode(),
-                'stack' => $e->getTraceAsString()
-            ], [
-                'user_id' => $currentUser['id'],
+        if (function_exists($funcName)) {
+            try {
+                $funcName($pdo, $currentUser, $_POST);
+            } catch (Exception $e) {
+                TelegramLogger::logError('api', [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'stack' => $e->getTraceAsString()
+                ], [
+                    'user_id' => $currentUser['id'],
+                    'action' => $action,
+                    'endpoint' => $_SERVER['REQUEST_URI'] ?? '/server/api.php'
+                ]);
+                sendError('Server Error');
+            }
+        } else {
+            TelegramLogger::log("Action Not Found in File", [
                 'action' => $action,
-                'endpoint' => $_SERVER['REQUEST_URI'] ?? '/server/api.php'
+                'func' => $funcName,
+                'file' => $routeFile,
+                'file_exists' => true,
+                'files_included' => get_included_files()
             ]);
-            sendError('Server Error');
+            sendError('Action not implemented');
         }
     } else {
-        TelegramLogger::log("Action Not Found in File", ['action' => $action]);
-        sendError('Action not implemented');
+        TelegramLogger::log("Route File Not Found", ['action' => $action, 'file' => $routeFile]);
+        sendError('Action file missing');
     }
 } else {
     // Optional: Log unknown actions (could be noisy)

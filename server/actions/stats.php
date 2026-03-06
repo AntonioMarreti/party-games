@@ -2,48 +2,61 @@
 
 // === GAME HISTORY & STATS ===
 
-function action_game_finished($pdo, $user, $data) {
+function action_game_finished($pdo, $user, $data)
+{
     // 1. Validation
     $room = getRoom($user['id']);
-    if (!$room) sendError('No room');
-    
+    if (!$room)
+        sendError('No room');
+
     // Only Host can submit results to prevent cheating/spam
-    if (!$room['is_host']) sendError('Only host can submit results');
+    if (!$room['is_host'])
+        sendError('Only host can submit results');
 
     $gameType = $room['game_type'];
     $playersData = $data['players_data'] ?? []; // Array of {user_id, rank, score, ...}
-    
+
     // If sent as JSON string from client
     if (is_string($playersData)) {
         $playersData = json_decode($playersData, true) ?? [];
     }
-    
+
+    // Validate playersData is array
+    if (!is_array($playersData) || empty($playersData)) {
+        sendError('Invalid players data');
+    }
+
     try {
         $pdo->beginTransaction();
 
         // Use Helper
-        recordGameStats($pdo, $room, $playersData, (int)($data['duration'] ?? 0));
+        recordGameStats($pdo, $room, $playersData, (int) ($data['duration'] ?? 0));
 
         // 4. Update Room State (Back to Lobby)
         $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")->execute([$room['id']]);
 
         $pdo->commit();
         echo json_encode(['status' => 'ok']);
-        
+
     } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($pdo->inTransaction())
+            $pdo->rollBack();
         TelegramLogger::log("Game Finish Error", ['error' => $e->getMessage(), 'room' => $room['room_code']]);
         sendError('Stats Error');
     }
 }
 
-function recordGameStats($pdo, $room, $playersData, $duration) {
+function recordGameStats($pdo, $room, $playersData, $duration)
+{
+    $duration = (int) $duration;
+    $room['host_user_id'] = (int) $room['host_user_id'];
+
     // 2. Create Game History
     $stmt = $pdo->prepare("INSERT INTO game_history (room_code, game_type, host_user_id, players_count, duration_seconds) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
-        $room['room_code'], 
-        $room['game_type'], 
-        $room['host_user_id'], 
+        $room['room_code'],
+        $room['game_type'],
+        $room['host_user_id'],
         count($playersData),
         $duration
     ]);
@@ -51,14 +64,14 @@ function recordGameStats($pdo, $room, $playersData, $duration) {
 
     // 3. Process Each Player
     foreach ($playersData as $pData) {
-        $pid = (int)$pData['user_id'];
-        $rank = (int)$pData['rank']; // 1 = winner
-        $dScore = (int)($pData['score'] ?? 0);
-        
+        $pid = (int) $pData['user_id'];
+        $rank = (int) $pData['rank']; // 1 = winner
+        $dScore = (int) ($pData['score'] ?? 0);
+
         // A. Record History Player
         $pdo->prepare("INSERT INTO game_history_players (game_history_id, user_id, final_position, final_score) VALUES (?, ?, ?, ?)")
             ->execute([$gameHistoryId, $pid, $rank, $dScore]);
-        
+
         // B. Update User Stats (Atomic Update)
         updateUserStats($pdo, $pid, $rank, $dScore, $gameHistoryId);
     }
@@ -79,40 +92,46 @@ function recordGameStats($pdo, $room, $playersData, $duration) {
     }
 }
 
-function updateUserStats($pdo, $userId, $rank, $score, $gameId) {
+function updateUserStats($pdo, $userId, $rank, $score, $gameId)
+{
     // Get current stats (for Elo and Streak)
     $stmt = $pdo->prepare("SELECT * FROM user_statistics WHERE user_id = ?");
-    $stmt->execute([$userId]);
+    $stmt->execute([(int) $userId]);
     $stats = $stmt->fetch();
-    
+
     if (!$stats) {
-        $pdo->prepare("INSERT IGNORE INTO user_statistics (user_id) VALUES (?)")->execute([$userId]);
+        $pdo->prepare("INSERT IGNORE INTO user_statistics (user_id) VALUES (?)")->execute([(int) $userId]);
         $stats = ['total_wins' => 0, 'total_losses' => 0, 'win_streak' => 0, 'longest_win_streak' => 0, 'rating' => 1000, 'total_points_earned' => 0];
     }
-    
+
+    // Ensure rank and score are integers
+    $rank = (int) $rank;
+    $score = (int) $score;
     $isWin = ($rank === 1);
-    
-    // Calc New Stats
-    $newWins = $stats['total_wins'] + ($isWin ? 1 : 0);
-    $newLosses = $stats['total_losses'] + ($isWin ? 0 : 1);
-    $newStreak = $isWin ? ($stats['win_streak'] + 1) : 0;
-    $newMaxStreak = max($stats['longest_win_streak'], $newStreak);
-    
+
+    // Calc New Stats - explicitly cast to int to prevent string issues
+    $newWins = (int) $stats['total_wins'] + ($isWin ? 1 : 0);
+    $newLosses = (int) $stats['total_losses'] + ($isWin ? 0 : 1);
+    $newStreak = $isWin ? ((int) $stats['win_streak'] + 1) : 0;
+    $newMaxStreak = max((int) ($stats['longest_win_streak'] ?? 0), $newStreak);
+
     // Use the balanced helper
     $xpGained = calculateXP($rank, $score);
-    $newPoints = $stats['total_points_earned'] + $xpGained;
-    
+    $newPoints = (int) $stats['total_points_earned'] + (int) $xpGained;
+
     // ELO CALCULATION (Simplified)
     // Real Elo needs opponent rating. Here we assume "Environment Rating" = 1200 or Average of room?
     // Let's use simple constant gain/loss for now to keep it robust
     $k = 32;
     $ratingChange = 0;
-    if ($isWin) $ratingChange = $k; 
-    else $ratingChange = -$k / 2; // Lose less than win
-    
-    $newRating = max(0, $stats['rating'] + $ratingChange); // No negative rating
-    
-    // UPDATE DB
+    if ($isWin)
+        $ratingChange = $k;
+    else
+        $ratingChange = -$k / 2; // Lose less than win
+
+    $newRating = max(0, (int) $stats['rating'] + $ratingChange); // No negative rating
+
+    // UPDATE DB - all parameters explicitly cast to ensure proper types
     $sql = "UPDATE user_statistics SET 
         total_games_played = total_games_played + 1,
         total_wins = ?,
@@ -122,19 +141,27 @@ function updateUserStats($pdo, $userId, $rank, $score, $gameId) {
         total_points_earned = ?,
         rating = ?
         WHERE user_id = ?";
-        
+
     $pdo->prepare($sql)->execute([
-        $newWins, $newLosses, $newStreak, $newMaxStreak, $newPoints, $newRating, $userId
+        (int) $newWins,
+        (int) $newLosses,
+        (int) $newStreak,
+        (int) $newMaxStreak,
+        (int) $newPoints,
+        (int) $newRating,
+        (int) $userId
     ]);
 }
 
 // === LEADERBOARDS ===
 
-function action_get_leaderboard($pdo, $user, $data) {
+function action_get_leaderboard($pdo, $user, $data)
+{
     $type = $data['type'] ?? 'global'; // 'global', 'friends'
-    $limit = (int)($data['limit'] ?? 50);
-    if ($limit > 100) $limit = 100;
-    
+    $limit = (int) ($data['limit'] ?? 50);
+    if ($limit > 100)
+        $limit = 100;
+
     try {
         if ($type === 'global') {
             $sql = "
@@ -149,8 +176,7 @@ function action_get_leaderboard($pdo, $user, $data) {
             foreach ($board as &$entry) {
                 $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0); // Note: verify if total_points_earned is selected
             }
-        } 
-        elseif ($type === 'friends') {
+        } elseif ($type === 'friends') {
             // Get friends IDs first
             // Reuse logic from get_friends query but simplified
             $friendsSql = "
@@ -162,9 +188,9 @@ function action_get_leaderboard($pdo, $user, $data) {
             $stmt->execute([$user['id'], $user['id'], $user['id']]);
             $fids = $stmt->fetchAll(PDO::FETCH_COLUMN);
             $fids[] = $user['id']; // Include self
-            
+
             $placeholders = implode(',', array_fill(0, count($fids), '?'));
-            
+
             $sql = "
                 SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
                 FROM user_statistics s
@@ -179,26 +205,26 @@ function action_get_leaderboard($pdo, $user, $data) {
             foreach ($board as &$entry) {
                 $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0);
             }
-        }
-        else {
+        } else {
             $board = [];
         }
-        
+
         echo json_encode(['status' => 'ok', 'leaderboard' => $board]);
-        
+
     } catch (Exception $e) {
         TelegramLogger::log("Leaderboard Error", ['error' => $e->getMessage()]);
         sendError('Database Error');
     }
 }
 
-function action_get_stats($pdo, $user, $data) {
-    $targetId = (int)($data['user_id'] ?? $user['id']);
-    
+function action_get_stats($pdo, $user, $data)
+{
+    $targetId = (int) ($data['user_id'] ?? $user['id']);
+
     $stmt = $pdo->prepare("SELECT * FROM user_statistics WHERE user_id = ?");
     $stmt->execute([$targetId]);
     $stats = $stmt->fetch();
-    
+
     if (!$stats) {
         // Return empty stats if not played yet, but strictly formatted
         $stats = [
@@ -212,9 +238,9 @@ function action_get_stats($pdo, $user, $data) {
             'total_points_earned' => 0
         ];
     }
-    
+
     $stats['level'] = calculateLevel($stats['total_points_earned']);
-    
+
     // Add Level
     $stats['level'] = calculateLevel($stats['total_points_earned'] ?? 0);
 
@@ -224,4 +250,31 @@ function action_get_stats($pdo, $user, $data) {
     $stats['achievements'] = $stmt->fetchAll();
 
     echo json_encode(['status' => 'ok', 'stats' => $stats]);
+}
+
+function action_get_history($pdo, $user, $data)
+{
+    $targetId = (int) ($data['user_id'] ?? $user['id']);
+    $limit = (int) ($data['limit'] ?? 50);
+    if ($limit > 100)
+        $limit = 100;
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT gh.id, gh.game_type, gh.duration_seconds, gh.created_at, 
+                   ghp.final_position, ghp.final_score
+            FROM game_history_players ghp
+            JOIN game_history gh ON gh.id = ghp.game_history_id
+            WHERE ghp.user_id = ?
+            ORDER BY gh.created_at DESC
+            LIMIT $limit
+        ");
+        $stmt->execute([$targetId]);
+        $history = $stmt->fetchAll();
+
+        echo json_encode(['status' => 'ok', 'history' => $history]);
+    } catch (Exception $e) {
+        TelegramLogger::log("History Error", ['error' => $e->getMessage()]);
+        sendError('Database Error');
+    }
 }

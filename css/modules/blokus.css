@@ -477,6 +477,7 @@ body.dark-mode .blokus-piece-card.selected {
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
+    transform-origin: top center;
     margin-top: 10px;
     background: var(--bg-card);
     border-radius: 16px;

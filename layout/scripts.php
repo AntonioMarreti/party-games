@@ -1,9 +1,15 @@
 <?php
 /** @var string $v Asset version */
+if (!defined('TG_CLIENT_ID')) {
+    require_once __DIR__ . '/../server/config.php';
+}
 ?>
 <!-- JS Libraries -->
 <script src="libs/bootstrap.bundle.min.js"></script>
 <script src="libs/qrcode.min.js"></script>
+
+<!-- Telegram Login Library (OIDC) -->
+<script src="https://telegram.org/js/telegram-login.js"></script>
 
 <!-- Core Data & Config -->
 <script src="js/audio.js?v=<?php echo $v; ?>"></script>
@@ -20,6 +26,7 @@
 <!-- Feature Modules -->
 <script type="module" src="js/modules/display-avatars.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/auth-manager.js?v=<?php echo $v; ?>"></script>
+<script src="js/modules/session-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/social-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/game-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/room-manager.js?v=<?php echo $v; ?>"></script>
@@ -29,36 +36,57 @@
 <!-- Main App Logic -->
 <script src="js/app.js?v=<?php echo $v; ?>"></script>
 
-<!-- Auth Helpers (Extracted from index.html) -->
+<!-- Auth Helpers -->
 <script>
-    // Callback for the widget
-    async function onTelegramAuth(user) {
-        // Find elements safely
-        const loginBtn = document.getElementById('browser-login-btn');
+    // === NEW: Telegram Login (OIDC) ===
+    async function loginViaTelegram() {
         const loginLoading = document.getElementById('login-loading');
-
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (loginLoading) loginLoading.style.display = 'block';
-
-        const formData = new FormData();
-        formData.append('action', 'login_widget');
-        formData.append('user_data', JSON.stringify(user));
+        // Check if Telegram.Login is available
+        if (!window.Telegram || !window.Telegram.Login) {
+            console.warn('Telegram.Login not available, falling back to bot login');
+            loginViaBot();
+            return;
+        }
 
         try {
-            const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
-            if (res.status === 'ok') {
-                localStorage.setItem('pg_token', res.token);
-                window.location.reload();
-            } else {
-                if (window.showAlert) window.showAlert('Ошибка входа', res.message, 'error');
-                if (loginBtn) loginBtn.style.display = 'block';
-            }
+            Telegram.Login.auth(
+                { client_id: '<?php echo TG_CLIENT_ID; ?>', request_access: 'write' },
+                async (data) => {
+                    if (!data) {
+                        // User cancelled or error
+                        console.log('Telegram Login: cancelled or failed');
+                        return;
+                    }
+
+                    if (loginLoading) loginLoading.style.display = 'block';
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('action', 'login_telegram');
+                        formData.append('id_token', data.id_token || '');
+
+                        const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
+                        if (res.status === 'ok') {
+                            localStorage.setItem('pg_token', res.token);
+                            window.location.reload();
+                        } else {
+                            if (loginLoading) loginLoading.style.display = 'none';
+                            if (window.showAlert) window.showAlert('Ошибка входа', res.message || 'Не удалось войти', 'error');
+                        }
+                    } catch (e) {
+                        if (loginLoading) loginLoading.style.display = 'none';
+                        console.error('Telegram Login error:', e);
+                        if (window.showAlert) window.showAlert('Ошибка сети', e.message, 'error');
+                    }
+                }
+            );
         } catch (e) {
-            console.error(e);
-            if (window.showAlert) window.showAlert('Ошибка сети', e.message, 'error');
+            console.error('Telegram.Login.auth failed:', e);
+            loginViaBot();
         }
     }
 
+    // === Fallback: Login via Bot (polling) ===
     async function loginViaBot() {
         try {
             const res = await fetch('server/api.php', {
@@ -96,4 +124,26 @@
             console.error(e);
         }
     }
+
+    // === Sessions: TTL button selector ===
+    function selectTtl(btn, days) {
+        document.querySelectorAll('.ttl-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (window.SessionManager) window.SessionManager.updateTtl(days);
+    }
+
+    // === Load sessions count hint when settings screen is opened ===
+    window.addEventListener('screenChanged', async (e) => {
+        if (e.detail.screenId !== 'screen-settings') return;
+        const hint = document.getElementById('sessions-count-hint');
+        if (!hint) return;
+        const res = await window.apiRequest({ action: 'get_sessions' });
+        if (res && res.status === 'ok') {
+            hint.textContent = `${res.sessions.length} из ${res.max} активных устройств`;
+            // Sync TTL buttons
+            document.querySelectorAll('.ttl-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.days === String(res.ttl_days));
+            });
+        }
+    });
 </script>

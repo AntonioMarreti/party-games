@@ -303,3 +303,56 @@
         </div>
     </div>
 </div>
+
+<!-- 13. XP Details Modal -->
+<div class="modal fade" id="modal-xp-details" tabindex="-1" aria-hidden="true" style="z-index: 1075;">
+    <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 340px;">
+        <div class="modal-content border-0 shadow-lg"
+            style="border-radius: 30px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="icon-wrap mx-auto rounded-circle d-flex align-items-center justify-content-center bg-light"
+                        style="width: 60px; height: 60px;">
+                        <i id="xp-details-icon" class="bi bi-controller text-primary fs-1"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold mb-1" id="xp-details-game">Brain Battle</h5>
+                <p class="text-muted small mb-4" id="xp-details-date">27.02.2026 12:30</p>
+
+                <div class="p-3 bg-light rounded-4 mb-4 text-start">
+                    <h6 class="fw-bold mb-3 text-center" style="font-size: 14px;">Расчет опыта (XP)</h6>
+
+                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                        <span class="text-muted small"><i class="bi bi-gift me-1"></i> Базовый опыт:</span>
+                        <span class="fw-bold">+20 XP</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                        <span class="text-muted small"><i class="bi bi-trophy me-1"></i> За <span
+                                id="xp-details-pos">1</span> место:</span>
+                        <span class="fw-bold text-warning" id="xp-details-rank-bonus">+100 XP</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                        <span class="text-muted small"><i class="bi bi-star me-1"></i> За игровой счет:</span>
+                        <span class="fw-bold" id="xp-details-score-bonus">+150 XP</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-3">
+                        <span class="fw-bold">Итого получено:</span>
+                        <span class="fw-bold text-success fs-5" id="xp-details-total">+270 XP</span>
+                    </div>
+                </div>
+
+                <div class="text-muted mb-4 small text-start px-2" style="font-size: 11px; line-height: 1.4;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Бонус за счет составляет 10% от ваших игровых очков <span id="xp-details-score-raw"
+                        class="fw-bold">(3622)</span>, но не более 150 дополнительных XP за одну игру.
+                </div>
+
+                <button class="btn btn-primary w-100 rounded-pill py-3 fw-bold shadow-sm"
+                    data-bs-dismiss="modal">Понятно</button>
+            </div>
+        </div>
+    </div>
+</div>

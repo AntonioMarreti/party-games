@@ -291,6 +291,24 @@ function action_get_state($pdo, $user, $data)
     $stmt->execute([$room['id']]);
     $players = $stmt->fetchAll();
 
+    // PARTY BATTLE: BOT PROCESSING HOOK
+    if ($room['game_type'] === 'partybattle' && $room['status'] === 'playing' && !empty($room['game_state'])) {
+        $gameFile = __DIR__ . "/../games/partybattle.php";
+        if (file_exists($gameFile)) {
+            require_once $gameFile;
+            if (function_exists('processGameBots')) {
+                $gameState = json_decode($room['game_state'], true);
+                if (processGameBots($pdo, $room, $gameState)) {
+                    // State was updated by bots, save it
+                    $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
+                        ->execute([json_encode($gameState), $room['id']]);
+                    // Refresh room data to reflect new state
+                    $room['game_state'] = json_encode($gameState);
+                }
+            }
+        }
+    }
+
     // Optimized Polling: Insert Notifications
     // We fetch unread notifications here to avoid separate polling request in game
     $notifs = [];
@@ -312,6 +330,40 @@ function action_get_state($pdo, $user, $data)
         // Table might not exist yet if migration didn't run
     }
 
+    // Get Recent Achievements
+    $newAchievements = [];
+    try {
+        $aStmt = $pdo->prepare("SELECT a.* FROM user_achievements ua JOIN achievements a ON a.id = ua.achievement_id WHERE ua.user_id = ? AND ua.unlocked_at > (NOW() - INTERVAL 10 SECOND)");
+        $aStmt->execute([$user['id']]);
+        $newAchievements = $aStmt->fetchAll();
+    } catch (Exception $e) {
+    }
+
+    // STATE SANITIZATION (Hide secrets from clients)
+    $gameType = strtolower($room['game_type'] ?? '');
+    if (($gameType === 'spyfall' || $gameType === 'spy') && !empty($room['game_state'])) {
+        $state = json_decode($room['game_state'], true);
+        if ($state && $state['phase'] === 'playing') {
+            $myId = (string) $user['id'];
+            $spyId = isset($state['spy_id']) ? (string) $state['spy_id'] : '';
+            $isSpy = ($myId === $spyId);
+
+            if ($isSpy) {
+                // The spy should not know the location or the actual roles
+                $state['location'] = '???';
+                // Only keep their own role to avoid revealing others' roles
+                $state['roles'] = [$myId => 'Шпион'];
+            } else {
+                // Locals should only see their own role, not others
+                $myRole = $state['roles'][$myId] ?? 'Местный житель';
+                $state['roles'] = [$myId => $myRole];
+                // Hide the spy's identity from locals
+                unset($state['spy_id']);
+            }
+            $room['game_state'] = json_encode($state, JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     echo json_encode([
         'status' => 'in_room',
         'user' => $user,
@@ -320,6 +372,7 @@ function action_get_state($pdo, $user, $data)
         'is_host' => $room['is_host'],
         'notifications' => $notifs,
         'events' => $events,
+        'new_achievements' => $newAchievements,
         'favorites' => $favorites // NEW
     ]);
 }

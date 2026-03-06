@@ -79,6 +79,9 @@ function showScreen(screenId) {
     if (window.ThemeManager) {
         window.ThemeManager.triggerHaptic('selection');
     }
+
+    // Dispatch event
+    window.dispatchEvent(new CustomEvent('screenChanged', { detail: { screenId: finalId } }));
 }
 
 /**
@@ -204,6 +207,16 @@ function switchTab(tabId) {
             }
         });
     }
+
+    // Dispatch event
+    window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId } }));
+}
+
+// === MORE UI UTILS ===
+
+function isScreenActive(id) {
+    const el = document.getElementById('screen-' + id);
+    return el && el.classList.contains('active-screen');
 }
 
 // === MODALS ===
@@ -616,6 +629,7 @@ function toggleGameSelect(gameId, el) {
 window.UIManager = {
     showScreen,
     switchTab,
+    isScreenActive,
     openModal,
     closeModal,
     setupModalClosing,
@@ -638,6 +652,7 @@ window.UIManager = {
 // Global aliases for convenience and HTML inline events
 window.showScreen = showScreen;
 window.switchTab = switchTab;
+window.isScreenActive = isScreenActive;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.showAlert = showAlert;

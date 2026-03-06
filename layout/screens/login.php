@@ -13,10 +13,16 @@
             <div id="login-loading" class="spinner-border text-light mb-4" role="status" style="display:none;">
             </div>
 
-            <!-- Alternative Login -->
-            <button class="btn-premium-tg" onclick="loginViaBot()">
-                <i class="bi bi-robot"></i>
-                <span>Войти через бота</span>
+            <!-- Telegram Login (Primary) -->
+            <button class="btn-premium-tg" onclick="loginViaTelegram()">
+                <i class="bi bi-telegram"></i>
+                <span>Войти через Telegram</span>
+            </button>
+
+            <!-- Fallback: Login via Bot -->
+            <button class="btn-link-subtle mt-2" onclick="loginViaBot()"
+                style="background:none; border:none; color:rgba(255,255,255,0.4); font-size:13px; cursor:pointer; text-decoration:underline;">
+                Не работает? Войти через бота
             </button>
 
             <!-- DEV LOGIN (REMOVE IN PRODUCTION) -->

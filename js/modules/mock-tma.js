@@ -115,6 +115,19 @@
         isVersionAtLeast: function (ver) { return true; }
     };
 
+    // Mock Telegram.Login for browser dev (will trigger fallback to bot login)
+    window.Telegram.Login = window.Telegram.Login || {
+        auth: function (options, callback) {
+            console.log("[MockTMA] Telegram.Login.auth called — use Dev Login or Bot Login instead");
+            if (callback) callback(null); // Simulate cancel → triggers fallback
+        },
+        init: function () { console.log("[MockTMA] Telegram.Login.init()"); },
+        open: function (callback) {
+            console.log("[MockTMA] Telegram.Login.open()");
+            if (callback) callback(null);
+        }
+    };
+
     if (isDev) {
         window.Telegram.WebApp.openInvoice = function (url, callback) {
             console.log("[MockTMA] openInvoice (Dev):", url);

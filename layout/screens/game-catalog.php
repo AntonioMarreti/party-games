@@ -5,7 +5,7 @@
     <!-- Header & Filters combined -->
     <div class="game-catalog-header">
         <!-- Top Row: Back & Title -->
-        <div class="d-flex align-items-center justify-content-between px-3 w-100 mb-1">
+        <div class="d-flex align-items-center justify-content-between w-100 mb-1" style="padding: 0 20px;">
             <button class="btn-catalog-back" onclick="showScreen('lobby')" aria-label="Назад">
                 <i class="bi bi-chevron-left" aria-hidden="true"></i>
             </button>
@@ -14,8 +14,8 @@
         </div>
 
         <!-- Bottom Row: Filters -->
-        <div class="d-flex gap-2 overflow-auto px-3 pb-2 pt-1 w-100 no-scrollbar" id="game-cat-filters-catalog"
-            style="white-space: nowrap;">
+        <div class="d-flex gap-2 overflow-auto pb-2 pt-1 w-100 no-scrollbar" id="game-cat-filters-catalog"
+            style="white-space: nowrap; padding: 0 20px;">
             <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab active" data-cat="all">Все</button>
             <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="party">Вечеринка</button>
             <button class="btn btn-sm rounded-pill px-3 fw-bold filter-tab" data-cat="logic">Логика</button>

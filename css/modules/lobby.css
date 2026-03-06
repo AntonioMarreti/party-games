@@ -77,16 +77,19 @@
 /* === GAME CATALOG SCREEN === */
 .game-catalog-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 20px 16px;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 0 24px;
     padding-top: calc(56px + env(safe-area-inset-top));
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--bg-app);
+    background: linear-gradient(180deg, var(--bg-app) 75%, transparent 100%);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    /* mask-image to smoothly fade blur and background at the very bottom */
+    -webkit-mask-image: linear-gradient(180deg, black 80%, transparent 100%);
+    mask-image: linear-gradient(180deg, black 80%, transparent 100%);
 }
 
 .game-catalog-header-title {
@@ -116,7 +119,7 @@
 }
 
 .game-catalog-content {
-    padding: 0 20px;
+    padding: 32px 20px 24px;
     display: flex;
     flex-direction: column;
     gap: 12px;

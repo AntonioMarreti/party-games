@@ -119,13 +119,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.AuthManager.setAuthToken(currentToken);
     }
 
+    const hasTmaInitData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
+    console.log('[Auth] token:', currentToken ? 'found' : 'missing', '| TMA initData:', hasTmaInitData ? 'present' : 'empty');
+
     if (currentToken) {
         if (window.AuthManager) window.AuthManager.initApp(tg);
-    } else if (tg && tg.initData) {
+    } else if (hasTmaInitData) {
         if (window.AuthManager) window.AuthManager.loginTMA(tg);
     } else {
         showScreen('login');
-        safeStyle('browser-login-btn', 'display', 'block');
     }
 
     const logoutGroup = document.getElementById('logout-menu-item-group');
@@ -136,6 +138,52 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // === STATE MANAGEMENT ===
+window.addEventListener('screenChanged', (e) => {
+    const id = e.detail.screenId;
+    if (id === 'screen-game') {
+        if (typeof renderReactionToolbar === 'function') renderReactionToolbar();
+    } else {
+        if (typeof hideReactionToolbar === 'function') hideReactionToolbar();
+    }
+
+    if (id === 'screen-settings' && window.syncColorButtonSelection) syncColorButtonSelection();
+
+    const showcase = document.getElementById('screen-game-detail');
+    if (id === 'screen-game-detail' && showcase && !showcase.dataset.swipeBound) {
+        let touchStartX = 0;
+        showcase.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+        showcase.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX < window.innerWidth * 0.2 && touchEndX - touchStartX > 100) window.showScreen('lobby');
+        }, { passive: true });
+        showcase.dataset.swipeBound = "true";
+    }
+
+    const catalog = document.getElementById('screen-game-catalog');
+    if (id === 'screen-game-catalog' && catalog && !catalog.dataset.swipeBound) {
+        let touchStartX = 0;
+        catalog.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+        catalog.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX < window.innerWidth * 0.2 && touchEndX - touchStartX > 100) window.showScreen('lobby');
+        }, { passive: true });
+        catalog.dataset.swipeBound = "true";
+    }
+});
+
+window.addEventListener('tabChanged', (e) => {
+    const tabId = e.detail.tabId;
+    if (tabId === 'leaderboard') {
+        if (typeof loadLeaderboardList === 'function') loadLeaderboardList('global');
+    } else if (tabId === 'games') {
+        if (window.renderLibrary) window.renderLibrary();
+    }
+
+    // Per user request, keep applying color to ensure header updates correctly.
+    const savedColor = localStorage.getItem('pgb_accent_color');
+    if (savedColor && window.ThemeManager) window.ThemeManager.applyAccentColor(savedColor);
+});
+
 window.checkState = async function () {
     const isLeaving = window.RoomManager ? window.RoomManager.getIsLeavingProcess() : false;
     if (isLeaving || isCheckingState) return;
@@ -149,7 +197,6 @@ window.checkState = async function () {
         if (res.status === 'auth_error') {
             localStorage.removeItem('pg_token');
             showScreen('login');
-            safeStyle('browser-login-btn', 'display', 'block');
             return res;
         }
 
@@ -165,6 +212,12 @@ window.checkState = async function () {
                 window.SocialManager.renderCurrentUser(res.user);
             } else if (window.updateUserInfo) {
                 window.updateUserInfo(res.user);
+            }
+        }
+
+        if (res.new_achievements && res.new_achievements.length > 0) {
+            if (typeof window.loadMyProfileStats === 'function') {
+                window.loadMyProfileStats();
             }
         }
 
@@ -245,67 +298,7 @@ window.checkState = async function () {
     }
 }
 
-// === UI & NAVIGATION ===
-function switchTab(tabId) {
-    if (window.UIManager) window.UIManager.switchTab(tabId);
-
-    if (tabId === 'leaderboard') {
-        if (typeof loadLeaderboardList === 'function') loadLeaderboardList('global');
-    } else if (tabId === 'games') {
-        if (window.renderLibrary) window.renderLibrary();
-    }
-
-    const savedColor = localStorage.getItem('pgb_accent_color');
-    if (savedColor && window.ThemeManager) window.ThemeManager.applyAccentColor(savedColor);
-}
-
-window.switchTab = switchTab;
-
-function isScreenActive(id) {
-    const el = document.getElementById('screen-' + id);
-    return el && el.classList.contains('active-screen');
-}
-
-function showScreen(id) {
-    if (window.UIManager) window.UIManager.showScreen(id);
-
-    const splash = document.getElementById('screen-splash');
-    if (splash) {
-        splash.classList.remove('active-screen');
-        splash.style.setProperty('display', 'none', 'important');
-    }
-
-    if (id === 'game') {
-        if (typeof renderReactionToolbar === 'function') renderReactionToolbar();
-    } else {
-        if (typeof hideReactionToolbar === 'function') hideReactionToolbar();
-    }
-
-    if (id === 'settings' && window.syncColorButtonSelection) syncColorButtonSelection();
-
-    const showcase = document.getElementById('screen-game-detail');
-    if (id === 'game-detail' && showcase && !showcase.dataset.swipeBound) {
-        let touchStartX = 0;
-        showcase.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-        showcase.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX < window.innerWidth * 0.2 && touchEndX - touchStartX > 100) window.showScreen('lobby');
-        }, { passive: true });
-        showcase.dataset.swipeBound = "true";
-    }
-
-    const catalog = document.getElementById('screen-game-catalog');
-    if (id === 'game-catalog' && catalog && !catalog.dataset.swipeBound) {
-        let touchStartX = 0;
-        catalog.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-        catalog.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX < window.innerWidth * 0.2 && touchEndX - touchStartX > 100) window.showScreen('lobby');
-        }, { passive: true });
-        catalog.dataset.swipeBound = "true";
-    }
-}
-
+// === DEBUG TOOLS ===
 async function fetchAppVersion() {
     const el = document.getElementById('app-version-display');
     if (!el) return;

@@ -32,6 +32,17 @@
 
         <!-- Menu Actions (Grouped Glass Style) -->
         <div class="settings-group mb-3">
+            <!-- Game History -->
+            <button type="button" class="btn-unstyled settings-item clickable" onclick="openGameHistory()">
+                <div class="d-flex align-items-center">
+                    <div class="icon-wrap text-primary me-3" style="width:32px; text-align:center;">
+                        <i class="bi bi-clock-history fs-5" aria-hidden="true"></i>
+                    </div>
+                    <span class="fw-bold" style="color: var(--text-main)">История игр</span>
+                </div>
+                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+            </button>
+
             <!-- Edit Profile -->
             <button type="button" class="btn-unstyled settings-item clickable" onclick="openProfileEditor()">
                 <div class="d-flex align-items-center">

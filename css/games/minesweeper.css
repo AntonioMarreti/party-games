@@ -1,0 +1,372 @@
+/* css/games/minesweeper.css – Minesweeper Battle Royale */
+
+/* ─── Board Container ─── */
+.ms-board-container {
+    width: 100%;
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+}
+
+.ms-grid {
+    display: grid;
+    gap: 2px;
+    padding: 8px;
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── Individual Cell ─── */
+.ms-cell {
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+
+    /* Unrevealed: solid-ish, clearly "closed" */
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.28);
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.35);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.ms-cell:hover:not(.revealed) {
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.38);
+    border-color: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.45);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.ms-cell:active:not(.revealed) {
+    transform: scale(0.9);
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.12);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* ─── Revealed Cell ─── */
+.ms-cell.revealed {
+    background: rgba(120, 120, 128, 0.04);
+    border: 1px solid rgba(120, 120, 128, 0.18);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    cursor: default;
+    backdrop-filter: none;
+}
+
+/* ─── Mine Cell ─── */
+.ms-cell.mine {
+    background: rgba(231, 76, 60, 0.25) !important;
+    border-color: rgba(231, 76, 60, 0.4) !important;
+    color: #e74c3c;
+    animation: ms-mine-explode 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes ms-mine-explode {
+    0% {
+        transform: scale(1);
+    }
+
+    25% {
+        transform: scale(1.25);
+        background: rgba(255, 100, 50, 0.4);
+    }
+
+    50% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ─── Flagged Cell ─── */
+.ms-cell.flagged {
+    background: rgba(231, 76, 60, 0.12);
+    border-color: rgba(231, 76, 60, 0.25);
+    color: #e74c3c;
+    animation: ms-flag-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes ms-flag-pop {
+    0% {
+        transform: scale(0.6);
+        opacity: 0.5;
+    }
+
+    60% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ─── Number Colors ─── */
+.ms-cell.val-1 {
+    color: #3498db;
+}
+
+.ms-cell.val-2 {
+    color: #2ecc71;
+}
+
+.ms-cell.val-3 {
+    color: #e74c3c;
+}
+
+.ms-cell.val-4 {
+    color: #9b59b6;
+}
+
+.ms-cell.val-5 {
+    color: #e67e22;
+}
+
+.ms-cell.val-6 {
+    color: #1abc9c;
+}
+
+.ms-cell.val-7 {
+    color: #555;
+}
+
+.ms-cell.val-8 {
+    color: #888;
+}
+
+/* ─── Stats Bar ─── */
+.ms-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.06);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.1);
+}
+
+.ms-stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.ms-stat-value {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--primary-color, #e8a838);
+    line-height: 1.2;
+}
+
+.ms-stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+/* ─── Turn Indicator ─── */
+.ms-turn-indicator {
+    padding: 10px 16px;
+    margin: 0 8px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 14px;
+    border-radius: 14px;
+    transition: all 0.3s ease;
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.04);
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.08);
+    color: var(--text-secondary, #999);
+}
+
+.ms-turn-active {
+    background: var(--primary-color, #e8a838);
+    color: #fff !important;
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(232, 168, 56, 0.3);
+    animation: ms-turn-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes ms-turn-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 16px rgba(232, 168, 56, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 4px 24px rgba(232, 168, 56, 0.5);
+    }
+}
+
+/* ─── Toolbar (segmented control) ─── */
+.ms-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0;
+    margin-bottom: 6px;
+}
+
+.ms-mode-control {
+    display: flex;
+    background: rgba(120, 120, 128, 0.12);
+    border-radius: 12px;
+    padding: 3px;
+    border: none;
+    gap: 0;
+    width: 100%;
+    max-width: 320px;
+}
+
+.ms-mode-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    color: rgba(60, 60, 67, 0.6);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.ms-mode-btn:active {
+    transform: scale(0.96);
+}
+
+.ms-mode-btn.active {
+    background: #fff;
+    color: #1c1c1e;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+    border: none;
+    font-weight: 700;
+}
+
+.ms-mode-btn.active.flag-mode {
+    background: #fff;
+    color: #e74c3c;
+}
+
+.ms-mode-btn i {
+    font-size: 14px;
+}
+
+/* ─── Scoreboard (compact chips) ─── */
+.ms-scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    margin-top: 12px;
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.06);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.08);
+}
+
+.ms-player-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(var(--glass-bg-rgb, 255, 255, 255), 0.06);
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.08);
+    flex: 1;
+    min-width: 100px;
+    justify-content: space-between;
+}
+
+.ms-player-chip.is-me {
+    border-color: rgba(232, 168, 56, 0.3);
+    background: rgba(232, 168, 56, 0.06);
+}
+
+.ms-player-chip.is-current-turn {
+    box-shadow: 0 0 8px rgba(232, 168, 56, 0.2);
+}
+
+.ms-player-chip .ms-player-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ms-player-chip .ms-player-score {
+    font-weight: 900;
+    color: var(--primary-color, #e8a838);
+}
+
+.ms-player-chip .ms-player-score.negative {
+    color: #e74c3c;
+}
+
+/* ─── Dark mode refinements ─── */
+[data-theme="dark"] .ms-mode-control {
+    background: rgba(120, 120, 128, 0.32);
+}
+
+[data-theme="dark"] .ms-mode-btn {
+    color: rgba(235, 235, 245, 0.5);
+}
+
+[data-theme="dark"] .ms-mode-btn.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .ms-mode-btn.active.flag-mode {
+    background: rgba(231, 76, 60, 0.3);
+    color: #ff6b6b;
+}
+
+[data-theme="dark"] .ms-cell.val-1 {
+    color: #5b9bff;
+}
+
+[data-theme="dark"] .ms-cell.val-2 {
+    color: #5ec75e;
+}
+
+[data-theme="dark"] .ms-cell.val-3 {
+    color: #ff6b6b;
+}
+
+[data-theme="dark"] .ms-cell.val-4 {
+    color: #b68bff;
+}
+
+[data-theme="dark"] .ms-cell.val-5 {
+    color: #ffaa55;
+}
+
+[data-theme="dark"] .ms-cell.val-6 {
+    color: #66cccc;
+}

@@ -636,3 +636,98 @@ body.dark-mode .badge-info {
 .glass-btn-primary:hover {
     background: color-mix(in srgb, var(--status-info), transparent 75%);
 }
+
+/* === SESSIONS SCREEN === */
+.sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.session-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 18px;
+    padding: 14px 16px;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-main);
+}
+
+.session-card.current {
+    border-color: color-mix(in srgb, var(--primary-color), transparent 60%);
+    background: color-mix(in srgb, var(--primary-color), transparent 92%);
+}
+
+.session-icon-wrap {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 14px;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--text-on-accent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color), transparent 65%);
+}
+
+.session-card.current .session-icon-wrap {
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary-color), transparent 50%);
+}
+
+.session-platform-row {
+    display: flex;
+    align-items: center;
+    font-size: 15px;
+    flex-wrap: wrap;
+}
+
+.session-device {
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.session-action {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    padding-left: 8px;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+/* TTL selector buttons */
+.ttl-btn {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border-main);
+    background: var(--bg-secondary);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.ttl-btn.active,
+.ttl-btn:focus {
+    background: var(--primary-gradient);
+    color: var(--text-on-accent);
+    border-color: transparent;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--primary-color), transparent 60%);
+}
+
+/* Security tip box */
+.sessions-tip {
+    background: color-mix(in srgb, var(--primary-color), transparent 90%);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 75%);
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-main);
+    line-height: 1.4;
+}

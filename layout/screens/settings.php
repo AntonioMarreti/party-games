@@ -137,7 +137,26 @@
             </div>
         </div>
 
-        <!-- 4. ABOUT CARD -->
+        <!-- 3.5. SECURITY CARD -->
+        <div class="settings-group mb-4 p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
+                        class="bi bi-shield-lock me-2"></i>Безопасность</h6>
+            </div>
+
+            <div class="settings-item border-0 pb-0 clickable" id="sessions-settings-link"
+                onclick="window.showScreen('sessions'); if(window.SessionManager) window.SessionManager.loadSessions();">
+                <div class="settings-label-wrap">
+                    <div class="fw-bold">Активные сеансы</div>
+                    <div class="text-muted small" id="sessions-count-hint">Загрузка...</div>
+                </div>
+                <div class="menu-icon-wrap" style="background: var(--bg-glass); color: var(--primary-color);">
+                    <i class="bi bi-phone-landscape"></i>
+                </div>
+            </div>
+        </div>
+
+
         <div class="settings-group mb-4 p-3">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i

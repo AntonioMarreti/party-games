@@ -109,14 +109,15 @@ function check_achievements($pdo, $userId, $context = [])
                 break;
             case 'bunker_streak':
                 // Check last 3 bunker games
+                $limit = (int) $val;
                 $s = $pdo->prepare("
                     SELECT ghp.final_position 
                     FROM game_history_players ghp
                     JOIN game_history gh ON gh.id = ghp.game_history_id
                     WHERE ghp.user_id = ? AND gh.game_type = 'bunker'
-                    ORDER BY gh.created_at DESC LIMIT ?
+                    ORDER BY gh.created_at DESC LIMIT $limit
                 ");
-                $s->execute([$userId, $val]);
+                $s->execute([$userId]);
                 $rows = $s->fetchAll(PDO::FETCH_COLUMN);
                 if (count($rows) >= $val) {
                     $allWins = true;
@@ -166,6 +167,32 @@ function check_achievements($pdo, $userId, $context = [])
                         // This might be hard if context only has current player data.
                         // 'action_game_finished' triggers this.
                         // For now accept if 'score_diff' is passed in context.
+                    } else if ($gameType === 'spyfall' || $gameType === 'spy') {
+                        if ($ach['code'] === 'spyfall_spy_win' && ($context['role'] ?? '') === 'spy' && ($context['rank'] ?? 0) == 1) {
+                            $unlocked = true;
+                        } else if ($ach['code'] === 'spyfall_detective_win' && ($context['role'] ?? '') === 'local' && ($context['rank'] ?? 0) == 1) {
+                            $unlocked = true;
+                        } else if ($ach['code'] === 'spyfall_vet') {
+                            $s = $pdo->prepare("SELECT COUNT(*) FROM game_history_players ghp JOIN game_history gh ON gh.id = ghp.game_history_id WHERE ghp.user_id = ? AND (gh.game_type = 'spyfall' OR gh.game_type = 'spy') AND ghp.final_position = 1");
+                            $s->execute([$userId]);
+                            if ($s->fetchColumn() >= $val)
+                                $unlocked = true;
+                        } else if ($ach['code'] === 'sweeper_pro') {
+                            $s = $pdo->prepare("SELECT COUNT(*) FROM game_history_players ghp JOIN game_history gh ON gh.id = ghp.game_history_id WHERE ghp.user_id = ? AND gh.game_type = 'minesweeper_br' AND ghp.final_position = 1");
+                            $s->execute([$userId]);
+                            if ($s->fetchColumn() >= $val)
+                                $unlocked = true;
+                        } else if ($ach['code'] === 'sweeper_god') {
+                            $s = $pdo->prepare("SELECT COUNT(*) FROM game_history_players ghp JOIN game_history gh ON gh.id = ghp.game_history_id WHERE ghp.user_id = ? AND gh.game_type = 'minesweeper_br' AND ghp.final_position = 1");
+                            $s->execute([$userId]);
+                            if ($s->fetchColumn() >= $val)
+                                $unlocked = true;
+                        } else if ($ach['code'] === 'logic_king' && $gameType === 'minesweeper_br') {
+                            // This check is best done via context passed at end of game
+                            if (($context['mines_hit'] ?? 999) == 0 && ($context['rank'] ?? 0) == 1) {
+                                $unlocked = true;
+                            }
+                        }
                     }
                 }
                 break;

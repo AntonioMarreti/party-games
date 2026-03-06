@@ -6,6 +6,9 @@
 // globalUser is initialized here to ensure availability for other modules
 window.globalUser = null;
 
+// Module-level user state (authToken is declared in api-manager.js)
+let globalUser = null;
+
 // === PUBLIC API ===
 
 async function initApp(tg) {
@@ -16,12 +19,34 @@ async function initApp(tg) {
 
         const res = await window.checkState(); // checkState works via global/window for now
 
-        // 1. Auth/Network Error -> Login
+        // 1. Auth/Network Error -> Login (or auto re-login via TMA)
         if (!res || res.status === 'error' || res.status === 'auth_error') {
+            const hasTmaData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
+            if (res && res.status === 'auth_error' && hasTmaData) {
+                // Token expired/invalidated (e.g. logged in from another device).
+                // Silently re-authenticate via Telegram instead of showing login screen.
+                console.log('[Auth] Token invalid, attempting silent TMA re-login...');
+                await loginTMA(tg);
+                return;
+            }
             if (window.showScreen) window.showScreen('login');
-            if (window.safeStyle) window.safeStyle('browser-login-btn', 'display', 'block');
             screenShown = true;
             return;
+        }
+
+        // 1b. If running in TMA, silently update session platform/device
+        //     (fixes migrated sessions that were labeled 'web'/'Перенесено из старой системы')
+        const hasTmaCtx = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
+        if (hasTmaCtx && window.apiRequest) {
+            const ua = navigator.userAgent || '';
+            let device = 'Telegram';
+            if (/iPhone/.test(ua)) device = 'iPhone · Telegram';
+            else if (/iPad/.test(ua)) device = 'iPad · Telegram';
+            else if (/Android/.test(ua)) device = 'Android · Telegram';
+            else if (/Mac/.test(ua)) device = 'Mac · Telegram Desktop';
+            else if (/Windows/.test(ua)) device = 'Windows · Telegram Desktop';
+            // Fire-and-forget — don't await so it doesn't slow down boot
+            window.apiRequest({ action: 'update_session_info', platform: 'tma', device });
         }
 
         // 2. Handle Start Params (Deep Links)
@@ -67,7 +92,6 @@ async function initApp(tg) {
     } catch (e) {
         console.error("Init App failed:", e);
         if (window.showScreen) window.showScreen('login');
-        if (window.safeStyle) window.safeStyle('browser-login-btn', 'display', 'block');
         screenShown = true;
     } finally {
         // ULTIMATE FAILSAFE
@@ -82,7 +106,22 @@ async function initApp(tg) {
 
 async function loginTMA(tg) {
     if (window.apiRequest) {
-        const res = await window.apiRequest({ action: 'login_tma', initData: tg.initData });
+        const ua = navigator.userAgent || '';
+        // Simple UA parsing for device name
+        let device = 'Telegram';
+        if (/iPhone/.test(ua)) device = 'iPhone · Telegram';
+        else if (/iPad/.test(ua)) device = 'iPad · Telegram';
+        else if (/Android/.test(ua)) device = 'Android · Telegram';
+        else if (/Mac/.test(ua)) device = 'Mac · Telegram Desktop';
+        else if (/Windows/.test(ua)) device = 'Windows · Telegram Desktop';
+        else if (/Linux/.test(ua)) device = 'Linux · Telegram Desktop';
+
+        const res = await window.apiRequest({
+            action: 'login_tma',
+            initData: tg.initData,
+            platform: 'tma',
+            device,
+        });
         if (res.status === 'ok') {
             setAuthToken(res.token);
             initApp(tg);

@@ -981,6 +981,137 @@ window.loadFriendRequests = loadFriendRequests;
 window.switchFriendsTab = switchFriendsTab;
 
 
+// === GAME HISTORY (NEW) ===
+async function openGameHistory() {
+    if (window.showScreen) window.showScreen('history');
+    await loadGameHistory();
+}
+
+async function loadGameHistory() {
+    const container = document.getElementById('history-content-list');
+    const loader = document.getElementById('history-loader');
+    const emptyState = document.getElementById('history-empty');
+
+    if (!container || !loader || !emptyState) return;
+
+    loader.style.display = 'block';
+    container.innerHTML = '';
+    emptyState.style.display = 'none';
+
+    try {
+        const res = await window.apiRequest({ action: 'get_history', limit: 50 });
+        loader.style.display = 'none';
+
+        if (res.status === 'ok') {
+            const history = res.history || [];
+            if (history.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                renderHistoryList(history, container);
+            }
+        } else {
+            container.innerHTML = '<p class="text-danger text-center mt-4">Ошибка загрузки истории</p>';
+        }
+    } catch (e) {
+        loader.style.display = 'none';
+        container.innerHTML = '<p class="text-danger text-center mt-4">Сетевая ошибка</p>';
+        console.error("Game History parsing error", e);
+    }
+}
+
+function renderHistoryList(history, container) {
+    const gameNames = {
+        'bunker': 'Бункер',
+        'blokus': 'Блокус',
+        'brainbattle': 'Brain Battle',
+        'alias': 'Алиас',
+        'tictactoe': 'Крестики-Нолики'
+    };
+
+    const gameIcons = {
+        'bunker': 'bi-shield-shaded text-danger',
+        'blokus': 'bi-grid-3x3-gap-fill text-primary',
+        'brainbattle': 'bi-lightning-charge-fill text-warning',
+        'alias': 'bi-chat-dots-fill text-success',
+        'tictactoe': 'bi-x-lg text-info'
+    };
+
+    history.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-card p-3 rounded-4 bg-white shadow-sm d-flex align-items-center mb-2 clickable';
+        div.style.cursor = 'pointer';
+        div.onclick = () => showGameDetailsModal(item, gameNames, gameIcons);
+
+        const dateObj = new Date(item.created_at);
+        const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const gname = gameNames[item.game_type] || item.game_type;
+        const gicon = gameIcons[item.game_type] || 'bi-controller text-secondary';
+
+        const score = item.final_score || 0;
+        const pos = item.final_position || '-';
+
+        let posClass = 'text-muted';
+        let rankBonus = 0;
+        if (pos === 1) { posClass = 'text-warning fw-bold'; rankBonus = 100; }
+        else if (pos === 2) { posClass = 'text-secondary fw-bold'; rankBonus = 50; }
+        else if (pos === 3) { posClass = 'text-danger fw-bold'; rankBonus = 20; }
+
+        const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
+        const xp = 20 + rankBonus + scoreBonus;
+
+        div.innerHTML = `
+            <div class="icon-wrap me-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: rgba(0,0,0,0.04);">
+                <i class="bi ${gicon} fs-4"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-bold fs-6 mb-0">${gname}</div>
+                <div class="text-muted small" style="font-size: 11px;">${dateStr}</div>
+            </div>
+            <div class="text-end">
+                <div class="${posClass}" style="font-size: 14px;">Место: ${pos}</div>
+                <div class="small fw-bold text-success">+${xp} XP <span class="text-muted" style="font-size: 10px;">(счет: ${score})</span></div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function showGameDetailsModal(item, gameNames, gameIcons) {
+    const score = item.final_score || 0;
+    const pos = item.final_position || '-';
+
+    let rankBonus = 0;
+    if (pos === 1) rankBonus = 100;
+    else if (pos === 2) rankBonus = 50;
+    else if (pos === 3) rankBonus = 20;
+
+    const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
+    const xp = 20 + rankBonus + scoreBonus;
+
+    const gname = gameNames[item.game_type] || item.game_type;
+    const gicon = gameIcons[item.game_type] || 'bi-controller text-primary';
+    const dateObj = new Date(item.created_at);
+    const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (window.safeText) {
+        window.safeText('xp-details-game', gname);
+        window.safeText('xp-details-date', dateStr);
+        window.safeText('xp-details-pos', pos);
+        window.safeText('xp-details-rank-bonus', '+' + rankBonus + ' XP');
+        window.safeText('xp-details-score-bonus', '+' + scoreBonus + ' XP');
+        window.safeText('xp-details-total', '+' + xp + ' XP');
+        window.safeText('xp-details-score-raw', '(' + score + ')');
+    }
+
+    const iconEl = document.getElementById('xp-details-icon');
+    if (iconEl) {
+        iconEl.className = 'bi fs-1 ' + gicon; // Keep the color class defined in gameIcons
+    }
+
+    if (window.showModal) window.showModal('modal-xp-details');
+}
+
 // Profile Aliases
 window.updateUserInfo = renderCurrentUser; // Alias for compat
 window.openProfileEditor = openProfileEditor;
@@ -991,3 +1122,5 @@ window.saveProfile = saveProfile;
 window.closeProfileEditor = closeProfileEditor;
 window.selectEmoji = selectEmoji;
 window.selectColor = selectColor;
+window.openGameHistory = openGameHistory;
+window.loadGameHistory = loadGameHistory;

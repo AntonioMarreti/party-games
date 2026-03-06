@@ -62,6 +62,20 @@ async function joinRoom(code = null) {
     const passInput = document.getElementById('join-room-pass');
     const res = await window.apiRequest({ action: 'join_room', room_code: code, password: passInput ? passInput.value : '' });
     if (res.status === 'ok') {
+        // Safe Modal Closing
+        const modalEl = document.getElementById('joinModal');
+        if (modalEl && window.bootstrap) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.hide();
+        }
+
+        // Force cleanup of stuck backdrops
+        setTimeout(() => {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }, 300);
+
         if (typeof window.checkState === 'function') window.checkState();
     } else {
         if (window.showAlert) window.showAlert("Ошибка", res.message, 'error');
@@ -355,6 +369,7 @@ function renderPlayerList(players, containerId) {
     if (sgId === 'blokus') botLimit = 4;
     else if (sgId === 'bunker') botLimit = 12;
     else if (sgId === 'tictactoe') botLimit = 2;
+    else if (sgId === 'partybattle') botLimit = 16;
 
     if (amIHost && botLimit > 0 && players.length < botLimit) {
         const div = document.createElement('div');
@@ -884,13 +899,13 @@ function renderGameSelectorUI(lobbyState) {
 
         // Structure: Fixed Header + Scrollable Content
         list.innerHTML = `
-            <div class="sticky-top" style="z-index: 10; background: var(--bg-card); border-bottom: 1px solid var(--divider);">
+            <div class="sticky-top" style="z-index: 10; background: var(--bg-secondary); border-bottom: 1px solid var(--border-main);">
                 <div class="px-3 pt-2 pb-2"> <!-- Reduced top padding for search -->
                     <div class="position-relative">
                          <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                          <input type="text" id="game-search-input" class="form-control rounded-4 border-1 shadow-sm" 
                                 placeholder="Поиск..." 
-                                style="padding-left: 45px; height: 42px; font-size: 16px; border-color: var(--border-glass);">
+                                style="padding-left: 45px; height: 42px; font-size: 16px; border-color: var(--border-main); background: var(--bg-app);">
                     </div>
                 </div>
 
@@ -916,7 +931,7 @@ function renderGameSelectorUI(lobbyState) {
                     position: relative;
                 }
                 .game-list-item:active {
-                    background: var(--bg-secondary);
+                    background: var(--bg-app);
                 }
                 
                 /* Inset border via pseudoelement to look like iOS */
@@ -984,6 +999,18 @@ function renderGameSelectorUI(lobbyState) {
                     color: #ffc107;
                 }
 
+                /* Filter Tabs Solid Design */
+                .filter-tab {
+                    background: var(--bg-app);
+                    color: var(--text-main);
+                    border: 1px solid var(--border-main);
+                }
+                .filter-tab.active {
+                    background: var(--text-main);
+                    color: var(--bg-secondary);
+                    border: 1px solid var(--text-main);
+                }
+
                 #gameSelectorModal .section-title {
                     padding: 24px 16px 0px; /* Strong top separation, zero bottom */
                     font-size: 11px;
@@ -995,9 +1022,7 @@ function renderGameSelectorUI(lobbyState) {
                 }
                 
                 #gameSelectorModal .modal-content {
-                    background: var(--bg-card) !important;
-                    backdrop-filter: blur(16px);
-                    -webkit-backdrop-filter: blur(16px);
+                    background: var(--bg-secondary) !important;
                     border-radius: 20px 20px 0 0; 
                     height: 70vh; /* Reduced height as requested */
                     display: flex;

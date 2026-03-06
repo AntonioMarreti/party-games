@@ -173,98 +173,37 @@ window.AVAILABLE_GAMES = [
         files: ['js/games/brainbattle.js']
     },
     {
-        id: 'whoami',
+        id: 'partybattle',
         category: 'party',
-        name: 'Кто из нас?',
-        icon: 'bi-question-circle-fill',
-        color: '#1ABC9C',
-        bgColor: '#E8F8F5',
-        promoImage: 'assets/promo/whoami.jpg',
-        description: 'Раскройте все секреты вашей компании!',
+        name: 'Party Battle',
+        icon: 'bi-controller',
+        color: '#6c5ce7',
+        bgColor: 'rgba(108, 92, 231, 0.1)',
+        promoImage: 'assets/promo/partybattle.jpg',
+        description: 'Сборник популярных игр для веселой компании.',
         longDescription: `
-            <p><strong>Кто из нас?</strong> — это провокационная игра для компании, которая поможет узнать, что ваши друзья на самом деле думают о вас и друг о друге.</p>
-            <p><strong>Правила игры:</strong></p>
+            <p><strong>Party Battle</strong> — это ультимативный набор игр для компании, объединенный в одну мета-игру. Больше не нужно выбирать — играйте во всё сразу!</p>
+            <p><strong>Доступные режимы:</strong></p>
             <ul>
-                <li><strong>1. Выбор темы:</strong> Хост выбирает один из тематических наборов вопросов: от милого «Дружеского» до горячего «18+» или «Провокационного».</li>
-                <li><strong>2. Голосование:</strong> На экране появляется вопрос (например: «Кто чаще всех случайно пишет не в тот чат?»). У каждого есть несколько секунд, чтобы указать пальцем (или нажать кнопку в приложении) на того, кто больше всего подходит под описание.</li>
-                <li><strong>3. Раскрытие правды:</strong> Игра показывает распределение голосов. Победитель раунда получает очки, а компания — повод для бурных обсуждений и оправданий.</li>
+                <li><strong>МемоБатл:</strong> Классическая битва гифок. Подбирайте смешные реакции на забавные ситуации.</li>
+                <li><strong>Добивка:</strong> Текстовый батл юмора. Дописывайте концовки к шуткам и голосуйте за лучший вариант.</li>
+                <li><strong>Кто из нас?</strong> Узнайте правду о своих друзьях. Голосуйте за того, кто больше всего подходит под описание.</li>
             </ul>
+            <p>Настраивайте количество раундов, выбирайте интересующие темы и используйте AI для бесконечной генерации контента!</p>
         `,
-        stats: { players: '3-12', time: '10-25 мин', difficulty: 'Легкая' },
+        stats: { players: '3-16', time: '15-40 мин', difficulty: 'Легкая' },
         rules: [
-            { icon: 'bi-collection-play-fill', text: 'Разнообразные пакеты вопросов по темам' },
-            { icon: 'bi-ui-checks-grid', text: 'Анонимное голосование за игроков' },
-            { icon: 'bi-chat-heart-fill', text: 'Отличный повод для обсуждений' },
-            { icon: 'bi-trophy-fill', text: 'Набирайте очки за популярность мнений' }
+            { icon: 'bi-shuffle', text: 'Разнообразные игровые режимы в одной сессии' },
+            { icon: 'bi-stars', text: 'AI-генерация уникальных ситуаций и шуток' },
+            { icon: 'bi-hand-thumbs-up', text: 'Анонимное голосование за лучшие ответы' },
+            { icon: 'bi-trophy', text: 'Единая система прогрессии и лидерборд' }
         ],
-        gallery: [
-            {
-                type: 'html',
-                label: 'Выбор тематики',
-                content: `
-                    <div class="p-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border-main);">
-                        <div class="theme-card selected p-2 px-3 mb-2" style="background: var(--bg-secondary); border: 2px solid var(--primary-color); border-radius: 16px;">
-                            <div class="d-flex align-items-center">
-                                <div class="me-3 fs-3">🤝</div>
-                                <div>
-                                    <div class="fw-bold small">Дружеское</div>
-                                    <div style="font-size: 10px; opacity: 0.7;">Лёгкие и смешные вопросы</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="theme-card p-2 px-3 opacity-50" style="background: var(--bg-secondary); border-radius: 16px;">
-                            <div class="d-flex align-items-center">
-                                <div class="me-3 fs-3">🔥</div>
-                                <div>
-                                    <div class="fw-bold small">Провокационное</div>
-                                    <div style="font-size: 10px; opacity: 0.7;">Только для смелых</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `
-            },
-            {
-                type: 'html',
-                label: 'Экран голосования',
-                content: `
-                    <div class="p-3 rounded-4 text-center" style="background: var(--bg-card); border: 1px solid var(--border-main);">
-                        <div class="badge bg-secondary mb-3" style="font-size: 10px;">Вопрос 3 из 10</div>
-                        <div class="h6 fw-bold mb-4">Кто первым придёт на помощь среди ночи?</div>
-                        <div class="d-grid gap-2" style="grid-template-columns: 1fr 1fr;">
-                            <div class="p-2 rounded-3 border fw-bold small text-primary" style="border-color: var(--primary-color) !important; background: rgba(var(--primary-rgb), 0.1);">Алексей</div>
-                            <div class="p-2 rounded-3 border fw-bold small opacity-50">Мария</div>
-                            <div class="p-2 rounded-3 border fw-bold small opacity-50">Дмитрий</div>
-                            <div class="p-2 rounded-3 border fw-bold small opacity-50">Елена</div>
-                        </div>
-                    </div>
-                `
-            },
-            {
-                type: 'html',
-                label: 'Итоги раунда',
-                content: `
-                    <div class="p-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border-main);">
-                        <div class="small fw-bold text-muted text-uppercase mb-3">Результаты голосования</div>
-                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-3" style="background: rgba(var(--primary-rgb), 0.1);">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary rounded-circle me-2" style="width: 24px; height: 24px;"></div>
-                                <span class="fw-bold small">Алексей</span>
-                            </div>
-                            <span class="badge bg-primary rounded-pill">5 голосов</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-secondary rounded-circle me-2" style="width: 24px; height: 24px;"></div>
-                                <span class="small">Мария</span>
-                            </div>
-                            <span class="badge bg-secondary rounded-pill">1 голос</span>
-                        </div>
-                    </div>
-                `
-            }
+        files: [
+            'js/games/partybattle/ui-modes.js',
+            'js/games/partybattle/ui.js',
+            'js/games/partybattle/index.js'
         ],
-        files: ['js/games/whoami.js']
+        renderFunction: 'render_partybattle'
     },
     {
         id: 'tictactoe_ultimate',
@@ -507,92 +446,6 @@ window.AVAILABLE_GAMES = [
         files: ['js/games/wordclash/index.js', 'js/games/wordclash/ui.js', 'server/games/packs/wordclash/words.json']
     },
     {
-        id: 'memebattle',
-        category: 'party',
-        name: 'Битва Мемов',
-        icon: 'bi-emoji-laughing-fill',
-        color: '#FF6B6B',
-        bgColor: '#FFF0F0',
-        promoImage: 'assets/promo/memebattle.jpg',
-        description: 'Кто смешнее всех подберет GIF?',
-        longDescription: `
-            <p><strong>МемоБитва</strong> — это битва остроумия, в которой вы доказываете, что ваше чувство юмора превосходит всех остальных. Идеальный способ разрядить обстановку и вдоволь посмеяться.</p>
-            <p><strong>Как стать мастером мемов:</strong></p>
-            <ul>
-                <li><strong>1. Ситуация:</strong> В каждом раунде игра подбрасывает жизненную или абсурдную ситуацию (например: «Когда пофиксил баг, который искал 3 часа»).</li>
-                <li><strong>2. Ваш ответ:</strong> У вас есть набор гифок («рука»), из которых нужно выбрать самую смешную реакцию. Если ничего не подходит — воспользуйтесь поиском, чтобы найти Тот Самый Мем.</li>
-                <li><strong>3. Судейство:</strong> Все мемы анонимно выставляются на голосование. Выбирайте лучший (кроме своего), ставьте лайки и копите XP за победы в раундах.</li>
-            </ul>
-        `,
-        stats: { players: '3-15', time: '15-30 мин', difficulty: 'Легкая' },
-        rules: [
-            { icon: 'bi-search-heart-fill', text: 'Поиск мемов по миллионам гифок' },
-            { icon: 'bi-stars', text: 'Уникальные AI-ситуации под ваш сетап' },
-            { icon: 'bi-hand-thumbs-up-fill', text: 'Анонимное голосование за фаворитов' },
-            { icon: 'bi-emoji-laughing-fill', text: 'Бесконечный поток юмора и креатива' }
-        ],
-        gallery: [
-            {
-                type: 'html',
-                label: 'Ситуация раунда',
-                content: `
-                    <div class="mb-container-demo p-4 text-center rounded-4" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white;">
-                        <div class="mb-glass-card mx-auto shadow-lg" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; padding: 24px;">
-                            <div class="small fw-bold text-uppercase opacity-75 mb-3" style="letter-spacing: 2px;">Ситуация:</div>
-                            <div class="h4 fw-black mb-0" style="line-height: 1.2;">Когда пришел на работу вовремя, а там никого нет:</div>
-                        </div>
-                    </div>
-                `
-            },
-            {
-                type: 'html',
-                label: 'Выбор реакции',
-                content: `
-                    <div class="p-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border-main);">
-                        <div class="small fw-bold text-muted text-uppercase mb-3" style="font-size: 10px; letter-spacing: 1px;">Выбор мема:</div>
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <div class="rounded-3 shadow-sm border border-2 overflow-hidden" style="border-color: var(--border-glass) !important; aspect-ratio: 1; background: #333;">
-                                    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHpibXRhMzR6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/H54feNXf6Y4n6/giphy.gif" style="width:100%; height:100%; object-fit:cover;">
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="rounded-3 shadow-sm border border-2 overflow-hidden" style="border-color: var(--border-glass) !important; aspect-ratio: 1; background: #444;">
-                                     <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHpibXRhMzR6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/vFKqnCdLPNOKc/giphy.gif" style="width:100%; height:100%; object-fit:cover;">
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="rounded-3 shadow-sm border border-2 overflow-hidden d-flex flex-column align-items-center justify-content-center" style="border-color: var(--border-glass) !important; aspect-ratio: 1; background: var(--bg-secondary); color: var(--primary-color);">
-                                    <i class="bi bi-search fs-4"></i>
-                                    <div style="font-size: 8px; font-weight: 800;">ПОИСК</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `
-            },
-            {
-                type: 'html',
-                label: 'Голосование (Live)',
-                content: `
-                    <div class="p-3 rounded-4" style="background: #1e2a3a; color: white;">
-                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="small fw-bold">ГОЛОСОВАНИЕ</div>
-                            <div class="badge bg-danger">Осталось 5с</div>
-                         </div>
-                         <div class="rounded-4 overflow-hidden position-relative shadow-lg" style="aspect-ratio: 16/9; background: #000;">
-                             <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHpibXRhMzR6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6amZ6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/H54feNXf6Y4n6/giphy.gif" style="width:100%; height:100%; object-fit:cover; opacity: 0.8;">
-                             <div class="position-absolute bottom-0 start-0 w-100 p-3" style="background: linear-gradient(transparent, rgba(0,0,0,0.8));">
-                                 <button class="btn btn-sm btn-light w-100 fw-bold py-2 rounded-pill">МНЕ НРАВИТСЯ! 🔥</button>
-                             </div>
-                         </div>
-                    </div>
-                `
-            }
-        ],
-        files: ['css/games/memebattle.css', 'js/games/memebattle/ui.js', 'js/games/memebattle/index.js']
-    },
-    {
         id: 'tictactoe',
         category: 'strategy',
         name: 'Крестики-Нолики',
@@ -644,6 +497,103 @@ window.AVAILABLE_GAMES = [
             'js/games/tictactoe/bot.js',
             'js/games/tictactoe/index.js'
         ]
+    },
+    {
+        id: 'spyfall',
+        category: 'party',
+        name: 'Шпион',
+        icon: 'bi-incognito',
+        color: '#E74C3C',
+        bgColor: '#FDEDEC',
+        promoImage: '',
+        description: 'Найди шпиона среди своих!',
+        longDescription: `
+            <p><strong>Шпион</strong> — это разговорная игра для компании. Кто-то из вас шпион, а остальные — обычные люди в секретной локации.</p>
+            <p><strong>Как играть:</strong></p>
+            <ul>
+                <li><strong>Локация:</strong> Все, кроме шпиона, видят тайную локацию, в которой они находятся (например, "Школа" или "Пиратский корабль").</li>
+                <li><strong>Вопросы:</strong> Игроки по очереди задают друг другу один наводящий вопрос о локации. Цель мирных — вычислить, кто задает странные вопросы. Цель шпиона — понять, где все находятся.</li>
+                <li><strong>Развязка:</strong> Если таймер истек или игроки решили проголосовать, выбирается подозреваемый. Шпион также может в любой момент остановить игру, если догадался, что это за локация!</li>
+            </ul>
+        `,
+        stats: { players: '3-10', time: '8-15 мин', difficulty: 'Средняя' },
+        rules: [
+            { icon: 'bi-chat-left-dots', text: 'Задавайте обтекаемые вопросы' },
+            { icon: 'bi-search', text: 'Внимательно слушайте ответы других' },
+            { icon: 'bi-hand-index-thumb', text: 'Голосуйте за самого подозрительного' },
+            { icon: 'bi-pin-map', text: 'Шпион может победить, угадав локацию!' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                label: 'Роль',
+                content: `
+                    <div class="p-3 rounded-4 shadow-sm text-center" style="background: var(--bg-card); border: 1px solid var(--border-main);">
+                        <div style="font-size:40px; color:var(--primary-color);"><i class="bi bi-geo-alt-fill"></i></div>
+                        <div class="h5 fw-bold mt-2">Космическая станция</div>
+                        <div class="small text-muted mt-1">Твоя роль: Механик</div>
+                    </div>
+                `
+            }
+        ],
+        files: [
+            'css/games/spyfall.css',
+            'js/games/spyfall/ui.js',
+            'js/games/spyfall/index.js'
+        ],
+        renderFunction: 'render_spyfall'
+    },
+    {
+        id: 'minesweeper_br',
+        category: 'logic',
+        name: 'Сапёр Battle Royale',
+        icon: 'bi-patch-exclamation-fill',
+        color: '#2C3E50',
+        bgColor: '#EBEDEF',
+        description: 'Пошаговая дуэль на минном поле — думай или взлетай!',
+        longDescription: `
+            <p><strong>Сапёр Battle Royale</strong> — это легендарная головоломка, превращённая в пошаговое соревнование. Теперь вы не просто чистите поле, а боретесь за каждую клетку с друзьями.</p>
+            <p><strong>Как проходит матч:</strong></p>
+            <ul>
+                <li><strong>Пошаговая тактика:</strong> Игроки ходят по очереди. Каждый клик — это ваш единственный шанс заработать очки или всё потерять.</li>
+                <li><strong>Честная логика:</strong> Поле генерируется так, что его всегда можно решить без угадывания. Если вы взорвались — значит, где-то просчитались.</li>
+                <li><strong>Прожимание (Chording):</strong> Расставляйте флажки на мины и открывайте соседние клетки одним кликом — рискованно, но это может принести огромное преимущество.</li>
+                <li><strong>Наказание за ошибки:</strong> Подрыв на мине отнимает очки и оглушает на 1 ход. Противники получат шанс вырваться вперёд!</li>
+            </ul>
+        `,
+        stats: { players: '2-8', time: '5-15 мин', difficulty: 'Высокая' },
+        rules: [
+            { icon: 'bi-shield-check', text: 'Поле всегда решается чистой логикой' },
+            { icon: 'bi-crosshair', text: 'Каждый клик — стратегическое решение' },
+            { icon: 'bi-lightning-fill', text: 'Подрыв на мине оглушает на 1 ход' },
+            { icon: 'bi-trophy-fill', text: 'Побеждает тот, кто наберёт больше очков' }
+        ],
+        gallery: [
+            {
+                type: 'html',
+                label: 'Игровое поле',
+                content: `
+                    <div class="p-3 rounded-4 shadow-sm" style="background: var(--bg-card); border: 1px solid var(--border-main);">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; width: 140px; margin: 0 auto;">
+                            <div class="rounded-1 d-flex align-items-center justify-content-center fw-bold" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); aspect-ratio:1;">1</div>
+                            <div class="rounded-1" style="background: var(--bg-secondary); aspect-ratio:1; border: 1px solid var(--border-main);"></div>
+                            <div class="rounded-1" style="background: var(--bg-secondary); aspect-ratio:1; border: 1px solid var(--border-main);"></div>
+                            <div class="rounded-1" style="background: var(--bg-secondary); aspect-ratio:1; border: 1px solid var(--border-main);"></div>
+                            <div class="rounded-1 d-flex align-items-center justify-content-center fw-bold" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); aspect-ratio:1;">2</div>
+                            <div class="rounded-1 d-flex align-items-center justify-content-center fw-bold" style="background: #e74c3c; color: white; aspect-ratio:1;"><i class="bi bi-flag-fill"></i></div>
+                            <div class="rounded-1 d-flex align-items-center justify-content-center fw-bold" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); aspect-ratio:1;">1</div>
+                            <div class="rounded-1" style="background: var(--bg-secondary); aspect-ratio:1; border: 1px solid var(--border-main);"></div>
+                        </div>
+                    </div>
+                `
+            }
+        ],
+        files: [
+            'css/games/minesweeper.css',
+            'js/games/minesweeper/ui.js',
+            'js/games/minesweeper/index.js'
+        ],
+        renderFunction: 'render_minesweeper_br'
     }
 ];
 

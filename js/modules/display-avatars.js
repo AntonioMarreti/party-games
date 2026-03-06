@@ -58,12 +58,8 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     let isEmoji = false;
     let emojiVal = '';
 
-    // 1. Photo URL (Prioritize if valid URL)
-    if (user.photo_url && user.photo_url.includes('http')) {
-        innerContent = `<img src="${user.photo_url}" style="${style}">`;
-    }
-    // 2. Custom Avatar
-    else if (user.custom_avatar) {
+    // 1. Custom Avatar (Prioritize over Telegram/Default photo)
+    if (user.custom_avatar) {
         try {
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
@@ -71,7 +67,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
                 emojiVal = cfg.value;
                 bgColor = cfg.bg || '#eee';
             } else {
-                innerContent = `<img src="${cfg.src}\" style=\"${style}\">`;
+                innerContent = `<img src="${cfg.src}" style="${style}">`;
             }
         } catch (e) {
             // Legacy path string
@@ -82,6 +78,10 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
             }
             innerContent = `<img src="${path}" style="${style}">`;
         }
+    }
+    // 2. Photo URL (Telegram or External)
+    else if (user.photo_url && user.photo_url.includes('http')) {
+        innerContent = `<img src="${user.photo_url}" style="${style}">`;
     }
     // 3. Fallback (Initials or default)
     else {
@@ -105,10 +105,11 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
             </div>
         `;
     } else {
-        // Wrap img in a clickable div or just format the img
-        // To ensure clickability we wrap
+        // Return without extra div wrapper to prevent CSS conflicts in profile-avatar-xl
+        // Just add the click handler and cursor to the img tag itself if possible, 
+        // or keep the wrapper but make it strictly match the size.
         return `
-            <div class="avatar-wrapper" style="display:inline-block; ${cursorStyle}" ${clickHandler}>
+            <div class="avatar-wrapper" style="display:flex; width:${sizePx}px; height:${sizePx}px; border-radius:50%; overflow:hidden; ${cursorStyle}" ${clickHandler}>
                 ${innerContent}
             </div>
         `;
