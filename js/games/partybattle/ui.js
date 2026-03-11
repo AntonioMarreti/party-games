@@ -349,6 +349,16 @@ window.PartyBattleUI = {
         `;
     },
 
+    renderSubmissionFooter: function () {
+        return `
+            <div class="p-3 mt-auto" style="z-index: 10;">
+                <button class="btn btn-outline-secondary w-100 fw-bold border-0" style="background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 0.9rem; opacity: 0.5;" onclick="window.sendGameAction('back_to_lobby')">
+                    <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
+                </button>
+            </div>
+        `;
+    },
+
     renderSituation: function (gameState) {
         if (!gameState.current_situation) return;
 
@@ -377,7 +387,11 @@ window.PartyBattleUI = {
         `;
 
         if (isHost) {
-            let btnText = gameState.mode === 'whoami' ? 'Перейти к голосованию' : 'Раздать варианты';
+            let btnText = 'Раздать варианты';
+            if (gameState.mode === 'whoami') btnText = 'Перейти к голосованию';
+            else if (gameState.mode === 'caption') btnText = 'Показать изображение';
+            else if (['joke', 'advice', 'acronym', 'bluff'].includes(gameState.mode)) btnText = 'Начать сбор ответов';
+
             html += `
             <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold fs-5 shadow-sm mb-3 animate__animated animate__pulse animate__infinite"
                 onclick="window.sendGameAction('next_round')">
@@ -428,13 +442,16 @@ window.PartyBattleUI = {
         const hasSubmitted = gameState.submissions && gameState.submissions[myId];
 
         let html = `
-            <div class="d-flex flex-column h-100" style="padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column min-vh-100 pb-4" style="padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState)}
                 
                 <div class="px-3 py-2 animate__animated animate__fadeInDown">
                     <div class="p-3 shadow-lg rounded-4" style="background: var(--bg-card); border: 2px solid var(--border-main);">
                         <div class="small text-muted fw-bold mb-1 opacity-50 text-uppercase" style="font-size: 10px; letter-spacing: 0.5px;">Ситуация / Вопрос:</div>
-                        <div class="fw-bold text-main" style="font-size: 1.15rem; line-height: 1.3;">${situation}</div>
+                        ${gameState.mode === 'caption'
+                ? `<img src="${situation}" class="w-100 rounded-3 object-fit-cover shadow-sm" style="max-height: 250px;">`
+                : `<div class="fw-bold text-main" style="font-size: 1.15rem; line-height: 1.3;">${situation}</div>`
+            }
                     </div>
                 </div>
         `;
@@ -464,16 +481,15 @@ window.PartyBattleUI = {
         }
 
         html += `
-                ${gameState.mode === 'joke' && !hasSubmitted ? `
-                    <div class="p-3 mt-3">
-                        <button class="btn btn-outline-secondary w-100 fw-bold border-0" style="background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 0.9rem;" onclick="window.sendGameAction('back_to_lobby')">
-                            <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
-                        </button>
-                    </div>
-                ` : this.renderBottomActions()}
+                ${this.renderSubmissionFooter()}
             </div>
         `;
         gameArea.innerHTML = html;
+
+        // Focus input after render
+        setTimeout(() => {
+            document.getElementById('pb-joke-input')?.focus();
+        }, 300);
     },
 
     submitAnswer: function (memoUrl = null) {

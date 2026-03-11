@@ -10,8 +10,8 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
             <h2 class="mb-5 fw-bold" style="color:var(--text-main);">Запомни!</h2>
             <div class="d-flex gap-4 mb-5">
                 ${task.shown_items.map(i => `
-                    <div class="bb-glass-card d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold; color: var(--primary-color);">
-                        ${i}
+                    <div class="bb-glass-card d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 2.5rem; color: var(--text-main);">
+                        ${i.startsWith('bi-') ? `<i class="bi ${i}"></i>` : i}
                     </div>
                 `).join('')}
             </div>
@@ -40,11 +40,13 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
                 <div class="d-grid gap-3 w-100 px-3" style="grid-template-columns: 1fr 1fr;">
         `;
         task.options.forEach(opt => {
-            html2 += `<button class="btn bb-glass-card p-4 fs-3 fw-bold border-0" style="color:var(--primary-color);" 
-                onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${opt}</button>`;
+            html2 += `<button class="btn bb-glass-card p-4 fs-3 fw-bold border-0 d-flex align-items-center justify-content-center" style="color:var(--text-main);" 
+                onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${opt.startsWith('bi-') ? `<i class="bi ${opt}"></i>` : opt}</button>`;
         });
         html2 += `</div></div>`;
         wrapper.innerHTML = html2;
+
+        if (window.bbResetTimer) window.bbResetTimer();
 
     }, 3000);
 };
@@ -57,9 +59,10 @@ window.BB_MECHANICS.blind_timer = function (wrapper, task) {
     let html = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center">
             <div class="bb-game-badge">${task.title}</div>
-            <h1 class="display-4 fw-bold mb-3" style="color:var(--text-main);">${task.question}</h1>
+            <h3 class="h3 fw-bold mb-3 px-3" style="color:var(--text-main);">${task.question}</h3>
             
-            <div id="blind-timer-display" class="display-1 fw-bold font-monospace my-5 text-primary" style="font-variant-numeric: tabular-nums;">0.00</div>
+            <div id="blind-timer-display" class="display-1 fw-bold font-monospace mt-5 mb-2 text-primary" style="font-variant-numeric: tabular-nums; transition: color 0.3s;">0.00</div>
+            <div id="blind-timer-hint" class="fw-bold mb-4" style="color: var(--text-muted); opacity: 0; transition: opacity 0.5s; height: 24px;">Считай про себя... 🤫</div>
             
             <div class="d-grid w-100 px-4">
                 <button id="blind-btn" class="bb-start-btn" onclick="window.bbBlindClick()">СТАРТ</button>
@@ -83,13 +86,16 @@ window.bbBlindClick = function () {
         btn.style.background = "linear-gradient(135deg, #FF7675 0%, #D63031 100%)";
         btn.style.boxShadow = "0 10px 30px rgba(214, 48, 49, 0.3)";
 
+        const hideTimeSec = (window.bbBlindTarget / 1000) * 0.4; // Прячем после 40% времени
+
         // Тикаем немного, потом скрываем
         window.bbBlindInterval = setInterval(() => {
             const diff = (performance.now() - window.bbBattleStartTime) / 1000;
 
-            if (diff > 1.5) {
-                display.innerText = "???";
-                display.style.color = "var(--text-muted)";
+            if (diff > hideTimeSec) {
+                display.innerText = "-.--";
+                display.style.color = "var(--border-main)";
+                document.getElementById('blind-timer-hint').style.opacity = '1';
             } else {
                 display.innerText = diff.toFixed(2);
             }
@@ -134,7 +140,7 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
     wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
             <div class="bb-game-badge">${task.title}</div>
-            <h2 id="simon-status" class="mb-5 fw-bold text-center" style="color:var(--text-muted);">ЗАПОМИНАЙ</h2>
+            <h4 id="simon-status" class="mb-5 fw-bold text-center px-3" style="color:var(--text-muted); line-height:1.4;">ЗАПОМНИ ЭТУ ПОСЛЕДОВАТЕЛЬНОСТЬ</h4>
             
             <div id="simon-display" class="mb-5 rounded-circle shadow-sm d-flex align-items-center justify-content-center animate__animated" 
                  style="width: 140px; height: 140px; background: white; border: 4px solid #f1f2f6;">
@@ -192,18 +198,50 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
             // 3. Даем игроку нажимать
             const status = document.getElementById('simon-status');
             if (status) {
-                status.innerText = "ПОВТОРЯЙ!";
+                status.innerText = "ТЕПЕРЬ ТВОЯ ОЧЕРЕДЬ ЖАТЬ!";
                 status.classList.remove('text-muted');
                 status.classList.add('text-primary', 'animate__animated', 'animate__flash');
             }
             document.querySelectorAll('.simon-btn').forEach(btn => {
                 btn.classList.remove('disabled');
             });
+            if (window.bbResetTimer) window.bbResetTimer();
         }
     }, 1300); // 1300ms interval (Slower)
 
     // 4. Обработка клика
     window.handleSimonClick = function (color, correctStr) {
+        // Визуальный отклик
+        const btn = document.getElementById(`btn-simon-${color}`);
+        if (btn) {
+            btn.style.transform = 'scale(0.95)';
+            btn.style.filter = 'brightness(1.2)';
+            setTimeout(() => {
+                btn.style.transform = 'scale(1)';
+                btn.style.filter = 'none';
+            }, 150);
+
+            // Также красиво мигнем центральным экраном цветом нажатой кнопки
+            const display = document.getElementById('simon-display');
+            if (display) {
+                display.style.background = colorMap[color].bg;
+                display.style.borderColor = colorMap[color].active;
+                display.innerHTML = '';
+                display.classList.remove('animate__pulse');
+                void display.offsetWidth; // Trigger reflow to restart animation
+                display.classList.add('animate__pulse');
+
+                if (window.simonUserClickTimeout) clearTimeout(window.simonUserClickTimeout);
+
+                window.simonUserClickTimeout = setTimeout(() => {
+                    display.style.background = 'white';
+                    display.style.borderColor = '#f1f2f6';
+                    display.innerHTML = '<i class="bi bi-eye-fill" style="font-size: 3rem; color:var(--text-muted);"></i>';
+                    display.classList.remove('animate__pulse');
+                }, 400); // Longer and more noticeable, but allows fast clicking
+            }
+        }
+
         userSequence.push(color);
         const correctArray = correctStr.split(',');
 
@@ -217,4 +255,91 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
             window.bbSubmit(correctStr, correctStr);
         }
     };
+};
+
+// 4. СЕКРЕТНЫЙ КОД (Secret Code)
+window.BB_MECHANICS.secret_code = function (wrapper, task) {
+    let html = `
+        <div id="sc-phase-1" class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+            <div class="bb-game-badge">${task.title}</div>
+            <h2 class="mb-5 fw-bold text-center px-3" style="color:var(--text-main);">${task.question}</h2>
+            <div class="bb-glass-card px-5 py-4 d-flex align-items-center justify-content-center mb-5" style="border: 2px dashed var(--primary-color);">
+                <h1 class="display-1 fw-bold mb-0 text-break text-center w-100" style="letter-spacing: 12px; margin-right: -12px; color: var(--primary-color);">${task.pin}</h1>
+            </div>
+            <div class="progress w-75 rounded-pill" style="height: 12px; background: var(--bg-secondary);">
+                <div class="progress-bar sc-timer-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color), white 30%)); border-radius: 10px;"></div>
+            </div>
+        </div>
+    `;
+    wrapper.innerHTML = html;
+
+    // Анимация таймера
+    setTimeout(() => {
+        const bar = wrapper.querySelector('.sc-timer-bar');
+        if (bar) bar.style.width = '0%';
+    }, 100);
+
+    // Переход ко второй фазе через 3 сек
+    setTimeout(() => {
+        if (wrapper.dataset.taskId !== JSON.stringify(task)) return; // Если ушли с экрана
+
+        let htmlPhase2 = `
+            <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100 w-100 animate__animated animate__fadeIn">
+                <div class="bb-game-badge">${task.title}</div>
+                <h4 class="mb-4 text-center fw-bold text-muted">Введи пароль:</h4>
+                
+                <div class="bb-glass-card w-100 px-4 py-3 mb-4 d-flex align-items-center justify-content-center shadow-sm" style="max-width:280px; height: 75px; border-bottom: 4px solid var(--primary-color);">
+                    <h1 id="sc-display" class="display-3 fw-bold mb-0 text-center w-100" style="letter-spacing: 10px; margin-right: -10px; color: var(--text-main);"></h1>
+                </div>
+
+                <div class="d-grid gap-2 px-3 w-100 mx-auto" style="grid-template-columns: repeat(3, 1fr); max-width: 300px;">
+        `;
+
+        let paddedKeypad = [];
+        for (let i = 0; i < 9; i++) paddedKeypad.push(task.keypad[i]);
+        paddedKeypad.push('empty');
+        paddedKeypad.push(task.keypad[9]);
+        paddedKeypad.push('clear');
+
+        paddedKeypad.forEach(k => {
+            if (k === 'empty') {
+                htmlPhase2 += `<div></div>`;
+            } else if (k === 'clear') {
+                htmlPhase2 += `<button class="btn btn-light shadow-sm border-0 d-flex align-items-center justify-content-center" style="height: 70px; font-size: 1.5rem; color: var(--status-error);" onclick="window.handleSecretCodeClear()"><i class="bi bi-backspace-fill"></i></button>`;
+            } else {
+                htmlPhase2 += `<button class="btn bb-glass-card shadow-sm border-0 d-flex align-items-center justify-content-center fw-bold text-dark" style="height: 70px; font-size: 2rem; transition: transform 0.1s ease;" onclick="window.handleSecretCodeClick(this, '${k}', '${task.correct_val}')">${k}</button>`;
+            }
+        });
+
+        htmlPhase2 += `</div></div>`;
+        wrapper.innerHTML = htmlPhase2;
+
+        window.scCurrentInput = '';
+
+        window.handleSecretCodeClear = function () {
+            window.scCurrentInput = '';
+            document.getElementById('sc-display').innerText = '';
+        };
+
+        window.handleSecretCodeClick = function (btn, num, correctStr) {
+            btn.style.transform = 'scale(0.9)';
+            btn.style.background = 'var(--bg-secondary)';
+            setTimeout(() => {
+                btn.style.transform = 'none';
+                btn.style.background = '';
+            }, 100);
+
+            if (window.scCurrentInput.length < correctStr.length) {
+                window.scCurrentInput += num;
+                document.getElementById('sc-display').innerText = window.scCurrentInput; // Показываем введенные цифры
+
+                if (window.scCurrentInput.length === correctStr.length) {
+                    setTimeout(() => {
+                        window.bbSubmit(window.scCurrentInput, correctStr);
+                    }, 200);
+                }
+            }
+        };
+
+    }, 3000);
 };

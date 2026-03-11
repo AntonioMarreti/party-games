@@ -15,20 +15,42 @@ window.PartyBattleModes = {
         return '';
     },
 
-    /* --- JOKE MODE --- */
+    /* --- TEXT MODES (Joke, Advice, Acronym, Caption, Bluff) --- */
     renderJokeSubmission: function (gameState) {
+        let promptText = "ПРИДУМАЙ СМЕШНУЮ ДОБИВКУ:";
+        let placeholderText = "Твоя огненная шутка...";
+        let btnText = "ОТПРАВИТЬ ШУТКУ";
+
+        if (gameState.mode === 'caption') {
+            promptText = "ПРИДУМАЙ ПОДПИСЬ К МЕМУ:";
+            placeholderText = "Что происходит на картинке?";
+            btnText = "ОТПРАВИТЬ ОТВЕТ";
+        } else if (gameState.mode === 'advice') {
+            promptText = "ДАЙ ВРЕДНЫЙ СОВЕТ:";
+            placeholderText = "Твой худший совет...";
+            btnText = "ОТПРАВИТЬ СОВЕТ";
+        } else if (gameState.mode === 'acronym') {
+            promptText = "РАСШИФРУЙ АББРЕВИАТУРУ:";
+            placeholderText = "Твоя расшифровка...";
+            btnText = "ОТПРАВИТЬ";
+        } else if (gameState.mode === 'bluff') {
+            promptText = "ПРИДУМАЙ ПРАВДОПОДОБНУЮ ЛОЖЬ:";
+            placeholderText = "Твое вранье...";
+            btnText = "ОТПРАВИТЬ ЛОЖЬ";
+        }
+
         return `
-            <div class="p-3 pb-5 animate__animated animate__fadeIn">
-                <div class="mb-4 text-center pb-5">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Придумай смешную добивку:</label>
-                    <textarea id="pb-joke-input" class="form-control rounded-4 p-3 shadow-sm mb-3" rows="3" placeholder="Твоя огненная шутка..." maxlength="150" 
+            <div class="px-2 pb-4 animate__animated animate__fadeIn">
+                <div class="mb-3 text-center">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-2" style="letter-spacing: 0.5px; opacity: 0.7;">${promptText}</label>
+                    <textarea id="pb-joke-input" class="form-control rounded-4 p-3 shadow-sm mb-3" rows="3" placeholder="${placeholderText}" maxlength="150" 
                         style="background: var(--bg-card); border: 2px solid var(--border-main); color: var(--text-main); font-size: 1.1rem; resize: none;"></textarea>
                     
                     <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold fs-5 shadow-sm" onclick="window.PartyBattleUI.submitAnswer()">
-                        <i class="bi bi-send-fill me-2"></i> Отправить шутку
+                        <i class="bi bi-send-fill me-2"></i> ${btnText}
                     </button>
                     
-                    <div class="text-end small text-muted mt-2"><span id="pb-joke-count">0</span>/150</div>
+                    <div class="text-end small text-muted mt-2 opacity-50"><span id="pb-joke-count">0</span>/150</div>
                 </div>
             </div>
             <script>

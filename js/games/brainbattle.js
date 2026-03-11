@@ -207,8 +207,8 @@
             </div>
             
             <div class="fixed-bottom-actions pb-2 d-flex gap-2">
-                <button class="bb-start-btn py-3 flex-grow-1" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: #fff;" onclick="backToLobby()">Выйти</button>
-                <button class="bb-start-btn py-3 flex-grow-1" onclick="bbStart()">Начать битву</button>
+                <button class="bb-start-btn flex-grow-1" style="max-width: 120px; background: var(--bg-secondary); color: var(--text-muted); box-shadow: none;" onclick="backToLobby()">Выйти</button>
+                <button class="bb-start-btn flex-grow-1" onclick="bbStart()">Начать битву</button>
             </div>
             <div style="height: 60px;"></div>`;
 
@@ -244,13 +244,30 @@
         sorted.forEach(([uid, data], index) => {
             const p = res.players.find(pl => String(pl.id) === uid);
             if (p) {
-                listHtml += `<div class="bb-result-card">
+                const streakBadge = data.has_streak ? `<span class="badge bg-danger ms-2 shadow-sm" style="font-size: 0.7rem; cursor: pointer; border-radius: 12px; padding: 4px 8px;" onclick="alert('🔥 Режим огня!\\n\\nЭтот игрок был первым 3 раза подряд, поэтому все его очки сейчас умножаются на 1.5x!')">🔥 1.5x</span>` : '';
+                listHtml += `<div class="bb-result-card animate__animated animate__flipInX" style="animation-duration: 0.5s;">
                 <div class="d-flex align-items-center">
                     <div class="bb-rank">#${index + 1}</div>
                     <img src="${p.photo_url}" class="rounded-circle me-3" style="width:40px;height:40px; border: 2px solid var(--bg-secondary); box-shadow: var(--shadow-sm);">
-                    <span class="fw-bold" style="font-size: 15px; color:var(--text-main);">${p.first_name}</span>
+                    <div class="d-flex flex-column justify-content-center">
+                        <span class="fw-bold d-flex align-items-center" style="font-size: 15px; color:var(--text-main); line-height: 1;">${p.first_name}${streakBadge}</span>
+                    </div>
                 </div>
                 <div class="fw-bold" style="color:var(--primary-color);">+${data.score}</div>
+            </div>`;
+            }
+        });
+
+        let waitingListHtml = '';
+        res.players.forEach(p => {
+            if (!state.round_results[String(p.id)]) {
+                waitingListHtml += `<div class="bb-result-card mt-2" style="background: rgba(255,255,255,0.4); opacity: 0.7; border: 1px dashed var(--border-main);">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border text-muted me-3" style="width: 20px; height: 20px; border-width: 2px;"></div>
+                    <img src="${p.photo_url}" class="rounded-circle me-3" style="width:30px;height:30px; filter: grayscale(100%);">
+                    <span class="fw-bold text-muted" style="font-size: 14px;">${p.first_name}</span>
+                </div>
+                <div class="fw-bold text-muted small">Думает...</div>
             </div>`;
             }
         });
@@ -282,10 +299,15 @@
                 <div class="d-flex flex-column gap-2 px-3 pb-3">
                     ${listHtml}
                 </div>
+                ${waitingListHtml ? `
+                <h6 class="text-start ms-4 mt-2 mb-3 small text-uppercase fw-extrabold" style="color: var(--text-muted); letter-spacing: 1px;">Ждем ответа от:</h6>
+                <div class="d-flex flex-column gap-2 px-3 pb-3">
+                    ${waitingListHtml}
+                </div>` : ''}
             </div>
 
             <!-- FIXED FOOTER -->
-            <div class="p-3 border-top bg-white bg-opacity-75 backdrop-blur shadow-lg flex-shrink-0" style="z-index: 100;">
+            <div class="p-3 pb-4 flex-shrink-0" style="z-index: 100;">
                 ${btnHtml}
             </div>
         </div>
@@ -382,6 +404,10 @@
         const categories = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
         if (categories.length === 0) return showAlert("Внимание", "Выберите категорию!", 'warning');
         sendGameAction('setup_game', { rounds: rounds, categories: JSON.stringify(categories) });
+    };
+
+    window.bbResetTimer = function () {
+        battleStartTime = performance.now();
     };
 
     window.bbSubmit = function (answer, correct, manualTime = null, manualSuccess = null) {

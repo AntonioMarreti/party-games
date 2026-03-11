@@ -394,7 +394,16 @@ function pb_nextRound(&$state)
     $state['submissions'] = [];
     $state['votes'] = [];
     unset($state['last_round_data']);
-    $state['phase'] = 'round_situation';
+
+    // Determine initial phase for this round
+    // Text-based modes can skip the focus screen and go straight to input
+    $fastModes = ['acronym', 'advice', 'joke', 'bluff'];
+    if (in_array($state['mode'], $fastModes)) {
+        $state['phase'] = 'round_submission';
+    } else {
+        $state['phase'] = 'round_situation';
+    }
+
     $state['timer_start'] = time();
 }
 

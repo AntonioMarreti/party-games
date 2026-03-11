@@ -73,6 +73,8 @@ window.BB_MECHANICS.defuse_numbers = function (wrapper, task) {
             </div>
         </div>`;
 
+    if (window.bbResetTimer) window.bbResetTimer();
+
     window.handleDefuse = function (val) {
         if (val === current) {
             document.getElementById(`btn-num-${val}`).style.visibility = 'hidden';
@@ -115,6 +117,7 @@ window.BB_MECHANICS.timing_safe = function (wrapper, task) {
         cursor.style.left = pos + '%';
         requestAnimationFrame(anim);
     };
+    if (window.bbResetTimer) window.bbResetTimer();
     requestAnimationFrame(anim);
 
     window.checkSafe = function () {
