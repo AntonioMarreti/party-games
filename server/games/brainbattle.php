@@ -5,7 +5,7 @@ function getGameLibrary()
 {
     return [
         'logic' => ['math_blitz', 'greater_less'],
-        'attention' => ['color_chaos', 'odd_one_out', 'count_objects', 'find_duplicate'],
+        'attention' => ['color_chaos', 'odd_one_out', 'count_objects', 'find_duplicate', 'thimbles'],
         'motor' => ['reaction_test', 'timing_safe', 'defuse_numbers'],
         'memory' => ['photo_memory', 'blind_timer', 'simon_says'],
         'erudition' => ['edible_inedible', 'alchemy', 'ai_quiz', 'fact_check']
@@ -38,10 +38,27 @@ function handleGameAction($pdo, $room, $user, $postData)
             return;
         $state['total_rounds'] = (int) $postData['rounds'];
         $state['selected_categories'] = json_decode($postData['categories'], true);
+        $state['selected_games'] = json_decode($postData['selected_games'] ?? '[]', true);
         $state['scores'] = [];
         $state['current_round'] = 0;
         $state['remaining_games'] = []; // СБРАСЫВАЕМ ОЧЕРЕДЬ ПРИ НОВОЙ НАСТРОЙКЕ
         startNextRound($state);
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    if ($type === 'get_library') {
+        return ['status' => 'ok', 'library' => getGameLibrary()];
+    }
+
+    if ($type === 'force_reset') {
+        if (!$room['is_host']) return;
+        $state = [
+            'phase' => 'setup',
+            'round' => 0,
+            'scores' => [],
+            'total_rounds' => 5
+        ];
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
@@ -63,8 +80,36 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         $score = 0;
         if ($isCorrect) {
-            // Формула очков: база 1000. Отнимаем за каждые 5мс задержки/погрешности.
-            $score = max(100, 1000 - floor($time / 5));
+            // Веса штрафа за время для разных игр (чем больше число, тем медленнее "сгорают" очки)
+            $penaltyFactor = 8; // По умолчанию (средний)
+            
+            $factors = [
+                // Быстрые игры (реакция) - штраф жесткий
+                'reaction_test' => 5,
+                'timing_safe' => 6,
+                'color_chaos' => 7,
+                
+                // Игры средней сложности
+                'math_blitz' => 8,
+                'greater_less' => 8,
+                'odd_one_out' => 10,
+                'find_duplicate' => 10,
+                
+                // Медленные/сложные игры (где нужно время на подумать/посмотреть) - штраф мягкий
+                'thimbles' => 15, 
+                'count_objects' => 12,
+                'photo_memory' => 15,
+                'ai_quiz' => 20, 
+                'fact_check' => 18,
+                'edible_inedible' => 12
+            ];
+
+            if (isset($factors[$gameType])) {
+                $penaltyFactor = $factors[$gameType];
+            }
+
+            // Формула очков: база 1000 - время / фактор
+            $score = max(100, 1000 - floor($time / $penaltyFactor));
 
             if (empty($state['round_results'])) {
                 $score += 50; // Бонус первому (в играх на скорость)
@@ -108,14 +153,23 @@ function startNextRound(&$state)
     $state['phase'] = 'playing';
     $state['round_results'] = [];
 
-    // Определяем доступный пул игр на основе выбранных категорий
+    // Определяем доступный пул игр
     $pool = [];
-    $cats = $state['selected_categories'] ?? ['logic', 'attention', 'motor', 'memory', 'erudition'];
-    foreach ($cats as $cat) {
-        if (isset($library[$cat])) {
-            $pool = array_merge($pool, $library[$cat]);
+    $selectedGames = $state['selected_games'] ?? [];
+    
+    if (!empty($selectedGames)) {
+        // Если выбраны конкретные игры - используем только их
+        $pool = $selectedGames;
+    } else {
+        // Иначе - по категориям
+        $cats = $state['selected_categories'] ?? ['logic', 'attention', 'motor', 'memory', 'erudition'];
+        foreach ($cats as $cat) {
+            if (isset($library[$cat])) {
+                $pool = array_merge($pool, $library[$cat]);
+            }
         }
     }
+    
     if (empty($pool))
         $pool = ['math_blitz'];
 
@@ -307,73 +361,22 @@ function generateTaskData($type)
 
     // 6. ФОТОПАМЯТЬ (Memory)
     if ($type === 'photo_memory') {
-        $emojis = [
-            '🍎',
-            '🚗',
-            '🐶',
-            '🍕',
-            '⚽',
-            '🚀',
-            '💎',
-            '⏰',
-            '🦁',
-            '🐼',
-            '🐘',
-            '🦜',
-            '🐢',
-            '🍩',
-            '🍣',
-            '🥨',
-            '🏰',
-            '🎡',
-            '🌋',
-            '🏖️',
-            '🛸',
-            '🤖',
-            '🎈',
-            '🎁',
-            '🎨',
-            '🎭',
-            '🎮',
-            '🔋',
-            '⚡',
-            '🌈',
-            '🔥',
-            '🧊',
-            '🍄',
-            '🥕',
-            '🥑',
-            '🍍',
-            '🥞',
-            '🍔',
-            '🍟',
-            '🍿',
-            '🥤',
-            '🍺',
-            '🥂',
-            '🛹',
-            '🚲',
-            '🚜',
-            '⛵',
-            '🛰️',
-            '🔭',
-            '🔬',
-            '🧬',
-            '💼',
-            '📁',
-            '🔑',
-            '💰',
-            '💳',
-            '💎',
-            '🔮'
+        $icons = [
+            'bi-apple', 'bi-car-front-fill', 'bi-bug-fill', 'bi-egg-fill', 'bi-trophy-fill', 
+            'bi-rocket-takeoff-fill', 'bi-gem', 'bi-alarm', 'bi-incognito', 'bi-robot', 
+            'bi-lightning-charge-fill', 'bi-heart-fill', 'bi-star-fill', 'bi-moon-stars-fill', 
+            'bi-tree-fill', 'bi-umbrella-fill', 'bi-gift-fill', 'bi-camera-reels-fill', 
+            'bi-controller', 'bi-bicycle', 'bi-airplane-fill', 'bi-anchor', 
+            'bi-brightness-high-fill', 'bi-cloud-rain-fill', 'bi-emoji-smile-fill', 'bi-peace-fill',
+            'bi-puzzle-fill', 'bi-music-note-beamed', 'bi-palette-fill', 'bi-hammer'
         ];
-        shuffle($emojis);
-        $shown = array_slice($emojis, 0, 4); // Показываем 4
+        shuffle($icons);
+        $shown = array_slice($icons, 0, 4); // Показываем 4
         $hidden = $shown[array_rand($shown)]; // Один из них правильный
 
         // Варианты ответа: правильный + 3 левых
         $opts = [$hidden];
-        $others = array_diff($emojis, $shown);
+        $others = array_diff($icons, $shown);
         shuffle($others);
         $opts = array_merge($opts, array_slice($others, 0, 3));
         shuffle($opts);
@@ -448,36 +451,12 @@ function generateTaskData($type)
     // 3. Найди дубли (Find Pairs) - выберем 1 лишний
     if ($type === 'find_duplicate') {
         $set = [
-            '🍎',
-            '🍌',
-            '🍒',
-            '🥑',
-            '🍔',
-            '🍕',
-            '🌮',
-            '🍦',
-            '🍟',
-            '🍕',
-            '🦁',
-            '🐼',
-            '🐨',
-            '🐮',
-            '🐸',
-            '🦊',
-            '🐼',
-            '🦁',
-            '🐯',
-            '🦒',
-            '🚗',
-            '🚕',
-            '🚲',
-            '🛸',
-            '🚁',
-            '🚜',
-            '🏎️',
-            '🚓',
-            '🚑',
-            '🛰️'
+            'bi-apple', 'bi-balloon-fill', 'bi-bug-fill', 'bi-cart-fill', 'bi-camera-fill', 
+            'bi-cloud-sun-fill', 'bi-cup-hot-fill', 'bi-envelope-fill', 'bi-gear-fill', 'bi-headset', 
+            'bi-house-fill', 'bi-key-fill', 'bi-lamp-fill', 'bi-lightbulb-fill', 'bi-lock-fill', 
+            'bi-magic', 'bi-magnet-fill', 'bi-mic-fill', 'bi-mouse-fill', 'bi-music-note', 
+            'bi-paint-bucket', 'bi-pencil-fill', 'bi-phone-fill', 'bi-pin-map-fill', 'bi-printer-fill', 
+            'bi-search', 'bi-send-fill', 'bi-shield-fill', 'bi-speaker-fill', 'bi-suit-spade-fill'
         ];
         shuffle($set);
         $target = $set[0];
@@ -692,13 +671,13 @@ function generateTaskData($type)
 
     // 9. СЧЕТ ОБЪЕКТОВ (Attention)
     if ($type === 'count_objects') {
-        $emojis = ['🍎', '🐶', '🚗', '⚽', '💎', '⭐', '🚀', '🍔'];
-        $target = $emojis[array_rand($emojis)];
+        $icons = ['bi-apple', 'bi-car-front-fill', 'bi-bug-fill', 'bi-egg-fill', 'bi-gem', 'bi-star-fill', 'bi-rocket-takeoff-fill', 'bi-heart-fill'];
+        $target = $icons[array_rand($icons)];
         $count = rand(3, 7);
         $grid = array_fill(0, $count, $target);
 
-        // Fill rest with other emojis
-        $others = array_diff($emojis, [$target]);
+        // Fill rest with other icons
+        $others = array_diff($icons, [$target]);
         shuffle($others);
         for ($i = 0; $i < 5; $i++)
             $grid[] = $others[0];
@@ -715,9 +694,42 @@ function generateTaskData($type)
             'type' => $type,
             'title' => 'Внимание',
             'question' => "Сколько тут $target ?",
+            'target' => $target,
             'grid' => $grid,
             'options' => $opts,
             'correct_val' => $count
+        ];
+    }
+
+    // НАПЕРСТКИ
+    if ($type === 'thimbles') {
+        $cups = 3;
+        $initial_ball = rand(0, 2);
+        $swaps_count = rand(6, 10);
+        $swaps = [];
+        $current_pos = $initial_ball;
+
+        for ($i = 0; $i < $swaps_count; $i++) {
+            $a = rand(0, 2);
+            $b = rand(0, 2);
+            while ($a == $b) {
+                $b = rand(0, 2);
+            }
+            $swaps[] = [$a, $b];
+            
+            // Отслеживаем где шарик
+            if ($current_pos == $a) $current_pos = $b;
+            else if ($current_pos == $b) $current_pos = $a;
+        }
+
+        return [
+            'type' => 'thimbles',
+            'title' => 'Наперстки',
+            'question' => 'Следи за шариком!',
+            'cups' => $cups,
+            'initial_ball' => $initial_ball,
+            'swaps' => $swaps,
+            'correct_val' => $current_pos
         ];
     }
 

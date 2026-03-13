@@ -19,7 +19,12 @@ window.BB_MECHANICS.color_chaos = function (wrapper, task) {
 
     let html = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 pb-5 pt-5">
-            <div class="bb-game-badge">${task.title}</div>
+            <div class="bb-game-badge d-flex align-items-center gap-2">
+                <span>${task.title}</span>
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
             
             <h2 class="mb-4 text-center fw-bold" style="color:var(--text-muted);">${task.question}</h2>
             
@@ -44,7 +49,12 @@ window.BB_MECHANICS.color_chaos = function (wrapper, task) {
 window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
     let html = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 pb-5 pt-5">
-            <div class="bb-game-badge">${task.title}</div>
+            <div class="bb-game-badge d-flex align-items-center gap-2">
+                <span>${task.title}</span>
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
             <h2 class="mb-5 fw-bold text-center animate__animated animate__fadeIn" style="color:var(--text-main);">${task.question}</h2>
             <div class="d-grid gap-2 w-100 px-3" style="grid-template-columns: repeat(4, 1fr);">
     `;
@@ -67,7 +77,12 @@ window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
 window.BB_MECHANICS.find_duplicate = function (wrapper, task) {
     wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
-            <div class="bb-game-badge">${task.title}</div>
+            <div class="bb-game-badge d-flex align-items-center gap-2">
+                <span>${task.title}</span>
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
             <h4 class="mb-4 text-center fw-bold" style="color:var(--text-muted);">${task.question}</h4>
             <div class="d-grid gap-2 px-3" style="grid-template-columns: repeat(4, 1fr);">
                 ${task.grid.map(emoji => `
@@ -83,10 +98,20 @@ window.BB_MECHANICS.find_duplicate = function (wrapper, task) {
 
 // 4. СЧЕТ ОБЪЕКТОВ
 window.BB_MECHANICS.count_objects = function (wrapper, task) {
+    let questionHtml = task.question;
+    if (task.target && task.target.startsWith('bi-')) {
+        questionHtml = questionHtml.replace(task.target, `<i class="bi ${task.target} mx-1" style="font-size: 1.2em; vertical-align: middle; color: var(--primary-color);"></i>`);
+    }
+
     wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
-            <div class="bb-game-badge">${task.title}</div>
-            <h4 class="mb-4 text-center text-muted fw-bold">${task.question}</h4>
+            <div class="bb-game-badge d-flex align-items-center gap-2">
+                <span>${task.title}</span>
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+            <h4 class="mb-4 text-center text-muted fw-bold">${questionHtml}</h4>
             
             <div class="bb-glass-card p-4 rounded-4 mb-5 d-flex flex-wrap justify-content-center gap-3" style="max-width:320px; background: var(--bg-glass);">
                 ${task.grid.map(emoji => `<span class="animate__animated animate__bounceIn" style="font-size: 2.5rem;">${emoji.startsWith('bi-') ? `<i class="bi ${emoji}"></i>` : emoji}</span>`).join('')}
@@ -106,135 +131,199 @@ window.BB_MECHANICS.count_objects = function (wrapper, task) {
 
 // 5. НАПЕРСТКИ (Thimbles / Shell game)
 window.BB_MECHANICS.thimbles = function (wrapper, task) {
-    let html = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
-            <div class="bb-game-badge">${task.title}</div>
-            <h3 class="mb-5 fw-bold text-center px-3" id="thimbles-status" style="color:var(--text-main);">${task.question}</h3>
-            
-            <div id="thimbles-container" style="position: relative; width: 300px; height: 180px; margin: 0 auto;">
-                <!-- Шарик -->
-                <div id="thimble-ball" style="position: absolute; bottom: 10px; left: 0px; width: 80px; text-align: center; font-size: 2.5rem; transition: left 0.4s ease; z-index: 1;">
-                    <i class="bi bi-circle-fill text-danger shadow-sm rounded-circle"></i>
-                </div>
-    `;
-
-    // 3 наперстка
-    for (let i = 0; i < task.cups; i++) {
-        html += `
-            <div id="cup-${i}" class="cup-element" style="position: absolute; bottom: 0; left: ${i * 110}px; width: 80px; height: 100px; background: color-mix(in srgb, var(--primary-color) 80%, black); border: 3px solid var(--primary-color); border-radius: 15px 15px 5px 5px; z-index: 2; transition: transform 0.4s ease, bottom 0.4s ease; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="if(window.thimblesReady) window.handleCupClick(${i})">
-                <i class="bi bi-cup-hot-fill" style="font-size: 3rem; color: rgba(255,255,255,0.3);"></i>
-            </div>
-        `;
+    if (!task.cups || !Array.isArray(task.swaps)) {
+        wrapper.innerHTML = `
+            <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100 px-4">
+                <i class="bi bi-exclamation-triangle-fill text-warning mb-3" style="font-size: 3rem;"></i>
+                <h4 class="fw-bold text-center mb-2">Игра устарела</h4>
+                <p class="text-muted text-center mb-4">Данные этого раунда сломаны. Нажмите кнопку ниже, чтобы сбросить игру и начать заново.</p>
+                <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold" onclick="confirmForceExit()">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i>Сбросить игру
+                </button>
+            </div>`;
+        return;
     }
 
-    html += `</div></div>`;
-    wrapper.innerHTML = html;
+    const N = task.cups;
+    const GAP = 110; // расстояние между позициями
+
+    wrapper.innerHTML = `
+        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+            <div class="bb-game-badge d-flex align-items-center gap-2">
+                <span>${task.title}</span>
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50" onclick="confirmForceExit()" title="Выйти">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+            <h3 class="mb-5 fw-bold text-center px-3" id="thimbles-status" style="color:var(--text-main);">${task.question}</h3>
+            <div id="thimbles-stage" style="position:relative; height:130px; width:${(N-1)*GAP+80}px; margin:0 auto;"></div>
+        </div>`;
+
+    const stage = document.getElementById('thimbles-stage');
+    const statusEl = document.getElementById('thimbles-status');
+
+    // Шарик — позиция задаётся через translateX, не через left
+    const ball = document.createElement('div');
+    ball.style.cssText = `
+        position:absolute; left:0; bottom:8px;
+        width:36px; height:36px;
+        background:radial-gradient(circle at 35% 35%, #ff6b6b, #c0392b);
+        border-radius:50%;
+        box-shadow:0 4px 14px rgba(192,57,43,0.5);
+        z-index:1;
+        transform: translateX(${task.initial_ball * GAP + 22}px);
+    `;
+    stage.appendChild(ball);
+
+    // Стаканчики — все left:0, позиция только через translateX
+    const cups = [];
+    // cupX[i] = текущий translateX стаканчика i (в пикселях)
+    const cupX = [];
+
+    for (let i = 0; i < N; i++) {
+        const c = document.createElement('div');
+        const tx = i * GAP;
+        c.style.cssText = `
+            position:absolute; left:0; bottom:0;
+            width:80px; height:110px;
+            background:linear-gradient(160deg, var(--primary-color) 0%, color-mix(in srgb,var(--primary-color) 50%,black) 100%);
+            border:2px solid rgba(255,255,255,0.2);
+            box-shadow:0 6px 20px rgba(0,0,0,0.3);
+            border-radius:18px 18px 8px 8px;
+            z-index:2;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer;
+            transform: translateX(${tx}px) translateY(0px);
+            will-change: transform;
+        `;
+        c.innerHTML = `<i class="bi bi-cup-hot-fill" style="font-size:2.8rem;color:rgba(255,255,255,0.15);pointer-events:none;"></i>`;
+        c.addEventListener('click', () => { if (window.thimblesReady) window.handleCupClick(i); });
+        stage.appendChild(c);
+        cups.push(c);
+        cupX.push(tx);
+    }
 
     window.thimblesReady = false;
-    let logicToDOM = [0, 1, 2]; // В какой логической позиции X (0, 1, 2) какой DOM элемент (0, 1, 2)
-    let posMap = [0, 110, 220]; // Координаты для каждой логической позиции
 
-    // 1. Показываем шарик
-    const ballPos = task.initial_ball;
-    const b = document.getElementById('thimble-ball');
-    b.style.left = posMap[ballPos] + 'px';
+    // Логическая позиция: cupLogicPos[dom-index] = какой позиции сейчас находится стаканчик i
+    const cupLogicPos = Array.from({length: N}, (_, i) => i);
+    function cupAtLogic(lp) { return cupLogicPos.indexOf(lp); }
 
+    function setCupTransform(domId, tx, ty, duration = 0) {
+        if (duration > 0) {
+            cups[domId].animate([
+                { transform: cups[domId].style.transform || `translateX(${cupX[domId]}px) translateY(0px)` },
+                { transform: `translateX(${tx}px) translateY(${ty}px)` }
+            ], {
+                duration: duration,
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                fill: 'forwards'
+            });
+        }
+        cups[domId].style.transform = `translateX(${tx}px) translateY(${ty}px)`;
+        cupX[domId] = tx;
+    }
+
+    function setBallTransform(tx, duration = 0) {
+        if (duration > 0) {
+            ball.animate([
+                { transform: ball.style.transform || `translateX(0px)` },
+                { transform: `translateX(${tx}px)` }
+            ], {
+                duration: duration,
+                easing: 'ease-out',
+                fill: 'forwards'
+            });
+        }
+        ball.style.transform = `translateX(${tx}px)`;
+    }
+
+    // Фаза 1: показываем шарик
+    const initDom = cupAtLogic(task.initial_ball);
     setTimeout(() => {
-        if (wrapper.dataset.taskId !== JSON.stringify(task)) return;
-        // Поднимаем стаканчик
-        document.getElementById(`cup-${logicToDOM[ballPos]}`).style.bottom = '80px';
-
-        // Опускаем стаканчик
+        setCupTransform(initDom, cupX[initDom], -80, 500);
         setTimeout(() => {
-            if (wrapper.dataset.taskId !== JSON.stringify(task)) return;
-            document.getElementById(`cup-${logicToDOM[ballPos]}`).style.bottom = '0px';
-            b.style.opacity = '0'; // Прячем настоящий шарик для иллюзии
-
-            // Начинаем перемешивания
+            setCupTransform(initDom, cupX[initDom], 0, 500);
             setTimeout(() => {
-                startSwaps(0);
-            }, 600);
-        }, 1500);
-    }, 500);
+                ball.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+                setTimeout(() => runSwaps(0), 600);
+            }, 1000);
+        }, 900);
+    }, 400);
 
-    function startSwaps(swapIndex) {
-        if (wrapper.dataset.taskId !== JSON.stringify(task)) return;
+    let ballLogicPos = task.initial_ball;
 
-        if (swapIndex >= task.swaps.length) {
-            // Закончили
+    function runSwaps(idx) {
+        if (idx >= task.swaps.length) {
             window.thimblesReady = true;
-            const st = document.getElementById('thimbles-status');
-            if (st) {
-                st.innerText = "ГДЕ ШАРИК?";
-                st.classList.add('text-primary', 'animate__animated', 'animate__flash');
+            if (window.bbResetTimer) window.bbResetTimer();
+            if (statusEl) {
+                statusEl.innerText = 'ГДЕ ШАРИК?';
+                statusEl.style.color = 'var(--primary-color)';
             }
             return;
         }
 
-        let swap = task.swaps[swapIndex];
-        let posA = swap[0];
-        let posB = swap[1];
+        const [posA, posB] = task.swaps[idx];
+        const domA = cupAtLogic(posA);
+        const domB = cupAtLogic(posB);
 
-        let domA = logicToDOM[posA];
-        let domB = logicToDOM[posB];
+        const txA_new = posB * GAP;
+        const txB_new = posA * GAP;
 
-        let cupA = document.getElementById(`cup-${domA}`);
-        let cupB = document.getElementById(`cup-${domB}`);
+        cups[domA].style.zIndex = '10';
+        cups[domB].style.zIndex = '5';
 
-        // Вычисляем, куда им нужно сдвинуться относительно их изначального положения
-        // cupA изначально был на left: domA * 110. Сейчас он на logicToDOM[posA]... стоп!
-        // transform: translateX не меняет left. 
-        // Поэтому нам нужно вычислять translateX относительно оригинального position: left (${domA * 110}).
-        // Позиция, в которую он должен встать - posMap[posB].
-        // Значит translateX = posMap[posB] - (domA * 110).
+        // Анимация через Element.animate
+        const duration = 600;
+        
+        // domA идет дугой вверх
+        cups[domA].animate([
+            { transform: `translateX(${cupX[domA]}px) translateY(0px)` },
+            { transform: `translateX(${(cupX[domA] + txA_new) / 2}px) translateY(-35px)`, offset: 0.5 },
+            { transform: `translateX(${txA_new}px) translateY(0px)` }
+        ], { duration, easing: 'ease-in-out', fill: 'forwards' });
 
-        let dxA = posMap[posB] - (domA * 110);
-        let dxB = posMap[posA] - (domB * 110);
+        // domB идет по низу
+        cups[domB].animate([
+            { transform: `translateX(${cupX[domB]}px) translateY(0px)` },
+            { transform: `translateX(${txB_new}px) translateY(0px)` }
+        ], { duration, easing: 'ease-in-out', fill: 'forwards' });
 
-        // Для красивой дуги добавляем translateY посреди пути
-        cupA.style.transform = `translateX(${(dxA + (posMap[posA] - (domA * 110))) / 2}px) translateY(-30px)`;
-        cupB.style.transform = `translateX(${(dxB + (posMap[posB] - (domB * 110))) / 2}px) translateY(30px)`;
+        cupX[domA] = txA_new;
+        cupX[domB] = txB_new;
+        cups[domA].style.transform = `translateX(${txA_new}px) translateY(0px)`;
+        cups[domB].style.transform = `translateX(${txB_new}px) translateY(0px)`;
 
-        setTimeout(() => {
-            cupA.style.transform = `translateX(${dxA}px) translateY(0px)`;
-            cupB.style.transform = `translateX(${dxB}px) translateY(0px)`;
-        }, 200);
+        cupLogicPos[domA] = posB;
+        cupLogicPos[domB] = posA;
+        if (ballLogicPos === posA) ballLogicPos = posB;
+        else if (ballLogicPos === posB) ballLogicPos = posA;
 
-        // Обновляем логическую карту
-        logicToDOM[posA] = domB;
-        logicToDOM[posB] = domA;
-
-        // Следующий сдвиг
-        setTimeout(() => {
-            startSwaps(swapIndex + 1);
-        }, 450); // немного быстрее для динамики
+        setTimeout(() => runSwaps(idx + 1), duration + 150);
     }
 
-    window.handleCupClick = function (domIndex) {
+    window.handleCupClick = function(domId) {
         if (!window.thimblesReady) return;
-        window.thimblesReady = false; // блочим повторные клики
+        window.thimblesReady = false;
 
-        let currentLogicPos = logicToDOM.indexOf(domIndex);
+        setCupTransform(domId, cupX[domId], -80, 400);
 
-        const cup = document.getElementById(`cup-${domIndex}`);
-        cup.style.bottom = '80px';
+        const correctLogicPos = parseInt(task.correct_val);
+        const clickedLogicPos = cupLogicPos[domId];
 
-        // Показываем шарик под тем стаканчиком, где он реально есть
-        let correctLogicPos = parseInt(task.correct_val);
-        b.style.left = posMap[correctLogicPos] + 'px';
-        b.style.opacity = '1';
-        b.style.transition = 'none'; // чтобы шарик не улетел
+        setBallTransform(correctLogicPos * GAP + 22, 0);
+        ball.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: 'forwards' });
 
-        // Если юзер кликнул не туда, то его стаканчик пустой, а мы поднимем правильный через полсекунды
-        if (currentLogicPos !== correctLogicPos) {
+        if (clickedLogicPos !== correctLogicPos) {
             setTimeout(() => {
-                let correctDomIndex = logicToDOM[correctLogicPos];
-                document.getElementById(`cup-${correctDomIndex}`).style.bottom = '80px';
-            }, 600);
+                const correctDom = cupAtLogic(correctLogicPos);
+                setCupTransform(correctDom, cupX[correctDom], -80, 400);
+            }, 400);
         }
 
         setTimeout(() => {
-            window.bbSubmit(currentLogicPos.toString(), task.correct_val.toString());
-        }, 1500); // Даем посмотреть результат и отправляем на сервер
+            window.bbSubmit(clickedLogicPos.toString(), task.correct_val.toString());
+        }, 1500);
     };
 };

@@ -845,7 +845,7 @@ function openGameShowcase(gameId) {
         }
 
         // 2. Clear Telegram BackButton
-        if (window.Telegram && window.Telegram.WebApp) {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
             window.Telegram.WebApp.BackButton.hide();
         }
 

@@ -8,9 +8,9 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
         <div id="mem-phase-1" class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
             <div class="bb-game-badge">${task.title}</div>
             <h2 class="mb-5 fw-bold" style="color:var(--text-main);">Запомни!</h2>
-            <div class="d-flex gap-4 mb-5">
+            <div class="d-flex flex-wrap justify-content-center gap-3 mb-5 px-3">
                 ${task.shown_items.map(i => `
-                    <div class="bb-glass-card d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 2.5rem; color: var(--text-main);">
+                    <div class="bb-glass-card d-flex align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px; font-size: 2.5rem; color: var(--text-main);">
                         ${i.startsWith('bi-') ? `<i class="bi ${i}"></i>` : i}
                     </div>
                 `).join('')}

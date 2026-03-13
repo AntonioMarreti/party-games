@@ -176,8 +176,9 @@
             </div>
 
             <div class="bb-glass-card mb-4" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
-                <label class="fw-bold mb-2 small text-uppercase text-muted d-block">Категории</label>
-                <div class="d-flex flex-column gap-1 overflow-auto" style="min-height:0;">
+                <label class="fw-bold small text-uppercase text-muted mb-2 d-block">Категории</label>
+                
+                <div id="bb-categories-list" class="d-flex flex-column gap-1 overflow-auto" style="min-height:0;">
                     <label class="bb-category-item py-2">
                         <input type="checkbox" class="bb-checkbox" value="attention" checked>
                         <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>
@@ -204,6 +205,16 @@
                         <span class="fw-bold text-body small">Память</span>
                     </label>
                 </div>
+                
+                <div id="bb-deep-settings" class="d-none flex-column gap-1 overflow-auto" style="min-height:0;">
+                    <!-- Will be filled via JS -->
+                </div>
+
+                <div class="mt-3 pt-2 border-top text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size: 0.75rem;" onclick="showDeepSettings()">
+                        <i class="bi bi-sliders me-1"></i> Расширенные настройки
+                    </button>
+                </div>
             </div>
             
             <div class="fixed-bottom-actions pb-2 d-flex gap-2">
@@ -211,6 +222,78 @@
                 <button class="bb-start-btn flex-grow-1" onclick="bbStart()">Начать битву</button>
             </div>
             <div style="height: 60px;"></div>`;
+
+            window.showDeepSettings = async function() {
+                const list = document.getElementById('bb-categories-list');
+                const deep = document.getElementById('bb-deep-settings');
+                const btn = event.currentTarget || event.target;
+
+                if (deep.classList.contains('d-none')) {
+                    list.classList.add('d-none');
+                    deep.classList.remove('d-none');
+                    btn.innerHTML = '<i class="bi bi-arrow-left me-1"></i> К категориям';
+                    
+                    if (!window.BB_LIBRARY) {
+                        deep.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+                        const res = await sendGameAction('get_library');
+                        if (res && res.library) {
+                            window.BB_LIBRARY = res.library;
+                        }
+                    }
+                    renderDeepSettings();
+                } else {
+                    deep.classList.add('d-none');
+                    list.classList.remove('d-none');
+                    btn.innerHTML = '<i class="bi bi-sliders me-1"></i> Расширенные настройки';
+                }
+            };
+
+            window.renderDeepSettings = function() {
+                const deep = document.getElementById('bb-deep-settings');
+                if (!window.BB_LIBRARY) return;
+
+                const gameNames = {
+                    'math_blitz': 'Математика',
+                    'greater_less': 'Больше-Меньше',
+                    'color_chaos': 'Цветовой хаос',
+                    'odd_one_out': 'Найди лишнее',
+                    'count_objects': 'Счет объектов',
+                    'find_duplicate': 'Найди пару',
+                    'thimbles': 'Наперстки',
+                    'reaction_test': 'Реакция',
+                    'timing_safe': 'Сейф',
+                    'defuse_numbers': 'Разминирование',
+                    'photo_memory': 'Фотопамять',
+                    'blind_timer': 'Секундомер',
+                    'simon_says': 'Саймон говорит',
+                    'edible_inedible': 'Съедобное',
+                    'alchemy': 'Алхимия',
+                    'ai_quiz': 'AI Викторина',
+                    'fact_check': 'Правда/Ложь'
+                };
+
+                const categoryNames = {
+                    'logic': 'Логика',
+                    'attention': 'Внимание',
+                    'motor': 'Реакция',
+                    'memory': 'Память',
+                    'erudition': 'Эрудиция'
+                };
+
+                let html = '';
+                for (const [cat, games] of Object.entries(window.BB_LIBRARY)) {
+                    html += `<div class="mt-2 mb-1 small fw-bold text-muted text-uppercase" style="font-size:0.65rem; letter-spacing:1px;">${categoryNames[cat] || cat}</div>`;
+                    games.forEach(game => {
+                        html += `
+                        <label class="bb-category-item py-1">
+                            <input type="checkbox" class="bb-game-checkbox" value="${game}">
+                            <span class="fw-bold text-body small ms-2">${gameNames[game] || game}</span>
+                        </label>`;
+                    });
+                }
+                deep.innerHTML = html;
+            };
+
 
             window.selectRounds = (val, btn) => {
                 document.getElementById('bb-rounds').value = val;
@@ -248,8 +331,8 @@
                 listHtml += `<div class="bb-result-card animate__animated animate__flipInX" style="animation-duration: 0.5s;">
                 <div class="d-flex align-items-center">
                     <div class="bb-rank">#${index + 1}</div>
-                    <img src="${p.photo_url}" class="rounded-circle me-3" style="width:40px;height:40px; border: 2px solid var(--bg-secondary); box-shadow: var(--shadow-sm);">
-                    <div class="d-flex flex-column justify-content-center">
+                    ${window.renderAvatar ? window.renderAvatar(p, 'md') : `<img src="${p.photo_url}" class="rounded-circle me-3" style="width:40px;height:40px;">`}
+                    <div class="d-flex flex-column justify-content-center ms-3">
                         <span class="fw-bold d-flex align-items-center" style="font-size: 15px; color:var(--text-main); line-height: 1;">${p.first_name}${streakBadge}</span>
                     </div>
                 </div>
@@ -264,8 +347,8 @@
                 waitingListHtml += `<div class="bb-result-card mt-2" style="background: rgba(255,255,255,0.4); opacity: 0.7; border: 1px dashed var(--border-main);">
                 <div class="d-flex align-items-center">
                     <div class="spinner-border text-muted me-3" style="width: 20px; height: 20px; border-width: 2px;"></div>
-                    <img src="${p.photo_url}" class="rounded-circle me-3" style="width:30px;height:30px; filter: grayscale(100%);">
-                    <span class="fw-bold text-muted" style="font-size: 14px;">${p.first_name}</span>
+                    ${window.renderAvatar ? window.renderAvatar(p, 'sm') : `<img src="${p.photo_url}" class="rounded-circle me-3" style="width:30px;height:30px;">`}
+                    <span class="fw-bold text-muted ms-2" style="font-size: 14px;">${p.first_name}</span>
                 </div>
                 <div class="fw-bold text-muted small">Думает...</div>
             </div>`;
@@ -357,8 +440,8 @@
                 <div class="bb-result-card" style="${index === 0 ? 'border: 2px solid #FFD700; transform: scale(1.02);' : ''}">
                     <div class="d-flex align-items-center">
                         <div class="bb-rank" style="${rankStyle}">#${index + 1}</div>
-                        <img src="${p.photo_url}" class="rounded-circle me-3" style="width:44px;height:44px; border: ${index === 0 ? '2px solid #FFD700' : 'none'};">
-                        <span class="fw-bold" style="font-size: 16px;">${p.first_name}</span>
+                        ${window.renderAvatar ? window.renderAvatar(p, 'md') : `<img src="${p.photo_url}" class="rounded-circle me-3" style="width:44px;height:44px;">`}
+                        <span class="fw-bold ms-3" style="font-size: 16px;">${p.first_name}</span>
                     </div>
                     <div class="fs-4 fw-bold text-dark">${score}</div>
                 </div>
@@ -401,9 +484,24 @@
 
     window.bbStart = function () {
         const rounds = document.getElementById('bb-rounds').value;
-        const categories = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-        if (categories.length === 0) return showAlert("Внимание", "Выберите категорию!", 'warning');
-        sendGameAction('setup_game', { rounds: rounds, categories: JSON.stringify(categories) });
+        const categories = Array.from(document.querySelectorAll('.bb-checkbox:checked')).map(cb => cb.value);
+        const selectedGames = Array.from(document.querySelectorAll('.bb-game-checkbox:checked')).map(cb => cb.value);
+        
+        // Если открыты расширенные настройки и выбраны игры - приоритет им
+        const isDeepActive = !document.getElementById('bb-deep-settings').classList.contains('d-none');
+        
+        if (isDeepActive && selectedGames.length === 0) {
+            return showAlert("Внимание", "Выберите хотя бы одну игру из списка!", 'warning');
+        }
+        if (!isDeepActive && categories.length === 0) {
+            return showAlert("Внимание", "Выберите категорию!", 'warning');
+        }
+
+        sendGameAction('setup_game', { 
+            rounds: rounds, 
+            categories: JSON.stringify(categories),
+            selected_games: JSON.stringify(isDeepActive ? selectedGames : [])
+        });
     };
 
     window.bbResetTimer = function () {
@@ -429,6 +527,12 @@
         const btn = event.target;
         if (btn) btn.disabled = true;
         sendGameAction('next_round');
+    };
+
+    window.confirmForceExit = function() {
+        if(confirm("Принудительно завершить игру и выйти в настройки?")) {
+            sendGameAction('force_reset');
+        }
     };
 
     window.finishGameSession = async function () {
