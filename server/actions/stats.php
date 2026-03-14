@@ -32,8 +32,10 @@ function action_game_finished($pdo, $user, $data)
         // Use Helper
         recordGameStats($pdo, $room, $playersData, (int) ($data['duration'] ?? 0));
 
-        // 4. Update Room State (Back to Lobby)
-        $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")->execute([$room['id']]);
+        // recordGameStats already handles the duration and history.
+        // We REMOVE the automatic lobby jump here to allow users to see the results screen.
+        // The transition back to the lobby should be explicitly triggered by the user via 'back_to_lobby'.
+        // $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")->execute([$room['id']]);
 
         $pdo->commit();
         echo json_encode(['status' => 'ok']);

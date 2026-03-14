@@ -111,8 +111,17 @@ function handleGameAction($pdo, $room, $user, $data)
         if ($cellValue === -1) {
             $state['revealed'][$idx] = $user['id'];
             $state['scores'][$user['id']] = max(0, ($state['scores'][$user['id']] ?? 0) - 50);
-            $state['stunned'][$user['id']] = 1; // Stun for 1 turn
-            advanceTurn($state);
+            
+            // SOLO MODE: Instant Game Over
+            if (count($state['turnOrder']) === 1) {
+                $state['status'] = 'finished';
+                $state['history'][] = ['type' => 'mine_hit_solo', 'user_id' => $user['id'], 'index' => $idx];
+                finalizeMinesweeper($pdo, $room['id'], $state);
+            } else {
+                $state['stunned'][$user['id']] = 1; // Stun for 1 turn in multiplayer
+                $state['history'][] = ['type' => 'reveal', 'user_id' => $user['id'], 'index' => $idx, 'is_mine' => true];
+                advanceTurn($state);
+            }
         } else {
             $before = $state['safeCellsRemaining'];
             revealRecursively($state, $idx, $user['id']);
@@ -120,6 +129,7 @@ function handleGameAction($pdo, $room, $user, $data)
             if ($opened > 0) {
                 $state['scores'][$user['id']] = ($state['scores'][$user['id']] ?? 0) + ($opened * 10);
             }
+            $state['history'][] = ['type' => 'reveal', 'user_id' => $user['id'], 'index' => $idx, 'is_mine' => false];
             advanceTurn($state);
         }
 
@@ -174,8 +184,16 @@ function handleGameAction($pdo, $room, $user, $data)
                     if ($state['grid'][$n] === -1) {
                         $state['revealed'][$n] = $user['id'];
                         $state['scores'][$user['id']] = max(0, ($state['scores'][$user['id']] ?? 0) - 50);
-                        $state['stunned'][$user['id']] = 1;
-                        $hitMine = true;
+                        
+                        // SOLO MODE: Instant Game Over on chord hit
+                        if (count($state['turnOrder']) === 1) {
+                            $state['status'] = 'finished';
+                            $hitMine = true;
+                            break; 
+                        } else {
+                            $state['stunned'][$user['id']] = 1;
+                            $hitMine = true;
+                        }
                     } else {
                         revealRecursively($state, $n, $user['id']);
                     }
@@ -186,7 +204,11 @@ function handleGameAction($pdo, $room, $user, $data)
             if ($opened > 0 && !$hitMine)
                 $state['scores'][$user['id']] = ($state['scores'][$user['id']] ?? 0) + ($opened * 10);
 
-            advanceTurn($state);
+            if ($state['status'] === 'finished') {
+                finalizeMinesweeper($pdo, $room['id'], $state);
+            } else {
+                advanceTurn($state);
+            }
         }
 
         checkVictory($pdo, $room['id'], $state);
@@ -203,7 +225,8 @@ function generateSafeBoard($size, $mineCount, $firstClickIdx)
     $totalCells = $rows * $cols;
 
     // Simple logic: keep trying until board is solvable and first click is 0.
-    for ($attempt = 0; $attempt < 50; $attempt++) {
+    // Higher attempt limit. For small boards, 2000 attempts is near-instant.
+    for ($attempt = 0; $attempt < 2000; $attempt++) {
         $grid = array_fill(0, $totalCells, 0);
         $minesPlaced = 0;
 
@@ -231,13 +254,14 @@ function generateSafeBoard($size, $mineCount, $firstClickIdx)
             $grid[$i] = $count;
         }
 
-        // NO-GUESS SOLVER CHECK
         if (isSolvable($grid, $size, $firstClickIdx)) {
             return $grid;
         }
     }
 
-    return $grid; // Fallback
+    // We never reduce mines anymore to keep difficulty honest.
+    // 2000 attempts is practically guaranteed to find a solution for 9x9.
+    return $grid;
 }
 
 function isSolvable($grid, $size, $startIdx)
@@ -290,6 +314,48 @@ function isSolvable($grid, $size, $startIdx)
                     if (!isset($flags[$u]) && !isset($revealed[$u])) {
                         $safeToOpen[] = $u;
                         $progress = true;
+                    }
+                }
+            }
+
+            // ADVANCED: Subset/Double-constraint logic
+            if (!$progress) {
+                foreach (array_keys($revealed) as $idx2) {
+                    if ($idx === $idx2) continue;
+                    $val2 = $grid[$idx2];
+                    if ($val2 <= 0) continue;
+
+                    $neighbors2 = getNeighbors($idx2, $rows, $cols);
+                    $unrev2 = array_filter($neighbors2, function ($n) use (&$revealed) {
+                        return !isset($revealed[$n]);
+                    });
+                    $f2 = array_filter($neighbors2, function ($n) use (&$flags) {
+                        return isset($flags[$n]);
+                    });
+
+                    $rem1 = $val - count($f);
+                    $rem2 = $val2 - count($f2);
+
+                    // If unrev2 is a subset of unrev
+                    if (count($unrev2) > 0 && count(array_diff($unrev2, $unrev)) === 0) {
+                        $diff = array_diff($unrev, $unrev2);
+                        $remDiff = $rem1 - $rem2;
+
+                        if ($remDiff === 0 && count($diff) > 0) {
+                            foreach ($diff as $d) {
+                                if (!isset($revealed[$d]) && !isset($flags[$d])) {
+                                    $safeToOpen[] = $d;
+                                    $progress = true;
+                                }
+                            }
+                        } elseif ($remDiff === count($diff) && count($diff) > 0) {
+                            foreach ($diff as $d) {
+                                if (!isset($flags[$d])) {
+                                    $flags[$d] = true;
+                                    $progress = true;
+                                }
+                            }
+                        }
                     }
                 }
             }

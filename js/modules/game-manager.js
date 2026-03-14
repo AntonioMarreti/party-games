@@ -636,7 +636,7 @@ function renderAllGames(category = 'all') {
 
     let filteredGames = window.AVAILABLE_GAMES;
     if (category !== 'all') {
-        filteredGames = filteredGames.filter(g => g.categoryCode === category);
+        filteredGames = filteredGames.filter(g => g.category === category);
     }
 
     filteredGames.forEach(game => {

@@ -1023,9 +1023,14 @@ function renderHistoryList(history, container) {
     const gameNames = {
         'bunker': 'Бункер',
         'blokus': 'Блокус',
-        'brainbattle': 'Brain Battle',
+        'brainbattle': 'Мозговая Битва',
         'alias': 'Алиас',
-        'tictactoe': 'Крестики-Нолики'
+        'tictactoe': 'Крестики-Нолики',
+        'partybattle': 'Party Battle',
+        'tictactoe_ultimate': 'Крестики-нолики Ultimate',
+        'wordclash': 'Битва Слов',
+        'spyfall': 'Шпион',
+        'minesweeper_br': 'Сапёр Battle Royale'
     };
 
     const gameIcons = {
@@ -1033,10 +1038,17 @@ function renderHistoryList(history, container) {
         'blokus': 'bi-grid-3x3-gap-fill text-primary',
         'brainbattle': 'bi-lightning-charge-fill text-warning',
         'alias': 'bi-chat-dots-fill text-success',
-        'tictactoe': 'bi-x-lg text-info'
+        'tictactoe': 'bi-x-lg text-info',
+        'partybattle': 'bi-controller text-primary',
+        'tictactoe_ultimate': 'bi-grid-3x3-gap-fill text-primary',
+        'wordclash': 'bi-fonts text-success',
+        'spyfall': 'bi-incognito text-danger',
+        'minesweeper_br': 'bi-patch-exclamation-fill text-secondary'
     };
 
-    history.forEach(item => {
+    const filteredHistory = history.filter(item => item.game_type !== 'lobby');
+
+    filteredHistory.forEach(item => {
         const div = document.createElement('div');
         div.className = 'history-card p-3 rounded-4 bg-white shadow-sm d-flex align-items-center mb-2 clickable';
         div.style.cursor = 'pointer';
@@ -1077,7 +1089,7 @@ function renderHistoryList(history, container) {
     });
 }
 
-function showGameDetailsModal(item, gameNames, gameIcons) {
+function showGameDetailsModal(item) {
     const score = item.final_score || 0;
     const pos = item.final_position || '-';
 
@@ -1088,6 +1100,32 @@ function showGameDetailsModal(item, gameNames, gameIcons) {
 
     const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
     const xp = 20 + rankBonus + scoreBonus;
+
+    const gameNames = {
+        'bunker': 'Бункер',
+        'blokus': 'Блокус',
+        'brainbattle': 'Мозговая Битва',
+        'alias': 'Алиас',
+        'tictactoe': 'Крестики-Нолики',
+        'partybattle': 'Party Battle',
+        'tictactoe_ultimate': 'Крестики-нолики Ultimate',
+        'wordclash': 'Битва Слов',
+        'spyfall': 'Шпион',
+        'minesweeper_br': 'Сапёр Battle Royale'
+    };
+
+    const gameIcons = {
+        'bunker': 'bi-shield-shaded text-danger',
+        'blokus': 'bi-grid-3x3-gap-fill text-primary',
+        'brainbattle': 'bi-lightning-charge-fill text-warning',
+        'alias': 'bi-chat-dots-fill text-success',
+        'tictactoe': 'bi-x-lg text-info',
+        'partybattle': 'bi-controller text-primary',
+        'tictactoe_ultimate': 'bi-grid-3x3-gap-fill text-primary',
+        'wordclash': 'bi-fonts text-success',
+        'spyfall': 'bi-incognito text-danger',
+        'minesweeper_br': 'bi-patch-exclamation-fill text-secondary'
+    };
 
     const gname = gameNames[item.game_type] || item.game_type;
     const gicon = gameIcons[item.game_type] || 'bi-controller text-primary';

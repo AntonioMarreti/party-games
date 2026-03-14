@@ -6,7 +6,7 @@
     overflow-x: auto;
     display: flex;
     justify-content: center;
-    padding: 4px 0;
+    padding: 60px 0 10px 0; /* More top padding for tooltips */
 }
 
 .ms-grid {
@@ -72,22 +72,32 @@
 }
 
 @keyframes ms-mine-explode {
-    0% {
-        transform: scale(1);
-    }
+    0% { transform: scale(1); }
+    25% { transform: scale(1.15); background: #ff4757; }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
 
-    25% {
-        transform: scale(1.25);
-        background: rgba(255, 100, 50, 0.4);
-    }
+/* ─── FEEDBACK EFFECTS ─── */
+.ms-hit-flash {
+    animation: ms-flash-red 0.4s ease-out;
+}
 
-    50% {
-        transform: scale(0.9);
-    }
+@keyframes ms-flash-red {
+    0% { background: transparent; }
+    20% { background: rgba(231, 76, 60, 0.4); }
+    100% { background: transparent; }
+}
 
-    100% {
-        transform: scale(1);
-    }
+.ms-shake {
+    animation: ms-shake-anim 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes ms-shake-anim {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 
 /* ─── Flagged Cell ─── */
@@ -158,6 +168,17 @@
     backdrop-filter: blur(8px);
     border-radius: 12px;
     border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.ms-stats.is-solo {
+    justify-content: space-around;
+    padding: 12px 20px;
+}
+
+.ms-stat-item.timer-item .ms-stat-value {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 20px;
 }
 
 .ms-stat-item {
@@ -370,3 +391,166 @@
 [data-theme="dark"] .ms-cell.val-6 {
     color: #66cccc;
 }
+
+.ms-board-container {
+    width: 100%;
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+    padding: 8px 0; /* Reset padding */
+}
+
+/* ─── TUTORIAL 3.0: Integrated Header Bar ─── */
+
+.ms-tutorial-bar {
+    background: var(--primary-color);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 16px;
+    margin: 8px 12px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(232, 168, 56, 0.2);
+    animation: ms-bar-slide 0.4s ease-out;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+@keyframes ms-bar-slide {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.ms-tutorial-bar-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.ms-tutorial-bar-content {
+    flex-grow: 1;
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.ms-tutorial-bar-action {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ms-tutorial-bar-action:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.ms-cell.radar-1 {
+    background: rgba(46, 204, 113, 0.15) !important;
+    box-shadow: inset 0 0 0 2px rgba(46, 204, 113, 0.4);
+}
+.ms-cell.radar-2 {
+    background: rgba(52, 152, 219, 0.15) !important;
+    box-shadow: inset 0 0 0 2px rgba(52, 152, 219, 0.4);
+}
+
+.ms-mode-btn.highlight-switch {
+    box-shadow: 0 0 0 4px var(--primary-color), 0 0 20px var(--primary-color);
+    animation: ms-btn-pulse 1.5s infinite;
+    z-index: 20;
+}
+
+@keyframes ms-btn-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 168, 56, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(232, 168, 56, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 168, 56, 0); }
+}
+
+.ms-tutorial-bar {
+    z-index: 1000;
+}
+
+.ms-cell.tutorial-target-pulse {
+    z-index: 100 !important;
+    box-shadow: 0 0 0 4px #fff, 0 0 20px #e8a838 !important;
+    animation: ms-target-pulse 1s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@keyframes ms-target-pulse {
+    0% { transform: scale(1); filter: brightness(1); }
+    100% { transform: scale(1.15); filter: brightness(1.3); }
+}
+
+@keyframes ms-cell-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 2px #e8a838, 0 0 10px rgba(232, 168, 56, 0.5); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 6px #e8a838, 0 0 25px rgba(232, 168, 56, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 0 2px #e8a838, 0 0 10px rgba(232, 168, 56, 0.5); }
+}
+
+[data-theme="dark"] .ms-tutorial-tooltip {
+    background: #3a3a3c;
+    border-top-color: #3a3a3c;
+}
+
+/* ─── Results Overlay ─── */
+.ms-results-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 30px);
+    max-width: 400px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+}
+
+[data-theme="dark"] .ms-results-overlay {
+    background: rgba(30,30,30, 0.82);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.ms-results-overlay.minimized {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.9);
+}
+
+.ms-show-board-btn {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--primary-color, #6c757d);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    box-shadow: 0 8px 16px rgba(108, 117, 125, 0.3);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ms-show-board-btn:active {
+    transform: translateX(-50%) scale(0.92);
+}
+
+.ms-win-text { color: var(--primary-color) !important; }
+.ms-loss-text { color: #e74c3c !important; }
