@@ -1,0 +1,639 @@
+/* Premium Backgammon Redesign CSS */
+
+:root {
+    --bg-wood-dark: #3a2211;
+    --bg-wood-light: #FFDDA1;
+    --bg-wood-gradient: linear-gradient(135deg, #FFDDA1 0%, #E6B97E 100%);
+    --bg-board-border: #4a2c16;
+}
+
+.bg-wrapper {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 20px);
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    overflow: hidden;
+}
+
+/* Player Info Sections */
+.bg-player-section {
+    padding: 10px 20px 20px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background: transparent;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.bg-player-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(20, 25, 40, 0.85);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bg-player-card:active {
+    transform: scale(0.96);
+    background: rgba(30, 35, 55, 0.95);
+}
+
+.bg-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--pgb-accent, #6C5CE7);
+    object-fit: cover;
+}
+
+.bg-player-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.bg-player-score {
+    font-size: 12px;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Header with Island */
+.bg-nav-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px 15px 5px 15px;
+    margin-top: 45px; /* Lower the island further to clear dynamic island/notch */
+    position: relative;
+    z-index: 100;
+}
+
+/* Board Area */
+.bg-board-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+:root {
+    --bg-wood-light: #d4b48c;
+    --bg-wood-dark: #3a2211;
+    --bg-board-border: #4a2c16;
+    --bg-wood-gradient: linear-gradient(135deg, rgba(235, 203, 161, 0.4) 0%, rgba(181, 131, 75, 0.2) 100%);
+    --bg-color-dark: linear-gradient(to bottom, #4a2c16 0%, #301b0d 100%);
+    --bg-color-light: linear-gradient(to bottom, #d4b48c 0%, #c4a47c 100%);
+    
+    /* Pure CSS Wood Grain */
+    --bg-wood-pattern: 
+        repeating-linear-gradient(
+            90deg,
+            rgba(0,0,0,0.03) 0px,
+            rgba(0,0,0,0.03) 1px,
+            transparent 1px,
+            transparent 4px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            rgba(0,0,0,0.02) 0px,
+            rgba(0,0,0,0.02) 1px,
+            transparent 1px,
+            transparent 2px
+        );
+}
+
+.bg-board {
+    width: 100%;
+    max-width: 500px;
+    height: 100%;
+    max-height: 75vh;
+    aspect-ratio: 1 / 1.25;
+    border-radius: 12px;
+    border: 14px solid var(--bg-board-border);
+    box-shadow: 
+        0 30px 80px rgba(0,0,0,0.8), 
+        inset 0 0 60px rgba(0,0,0,0.6),
+        inset 0 2px 4px rgba(255,255,255,0.1);
+    background-color: var(--bg-wood-light);
+    background-image: var(--bg-wood-pattern), var(--bg-wood-gradient);
+    display: flex;
+    position: relative;
+    padding: 1px 1px;
+}
+
+.bg-board-bar {
+    width: 32px;
+    background: #3a2211;
+    background-image: var(--bg-wood-pattern);
+    box-shadow: 
+        inset 6px 0 15px rgba(0,0,0,0.7), 
+        inset -6px 0 15px rgba(0,0,0,0.7),
+        0 0 40px rgba(0,0,0,0.4);
+    border-left: 2px solid rgba(0,0,0,0.6);
+    border-right: 2px solid rgba(0,0,0,0.6);
+    z-index: 20;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* Center line on the bar */
+.bg-board-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.05);
+}
+
+.bg-board-half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+}
+
+.bg-row {
+    flex: 1;
+    display: flex;
+    justify-content: space-evenly;
+    position: relative;
+    overflow: visible;
+}
+
+/* Scalloped arches: one per point, using repeating radial gradient overlay */
+.top-row::before,
+.bottom-row::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 36px;
+    pointer-events: none;
+    z-index: 10;
+    background-size: 16.666% 100%;
+    background-repeat: repeat-x;
+}
+
+.top-row::before {
+    top: -2px;
+    /* arch opens downward: circle center at bottom, cuts a hole from the board-color strip */
+    background-image: radial-gradient(
+        circle at 50% 100%,
+        transparent 62%,
+        var(--bg-board-border, #4a2c16) 64%
+    );
+}
+
+.bottom-row::after {
+    bottom: -2px;
+    /* arch opens upward: circle center at top */
+    background-image: radial-gradient(
+        circle at 50% 0%,
+        transparent 62%,
+        var(--bg-board-border, #4a2c16) 64%
+    );
+}
+
+.bg-point-wrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    cursor: pointer;
+    height: 100%;
+}
+
+.bg-point {
+    position: absolute;
+    width: 90%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.8;
+}
+
+.bg-point-top {
+    clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+    background-image: var(--bg-wood-pattern);
+}
+
+.bg-point-bottom {
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background-image: var(--bg-wood-pattern);
+}
+
+.bg-color-dark {
+    background-color: #5d3a1a;
+    background-image: var(--bg-color-dark), var(--bg-wood-pattern);
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.bg-color-light {
+    background-color: #e8d5b5;
+    background-image: var(--bg-color-light), var(--bg-wood-pattern);
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Dice on Board */
+.bg-dice-surface {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 15px;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.bg-dice-surface.visible {
+    opacity: 1;
+}
+
+.bg-die {
+    width: 42px;
+    height: 42px;
+    background: white;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 5px;
+    gap: 2px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset -3px -3px 5px rgba(0,0,0,0.2);
+    border: 1px solid #eee;
+    transition: transform 0.07s;
+}
+
+.bg-dice-surface.rolling .bg-die {
+    animation: diceShake 0.08s infinite alternate;
+    transform-origin: center;
+}
+
+@keyframes diceShake {
+    0%   { transform: rotate(-15deg) scale(1.08); }
+    100% { transform: rotate(15deg) scale(0.95); }
+}
+
+.die-dot {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.die-dot.active::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    background: #222;
+    border-radius: 50%;
+    box-shadow: inset 1px 1px 1px rgba(0,0,0,0.3);
+}
+
+.bg-dice-surface.rolling .bg-die {
+    animation: dieRoll 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
+}
+
+@keyframes dieRoll {
+    0% { transform: scale(1) rotate(0deg) translate(0, 0); }
+    25% { transform: scale(1.1) rotate(90deg) translate(-5px, 5px); }
+    50% { transform: scale(0.9) rotate(180deg) translate(5px, -5px); }
+    75% { transform: scale(1.05) rotate(270deg) translate(-3px, -3px); }
+    100% { transform: scale(1) rotate(360deg) translate(0, 0); }
+}
+
+/* Checkers */
+.checkers-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.bg-checker {
+    width: 88%;
+    aspect-ratio: 1/1;
+    max-width: 32px;
+    border-radius: 50%;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.bg-dice-surface.starting {
+    pointer-events: none;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 60%;
+    height: 100px;
+    z-index: 40;
+    opacity: 1;
+}
+
+.bg-die-setup {
+    width: 44px;
+    height: 44px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 5px;
+    gap: 2px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+.bg-die-label {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
+.bg-die-setup.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.bg-die-setup.black {
+    background: #222;
+    border: 1px solid #444;
+}
+
+.bg-die-setup.black .die-dot.active::after {
+    background: #fff;
+}
+
+.bg-checker-white {
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e0e0e0 60%, #a0a0a0 100%);
+    border: 1px solid #777;
+}
+
+.bg-checker-black {
+    background: radial-gradient(circle at 35% 35%, #4a4a4a 0%, #1a1a1a 70%, #000000 100%);
+    border: 1px solid #000;
+}
+
+.bg-checker-inner {
+    width: 65%;
+    height: 65%;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.05);
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+}
+
+.bg-checker-count {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 0 3px rgba(0,0,0,1);
+    background: rgba(0,0,0,0.4);
+    padding: 1px 4px;
+    border-radius: 10px;
+    pointer-events: none;
+    z-index: 10;
+}
+.bg-checker-white .bg-checker-count { color: #333; text-shadow: none; background: rgba(255,255,255,0.4); }
+
+
+/* Action Controls */
+.bg-controls {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+.bg-btn {
+    border: none;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-btn-primary {
+    background: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+}
+
+.bg-btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.5);
+    transform: translateY(-2px);
+}
+
+.bg-btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #eee;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.bg-btn:active {
+    transform: scale(0.95);
+}
+
+.bg-roll-btn {
+    background: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%);
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    box-shadow: 0 3px 10px rgba(108, 92, 231, 0.3);
+}
+
+/* Status Overlays etc */
+.bg-legal-target {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(46, 204, 113, 0.15);
+    border: 2px dashed rgba(46, 204, 113, 0.5);
+    z-index: 5;
+    animation: pulseMove 1.5s infinite;
+}
+
+@keyframes pulseMove {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+    100% { opacity: 0.3; }
+}
+
+.bg-selected-point .bg-checker:last-child {
+    transform: translateX(-50%) translateY(-10px) scale(1.1);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+    z-index: 100 !important;
+}
+
+.bg-selected-point-top .bg-checker:last-child {
+    transform: translateX(-50%) translateY(10px) scale(1.1);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+    z-index: 100 !important;
+}
+
+/* Menu Overlay */
+.bg-menu-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.bg-menu-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.bg-menu-content {
+    background: rgba(25, 30, 45, 0.95);
+    width: 280px;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transform: translateY(20px);
+    transition: transform 0.3s;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.bg-menu-overlay.active .bg-menu-content {
+    transform: translateY(0);
+}
+
+.bg-menu-header {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #fff;
+}
+
+.bg-menu-item {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.bg-menu-item:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.bg-menu-item.text-danger { color: #ff4757; }
+
+/* Turn Indicators */
+.bg-turn-active {
+    border-color: var(--pgb-accent, #6C5CE7) !important;
+    box-shadow: 0 0 15px rgba(108, 92, 231, 0.4) !important;
+    background: rgba(35, 40, 60, 0.95) !important;
+}
+
+.bg-avatar-wrap {
+    position: relative;
+    display: flex;
+}
+
+.bg-turn-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background: #2ecc71;
+    border: 2px solid #191e2d;
+    border-radius: 50%;
+    z-index: 5;
+    animation: turnPulse 1.5s infinite;
+}
+
+@keyframes turnPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+
+.bg-player-card.no-click {
+    cursor: default;
+}
+
+.bg-player-card.no-click:active {
+    transform: none;
+}
+
+/* bg-point-scallop legacy - now handled by ::before/::after */
+.bg-point-scallop { display: none; }

@@ -111,9 +111,6 @@ function handleGameAction($pdo, $room, $user, $postData)
             // Формула очков: база 1000 - время / фактор
             $score = max(100, 1000 - floor($time / $penaltyFactor));
 
-            if (empty($state['round_results'])) {
-                $score += 50; // Бонус первому (в играх на скорость)
-            }
         }
 
         $state['round_results'][$userId] = [

@@ -15,16 +15,27 @@ class StorageManager {
      */
     get(key) {
         return new Promise((resolve) => {
-            // First try CloudStorage if available
             if (this.useCloud) {
-                this.tg.CloudStorage.getItem(key, (err, value) => {
-                    if (!err && value) {
-                        resolve(value);
-                    } else {
-                        // Fallback to localStorage if Cloud fails or is empty (migration strategy)
-                        resolve(localStorage.getItem(key));
-                    }
-                });
+                // 3s Failsafe Timeout
+                const timeout = setTimeout(() => {
+                    console.warn(`[Storage] Cloud get(${key}) timeout, using localStorage`);
+                    resolve(localStorage.getItem(key));
+                }, 3000);
+
+                try {
+                    this.tg.CloudStorage.getItem(key, (err, value) => {
+                        clearTimeout(timeout);
+                        if (!err && value) {
+                            resolve(value);
+                        } else {
+                            // Fallback to localStorage if Cloud fails or is empty (migration strategy)
+                            resolve(localStorage.getItem(key));
+                        }
+                    });
+                } catch (e) {
+                    clearTimeout(timeout);
+                    resolve(localStorage.getItem(key));
+                }
             } else {
                 resolve(localStorage.getItem(key));
             }
@@ -43,9 +54,21 @@ class StorageManager {
             localStorage.setItem(key, value);
 
             if (this.useCloud) {
-                this.tg.CloudStorage.setItem(key, value, (err, stored) => {
-                    resolve(!err && stored);
-                });
+                // 3s Failsafe Timeout
+                const timeout = setTimeout(() => {
+                    console.warn(`[Storage] Cloud set(${key}) timeout`);
+                    resolve(true); // Still resolve so app doesn't hang
+                }, 3000);
+
+                try {
+                    this.tg.CloudStorage.setItem(key, value, (err, stored) => {
+                        clearTimeout(timeout);
+                        resolve(!err && stored);
+                    });
+                } catch (e) {
+                    clearTimeout(timeout);
+                    resolve(true);
+                }
             } else {
                 resolve(true);
             }
@@ -62,9 +85,21 @@ class StorageManager {
             localStorage.removeItem(key);
 
             if (this.useCloud) {
-                this.tg.CloudStorage.removeItem(key, (err, deleted) => {
-                    resolve(!err && deleted);
-                });
+                // 3s Failsafe Timeout
+                const timeout = setTimeout(() => {
+                    console.warn(`[Storage] Cloud remove(${key}) timeout`);
+                    resolve(true);
+                }, 3000);
+
+                try {
+                    this.tg.CloudStorage.removeItem(key, (err, deleted) => {
+                        clearTimeout(timeout);
+                        resolve(!err && deleted);
+                    });
+                } catch (e) {
+                    clearTimeout(timeout);
+                    resolve(true);
+                }
             } else {
                 resolve(true);
             }

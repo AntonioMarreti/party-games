@@ -594,7 +594,33 @@ window.AVAILABLE_GAMES = [
             'js/games/minesweeper/index.js'
         ],
         renderFunction: 'render_minesweeper_br'
+    },
+    {
+        id: 'backgammon_game',
+        category: 'logic',
+        name: 'Длинные Нарды',
+        icon: 'bi-dice-5',
+        color: '#8b5a2b',
+        bgColor: '#fdf2e9',
+        description: 'Классические Длинные Нарды.',
+        longDescription: `
+            <p><strong>Длинные нарды</strong> — классическая настольная игра для двух игроков на логику и стратегию.</p>
+        `,
+        stats: { players: '2', time: '10-20 мин', difficulty: 'Средняя' },
+        rules: [
+            { icon: 'bi-dice-5', text: '15 фишек, бросок кубиков определяет ход' },
+            { icon: 'bi-arrow-clockwise', text: 'Движение строго против часовой стрелки' },
+            { icon: 'bi-slash-circle', text: 'Запрещено выбивать чужие фишки' }
+        ],
+        gallery: [],
+        css: ['css/games/backgammon.css'],
+        files: [
+            'js/games/backgammon/logic.js',
+            'js/games/backgammon/ui.js',
+            'js/games/backgammon/index.js'
+        ],
+        renderFunction: 'render_backgammon_game'
     }
 ];
 
-// export const GAMES_CONFIG = window.AVAILABLE_GAMES; // Removed for sync loading
+// export const GAMES_CONFIG = window.AVAILABLE_GAMES;

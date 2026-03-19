@@ -156,6 +156,25 @@ if ($action === 'dev_login') {
     exit;
 }
 
+// === CLIENT ERROR LOGGING (Unauthenticated) ===
+if ($action === 'log_client_error') {
+    $errorMsg = $_POST['message'] ?? 'Unknown Client Error';
+    $contextRaw = $_POST['context'] ?? '{}';
+    $context = @json_decode($contextRaw, true) ?: [];
+
+    $logData = [
+        'stack' => $_POST['stack'] ?? 'No stack trace',
+        'diagnostics' => $context
+    ];
+
+    require_once 'lib/TelegramLogger.php';
+    // Use logEvent to show the full Data block in the log channel
+    TelegramLogger::logEvent('api', "Client Error: $errorMsg", $logData);
+
+    echo json_encode(['status' => 'ok']);
+    exit;
+}
+
 // === HELPER FUNCTIONS (Available to Actions) ===
 require_once 'lib/shared_helpers.php';
 // getUserByToken and registerOrLoginUser are now in auth.php

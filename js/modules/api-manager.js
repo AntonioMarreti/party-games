@@ -24,9 +24,18 @@ async function apiRequest(data) {
         }
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
     try {
         const localBefore = Date.now();
-        const response = await fetch(API_URL, { method: 'POST', body: body });
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: body,
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         if (!response.ok) throw new Error(`Server Error: ${response.status}`);
 
         // Time Sync Logic
@@ -47,18 +56,54 @@ async function apiRequest(data) {
 
         return res;
     } catch (e) {
+        clearTimeout(timeoutId);
         console.error("API Error:", e);
-        if (data && data.action !== 'get_state') {
-            const msg = (e.message && e.message.includes("pattern")) ? "Communication Error (Invalid Format)" : e.message;
-            if (window.showAlert) window.showAlert("Ошибка сети/сервера", msg, 'error');
+
+        let errorMsg = e.message;
+        if (e.name === 'AbortError') {
+            errorMsg = "Превышено время ожидания (медленное соединение)";
+            if (window.logClientError) {
+                window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: 5s`);
+            }
         }
-        return { status: 'error', message: e.message };
+
+        if (data && data.action !== 'get_state') {
+            if (window.showAlert) window.showAlert("Ошибка сети/сервера", errorMsg, 'error');
+        }
+        return { status: 'error', message: errorMsg, is_timeout: e.name === 'AbortError' };
+    }
+}
+
+async function logClientError(message, stack = '', context = {}) {
+    const body = new FormData();
+    body.append('action', 'log_client_error');
+    body.append('message', message);
+    body.append('stack', stack || new Error().stack);
+    body.append('context', JSON.stringify({
+        ua: navigator.userAgent,
+        href: window.location.href,
+        platform: window.Telegram?.WebApp?.platform || 'web',
+        online: navigator.onLine,
+        connection: navigator.connection ? { type: navigator.connection.effectiveType, rtt: navigator.connection.rtt } : 'unknown',
+        perf: window.performance ? { 
+            load: window.performance.timing.loadEventEnd - window.performance.timing.navigationStart,
+            dom: window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart
+        } : null,
+        ...context
+    }));
+
+    try {
+        // Use direct fetch without timeout logic to avoid loops/hangs during logging
+        await fetch(API_URL, { method: 'POST', body: body });
+    } catch (e) {
+        console.warn("Remote logging failed:", e);
     }
 }
 
 // Expose globally
 window.APIManager = {
     apiRequest,
+    logClientError,
     getAuthToken: () => authToken,
     setAuthToken: (t) => { authToken = t; localStorage.setItem('pg_token', t); },
     getServerTimeOffset: () => serverTimeOffset,

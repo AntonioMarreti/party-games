@@ -70,6 +70,13 @@ function action_game_action($pdo, $user, $data)
             $pdo->beginTransaction();
             // Assuming handleGameAction is defined in the game file
             $result = handleGameAction($pdo, $room, $user, $data);
+            
+            // Persist the state if the game handler returned it
+            if (isset($result['state'])) {
+                $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
+                    ->execute([json_encode($result['state']), $room['id']]);
+            }
+            
             $pdo->commit();
             echo json_encode($result ?? ['status' => 'ok']);
         } catch (Exception $e) {

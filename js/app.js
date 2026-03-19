@@ -53,6 +53,24 @@ function closeSettingsScreen() {
 
 // === INITIALIZATION ===
 document.addEventListener('DOMContentLoaded', async () => {
+    // Splash Screen Failsafe: if nothing happens for 7s, force transition
+    const splashTimeout = setTimeout(() => {
+        const splash = document.getElementById('screen-splash');
+        if (splash && splash.classList.contains('active-screen')) {
+            console.warn("[App] Splash timeout reached. Forcing login screen.");
+            if (window.logClientError) {
+                const diag = {
+                    tg_init: !!(window.Telegram && window.Telegram.WebApp),
+                    tg_data_len: window.Telegram?.WebApp?.initData?.length || 0,
+                    scripts: Array.from(document.scripts).map(s => s.src || 'inline').filter(s => s.includes('telegram') || s.includes('api-manager') || s.includes('auth-manager'))
+                };
+                window.logClientError("Splash Timeout (7s)", "App failed to load initial state within 7 seconds.", diag);
+            }
+            if (window.showScreen) window.showScreen('login');
+            if (window.showAlert) window.showAlert("Медленное соединение", "Приложение загружается дольше обычного. Попробуйте войти вручную.", "warning");
+        }
+    }, 7000);
+
     const AVAILABLE_GAMES = window.AVAILABLE_GAMES;
     if (AVAILABLE_GAMES && AVAILABLE_GAMES.length > 0) {
         window.selectedGameId = AVAILABLE_GAMES[0].id;
@@ -85,6 +103,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     fetchAppVersion();
 
+    /* Main Application Logic
+     */
+    window.addEventListener('error', (e) => {
+        if (window.logClientError) {
+            window.logClientError("Global JS Error", e.message, { filename: e.filename, lineno: e.lineno, colno: e.colno });
+        }
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+        if (window.logClientError) {
+            window.logClientError("Unhandled Promise Rejection", e.reason?.message || String(e.reason));
+        }
+    });
+
     const hash = window.location.hash;
     if (hash.includes('auth_token=')) {
         const token = hash.split('auth_token=')[1].trim();
@@ -94,6 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.history.replaceState(null, null, window.location.pathname);
     }
 
+    const logoutGroup = document.getElementById('logout-menu-item-group');
     safeStyle('login-loading', 'display', 'none');
 
     let savedColor;
@@ -122,19 +154,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hasTmaInitData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
     console.log('[Auth] token:', currentToken ? 'found' : 'missing', '| TMA initData:', hasTmaInitData ? 'present' : 'empty');
 
+    const loginStd = document.getElementById('login-methods-standard');
+    const loginTma = document.getElementById('login-methods-tma');
+    if (loginStd && loginTma) {
+        if (hasTmaInitData) {
+            loginStd.style.display = 'none';
+            loginTma.style.display = 'block';
+        } else {
+            loginStd.style.display = 'block';
+            loginTma.style.display = 'none';
+        }
+    }
+
     if (currentToken) {
-        if (window.AuthManager) window.AuthManager.initApp(tg);
+        if (window.AuthManager) await window.AuthManager.initApp(tg);
     } else if (hasTmaInitData) {
-        if (window.AuthManager) window.AuthManager.loginTMA(tg);
+        if (window.AuthManager) await window.AuthManager.loginTMA(tg);
     } else {
         showScreen('login');
     }
 
-    const logoutGroup = document.getElementById('logout-menu-item-group');
     if (logoutGroup) {
         const isTMA = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0;
         logoutGroup.style.display = isTMA ? 'none' : 'block';
     }
+
+    // Success - Clear Splash Timeout
+    clearTimeout(splashTimeout);
 });
 
 // === STATE MANAGEMENT ===

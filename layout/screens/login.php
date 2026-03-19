@@ -13,17 +13,28 @@
             <div id="login-loading" class="spinner-border text-light mb-4" role="status" style="display:none;">
             </div>
 
-            <!-- Telegram Login (Primary) -->
-            <button class="btn-premium-tg" onclick="loginViaTelegram()">
-                <i class="bi bi-telegram"></i>
-                <span>Войти через Telegram</span>
-            </button>
+            <!-- Standard Login (Browser) -->
+            <div id="login-methods-standard">
+                <button class="btn-premium-tg" onclick="loginViaTelegram()">
+                    <i class="bi bi-telegram"></i>
+                    <span>Войти через Telegram</span>
+                </button>
 
-            <!-- Fallback: Login via Bot -->
-            <button class="btn-link-subtle mt-2" onclick="loginViaBot()"
-                style="background:none; border:none; color:rgba(255,255,255,0.4); font-size:13px; cursor:pointer; text-decoration:underline;">
-                Не работает? Войти через бота
-            </button>
+                <!-- Fallback: Login via Bot -->
+                <button class="btn-link-subtle mt-2" onclick="loginViaBot()"
+                    style="background:none; border:none; color:rgba(255,255,255,0.4); font-size:13px; cursor:pointer; text-decoration:underline; width:100%;">
+                    Не работает? Войти через бота
+                </button>
+            </div>
+
+            <!-- TMA Login (Hidden by default, shown via JS if initData present) -->
+            <div id="login-methods-tma" style="display:none;">
+                <button class="btn-premium-tg" onclick="window.location.reload()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Попробовать снова</span>
+                </button>
+                <p class="mt-3 text-white-50" style="font-size: 12px;">Похоже, возникла проблема с загрузкой данных Telegram.</p>
+            </div>
 
             <!-- DEV LOGIN (REMOVE IN PRODUCTION) -->
             <div class="mt-4">

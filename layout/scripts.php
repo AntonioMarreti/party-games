@@ -9,7 +9,7 @@ if (!defined('TG_CLIENT_ID')) {
 <script src="libs/qrcode.min.js"></script>
 
 <!-- Telegram Login Library (OIDC) -->
-<script src="https://telegram.org/js/telegram-login.js"></script>
+<script src="https://telegram.org/js/telegram-login.js" defer></script>
 
 <!-- Core Data & Config -->
 <script src="js/audio.js?v=<?php echo $v; ?>"></script>
