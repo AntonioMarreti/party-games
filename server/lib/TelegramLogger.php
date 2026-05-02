@@ -147,7 +147,7 @@ class TelegramLogger
             return false;
         }
 
-        $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/" . $method;
+        $url = "https://tgproxy.regucka1998.workers.dev/bot" . BOT_TOKEN . "/" . $method;
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);

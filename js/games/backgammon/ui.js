@@ -4,13 +4,20 @@ window._bgIsRolling = false;
 window._bgIsApplyingMove = false;
 window._bgIsSyncing = false;
 window._bgMyColor = 'white';
+window._bgRollingFaces = [3, 6];
+window._bgRollingTimer = null;
+window._bgLastMove = null;
 
 window.render_backgammon = function(res) {
     if (!res || !res.room) return;
-    window._bgLastRes = res; 
-    
+    window._bgLastRes = res;
+
     let state = res.room.game_state ? (typeof res.room.game_state === 'string' ? JSON.parse(res.room.game_state) : res.room.game_state) : null;
     const container = document.getElementById('game-area');
+
+    if (!state && window._bgEngine && window._bgEngine.status !== 'starting') {
+        window._bgEngine.reset();
+    }
 
     if (!window._bgEngine) {
         window._bgEngine = new BackgammonEngine();
@@ -20,7 +27,7 @@ window.render_backgammon = function(res) {
     // 2. Failsafe: Host is White, Guest is Black
     const myIdStr = String(res.user?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '0');
     const players = res.room.players || [];
-    
+
     let meIdx = players.findIndex(p => {
         if (!p) return false;
         const pid = String(p.id || p.user_id || p);
@@ -39,18 +46,16 @@ window.render_backgammon = function(res) {
 
     window._bgMyColor = myColor;
     const engine = window._bgEngine;
-    const isMyTurn = engine.turn === myColor;
-    const isStarting = engine.status === 'starting';
-    
+
     // UI Labeling
     const myColorName = myColor === 'white' ? 'Белые' : 'Черные';
     const opponentColorName = myColor === 'white' ? 'Черные' : 'Белые';
-    
+
     const me = players.find(p => {
         const pid = String(p.id || p.user_id || p);
         return pid === myIdStr;
     }) || (res.is_host ? players[0] : players[1]) || { first_name: 'Вы' };
-    
+
     const opponent = players.find(p => {
         const pid = String(p.id || p.user_id || p);
         return pid !== myIdStr;
@@ -62,7 +67,14 @@ window.render_backgammon = function(res) {
         engine.syncState(serverState);
     }
 
-    if (!state || (state.status === 'setup' && !window._bgEngine.status === 'playing')) {
+    const isMyTurn = engine.turn === myColor;
+    const isStarting = engine.status === 'starting';
+
+    if (!isMyTurn && window._bgSelectedPoint !== null) {
+        window._bgSelectedPoint = null;
+    }
+
+    if (!state || (state.status === 'setup' && window._bgEngine.status !== 'playing')) {
         renderBgSetup(container, res.is_host, res.room.players || []);
     } else {
         renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me, opponent);
@@ -70,22 +82,7 @@ window.render_backgammon = function(res) {
 };
 
 window.bgSyncState = async function() {
-    const engine = window._bgEngine;
-    if (!engine) return;
-    
-    // Flag that we are actively sending a sync to prevent incoming polls from overwriting us
-    window._bgIsSyncing = true;
-    try {
-        await window.apiRequest({ 
-            action: 'game_action', 
-            type: 'sync_state', 
-            state: JSON.stringify(engine) 
-        });
-    } catch (e) {
-        console.error("Sync failed", e);
-    } finally {
-        window._bgIsSyncing = false;
-    }
+    return;
 }
 
 function renderBgSetup(container, isHost, players) {
@@ -94,33 +91,45 @@ function renderBgSetup(container, isHost, players) {
             <div class="display-1 mb-3 text-primary"><i class="bi bi-dice-5"></i></div>
             <h2 class="fw-bold mb-1">Длинные Нарды</h2>
             <p class="text-muted small mb-4">Классическая игра для двоих</p>
-            ${isHost ? 
-                `<button class="btn btn-primary btn-lg w-100 mb-3" onclick="bgStartLocal()">Начать игру</button>` :
+            ${isHost ?
+                `<button class="btn btn-primary btn-lg w-100 mb-3" onclick="bgStartLocal(event)">Начать игру</button>` :
                 `<div class="text-muted mb-3">Ожидание хоста...</div>`
             }
         </div>
     `;
 }
 
-window.bgStartLocal = async function() {
-    const btn = event.currentTarget;
-    const oldText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Запуск...';
-    btn.disabled = true;
+window.bgStartLocal = async function(event) {
+    const btn = event?.currentTarget;
+    const oldText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Запуск...';
+        btn.disabled = true;
+    }
 
     try {
         const res = await window.apiRequest({ action: 'game_action', type: 'start_game' });
         if (res && res.status !== 'error') {
-            // Room manager will receive state in the next poll and re-render
+            if (res.state) {
+                window._bgEngine.syncState(res.state);
+                if (window._bgLastRes?.room) {
+                    window._bgLastRes.room.game_state = res.state;
+                    render_backgammon(window._bgLastRes);
+                }
+            }
         } else {
             console.error("Start error", res);
-            btn.innerHTML = oldText;
-            btn.disabled = false;
+            if (btn) {
+                btn.innerHTML = oldText;
+                btn.disabled = false;
+            }
         }
     } catch (e) {
         console.error(e);
-        btn.innerHTML = oldText;
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
     }
 }
 
@@ -138,6 +147,12 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
             <div id="bg-game-menu" class="bg-menu-overlay" onclick="bgToggleMenu()"></div>
             <div class="bg-controls"></div>
         `;
+
+        const savedOrientation = localStorage.getItem('bg_orientation');
+        if (savedOrientation === 'landscape') {
+            wrapper.classList.add('bg-landscape-mode');
+        }
+
         container.innerHTML = '';
         container.appendChild(wrapper);
     }
@@ -163,9 +178,12 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
     }
 
     const hasIRolled = isStarting && engine.startingRolls && engine.startingRolls[myColor];
-    const canRoll = !isStarting && isMyTurn && engine.movesLeft.length === 0;
     const bothRolled = isStarting && engine.startingRolls && engine.startingRolls.white && engine.startingRolls.black;
     const iAmReady = isStarting && engine.readyToStart && engine.readyToStart[myColor];
+    const movablePoints = isMyTurn ? engine.getMovablePoints() : [];
+    const hasMovesAvailable = movablePoints.length > 0;
+    const selectedMoveDetails = window._bgSelectedPoint !== null ? engine.getLegalMoveDetails(window._bgSelectedPoint) : new Map();
+    const selectedMoves = Array.from(selectedMoveDetails.keys());
 
     const myColorName = myColor === 'white' ? 'Белые' : 'Черные';
     const opponentColorName = myColor === 'white' ? 'Черные' : 'Белые';
@@ -218,8 +236,11 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
                     </div>
                 </div>
             ` : `
-                <div class="bg-dice-surface ${window._bgIsRolling ? 'rolling' : ''} ${engine.dice.length > 0 ? 'visible' : ''}">
-                    ${engine.dice.map(d => `<div class="bg-die die-${d}">${getDiceDots(d)}</div>`).join('')}
+                <div class="bg-dice-surface ${window._bgIsRolling ? 'rolling visible' : ''} ${engine.dice.length > 0 ? 'visible' : ''}">
+                    ${window._bgIsRolling ? `
+                        <div class="bg-die die-${window._bgRollingFaces[0]}">${getDiceDots(window._bgRollingFaces[0])}</div>
+                        <div class="bg-die die-${window._bgRollingFaces[1]}">${getDiceDots(window._bgRollingFaces[1])}</div>
+                    ` : engine.dice.map(d => `<div class="bg-die die-${d}">${getDiceDots(d)}</div>`).join('')}
                 </div>
             `}
         </div>
@@ -236,7 +257,6 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
                 <div class="bg-player-name">${me.first_name === 'Вы' ? 'Вы' : me.first_name + ' (Вы)'}</div>
                 <div class="bg-player-score">${myColorName} ${isMyTurn ? '• <b>Ходите</b>' : ''}</div>
             </div>
-            ${canRoll ? `<button class="bg-roll-btn ms-2" onclick="bgRollDice()">Бросить</button>` : ''}
         </div>
     `;
 
@@ -244,24 +264,62 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
     if (!menuOverlay.innerHTML) {
         menuOverlay.innerHTML = `
             <div class="bg-menu-content" onclick="event.stopPropagation()">
-                <div class="bg-menu-header">Меню игры</div>
-                <button class="bg-menu-item" onclick="bgToggleOrientation()">
-                    <i class="bi bi-phone-landscape me-2"></i> Сменить ориентацию
-                </button>
-                    <button class="bg-menu-item text-danger" onclick="window.backToLobby && window.backToLobby()">
-                        <i class="bi bi-box-arrow-left me-2"></i> Выйти в лобби
+                <div class="bg-menu-header"><i class="bi bi-gear-fill me-2 opacity-75"></i>Меню игры</div>
+                <div class="d-flex flex-column gap-3">
+                    <button class="bg-btn bg-btn-secondary w-100" onclick="bgToggleOrientation()">
+                        <i class="bi bi-phone-landscape me-2"></i> Сменить ориентацию
                     </button>
-                <button class="bg-menu-item mt-2 pt-3 border-top" onclick="bgToggleMenu()">
-                    Закрыть
-                </button>
+                    ${res.is_host ? `
+                    <button class="bg-btn bg-btn-secondary w-100" onclick="bgConfirmRestartGame()">
+                        <i class="bi bi-arrow-clockwise me-2"></i> Начать заново
+                    </button>
+                    ` : ''}
+                    ${window.backToLobby ? `
+                    <button class="bg-btn w-100" style="background: rgba(255, 71, 87, 0.15); color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.3);" onclick="window.backToLobby()">
+                        <i class="bi bi-box-arrow-left me-2"></i> Вернуться в лобби
+                    </button>
+                    ` : ''}
+                    <div class="border-top pt-3 mt-1" style="border-color: rgba(255,255,255,0.05) !important;">
+                        <button class="bg-btn bg-btn-primary w-100" onclick="bgToggleMenu()">
+                            Продолжить игру
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     }
 
+    const canBearOffActive = window._bgSelectedPoint !== null && isMyTurn && selectedMoves.includes('off');
+    const turnMessage = getBackgammonStatusText({
+        engine,
+        isMyTurn,
+        isStarting,
+        myColorName,
+        opponentColorName,
+        hasMovesAvailable
+    });
+
     // Update Controls & Result Info
     controls.innerHTML = `
-        ${isStarting ? `
-            ${bothRolled ? `
+        ${engine.status === 'finished' ? `
+            <div class="bg-finish-panel">
+                <div class="bg-finish-title">${engine.winner === myColor ? 'Вы выиграли' : 'Победили ' + (engine.winner === 'white' ? 'белые' : 'черные')}</div>
+                <div class="bg-finish-score">Снято: белые ${engine.whiteOff}/15 · черные ${engine.blackOff}/15</div>
+                <div class="bg-finish-actions">
+                    ${res.is_host ? `<button class="bg-btn bg-btn-primary" onclick="bgConfirmRestartGame()">Начать заново</button>` : ''}
+                    <button class="bg-btn bg-btn-secondary" onclick="bgToggleMenu()">Меню</button>
+                </div>
+            </div>
+        ` : isStarting ? `
+            ${bothRolled && engine.startingRolls.white === engine.startingRolls.black ? `
+                <div class="bg-turn-info text-primary fw-bold mb-2">
+                    <i class="bi bi-arrow-repeat me-1"></i>
+                    Выпала ничья ${engine.startingRolls.white}:${engine.startingRolls.black}
+                </div>
+                <button class="bg-btn bg-btn-primary" onclick="bgRollForStart()" ${window._bgIsRolling ? 'disabled' : ''}>
+                    Бросить заново
+                </button>
+            ` : bothRolled ? `
                 <div class="bg-turn-info text-primary fw-bold mb-2">
                     <i class="bi bi-info-circle me-1"></i>
                     ${engine.startingRolls.white > engine.startingRolls.black ? 'Белые выиграли!' : 'Черные выиграли!'}
@@ -274,19 +332,85 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
                     ${hasIRolled ? 'Ожидание соперника...' : 'Бросить для старта'}
                 </button>
             `}
+        ` : canBearOffActive ? `
+            <button class="bg-btn" style="background: #2ecc71; color: #fff; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);" onclick="bgPointClick('off')">
+                Выбросить шашку
+            </button>
         ` : (isMyTurn && engine.movesLeft.length === 0) ? `
             <button class="bg-btn bg-btn-primary" onclick="bgRollDice()" ${window._bgIsRolling ? 'disabled' : ''}>
                 Бросить кубики
             </button>
+        ` : (isMyTurn && engine.movesLeft.length > 0 && !hasMovesAvailable) ? `
+            <div class="bg-turn-panel bg-no-moves-panel">
+                <div class="bg-turn-info">На этих костях ходов нет</div>
+                <div class="bg-dice-left">${formatDiceLeft(engine.movesLeft)}</div>
+                <button class="bg-btn bg-btn-secondary" onclick="bgPassTurn()">Передать ход</button>
+            </div>
         ` : (isMyTurn && engine.movesLeft.length > 0) ? `
-            <div class="bg-turn-info">Ваш ход. На кубиках: <span class="badge bg-primary px-3">${engine.movesLeft.join(' и ')}</span></div>
+            <div class="bg-turn-panel">
+                <div class="bg-turn-info">${turnMessage}</div>
+                <div class="bg-dice-left">${formatDiceLeft(engine.movesLeft)}</div>
+            </div>
         ` : engine.movesLeft.length > 0 ? `
-            <div class="bg-turn-info">Ход соперника. У него: <span class="badge bg-secondary px-3">${engine.movesLeft.join(' и ')}</span></div>
+            <div class="bg-turn-panel">
+                <div class="bg-turn-info">${turnMessage}</div>
+                <div class="bg-dice-left muted">${formatDiceLeft(engine.movesLeft)}</div>
+            </div>
         ` : `
-            <div class="bg-turn-info">${isMyTurn ? 'Сделайте ход' : 'Ожидайте ход соперника...'}</div>
+            <div class="bg-turn-info">${turnMessage}</div>
         `}
-        <button class="bg-btn bg-btn-secondary" onclick="bgToggleMenu()">Меню</button>
+        ${engine.status === 'finished' ? '' : '<button class="bg-btn bg-btn-secondary" onclick="bgToggleMenu()">Меню</button>'}
     `;
+}
+
+function formatDiceLeft(movesLeft) {
+    if (!movesLeft || movesLeft.length === 0) return '';
+    return `Осталось: ${movesLeft.join(' + ')}`;
+}
+
+function formatDiceUsed(dice) {
+    if (!dice || dice.length === 0) return '';
+    return dice.join('+');
+}
+
+function getBackgammonStatusText({ engine, isMyTurn, isStarting, myColorName, opponentColorName, hasMovesAvailable }) {
+    if (engine.status === 'finished') {
+        return engine.winner === window._bgMyColor ? 'Партия выиграна' : 'Партия завершена';
+    }
+
+    if (isStarting) {
+        if (engine.startingRolls.white && engine.startingRolls.black) {
+            if (engine.startingRolls.white === engine.startingRolls.black) {
+                return 'Одинаковый стартовый бросок, кидаем заново';
+            }
+            return engine.turn === window._bgMyColor
+                ? `Выиграли стартовый бросок, играете за ${myColorName.toLowerCase()}`
+                : `Старт у соперника, вы играете за ${myColorName.toLowerCase()}`;
+        }
+        return 'Определяем, кто ходит первым';
+    }
+
+    if (isMyTurn && engine.movesLeft.length === 0) {
+        return 'Ваш ход, бросьте кубики';
+    }
+
+    if (isMyTurn && engine.movesLeft.length > 0 && !hasMovesAvailable) {
+        return 'Передайте ход сопернику';
+    }
+
+    if (isMyTurn && window._bgSelectedPoint !== null) {
+        return 'Теперь нажмите зеленую точку назначения';
+    }
+
+    if (isMyTurn && engine.movesLeft.length > 0) {
+        return 'Подсвечены шашки, которыми можно ходить';
+    }
+
+    if (!isMyTurn && engine.movesLeft.length > 0) {
+        return `Ход соперника за ${opponentColorName.toLowerCase()}`;
+    }
+
+    return isMyTurn ? 'Ваш ход' : 'Ожидайте ход соперника';
 }
 
 function getDiceDots(value) {
@@ -314,10 +438,7 @@ window.bgPointClick = async function(idx) {
     const engine = window._bgEngine;
     if (!engine || !window._bgLastRes || window._bgIsApplyingMove) return;
 
-    const myId = String(window._bgLastRes.user.id);
-    const players = window._bgLastRes.room.players || window._bgLastRes.players || [];
-    const amIWhite = players[0] && String(players[0].id) === myId;
-    const myColor = amIWhite ? 'white' : 'black';
+    const myColor = window._bgMyColor;
 
     if (engine.turn !== myColor) return;
 
@@ -325,10 +446,26 @@ window.bgPointClick = async function(idx) {
         const moves = engine.getLegalMoves(window._bgSelectedPoint);
         if (moves.includes(idx)) {
             window._bgIsApplyingMove = true;
-            await engine.applyMove(window._bgSelectedPoint, idx);
-            window._bgSelectedPoint = null;
-            window._bgIsApplyingMove = false;
-            render_backgammon(window._bgLastRes);
+            try {
+                const res = await window.apiRequest({
+                    action: 'game_action',
+                    type: 'move_checker',
+                    from: window._bgSelectedPoint,
+                    to: idx
+                });
+                if (res?.status === 'ok' && res.state) {
+                    engine.syncState(res.state);
+                    window._bgLastMove = engine.lastMove;
+                    window._bgSelectedPoint = null;
+                    if (window._bgLastRes?.room) {
+                        window._bgLastRes.room.game_state = res.state;
+                    }
+                    if (window.audioManager) window.audioManager.play('move');
+                    render_backgammon(window._bgLastRes);
+                }
+            } finally {
+                window._bgIsApplyingMove = false;
+            }
             return;
         }
     }
@@ -343,36 +480,130 @@ window.bgPointClick = async function(idx) {
     render_backgammon(window._bgLastRes);
 }
 
+window.bgPassTurn = async function() {
+    const engine = window._bgEngine;
+    if (!engine || engine.turn !== window._bgMyColor) return;
+    if (engine.movesLeft.length === 0 || engine.getMovablePoints().length > 0) return;
+
+    window._bgSelectedPoint = null;
+    const res = await window.apiRequest({ action: 'game_action', type: 'pass_turn' });
+    if (res?.status === 'ok' && res.state) {
+        engine.syncState(res.state);
+        if (window._bgLastRes?.room) {
+            window._bgLastRes.room.game_state = res.state;
+        }
+        if (window._bgLastRes) render_backgammon(window._bgLastRes);
+    }
+}
+
+window.bgConfirmRestartGame = function() {
+    const restart = () => window.bgRestartGame();
+    if (window.showConfirmation) {
+        window.showConfirmation(
+            'Начать заново',
+            'Текущая партия будет сброшена для обоих игроков.',
+            restart,
+            { confirmText: 'Начать заново', isDanger: true }
+        );
+        return;
+    }
+
+    if (window.confirm('Начать партию заново?')) restart();
+}
+
+window.bgRestartGame = async function() {
+    if (!window._bgLastRes?.is_host) return;
+
+    const menu = document.getElementById('bg-game-menu');
+    if (menu) menu.classList.remove('active');
+
+    window._bgSelectedPoint = null;
+    window._bgLastMove = null;
+    window._bgIsRolling = false;
+    stopBackgammonDiceAnimation();
+
+    const res = await window.apiRequest({ action: 'game_action', type: 'restart_game' });
+    if (res?.status === 'ok' && res.state) {
+        if (!window._bgEngine) {
+            window._bgEngine = new BackgammonEngine();
+        }
+        window._bgEngine.syncState(res.state);
+        if (window._bgLastRes?.room) {
+            window._bgLastRes.room.game_state = res.state;
+        }
+        if (window._bgLastRes) render_backgammon(window._bgLastRes);
+    } else if (window.showAlert) {
+        window.showAlert('Ошибка', res?.message || 'Не удалось начать заново', 'error');
+    }
+}
+
 window.bgRollForStart = async function() {
     if (window._bgIsRolling) return;
     window._bgIsRolling = true;
+    startBackgammonDiceAnimation();
     render_backgammon(window._bgLastRes);
-    
+
     setTimeout(async () => {
-        const engine = window._bgEngine;
-        if (engine && engine.status === 'starting') {
-            await engine.rollDice(window._bgMyColor);
+        if (window._bgEngine && window._bgEngine.status === 'starting') {
+            const res = await window.apiRequest({ action: 'game_action', type: 'roll_for_start' });
+            if (res?.status === 'ok' && res.state) {
+                window._bgEngine.syncState(res.state);
+                if (window._bgLastRes?.room) {
+                    window._bgLastRes.room.game_state = res.state;
+                }
+            }
         }
         window._bgIsRolling = false;
+        stopBackgammonDiceAnimation();
         if (window._bgLastRes) render_backgammon(window._bgLastRes);
-    }, 1200);
+    }, 2200);
 }
 
 window.bgRollDice = async function() {
     if (window._bgIsRolling) return;
-    
+
     // Security: only roll if it's my turn
     const engine = window._bgEngine;
     if (engine.turn !== window._bgMyColor) return;
 
     window._bgIsRolling = true;
+    startBackgammonDiceAnimation();
     render_backgammon(window._bgLastRes);
 
     setTimeout(async () => {
-        await engine.rollDice(window._bgMyColor);
+        const res = await window.apiRequest({ action: 'game_action', type: 'roll_dice' });
+        if (res?.status === 'ok' && res.state) {
+            engine.syncState(res.state);
+            if (window._bgLastRes?.room) {
+                window._bgLastRes.room.game_state = res.state;
+            }
+        }
         window._bgIsRolling = false;
+        stopBackgammonDiceAnimation();
         if (window._bgLastRes) render_backgammon(window._bgLastRes);
-    }, 1200);
+    }, 2200);
+}
+
+function startBackgammonDiceAnimation() {
+    stopBackgammonDiceAnimation();
+    window._bgRollingFaces = [
+        1 + Math.floor(Math.random() * 6),
+        1 + Math.floor(Math.random() * 6)
+    ];
+    window._bgRollingTimer = setInterval(() => {
+        window._bgRollingFaces = [
+            1 + Math.floor(Math.random() * 6),
+            1 + Math.floor(Math.random() * 6)
+        ];
+        if (window._bgLastRes) render_backgammon(window._bgLastRes);
+    }, 120);
+}
+
+function stopBackgammonDiceAnimation() {
+    if (window._bgRollingTimer) {
+        clearInterval(window._bgRollingTimer);
+        window._bgRollingTimer = null;
+    }
 }
 
 window.bgToggleMenu = function() {
@@ -381,33 +612,49 @@ window.bgToggleMenu = function() {
 }
 
 window.bgAcknowledgeStart = async function() {
-    const engine = window._bgEngine;
-    if (engine && engine.status === 'starting') {
-        await engine.acknowledgeStart(window._bgMyColor);
+    if (window._bgEngine && window._bgEngine.status === 'starting') {
+        const res = await window.apiRequest({ action: 'game_action', type: 'acknowledge_start' });
+        if (res?.status === 'ok' && res.state) {
+            window._bgEngine.syncState(res.state);
+            if (window._bgLastRes?.room) {
+                window._bgLastRes.room.game_state = res.state;
+            }
+        }
         if (window._bgLastRes) render_backgammon(window._bgLastRes);
     }
 }
 
 window.bgToggleOrientation = function() {
-    window.showAlert("Ориентация", "Смена ориентации будет доступна в следующем обновлении!", "info");
+    const wrapper = document.getElementById('bg-wrapper');
+    if (!wrapper) return;
+
+    wrapper.classList.toggle('bg-landscape-mode');
+    const isLandscape = wrapper.classList.contains('bg-landscape-mode');
+    localStorage.setItem('bg_orientation', isLandscape ? 'landscape' : 'portrait');
+
     window.bgToggleMenu();
 }
 
 function renderPoints(engine, indices, isTop) {
     let arr = [];
-    const legalMoves = window._bgSelectedPoint !== null ? engine.getLegalMoves(window._bgSelectedPoint) : [];
+    const legalMoveDetails = window._bgSelectedPoint !== null ? engine.getLegalMoveDetails(window._bgSelectedPoint) : new Map();
+    const legalMoves = Array.from(legalMoveDetails.keys());
+    const movablePoints = engine.turn === window._bgMyColor ? engine.getMovablePoints() : [];
 
     for (let i of indices) {
         const cell = engine.board[i];
         const isSelected = window._bgSelectedPoint === i;
         const isLegalTarget = legalMoves.includes(i);
+        const isMovableSource = movablePoints.includes(i);
+        const lastMove = engine.lastMove || window._bgLastMove;
+        const isRecentMoveSource = lastMove && lastMove.from === i;
+        const isRecentMoveTarget = lastMove && lastMove.to === i;
 
         let piecesHTML = '';
         if (cell) {
             const total = cell.count;
-            // Adaptive stacking: tight (7.5%) for small counts, compressed if they'd exceed row height
-            const maxStackHeight = 38; // % of board half
-            const idealStep = 7.5; 
+            const maxStackHeight = 44;
+            const idealStep = 8.5;
             const step = total > 1 ? Math.min(idealStep, maxStackHeight / (total - 1)) : 0;
 
             for (let p=0; p<total; p++) {
@@ -416,9 +663,8 @@ function renderPoints(engine, indices, isTop) {
                 const posStyle = isTop ? `top: ${offsetPercent}%;` : `bottom: ${offsetPercent}%;`;
                 const zIndex = p + 10;
 
-                // Only show number if more than 5 checkers (it's obvious for 2-5)
-                const countLabel = (p === total - 1 && total > 5) ? `<span class="bg-checker-count">${total}</span>` : '';
-                
+                const countLabel = (p === total - 1 && total > 4) ? `<span class="bg-checker-count">${total}</span>` : '';
+
                 piecesHTML += `
                     <div class="bg-checker ${colorClass}" style="${posStyle} z-index:${zIndex};">
                         <div class="bg-checker-inner"></div>
@@ -431,10 +677,14 @@ function renderPoints(engine, indices, isTop) {
         const pointColorClass = (i % 2 === 0) ? 'bg-color-dark' : 'bg-color-light';
 
         const selectionClass = isSelected ? (isTop ? 'bg-selected-point-top' : 'bg-selected-point') : '';
-        const legalOverlay = isLegalTarget ? `<div class="bg-legal-target"></div>` : '';
+        const legalOverlay = isLegalTarget ? `
+            <div class="bg-legal-target">
+                <span>${formatDiceUsed(legalMoveDetails.get(i))}</span>
+            </div>
+        ` : '';
 
         arr.push(`
-        <div class="bg-point-wrapper ${selectionClass}" onclick="bgPointClick(${i})" data-id="${i}">
+        <div class="bg-point-wrapper ${selectionClass} ${isMovableSource ? 'bg-movable-point' : ''} ${isRecentMoveSource ? 'bg-last-move-source' : ''} ${isRecentMoveTarget ? 'bg-recent-move' : ''}" onclick="bgPointClick(${i})" data-id="${i}">
             <div class="bg-point-scallop"></div>
             <div class="bg-point ${pointTriangleClass} ${pointColorClass}"></div>
             <div class="checkers-container">${piecesHTML}</div>

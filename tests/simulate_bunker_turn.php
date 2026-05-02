@@ -1,72 +1,194 @@
 <?php
-// tests/simulate_bunker_turn_logic.php
-require_once __DIR__ . '/../server/lib/db.php';
-require_once __DIR__ . '/../server/games/bunker.php';
+// tests/simulate_bunker_turn.php
 
-// Mock Data
-$roomVal = [
-    'id' => 'test_room_' . time(),
-    'is_host' => true,
-    'game_state' => json_encode(getInitialState())
-];
-
-// Mock User 1 (Host)
-$u1 = ['id' => '101', 'first_name' => 'HostUser'];
-// Mock User 2
-$u2 = ['id' => '102', 'first_name' => 'PlayerTwo'];
-
-$postDataInit = ['type' => 'init_bunker', 'mode' => 'normal'];
-
-function printState($label, $state) {
-    echo "\n--- $label ---\n";
-    echo "Phase: " . $state['phase'] . "\n";
-    echo "Round: " . $state['current_round'] . "\n";
-    echo "Active Player Id: " . ($state['current_player_id'] ?? 'NULL') . "\n";
-    echo "Turn Phase: " . ($state['turn_phase'] ?? 'NULL') . "\n";
-    echo "History Len: " . count($state['history']) . "\n";
+if (!defined('BUNKER_PACK')) {
+    define('BUNKER_PACK', __DIR__ . '/../server/games/packs/bunker/base.json');
 }
 
+require_once __DIR__ . '/../server/games/bunker.php';
+
+final class FakePdoStatement
+{
+    private array $rows = [];
+    private int $fetchIndex = 0;
+
+    public function __construct(private FakePdo $pdo, private string $sql)
+    {
+    }
+
+    public function execute(array $params = []): bool
+    {
+        $this->rows = $this->pdo->runQuery($this->sql, $params);
+        $this->fetchIndex = 0;
+        return true;
+    }
+
+    public function fetchAll($mode = null): array
+    {
+        if ($mode === PDO::FETCH_COLUMN) {
+            return array_map(static fn(array $row) => reset($row), $this->rows);
+        }
+        return $this->rows;
+    }
+
+    public function fetchColumn(int $column = 0): mixed
+    {
+        if (empty($this->rows)) {
+            return false;
+        }
+        $row = $this->rows[0];
+        return array_values($row)[$column] ?? false;
+    }
+
+    public function fetch($mode = null): array|false
+    {
+        if (!isset($this->rows[$this->fetchIndex])) {
+            return false;
+        }
+        return $this->rows[$this->fetchIndex++];
+    }
+}
+
+final class FakePdo
+{
+    public function __construct(private array $roomPlayers, private array $users)
+    {
+    }
+
+    public function prepare(string $sql): FakePdoStatement
+    {
+        return new FakePdoStatement($this, $sql);
+    }
+
+    public function runQuery(string $sql, array $params): array
+    {
+        if (str_contains($sql, 'SELECT user_id FROM room_players WHERE room_id = ?')) {
+            $roomId = (string) ($params[0] ?? '');
+            $rows = array_filter($this->roomPlayers, static fn(array $row) => (string) $row['room_id'] === $roomId);
+            return array_map(static fn(array $row) => ['user_id' => $row['user_id']], array_values($rows));
+        }
+
+        if (str_contains($sql, 'SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?')) {
+            [$roomId, $userId] = $params;
+            foreach ($this->roomPlayers as $row) {
+                if ((string) $row['room_id'] === (string) $roomId && (string) $row['user_id'] === (string) $userId) {
+                    return [['is_bot' => $row['is_bot']]];
+                }
+            }
+            return [];
+        }
+
+        if (str_contains($sql, 'SELECT first_name FROM users WHERE id = ?')) {
+            $userId = (string) ($params[0] ?? '');
+            return isset($this->users[$userId]) ? [['first_name' => $this->users[$userId]['first_name']]] : [];
+        }
+
+        return [];
+    }
+}
+
+$GLOBALS['TEST_BUNKER_STATE'] = null;
+
+function updateGameState($roomId, $state)
+{
+    $GLOBALS['TEST_BUNKER_STATE'] = $state;
+}
+
+function assertTrue(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+$roomId = 'room-test';
+$users = [
+    '101' => ['id' => '101', 'first_name' => 'HostUser'],
+    '102' => ['id' => '102', 'first_name' => 'PlayerTwo'],
+];
+$roomPlayers = [
+    ['room_id' => $roomId, 'user_id' => '101', 'is_bot' => 0],
+    ['room_id' => $roomId, 'user_id' => '102', 'is_bot' => 0],
+];
+$pdo = new FakePdo($roomPlayers, $users);
+
+$state = getInitialState();
+$state['turn_queue'] = ['101', '102'];
+$state['current_round'] = 1;
+$state['phase'] = 'round';
+$state['active_player_index'] = 0;
+$state['current_player_id'] = '101';
+$state['turn_phase'] = 'reveal';
+$state['bunker_places'] = 1;
+$state['bunker_features'] = [
+    ['text' => 'Solar panels'],
+    ['text' => 'Water recycler'],
+    ['text' => 'Hydroponics'],
+    ['text' => 'Air filters'],
+    ['text' => 'Workshop'],
+];
+$state['revealed_features'] = [$state['bunker_features'][0]];
+$state['players_cards']['101'] = [
+    'professions' => ['text' => 'Doctor', 'revealed' => false, 'tags' => []],
+    'health' => ['text' => 'Healthy', 'revealed' => false, 'tags' => []],
+    'facts' => ['text' => 'Can fix generators', 'revealed' => false, 'tags' => []],
+    'luggage' => ['text' => 'Medical kit', 'revealed' => false, 'tags' => []],
+];
+$state['players_cards']['102'] = [
+    'professions' => ['text' => 'Soldier', 'revealed' => false, 'tags' => []],
+    'health' => ['text' => 'Sprained ankle', 'revealed' => false, 'tags' => []],
+    'facts' => ['text' => 'Afraid of darkness', 'revealed' => false, 'tags' => []],
+    'luggage' => ['text' => 'Rope', 'revealed' => false, 'tags' => []],
+];
+
+$room = [
+    'id' => $roomId,
+    'is_host' => true,
+    'game_state' => json_encode($state),
+];
+
+echo "=== Bunker turn smoke test ===\n";
+
 try {
-    // 1. Init Game
-    // We need room_players in DB for this to work because init_bunker queries DB.
-    // For this simulation, we will bypass the DB query inside init_bunker by mocking or just manually setting state.
-    // Since we can't easily mock DB here without refactoring code, let's manually construct the state as if init happened.
-    
-    echo "Initializing State...\n";
-    $state = getInitialState();
-    
-    // Manually setup players for test
-    $allIds = ['101', '102'];
-    $state['turn_queue'] = ['101', '102']; // Force order
-    $state['current_round'] = 1;
-    $state['phase'] = 'round';
-    $state['active_player_index'] = 0;
-    $state['current_player_id'] = '101';
-    $state['turn_phase'] = 'reveal';
-    
-    // Give cards
-    $state['players_cards']['101'] = ['professions' => ['text'=>'Doctor', 'revealed'=>true], 'health'=>['text'=>'Healthy', 'revealed'=>false]];
-    $state['players_cards']['102'] = ['professions' => ['text'=>'Soldier', 'revealed'=>true], 'health'=>['text'=>'Sick', 'revealed'=>false]];
-    
-    $roomVal['game_state'] = json_encode($state);
-    printState("Start", $state);
-    
-    // 2. Player 1 tries to reveal 'health'
-    echo "\nAction: P1 reveals health...\n";
-    $postReveal = ['type' => 'reveal_card', 'card_type' => 'health'];
-    // We need to inject $state into handleGameAction logic. 
-    // handleGameAction takes $pdo. We can't easily run handleGameAction without a real PDO connected to a real DB with room_players.
-    // Hmmm. This is a limitation of the current monolithic structure.
-    
-    // SOLUTION: We will just call the LOGIC BLOCKS from handleGameAction directly? No, that's inside the function.
-    // We have to mock PDO? Alternatively, we can assume the code is correct if I just dry-run the logic mentally? No.
-    // Let's modify the test to use a temporary SQLite DB if possible? Or just rely on unit testing functions.
-    
-    // Actually, I can check if my code syntax is valid by running php -l.
-    // And to test logic, I really should interact with the game.
-    
-    echo "Skipping full simulation due to DB dependencies. Checking syntax...\n";
-    
-} catch (Exception $e) {
-    echo "Error: " . $e->getMessage();
+    $host = $users['101'];
+    $guest = $users['102'];
+
+    $result = handleGameAction($pdo, $room, $host, ['type' => 'reveal_card', 'card_type' => 'health']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Host reveal should succeed');
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+    assertTrue($state['players_cards']['101']['health']['revealed'] === true, 'Host health card should be revealed');
+    assertTrue($state['turn_phase'] === 'discussion', 'Turn should switch to discussion after reveal');
+
+    $room['game_state'] = json_encode($state);
+    $result = handleGameAction($pdo, $room, $host, ['type' => 'end_turn']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Host end_turn should succeed');
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+    assertTrue($state['current_player_id'] === '102', 'Turn should pass to second player');
+    assertTrue($state['turn_phase'] === 'reveal', 'Second player should start in reveal phase');
+
+    $room['game_state'] = json_encode($state);
+    $result = handleGameAction($pdo, $room, $guest, ['type' => 'reveal_card', 'card_type' => 'professions']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Second player reveal should succeed');
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+
+    $room['game_state'] = json_encode($state);
+    $result = handleGameAction($pdo, $room, $guest, ['type' => 'end_turn']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Second player end_turn should succeed');
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+    assertTrue($state['phase'] === 'voting', 'Round should enter voting after last player turn');
+
+    $room['game_state'] = json_encode($state);
+    handleGameAction($pdo, $room, $host, ['type' => 'vote_kick', 'target_id' => '102']);
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+    $room['game_state'] = json_encode($state);
+    handleGameAction($pdo, $room, $guest, ['type' => 'vote_kick', 'target_id' => '102']);
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+
+    assertTrue(in_array('102', $state['kicked_players'], true), 'Second player should be kicked after unanimous vote');
+    assertTrue($state['phase'] === 'outro', 'Game should end when survivor count fits bunker capacity');
+
+    echo "PASS\n";
+} catch (Throwable $e) {
+    fwrite(STDERR, "FAIL: " . $e->getMessage() . "\n");
+    exit(1);
 }

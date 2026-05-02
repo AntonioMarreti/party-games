@@ -2,6 +2,70 @@
 
 // === FRIENDSHIP ACTIONS ===
 
+function action_search_users($pdo, $user, $data) {
+    $query = trim((string) ($data['query'] ?? ''));
+    if (mb_strlen($query) < 2) {
+        echo json_encode(['status' => 'ok', 'users' => []]);
+        return;
+    }
+
+    $like = '%' . $query . '%';
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+            FROM users u
+            LEFT JOIN friendships f
+                ON (
+                    (f.user_id = ? AND f.friend_id = u.id)
+                    OR (f.user_id = u.id AND f.friend_id = ?)
+                )
+            WHERE u.id != ?
+              AND (
+                    u.first_name LIKE ?
+                    OR u.custom_name LIKE ?
+                    OR u.username LIKE ?
+                  )
+              AND (f.id IS NULL OR f.status != 'accepted')
+            ORDER BY
+                CASE
+                    WHEN u.custom_name = ? THEN 0
+                    WHEN u.first_name = ? THEN 1
+                    WHEN u.custom_name LIKE ? THEN 2
+                    WHEN u.first_name LIKE ? THEN 3
+                    ELSE 4
+                END,
+                u.id DESC
+            LIMIT 20
+        ");
+        $stmt->execute([
+            $user['id'],
+            $user['id'],
+            $user['id'],
+            $like,
+            $like,
+            $like,
+            $query,
+            $query,
+            $query . '%',
+            $query . '%'
+        ]);
+
+        echo json_encode(['status' => 'ok', 'users' => $stmt->fetchAll()]);
+    } catch (Exception $e) {
+        TelegramLogger::logError('database', [
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+            'stack' => $e->getTraceAsString()
+        ], [
+            'user_id' => $user['id'],
+            'action' => 'search_users',
+            'query' => $query
+        ]);
+        sendError('Database Error');
+    }
+}
+
 function action_add_friend($pdo, $user, $data) {
     $friendId = (int)($data['friend_id'] ?? 0);
     
@@ -376,7 +440,7 @@ function action_invite_friends($pdo, $user, $data) {
                 TelegramLogger::sendAnalytics("Invite Sent", "User {$user['id']} invited friend {$friend['id']} to room $roomId");
 
                 // Use direct curl for custom message with keyboard
-                $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
+                $url = "https://tgproxy.regucka1998.workers.dev/bot" . BOT_TOKEN . "/sendMessage";
                 $postData = [
                     'chat_id' => $friend['telegram_id'],
                     'text' => $message,
@@ -441,4 +505,3 @@ function action_mark_notification_read($pdo, $user, $data) {
         
     echo json_encode(['status' => 'ok']);
 }
-

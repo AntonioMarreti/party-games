@@ -25,7 +25,7 @@ async function apiRequest(data) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
     try {
         const localBefore = Date.now();
@@ -61,13 +61,21 @@ async function apiRequest(data) {
 
         let errorMsg = e.message;
         if (e.name === 'AbortError') {
-            errorMsg = "Превышено время ожидания (медленное соединение)";
+            errorMsg = `Превышено время ожидания сервера (операция: ${data?.action || 'неизвестно'})`;
+            console.error("🔥 TIMEOUT ACTION:", data?.action);
             if (window.logClientError) {
-                window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: 5s`);
+                window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: 10s`);
             }
         }
 
-        if (data && data.action !== 'get_state') {
+        let isSilent = false;
+        if (data && typeof data.action === 'string') {
+            if (data.action.includes('get_state')) isSilent = true;
+            if (data.action === 'game_action') isSilent = true;
+            if (data.action === 'update_session_info') isSilent = true;
+        }
+
+        if (!isSilent) {
             if (window.showAlert) window.showAlert("Ошибка сети/сервера", errorMsg, 'error');
         }
         return { status: 'error', message: errorMsg, is_timeout: e.name === 'AbortError' };

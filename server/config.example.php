@@ -1,6 +1,7 @@
 <?php
 // server/config.example.php
-// Rename this file to config.php and fill in your credentials
+// Rename this file to config.php and fill in your credentials.
+// For production, prefer environment variables or a local untracked override.
 
 // Database Settings
 $db_host = 'localhost';

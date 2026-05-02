@@ -298,7 +298,7 @@ function reply($chatId, $text)
  */
 function sendTelegram($method, $data)
 {
-    $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/$method";
+    $url = "https://tgproxy.regucka1998.workers.dev/bot" . BOT_TOKEN . "/$method";
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);

@@ -376,6 +376,11 @@ const GameManager = {
 
 const EMOJI_OPTIONS = ['😎', '👻', '🤖', '🐱', '💀', '👽', '🦊', '🐯', '🤴', '🥷', '🦁', '🦄', '🐼', '🐵', '🐸'];
 
+function getReactionHideStorageKey() {
+    const roomCode = String(window.currentRoomCode || '').trim();
+    return roomCode ? `hide_reactions_room_${roomCode}` : null;
+}
+
 function renderReactionToolbar() {
     const screen = document.getElementById('screen-game');
     if (!screen) return;
@@ -399,19 +404,22 @@ function renderReactionToolbar() {
         const palette = document.createElement('div');
         palette.className = 'reaction-palette';
 
-        // Add hide button for word clash
-        if (window.selectedGameId === 'wordclash') {
-            const hideBtn = document.createElement('div');
-            hideBtn.className = 'reaction-hide-btn';
-            hideBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
-            hideBtn.title = 'Скрыть для этой игры';
-            hideBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                localStorage.setItem(`hide_reactions_${window.selectedGameId} `, 'true');
-                hideReactionToolbar();
-            });
-            palette.appendChild(hideBtn);
-        }
+        const hideBtn = document.createElement('button');
+        hideBtn.type = 'button';
+        hideBtn.className = 'reaction-hide-btn';
+        hideBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        hideBtn.title = 'Скрыть до новой комнаты';
+        hideBtn.setAttribute('aria-label', 'Скрыть реакции');
+        hideBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const hideKey = getReactionHideStorageKey();
+            if (hideKey) {
+                localStorage.setItem(hideKey, 'true');
+            }
+            hideReactionToolbar();
+        });
+        palette.appendChild(hideBtn);
 
         // Palette: Approval, Fun, Wow, Shock, Thinking, Waiting/Hurry
         const emojis = ['👍', '😂', '🔥', '😱', '🤔', '⏳'];
@@ -524,8 +532,8 @@ function renderReactionToolbar() {
         });
     }
 
-    // Check if user hid reactions for this game
-    if (window.selectedGameId && localStorage.getItem(`hide_reactions_${window.selectedGameId} `) === 'true') {
+    const hideKey = getReactionHideStorageKey();
+    if (hideKey && localStorage.getItem(hideKey) === 'true') {
         container.style.display = 'none';
         return;
     }

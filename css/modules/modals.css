@@ -15,8 +15,18 @@
     height: 100vh;
 }
 
+/* TMA iOS Rubber-band fix: Ensure hidden modals never render in the overflow area */
+.modal:not(.show),
+.custom-modal-overlay:not(.show) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
 
-
+/* Force fixed positioning in case TMA strips it */
+.modal {
+    position: fixed !important;
+}
 .modal-dialog {
     margin: 20px auto !important;
     max-width: calc(100% - 40px);

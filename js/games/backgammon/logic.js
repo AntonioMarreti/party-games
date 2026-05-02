@@ -35,6 +35,39 @@ class BackgammonEngine {
         this.version = 0;
         this.startingRolls = { white: null, black: null };
         this.readyToStart = { white: false, black: false };
+        this.lastMove = null;
+    }
+
+    getMovablePoints() {
+        if (this.status !== 'playing' || this.movesLeft.length === 0) return [];
+        const points = [];
+        for (let i = 0; i < 24; i++) {
+            if (this.getLegalMoves(i).length > 0) points.push(i);
+        }
+        return points;
+    }
+
+    getLegalMoveDetails(fromIndex) {
+        if (this.status !== 'playing' || this.movesLeft.length === 0) return new Map();
+        const cell = this.board[fromIndex];
+        if (!cell || cell.player !== this.turn) return new Map();
+
+        const headIndex = this.turn === 'white' ? 23 : 11;
+        let headLimit = 1;
+        if (this.isFirstTurn[this.turn] &&
+            this.dice.length === 4 &&
+            [3, 4, 6].includes(this.dice[0])) {
+            headLimit = 2;
+        }
+        if (fromIndex === headIndex && this.headMoved >= headLimit) return new Map();
+
+        const found = new Map();
+        this._findMoves(fromIndex, this.movesLeft.slice(), [], found, fromIndex === headIndex);
+        const details = new Map();
+        for (const [target, usedIdx] of found.entries()) {
+            details.set(target, usedIdx.map(idx => this.movesLeft[idx]));
+        }
+        return details;
     }
 
     /* Progress: how far a piece has traveled (0 = at head, 23 = last step before bear-off) */
@@ -69,6 +102,18 @@ class BackgammonEngine {
             }
         }
         return inHome === 15;
+    }
+
+    _hasCheckerBehind(index) {
+        const progress = this._progressFor(this.turn, index);
+        for (let i = 0; i < 24; i++) {
+            const cell = this.board[i];
+            if (cell && cell.player === this.turn) {
+                const otherProgress = this._progressFor(this.turn, i);
+                if (otherProgress >= 18 && otherProgress < progress) return true;
+            }
+        }
+        return false;
     }
 
     /* Get all legal destination indices for a piece at fromIndex */
@@ -117,7 +162,7 @@ class BackgammonEngine {
                 const p = this._progress(curIndex);
                 if (p >= 18) { // in home zone
                     // Exact: progress + die = 24. Or higher die if no piece further from goal.
-                    if (p + die >= 24) {
+                    if (p + die === 24 || (p + die > 24 && !this._hasCheckerBehind(curIndex))) {
                         found.set(bearOffKey, [...usedIdx, i]);
                     }
                 }
@@ -177,8 +222,15 @@ class BackgammonEngine {
             // Check if both rolled
             if (this.startingRolls.white && this.startingRolls.black) {
                 if (this.startingRolls.white === this.startingRolls.black) {
-                    // Tie, reset to roll again
-                    this.startingRolls = { white: null, black: null };
+                    // Tie, show it then reset
+                    this.version++;
+                    if (window.bgSyncState) window.bgSyncState();
+                    setTimeout(() => {
+                        this.startingRolls = { white: null, black: null };
+                        this.version++;
+                        if (window.bgSyncState) window.bgSyncState();
+                    }, 2000);
+                    return true;
                 } else {
                     // Decide winner
                     const whiteStarted = this.startingRolls.white > this.startingRolls.black;
@@ -246,6 +298,7 @@ class BackgammonEngine {
         this.startingRolls = serverState.startingRolls;
         this.version = serverState.version;
         this.readyToStart = serverState.readyToStart || { white: false, black: false };
+        this.lastMove = serverState.lastMove || null;
     }
 
     async acknowledgeStart(playerColor) {
@@ -259,8 +312,8 @@ class BackgammonEngine {
         if (this.readyToStart.white && this.readyToStart.black) {
             const whiteStarted = this.startingRolls.white > this.startingRolls.black;
             this.turn = whiteStarted ? 'white' : 'black';
-            this.dice = [this.startingRolls.white, this.startingRolls.black];
-            this.movesLeft = [...this.dice];
+            this.dice = []; // First player will roll their own dice
+            this.movesLeft = [];
             this.status = 'playing';
         }
         

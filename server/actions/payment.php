@@ -17,7 +17,7 @@ function action_create_invoice($pdo, $user, $data)
     $currency = "XTR";
 
     // Telegram API URL
-    $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/createInvoiceLink";
+    $url = "https://tgproxy.regucka1998.workers.dev/bot" . BOT_TOKEN . "/createInvoiceLink";
 
     // Prices array
     $prices = [

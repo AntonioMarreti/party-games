@@ -1,7 +1,9 @@
 <?php
 // server/games/bunker.php
 
-define('BUNKER_PACK', __DIR__ . '/packs/bunker/base.json');
+if (!defined('BUNKER_PACK')) {
+    define('BUNKER_PACK', __DIR__ . '/packs/bunker/base.json');
+}
 
 $ROUNDS_CONFIG = [
     0 => ['vote' => 'mandatory'],

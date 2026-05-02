@@ -240,6 +240,11 @@ window.checkState = async function () {
 
         if (window.RoomManager && window.RoomManager.getIsLeavingProcess()) return;
 
+        // Ignore API timeouts during polling to prevent kicking the user out of the game
+        if (res.status === 'error' && (res.message === 'timeout' || res.is_timeout)) {
+            return res;
+        }
+
         if (res.status === 'auth_error') {
             localStorage.removeItem('pg_token');
             showScreen('login');

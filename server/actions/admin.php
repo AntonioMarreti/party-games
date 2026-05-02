@@ -1,5 +1,10 @@
 <?php
 
+function action_admin_stats($pdo, $user, $data)
+{
+    action_admin_get_stats($pdo, $user, $data);
+}
+
 function action_admin_get_stats($pdo, $user, $data)
 {
     // Basic security: Check if user is an admin
