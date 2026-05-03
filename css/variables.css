@@ -129,6 +129,29 @@ body.dark-mode {
     --shadow-glow: 0 0 25px color-mix(in srgb, var(--primary-color), transparent 40%);
 }
 
+/* === THERMAL SAFE TOKEN OVERRIDES === */
+body.thermal-safe {
+    --bg-card: var(--bg-secondary);
+    --bg-glass: var(--bg-secondary);
+    --bg-glass-strong: var(--bg-secondary);
+    --border-glass: var(--border-main);
+    --shadow-main: none;
+    --shadow-strong: none;
+    --shadow-glow: none;
+}
+
+body.dark-mode.thermal-safe {
+    --bg-app: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --bg-glass: #1e293b;
+    --bg-glass-strong: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #cbd5e1;
+    --border-main: rgba(255, 255, 255, 0.14);
+    --border-glass: rgba(255, 255, 255, 0.14);
+}
+
 
 /* Hide Scrollbar Globally */
 ::-webkit-scrollbar {

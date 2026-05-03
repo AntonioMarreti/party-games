@@ -18,7 +18,7 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
 
     document.body.appendChild(overlay);
 
-    const randomDelay = task.delay || 3000;
+    const randomDelay = task.delay_ms || task.delay || 3000;
 
     window.bbReactionTimeout = setTimeout(() => {
         if (overlay) {
@@ -37,8 +37,11 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
 window.bbReactionClick = function () {
     const bg = document.getElementById('bb-overlay-layer');
     if (!bg) return;
+    if (bg.dataset.finished === "true") return;
 
     const finish = (time, success) => {
+        if (bg.dataset.finished === "true") return;
+        bg.dataset.finished = "true";
         bg.remove(); // Remove immediately
         window.bbSubmit(null, null, time, success);
     };

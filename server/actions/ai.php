@@ -14,6 +14,8 @@ function action_generate_content($pdo, $currentUser, $params)
     $type = $params['type'] ?? '';
     // $data could be already an array in some frameworks, but here it's likely a JSON string or array from $_POST
     $data = isset($params['data']) ? (is_array($params['data']) ? $params['data'] : json_decode($params['data'], true)) : [];
+    $summaryLockName = null;
+    $summaryLockAcquired = false;
 
     try {
         $prompt = "";
@@ -97,6 +99,27 @@ function action_generate_content($pdo, $currentUser, $params)
                     $state = json_decode($room['game_state'], true);
                     if (isset($state['ai_summary'])) {
                         echo json_encode(['status' => 'ok', 'data' => $state['ai_summary'], 'cached' => true]);
+                        return;
+                    }
+
+                    $summaryLockName = 'bunker_summary_' . (int) $room['id'];
+                    $lockStmt = $pdo->prepare("SELECT GET_LOCK(?, 0)");
+                    $lockStmt->execute([$summaryLockName]);
+                    $summaryLockAcquired = (int) $lockStmt->fetchColumn() === 1;
+
+                    if (!$summaryLockAcquired) {
+                        echo json_encode(['status' => 'pending', 'message' => 'Summary generation already in progress']);
+                        return;
+                    }
+
+                    $freshStmt = $pdo->prepare("SELECT game_state FROM rooms WHERE id = ?");
+                    $freshStmt->execute([$room['id']]);
+                    $freshState = json_decode($freshStmt->fetchColumn() ?: '', true);
+                    if (isset($freshState['ai_summary'])) {
+                        $releaseStmt = $pdo->prepare("SELECT RELEASE_LOCK(?)");
+                        $releaseStmt->execute([$summaryLockName]);
+                        $summaryLockAcquired = false;
+                        echo json_encode(['status' => 'ok', 'data' => $freshState['ai_summary'], 'cached' => true]);
                         return;
                     }
                 }
@@ -197,10 +220,20 @@ function action_generate_content($pdo, $currentUser, $params)
 
             // --- SAVE TO CACHE IF IT'S A BUNKER SUMMARY ---
             if ($type === 'bunker_summary' && isset($room['id'])) {
-                $state = json_decode($room['game_state'], true);
+                $freshStmt = $pdo->prepare("SELECT game_state FROM rooms WHERE id = ?");
+                $freshStmt->execute([$room['id']]);
+                $state = json_decode($freshStmt->fetchColumn() ?: '', true);
+                if (!is_array($state)) {
+                    $state = json_decode($room['game_state'], true);
+                }
                 $state['ai_summary'] = $content;
                 if (function_exists('updateGameState')) {
                     updateGameState($room['id'], $state);
+                }
+                if ($summaryLockAcquired && $summaryLockName) {
+                    $releaseStmt = $pdo->prepare("SELECT RELEASE_LOCK(?)");
+                    $releaseStmt->execute([$summaryLockName]);
+                    $summaryLockAcquired = false;
                 }
             }
             // ----------------------------------------------
@@ -220,10 +253,22 @@ function action_generate_content($pdo, $currentUser, $params)
 
             echo json_encode(['status' => 'ok', 'data' => $content, 'debug_messages' => $messages]);
         } else {
+            if ($summaryLockAcquired && $summaryLockName) {
+                $releaseStmt = $pdo->prepare("SELECT RELEASE_LOCK(?)");
+                $releaseStmt->execute([$summaryLockName]);
+                $summaryLockAcquired = false;
+            }
             echo json_encode(['status' => 'error', 'message' => 'API Error (No Content)', 'debug' => $response, 'debug_messages' => $messages]);
         }
 
     } catch (Exception $e) {
+        if ($summaryLockAcquired && $summaryLockName) {
+            try {
+                $releaseStmt = $pdo->prepare("SELECT RELEASE_LOCK(?)");
+                $releaseStmt->execute([$summaryLockName]);
+            } catch (Exception $releaseError) {
+            }
+        }
         echo json_encode(['status' => 'error', 'message' => $e->getMessage(), 'debug_messages' => $messages ?? []]);
     }
 }

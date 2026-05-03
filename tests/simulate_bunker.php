@@ -57,10 +57,12 @@ try {
     for ($i = 0; $i < $turnCount; $i++) {
         $currentId = (string) $state['current_player_id'];
         $cards = $state['players_cards'][$currentId];
-        $cardType = array_key_first(array_filter(
-            $cards,
-            static fn($card) => is_array($card) && array_key_exists('revealed', $card) && !$card['revealed']
-        ));
+        $cardType = empty($cards['professions']['revealed'])
+            ? 'professions'
+            : array_key_first(array_filter(
+                $cards,
+                static fn($card) => is_array($card) && array_key_exists('revealed', $card) && !$card['revealed']
+            ));
         assertTrue($cardType !== null, "Player {$currentId} should have a card to reveal");
 
         $room['game_state'] = json_encode($state);
@@ -72,12 +74,25 @@ try {
         $state = $GLOBALS['TEST_BUNKER_SIM_STATE'];
     }
 
-    assertTrue($state['phase'] === 'voting', 'Round should end with voting');
-    echo "[+] All players completed a turn, voting started\n";
+    assertTrue($state['phase'] === 'vote_query', 'Optional round should ask whether to vote');
+    echo "[+] All players completed a turn, vote query started\n";
 
     $room['game_state'] = json_encode($state);
     foreach (array_keys($users) as $voterId) {
-        handleGameAction($pdo, $room, $users[$voterId], ['type' => 'vote_kick', 'target_id' => '106']);
+        $voterId = (string) $voterId;
+        handleGameAction($pdo, $room, $users[$voterId], ['type' => 'vote_query_answer', 'answer' => 'yes']);
+        $state = $GLOBALS['TEST_BUNKER_SIM_STATE'];
+        $room['game_state'] = json_encode($state);
+    }
+    assertTrue($state['phase'] === 'voting', 'Yes majority should start kick voting');
+
+    foreach (array_keys($users) as $voterId) {
+        $voterId = (string) $voterId;
+        if ($voterId === '106') {
+            handleGameAction($pdo, $room, $users[$voterId], ['type' => 'vote_kick', 'target_id' => '105']);
+        } else {
+            handleGameAction($pdo, $room, $users[$voterId], ['type' => 'vote_kick', 'target_id' => '106']);
+        }
         $state = $GLOBALS['TEST_BUNKER_SIM_STATE'];
         $room['game_state'] = json_encode($state);
     }

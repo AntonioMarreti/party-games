@@ -26,6 +26,35 @@
     transition: background 0.3s ease;
 }
 
+#bunker-wrapper {
+    position: relative;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+.bunker-outro-screen {
+    height: 100%;
+    min-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+.bunker-outro-screen .ai-text {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+#screen-game.active-screen #game-area:has(#bunker-wrapper) {
+    height: 100%;
+    min-height: 100%;
+}
+
 /* Base layout */
 .bunker-main-layout {
     width: 100%;
@@ -368,7 +397,7 @@
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    position: fixed;
+    position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
@@ -380,6 +409,15 @@
     padding-top: calc(50px + env(safe-area-inset-top));
     /* Increased clearance */
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 100%;
+    pointer-events: auto;
+}
+
+.bunker-voting-panel,
+.voting-targets-grid,
+.voting-target-btn {
+    pointer-events: auto !important;
 }
 
 .voting-header h2 {
@@ -396,6 +434,18 @@
     align-items: center;
     color: var(--bunker-text);
     margin-bottom: 12px;
+}
+
+.voting-targets-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.target-name {
+    color: var(--bunker-text);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 /* Other components follow the same light-theme pattern */
@@ -810,6 +860,29 @@ body.thermal-safe .turn-indicator-floating {
     border-bottom: 2px solid #eee;
 }
 
+body.thermal-safe .bunker-voting-screen {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+}
+
+body.thermal-safe .bunker-voting-screen h1,
+body.thermal-safe .bunker-voting-screen h2,
+body.thermal-safe .bunker-voting-screen p,
+body.thermal-safe .bunker-voting-screen .vote-status-msg {
+    color: #1e293b !important;
+}
+
+body.thermal-safe .voting-target-btn {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+}
+
+body.thermal-safe .target-name,
+body.thermal-safe .target-arg {
+    color: #1e293b !important;
+}
+
 body.thermal-safe .swal2-popup {
     background: #ffffff !important;
     border: 1px solid #eee;
@@ -828,4 +901,121 @@ body.thermal-safe h4,
 body.thermal-safe h5,
 body.thermal-safe h6 {
     color: #000 !important;
+}
+
+/* Desktop phone mockup containment */
+@media (min-width: 1024px) and (pointer: fine) {
+    .device-content #screen-game.active-screen #game-area:has(#bunker-wrapper) {
+        height: 100%;
+        min-height: 100%;
+    }
+
+    .device-content #bunker-wrapper {
+        height: 100%;
+        min-height: 100%;
+    }
+
+    .device-content .bunker-theme-wrapper {
+        height: 100%;
+        min-height: 100%;
+        overflow: hidden;
+        background-attachment: scroll;
+    }
+
+    .device-content .bunker-main-layout {
+        height: 100%;
+        min-height: 100%;
+    }
+
+    .device-content .bunker-voting-screen,
+    .device-content .bunker-footer-bar,
+    .device-content .fixed-bottom-actions,
+    .device-content .bunker-reveal-overlay {
+        position: absolute;
+        left: 0;
+        right: 0;
+        width: 100%;
+    }
+
+    .device-content .bunker-voting-screen,
+    .device-content .bunker-reveal-overlay {
+        top: 0;
+        bottom: 0;
+        height: 100%;
+    }
+
+    .device-content .bunker-footer-bar,
+    .device-content .fixed-bottom-actions {
+        bottom: 0;
+    }
+
+    .device-content .bunker-voting-screen {
+        min-height: 100%;
+        padding: 76px 18px 24px;
+        overscroll-behavior: contain;
+    }
+
+    .device-content .bunker-voting-screen .text-center.mb-4 {
+        margin-bottom: 14px !important;
+        padding-top: 0 !important;
+    }
+
+    .device-content .bunker-voting-screen h2 {
+        font-size: 1.35rem;
+        line-height: 1.15;
+    }
+
+    .device-content .voting-targets-grid {
+        gap: 8px;
+        padding-bottom: 20px;
+    }
+
+    .device-content .voting-target-btn {
+        margin-bottom: 0 !important;
+        padding: 12px;
+        border-radius: 16px;
+        min-height: 68px;
+    }
+
+    .device-content .voting-target-btn .target-avatar {
+        width: 42px !important;
+        height: 42px !important;
+        flex: 0 0 42px;
+    }
+
+    .device-content .target-name {
+        font-size: 15px;
+        color: var(--bunker-text) !important;
+    }
+
+    .device-content .target-arg {
+        font-size: 11px !important;
+        line-height: 1.25;
+    }
+
+    .device-content .bunker-intro-info-block {
+        max-height: min(52vh, 430px);
+    }
+
+    .device-content .bunker-intro-info-block .card {
+        padding: 18px !important;
+    }
+
+    .device-content .bunker-intro-info-block h3 {
+        font-size: 1.25rem !important;
+    }
+
+    .device-content .bunker-intro-info-block p {
+        font-size: 0.9rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .device-content .bunker-intro-info-block .badge {
+        font-size: 0.75rem !important;
+        white-space: normal;
+    }
+
+    .device-content .bunker-intro-actions {
+        padding-top: 10px !important;
+    }
 }

@@ -103,12 +103,10 @@ body {
     transition: none !important;
 }
 
-.thermal-safe body {
+body.thermal-safe {
     background-image: none !important;
     background-color: var(--bg-app) !important;
 }
-
-
 
 .thermal-safe .glass,
 .thermal-safe .glass-card,
@@ -139,9 +137,36 @@ body {
     /* Use solid backgrounds without blur to save power but maintain legibility */
     background: var(--bg-secondary) !important;
     border: 1px solid var(--border-main) !important;
+    color: var(--text-main) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: none !important;
+}
+
+.thermal-safe .glass *,
+.thermal-safe .glass-card *,
+.thermal-safe .modal-content *,
+.thermal-safe .action-card *,
+.thermal-safe .game-list-card *,
+.thermal-safe .room-code-card *,
+.thermal-safe .game-setting-card *,
+.thermal-safe .stats-card-modern *,
+.thermal-safe .settings-group *,
+.thermal-safe .profile-card-new *,
+.thermal-safe .menu-card-premium *,
+.thermal-safe .menu-btn-item *,
+.thermal-safe .game-catalog-header *,
+.thermal-safe .catalog-game-card * {
+    text-shadow: none !important;
+}
+
+.thermal-safe .text-muted {
+    color: var(--text-muted) !important;
+}
+
+.thermal-safe .fixed-bottom,
+.thermal-safe .fixed-top {
+    background-color: var(--bg-secondary);
 }
 
 .thermal-safe .header-bg {
@@ -155,6 +180,7 @@ body {
 }
 
 .thermal-safe .login-card {
-    background: var(--bg-dark) !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-main) !important;
     backdrop-filter: none !important;
 }

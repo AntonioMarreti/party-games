@@ -6,6 +6,7 @@
 const API_URL = 'server/api.php';
 let authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_token').trim() : null;
 let serverTimeOffset = 0;
+let consecutiveGetStateTimeouts = 0;
 
 async function apiRequest(data) {
     let body;
@@ -47,6 +48,9 @@ async function apiRequest(data) {
         }
 
         const res = await response.json();
+        if (data?.action === 'get_state') {
+            consecutiveGetStateTimeouts = 0;
+        }
 
         // Handle token updates if server returns one
         if (res.token) {
@@ -64,7 +68,14 @@ async function apiRequest(data) {
             errorMsg = `Превышено время ожидания сервера (операция: ${data?.action || 'неизвестно'})`;
             console.error("🔥 TIMEOUT ACTION:", data?.action);
             if (window.logClientError) {
-                window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: 10s`);
+                if (data?.action === 'get_state') {
+                    consecutiveGetStateTimeouts++;
+                    if (consecutiveGetStateTimeouts >= 3) {
+                        window.logClientError("API Timeout", `Action: get_state, Timeout: 10s, Consecutive: ${consecutiveGetStateTimeouts}`);
+                    }
+                } else {
+                    window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: 10s`);
+                }
             }
         }
 

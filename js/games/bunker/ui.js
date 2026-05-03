@@ -314,7 +314,12 @@ window.triggerAbility = function (cardKey, actionType) {
     }
 
     // Show Target Picker for others
-    var players = window.bunkerState.lastRes.players.filter(p => !window.bunkerState.lastServerState.kicked_players.includes(String(p.id)));
+    var myId = String(window.bunkerState.lastRes.user.id);
+    var allowSelfTarget = actionType === 'heal';
+    var players = window.bunkerState.lastRes.players.filter(p => {
+        if (window.bunkerState.lastServerState.kicked_players.includes(String(p.id))) return false;
+        return allowSelfTarget || String(p.id) !== myId;
+    });
 
     var overlay = document.createElement('div');
     overlay.className = 'bunker-reveal-overlay animate__animated animate__fadeIn';
@@ -430,16 +435,74 @@ window.renderVoteQuery = function (wrapper, state, res) {
     `;
 };
 
+window.cleanupBunkerVotingPortal = function () {
+    var portal = document.getElementById('bunker-voting-portal');
+    if (portal) portal.remove();
+    if (window.bunkerVotingPortalResize) {
+        window.removeEventListener('resize', window.bunkerVotingPortalResize);
+        window.bunkerVotingPortalResize = null;
+    }
+};
+
+window.mountBunkerVotingPortal = function (wrapper) {
+    var deviceContent = document.querySelector('.device-content');
+    var usePortal = deviceContent && window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches;
+    if (!usePortal) {
+        window.cleanupBunkerVotingPortal();
+        return wrapper;
+    }
+
+    var portal = document.getElementById('bunker-voting-portal');
+    if (!portal) {
+        portal = document.createElement('div');
+        portal.id = 'bunker-voting-portal';
+        document.body.appendChild(portal);
+    }
+
+    var positionPortal = function () {
+        var rect = deviceContent.getBoundingClientRect();
+        portal.style.cssText = [
+            'position:fixed',
+            'left:' + rect.left + 'px',
+            'top:' + rect.top + 'px',
+            'width:' + rect.width + 'px',
+            'height:' + rect.height + 'px',
+            'z-index:9000',
+            'overflow:hidden',
+            'border-radius:50px',
+            'background:#f8fafc',
+            'pointer-events:auto'
+        ].join(';');
+    };
+
+    positionPortal();
+    if (window.bunkerVotingPortalResize) {
+        window.removeEventListener('resize', window.bunkerVotingPortalResize);
+    }
+    window.bunkerVotingPortalResize = positionPortal;
+    window.addEventListener('resize', window.bunkerVotingPortalResize);
+
+    wrapper.innerHTML = '';
+    return portal;
+};
+
 window.renderVoting = function (wrapper, state, res, isRevote) {
     var myId = String(res.user.id);
     var hasVoted = state.votes && state.votes[myId];
     var amIKicked = state.kicked_players.includes(myId);
+    var availableTargets = res.players.filter(function (p) {
+        if (state.kicked_players.includes(String(p.id))) return false;
+        if (String(p.id) === myId) return false;
+        if (isRevote && state.tie_candidates && !state.tie_candidates.includes(String(p.id))) return false;
+        return true;
+    });
 
     var html = `
-        <div class="bunker-voting-screen px-4 pb-5"> 
+        <div class="bunker-voting-screen px-4 pb-5" style="position:absolute; inset:0; height:100dvh; min-height:100dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; isolation:isolate; background:#f8fafc; color:#1e293b; pointer-events:auto; z-index:5000;">
+            <div class="bunker-voting-panel" style="position:relative; z-index:50; min-height:100%; width:100%; display:flex; flex-direction:column; pointer-events:auto;">
             <!-- Removed Top Exit Button -->
             <div class="text-center mb-4 pt-4">
-                <h2 class="fw-bold" style="color:var(--text-main);">${state.phase_title || (isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?")}</h2>
+                <h2 class="fw-bold" style="color:#1e293b;">${state.phase_title || (isRevote ? "<i class='bi bi-swords'></i> ДУЭЛЬ <i class='bi bi-swords'></i>" : "КОГО ИЗГНАТЬ?")}</h2>
                 ${isRevote ? `<div class="alert py-2 small fw-bold mt-2" style="background:var(--bg-secondary); color:var(--status-warning); border:1px solid var(--border-main);">При повторной ничьей - случайный вылет!</div>` : ''}
                 
                 ${res.is_host ? `
@@ -455,10 +518,12 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
     } else if (hasVoted) {
         html += `<div class="vote-status-msg pulse">Ожидаем остальных...</div>`;
     } else {
-        html += `<div class="voting-targets-grid">`;
-        res.players.forEach(function (p) {
-            if (state.kicked_players.includes(String(p.id))) return;
-            if (isRevote && state.tie_candidates && !state.tie_candidates.includes(String(p.id))) return;
+        if (availableTargets.length === 0) {
+            html += `<div class="vote-status-msg">Нет доступных целей для голосования</div>`;
+        } else {
+            html += `<div class="voting-targets-grid" style="display:flex; flex-direction:column; gap:10px; padding-bottom:120px; position:relative; z-index:2; width:100%; pointer-events:auto;">`;
+        }
+        availableTargets.forEach(function (p) {
 
             var argsHtml = '';
             if (isRevote) {
@@ -471,16 +536,18 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
             }
 
             html += `
-                <button class="voting-target-btn w-100 mb-3" onclick="window.sendVoteKick('${p.id}')">
+                <button class="voting-target-btn w-100 mb-3" style="display:flex !important; align-items:center; width:100%; min-height:68px; padding:14px; border-radius:18px; border:1px solid #cbd5e1; background:#ffffff; color:#1e293b; opacity:1; visibility:visible; position:relative; z-index:3; pointer-events:auto;" onclick="window.sendVoteKick('${p.id}')">
                     <img src="${window.getAvatarSrc(p.photo_url)}" class="target-avatar rounded-circle me-3" style="width:50px; height:50px;">
                     <div class="text-start">
-                        <div class="target-name fw-bold">${p.first_name}</div>
+                        <div class="target-name fw-bold" style="color:#1e293b; opacity:1; visibility:visible;">${p.first_name}</div>
                         ${argsHtml}
                     </div>
                 </button>
             `;
         });
-        html += `</div>`;
+        if (availableTargets.length > 0) {
+            html += `</div>`;
+        }
     }
 
     html += `
@@ -489,9 +556,13 @@ window.renderVoting = function (wrapper, state, res, isRevote) {
                 <i class="bi bi-chevron-left"></i> Выйти из игры
             </button>
         </div>
+        </div>
     </div>`;
 
-    wrapper.innerHTML = html;
+    var votingHost = window.mountBunkerVotingPortal(wrapper);
+    votingHost.innerHTML = html;
+    var reactionToolbar = document.getElementById('reaction-toolbar');
+    if (reactionToolbar) reactionToolbar.style.display = 'none';
 };
 
 window.renderVoteResults = function (wrapper, state, res) {
@@ -526,7 +597,7 @@ window.renderOutro = function (wrapper, state, res) {
     var survivors = res.players.filter(p => !state.kicked_players.includes(String(p.id)));
 
     var html = `
-        <div class="bunker-outro-screen p-4" style="padding-top: calc(50px + env(safe-area-inset-top)) !important; padding-bottom: 120px !important;">
+        <div class="bunker-outro-screen p-4" style="padding-top: calc(82px + env(safe-area-inset-top)) !important; padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important;">
             <h1 class="outro-title text-center fw-bold mb-4"><i class="bi bi-house-heart-fill me-2"></i>ИСТОРИЯ БУНКЕРА</h1>
             
             <div class="outro-stats d-flex justify-content-around rounded-pill p-3 mb-3 shadow-sm" style="background:var(--bg-secondary); border:1px solid var(--border-main);">
@@ -579,14 +650,17 @@ window.fetchBunkerSummary = async function (state, res) {
     var container = document.getElementById('bunker-ai-summary');
     if (!container) return;
 
-    // Use session cache if available to avoid unnecessary network calls
-    if (window.bunkerState.aiSummary) {
-        var text = window.bunkerState.aiSummary;
+    var cachedSummary = state.ai_summary || window.bunkerState.aiSummary;
+    if (cachedSummary) {
+        var text = cachedSummary;
         var formattedText = text.trim().split('\n\n').map(p => `<p class="mb-2">${p.replace(/\n/g, '<br>')}</p>`).join('');
+        window.bunkerState.aiSummary = text;
         container.querySelector('.ai-text').innerHTML = formattedText;
         container.style.display = 'block';
         return;
     }
+
+    if (window.bunkerState.aiSummaryPending) return;
 
     try {
         var allPlayers = res.players.map(p => {
@@ -605,15 +679,18 @@ window.fetchBunkerSummary = async function (state, res) {
             };
         });
 
-        var response = await window.AIManager.generate('bunker_summary', {
+        window.bunkerState.aiSummaryPending = window.AIManager.generate('bunker_summary', {
             catastrophe: state.catastrophe?.title,
             capacity: state.bunker_places,
             players: allPlayers,
             threats: state.threat_results,
             features: state.revealed_features
         });
+        var response = await window.bunkerState.aiSummaryPending;
 
         console.log("Bunker Summary AI Response:", response);
+
+        if (response && response.status === 'pending') return;
 
         if (response && response.status === 'ok' && response.data) {
             var text = typeof response.data === 'string' ? response.data : (response.data.text || JSON.stringify(response.data));
@@ -628,6 +705,8 @@ window.fetchBunkerSummary = async function (state, res) {
         }
     } catch (e) {
         console.error("AI Summary Error:", e);
+    } finally {
+        window.bunkerState.aiSummaryPending = null;
     }
 };
 

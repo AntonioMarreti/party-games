@@ -20,11 +20,14 @@ window.render_bunker = async function (res) {
         phase: state.phase,
         round: state.current_round,
         voted_count: state.votes ? Object.keys(state.votes).length : 0,
+        vote_query_count: state.vote_query_result ? Object.keys(state.vote_query_result).length : 0,
         revealed_count: state.players_cards ?
             Object.values(state.players_cards).reduce(function (acc, p) {
                 return acc + Object.values(p).filter(function (c) { return c.revealed; }).length;
             }, 0) : 0,
         user_voted: state.votes ? !!state.votes[res.user.id] : false,
+        user_vote_query: state.vote_query_result ? !!state.vote_query_result[res.user.id] : false,
+        ai_summary: state.ai_summary ? String(state.ai_summary).length : 0,
         active_player: state.current_player_id,     // Track active player changes
         history_len: state.history ? state.history.length : 0 // Track history
     });
@@ -78,6 +81,10 @@ window.render_bunker = async function (res) {
         }
 
         // Router
+        if (state.phase !== 'voting' && state.phase !== 'tie_voting' && window.cleanupBunkerVotingPortal) {
+            window.cleanupBunkerVotingPortal();
+        }
+
         switch (state.phase) {
             case 'intro': window.renderIntro(wrapper, state, res); break;
             case 'round': window.renderRoundPhase(wrapper, state, res); break;

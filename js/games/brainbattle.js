@@ -2,7 +2,10 @@
 {
     let battleStartTime = 0;
     let countdownActive = false;
-    let reactionTimeout = null;
+    let submittedRoundId = null;
+    let reviewMode = false;
+    let reviewDevMode = false;
+    let finalActionsPortalState = null;
 
     // СПИСОК МОДУЛЕЙ
     const ENGINE_FILES = [
@@ -81,14 +84,19 @@
             // --- ТОЧКА РАЗМОРОЗКИ 1: Каждый тик рендера (по умолчанию всё доступно) ---
             wrapper.style.pointerEvents = 'auto';
             wrapper.style.opacity = '1';
+            clearBrainBattleFinalActions();
 
             if (state.phase === 'setup') {
+                reviewMode = false;
+                cleanupBrainBattleRound();
                 renderSetup(wrapper, res.is_host);
             }
             else if (state.phase === 'playing') {
+                reviewMode = false;
                 wrapper.dataset.rendered = ''; // Сбрасываем флаг сетапа
 
                 if (state.round_results && state.round_results[myId]) {
+                    cleanupBrainBattleRound();
                     const overlay = document.getElementById('bb-overlay-layer');
                     if (overlay) overlay.remove(); // Remove overlay if match finished
                     // Если я уже ответил - показываю экран ожидания
@@ -99,14 +107,276 @@
                 }
             }
             else if (state.phase === 'game_over') {
+                cleanupBrainBattleRound();
                 const overlay = document.getElementById('bb-overlay-layer');
                 if (overlay) overlay.remove();
-                renderFinal(wrapper, state, res);
+                if (reviewMode) renderReview(wrapper, state, res);
+                else renderFinal(wrapper, state, res);
             }
 
         } catch (e) {
             console.error("BB Render Error:", e);
         }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatTaskValue(value) {
+        if (value === null || typeof value === 'undefined' || value === '') return '—';
+        const stringValue = String(value);
+        return stringValue.startsWith('bi-')
+            ? `<i class="bi ${escapeHtml(stringValue)}"></i>`
+            : escapeHtml(stringValue);
+    }
+
+    function formatRoundQuestion(round) {
+        if (round.question) return escapeHtml(round.question);
+        return escapeHtml(round.title || round.game_type || 'Раунд');
+    }
+
+    function formatScoreExplanation(round, entry) {
+        if (!entry) {
+            return `
+                <span class="text-muted">Не ответил до конца раунда</span>
+                <span class="fw-bold text-muted">= +0</span>
+            `;
+        }
+
+        const breakdown = entry.score_breakdown || null;
+        const reason = String(breakdown?.reason || '');
+
+        if (!entry.correct) {
+            if (reason === 'too_fast_rejected') {
+                return `
+                    <span class="text-danger">Ответ отклонен: слишком быстро для честного результата</span>
+                    <span class="fw-bold text-danger">= +0</span>
+                `;
+            }
+
+            return `
+                <span class="text-danger">Ответ неверный, очки не начисляются</span>
+                <span class="fw-bold text-danger">= +0</span>
+            `;
+        }
+
+        const gameType = String(breakdown?.game_type || round.game_type || '');
+        const scoreFactor = Math.max(1, Number(breakdown?.score_factor || round.score_factor || 0));
+        const timeMs = Math.max(0, Math.min(60000, Number(breakdown?.time_ms ?? entry.time ?? 0)));
+        const rawScore = Number.isFinite(Number(breakdown?.raw_score))
+            ? Number(breakdown.raw_score)
+            : (1000 - Math.floor(timeMs / scoreFactor));
+        const finalScore = Number.isFinite(Number(breakdown?.final_score))
+            ? Number(breakdown.final_score)
+            : Math.max(100, rawScore);
+        const roundedTime = Math.round(timeMs);
+        const isBlindTimer = !!breakdown?.is_blind_timer || gameType === 'blind_timer';
+        const timeLabel = isBlindTimer
+            ? `погрешность ${roundedTime} мс`
+            : `${roundedTime} мс`;
+        const baseLine = isBlindTimer
+            ? `Для секундомера считается точность, а не скорость`
+            : `Чем быстрее верный ответ, тем меньше штраф по времени`;
+        const minimumApplied = typeof breakdown?.minimum_applied === 'boolean'
+            ? breakdown.minimum_applied
+            : rawScore < 100;
+
+        return `
+            <span class="text-muted">${baseLine}</span>
+            <span class="text-muted">
+                1000 - floor(${timeLabel} / ${scoreFactor}) = ${rawScore}
+            </span>
+            ${minimumApplied ? '<span class="fw-bold text-warning">Сработал нижний лимит: минимум 100</span>' : ''}
+            <span class="fw-bold text-success">= +${finalScore}</span>
+        `;
+    }
+
+    function formatDevAuditDetails(round, entry) {
+        if (!entry) {
+            return '<span class="text-muted">status: no_answer</span>';
+        }
+
+        const breakdown = entry.score_breakdown || {};
+        const gameType = String(breakdown.game_type || round.game_type || '');
+        const factor = Number(breakdown.score_factor || round.score_factor || 0);
+        const timeMs = Math.round(Number(breakdown.time_ms ?? entry.time ?? 0));
+        const rawScore = Number(breakdown.raw_score ?? entry.score ?? 0);
+        const finalScore = Number(breakdown.final_score ?? entry.score ?? 0);
+        const reason = String(breakdown.reason || (entry.correct ? 'correct' : 'incorrect'));
+        const minimumApplied = !!breakdown.minimum_applied;
+
+        return `
+            <span><b>status:</b> accepted</span>
+            <span><b>reason:</b> ${escapeHtml(reason)}</span>
+            <span><b>game:</b> ${escapeHtml(gameType)}</span>
+            <span><b>time_ms:</b> ${timeMs}</span>
+            <span><b>factor:</b> ${factor}</span>
+            <span><b>raw_score:</b> ${rawScore}</span>
+            <span><b>final_score:</b> ${finalScore}</span>
+            <span><b>minimum_applied:</b> ${minimumApplied ? 'yes' : 'no'}</span>
+        `;
+    }
+
+    function renderReview(wrapper, state, res) {
+        clearBrainBattleFinalActions();
+        const history = Array.isArray(state.round_history) ? [...state.round_history] : [];
+        history.sort((a, b) => (a.round_number || 0) - (b.round_number || 0));
+
+        let html = `
+        <div class="bb-review-screen px-3 pt-4 pb-5">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <button class="btn btn-light rounded-pill px-3 fw-bold shadow-sm" onclick="window.bbBackToResults()">
+                    <i class="bi bi-arrow-left me-2"></i>Назад
+                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm rounded-pill px-3 fw-bold ${reviewDevMode ? 'btn-dark' : 'btn-outline-dark'}" onclick="window.bbToggleReviewDev()">
+                        ${reviewDevMode ? 'Обычный' : 'Dev'}
+                    </button>
+                    <div class="small text-uppercase fw-bold text-muted" style="letter-spacing:1px;">Разбор матча</div>
+                </div>
+            </div>
+        `;
+
+        if (!history.length) {
+            wrapper.innerHTML = `${html}
+                <div class="bb-glass-card text-center py-5">
+                    <div class="fw-bold mb-2">История раундов пока не сохранена</div>
+                    <div class="text-muted small">Попробуй вернуться на экран результатов и открыть разбор снова.</div>
+                </div>
+            </div>`;
+            return;
+        }
+
+        history.forEach(round => {
+            const results = round.round_results || {};
+            const scoreSnapshot = round.scores_after_round || {};
+            const scoreFactor = Number(round.score_factor || 0);
+
+            let rowsHtml = '';
+            res.players.forEach(player => {
+                const playerId = String(player.id);
+                const entry = results[playerId];
+                const scoreAfter = Number(scoreSnapshot[playerId] || 0);
+                const roundScore = Number(entry?.score || 0);
+                const answerHtml = entry ? formatTaskValue(entry.answer) : '<span class="text-muted">Не ответил</span>';
+                const correctClass = entry ? (entry.correct ? 'text-success' : 'text-danger') : 'text-muted';
+                const correctness = entry ? (entry.correct ? 'Верно' : 'Ошибка') : 'Нет ответа';
+                const timeText = entry ? `${(Number(entry.time || 0) / 1000).toFixed(2)} с` : '—';
+                const scoreExplanation = formatScoreExplanation(round, entry);
+                const devAuditDetails = formatDevAuditDetails(round, entry);
+
+                rowsHtml += `
+                <div class="bb-audit-row">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        ${window.renderAvatar ? window.renderAvatar(player, 'sm') : ''}
+                        <div class="fw-bold">${escapeHtml(player.first_name)}</div>
+                    </div>
+                    <div class="small text-muted mb-1">Ответ</div>
+                    <div class="fw-bold mb-2">${answerHtml}</div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="${correctClass} fw-bold">${correctness}</span>
+                        <span>${timeText}</span>
+                    </div>
+                    ${reviewDevMode ? `<div class="small mb-2 bb-audit-formula">${scoreExplanation}</div>` : ''}
+                    <div class="d-flex justify-content-between small">
+                        <span>За раунд: <b>+${roundScore}</b></span>
+                        <span>Итого: <b>${scoreAfter}</b></span>
+                    </div>
+                    ${reviewDevMode ? `<div class="small mt-2 bb-audit-dev">${devAuditDetails}</div>` : ''}
+                </div>`;
+            });
+
+            html += `
+            <section class="bb-glass-card mb-4">
+                <div class="d-flex justify-content-between align-items-start mb-3 gap-3">
+                    <div>
+                        <div class="small text-uppercase fw-bold text-muted mb-1">Раунд ${round.round_number}</div>
+                        <h3 class="h5 fw-bold mb-1">${escapeHtml(round.title || round.game_type || 'Раунд')}</h3>
+                        <div class="small text-muted">${formatRoundQuestion(round)}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small text-uppercase fw-bold text-muted">Правильный ответ</div>
+                        <div class="fw-bold text-primary">${formatTaskValue(round.correct_val)}</div>
+                    </div>
+                </div>
+                <div class="bb-audit-meta mb-3">
+                    <span>Фактор очков: ${scoreFactor || '—'}</span>
+                    ${reviewDevMode ? `<span>Формула: 1000 - time / ${scoreFactor || 'n'}</span>` : ''}
+                </div>
+                <div class="bb-audit-grid">
+                    ${rowsHtml}
+                </div>
+            </section>`;
+        });
+
+        html += `</div>`;
+        wrapper.innerHTML = html;
+    }
+
+    function clearBrainBattleFinalActions() {
+        if (finalActionsPortalState?.sync) {
+            window.removeEventListener('resize', finalActionsPortalState.sync);
+            window.removeEventListener('scroll', finalActionsPortalState.sync, true);
+        }
+
+        const portal = document.getElementById('bb-final-actions-portal');
+        if (portal) portal.remove();
+        finalActionsPortalState = null;
+    }
+
+    function mountBrainBattleFinalActions(wrapper, contentHtml) {
+        clearBrainBattleFinalActions();
+
+        const target = document.querySelector('.screen.active-screen') || wrapper;
+        if (!target) return;
+
+        const portal = document.createElement('div');
+        portal.id = 'bb-final-actions-portal';
+        portal.className = 'bb-final-actions-portal';
+        portal.innerHTML = contentHtml;
+        document.body.appendChild(portal);
+
+        const sync = () => {
+            if (!document.body.contains(portal)) return;
+            const rect = target.getBoundingClientRect();
+            portal.style.left = `${Math.round(rect.left)}px`;
+            portal.style.width = `${Math.round(rect.width)}px`;
+            portal.style.bottom = `${Math.max(Math.round(window.innerHeight - rect.bottom), 0)}px`;
+        };
+
+        finalActionsPortalState = { portal, sync };
+        window.addEventListener('resize', sync);
+        window.addEventListener('scroll', sync, true);
+        sync();
+    }
+
+    function cleanupBrainBattleRound() {
+        countdownActive = false;
+        clearBrainBattleFinalActions();
+        if (window.bbCountdownInterval) {
+            clearInterval(window.bbCountdownInterval);
+            window.bbCountdownInterval = null;
+        }
+        if (window.bbReactionTimeout) {
+            clearTimeout(window.bbReactionTimeout);
+            window.bbReactionTimeout = null;
+        }
+        if (window.bbBlindInterval) {
+            clearInterval(window.bbBlindInterval);
+            window.bbBlindInterval = null;
+        }
+        if (window.simonUserClickTimeout) {
+            clearTimeout(window.simonUserClickTimeout);
+            window.simonUserClickTimeout = null;
+        }
+        const overlay = document.getElementById('bb-overlay-layer');
+        if (overlay) overlay.remove();
     }
 
     // === ОТСЧЕТ И ЗАПУСК ===
@@ -115,8 +385,10 @@
         if (wrapper.dataset.taskId === taskStr) return;
         if (countdownActive) return;
 
+        cleanupBrainBattleRound();
         wrapper.dataset.taskId = taskStr;
         countdownActive = true;
+        submittedRoundId = null;
 
         wrapper.innerHTML = `
         <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
@@ -129,14 +401,15 @@
     `;
 
         let count = 3;
-        const interval = setInterval(() => {
+        window.bbCountdownInterval = setInterval(() => {
             count--;
             const numEl = document.getElementById('cnt-number');
             if (count > 0 && numEl) {
                 numEl.innerText = count;
                 window.audioManager.play('click'); // Tick sound
             } else {
-                clearInterval(interval);
+                clearInterval(window.bbCountdownInterval);
+                window.bbCountdownInterval = null;
                 countdownActive = false;
 
                 wrapper.style.pointerEvents = 'auto';
@@ -342,8 +615,10 @@
         });
 
         let waitingListHtml = '';
+        const waitingPlayers = [];
         res.players.forEach(p => {
             if (!state.round_results[String(p.id)]) {
+                waitingPlayers.push(p);
                 waitingListHtml += `<div class="bb-result-card mt-2" style="background: rgba(255,255,255,0.4); opacity: 0.7; border: 1px dashed var(--border-main);">
                 <div class="d-flex align-items-center">
                     <div class="spinner-border text-muted me-3" style="width: 20px; height: 20px; border-width: 2px;"></div>
@@ -358,7 +633,8 @@
         const isLastRound = state.current_round >= state.total_rounds;
         let btnHtml = '';
         if (res.is_host) {
-            btnHtml = `<button class="bb-start-btn w-100 py-3" onclick="bbNext()">${isLastRound ? "🏁 Результаты" : "Следующий раунд"}</button>`;
+            const hasWaitingHumans = waitingPlayers.some(p => Number(p.is_bot) !== 1);
+            btnHtml = `<button class="bb-start-btn w-100 py-3" ${hasWaitingHumans ? 'disabled style="opacity:0.55; box-shadow:none;"' : ''} onclick="bbNext()">${hasWaitingHumans ? "Ждем игроков..." : (isLastRound ? "🏁 Результаты" : "Следующий раунд")}</button>`;
         } else {
             btnHtml = `<div class="text-center text-muted fw-bold small"><div class="spinner-border spinner-border-sm me-2"></div> Ожидание хоста...</div>`;
         }
@@ -405,7 +681,9 @@
         wrapper.style.pointerEvents = 'auto';
         wrapper.style.opacity = '1';
 
-        const sorted = Object.entries(state.scores || {}).sort((a, b) => b[1] - a[1]);
+        const finalEntries = res.players.map(p => [String(p.id), Number((state.scores || {})[String(p.id)] || 0)]);
+        finalEntries.sort((a, b) => b[1] - a[1]);
+        const sorted = finalEntries;
         const winnerId = sorted[0] ? sorted[0][0] : null;
         const isWinner = String(res.user.id) === String(winnerId);
 
@@ -449,24 +727,32 @@
             }
         });
 
-        html += `</div><div style="height: 100px;"></div></div>`;
+        html += `</div><div class="bb-final-spacer"></div></div>`;
 
+        let footerHtml = '';
         if (res.is_host) {
-            html += `<div class="fixed-bottom-actions"><button class="bb-start-btn" style="background: var(--bg-secondary); color: var(--text-main); box-shadow: none; border: 1px solid var(--border-main);" onclick="bbFinish()">↩️ Вернуться в Лобби</button></div>`;
+            footerHtml = `<div class="fixed-bottom-actions bb-final-actions">
+                <button class="bb-start-btn bb-secondary-btn" onclick="window.bbOpenReview()"><i class="bi bi-journal-text me-2"></i>Фактчекинг</button>
+                <button class="bb-start-btn" style="background: var(--bg-secondary); color: var(--text-main); box-shadow: none; border: 1px solid var(--border-main);" onclick="bbFinish()"><i class="bi bi-arrow-return-left me-2"></i>Вернуться в Лобби</button>
+            </div>`;
         } else {
-            html += `<div class="fixed-bottom-actions text-center"><button class="btn btn-link fw-bold text-decoration-none" style="color:var(--text-muted);" onclick="leaveRoom()">Покинуть комнату</button></div>`;
+            footerHtml = `<div class="fixed-bottom-actions bb-final-actions text-center">
+                <button class="bb-start-btn bb-secondary-btn" onclick="window.bbOpenReview()"><i class="bi bi-journal-text me-2"></i>Фактчекинг</button>
+                <button class="btn btn-link fw-bold text-decoration-none" style="color:var(--text-muted);" onclick="leaveRoom()">Покинуть комнату</button>
+            </div>`;
         }
 
         wrapper.innerHTML = html;
+        mountBrainBattleFinalActions(wrapper, footerHtml);
     }
 
     window.bbFinish = async function () {
         // 1. Собираем результаты для рейтинга
-        if (window.lastBBState && window.lastBBState.scores) {
-            const scores = window.lastBBState.scores;
-            const playersData = Object.entries(scores).map(([uid, score]) => ({
-                user_id: parseInt(uid),
-                score: score
+        if (window.lastBBState) {
+            const scores = window.lastBBState.scores || {};
+            const playersData = (window.currentGamePlayers || []).map(player => ({
+                user_id: parseInt(player.id),
+                score: Number(scores[String(player.id)] || 0)
             }));
 
             // Сортировка для рангов
@@ -480,6 +766,23 @@
 
         await apiRequest({ action: 'stop_game' });
         checkState();
+    };
+
+    window.bbOpenReview = function () {
+        reviewMode = true;
+        reviewDevMode = false;
+        if (window.checkState) window.checkState();
+    };
+
+    window.bbBackToResults = function () {
+        reviewMode = false;
+        reviewDevMode = false;
+        if (window.checkState) window.checkState();
+    };
+
+    window.bbToggleReviewDev = function () {
+        reviewDevMode = !reviewDevMode;
+        if (window.checkState) window.checkState();
     };
 
     window.bbStart = function () {
@@ -509,6 +812,10 @@
     };
 
     window.bbSubmit = function (answer, correct, manualTime = null, manualSuccess = null) {
+        const roundId = window.lastBBState?.round_id || '';
+        if (submittedRoundId === roundId) return;
+        submittedRoundId = roundId;
+
         const time = manualTime !== null ? manualTime : (performance.now() - battleStartTime);
         const isSuccess = manualSuccess !== null ? manualSuccess : (String(answer) === String(correct));
 
@@ -519,7 +826,8 @@
             wrapper.style.opacity = '0.6';
         }
 
-        sendGameAction('submit_result', { time_ms: time, success: isSuccess });
+        cleanupBrainBattleRound();
+        sendGameAction('submit_result', { round_id: roundId, time_ms: time, success: isSuccess, answer: answer });
     };
 
     window.bbNext = function () {

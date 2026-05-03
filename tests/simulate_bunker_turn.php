@@ -105,15 +105,17 @@ $roomId = 'room-test';
 $users = [
     '101' => ['id' => '101', 'first_name' => 'HostUser'],
     '102' => ['id' => '102', 'first_name' => 'PlayerTwo'],
+    '103' => ['id' => '103', 'first_name' => 'PlayerThree'],
 ];
 $roomPlayers = [
     ['room_id' => $roomId, 'user_id' => '101', 'is_bot' => 0],
     ['room_id' => $roomId, 'user_id' => '102', 'is_bot' => 0],
+    ['room_id' => $roomId, 'user_id' => '103', 'is_bot' => 0],
 ];
 $pdo = new FakePdo($roomPlayers, $users);
 
 $state = getInitialState();
-$state['turn_queue'] = ['101', '102'];
+$state['turn_queue'] = ['101', '102', '103'];
 $state['current_round'] = 1;
 $state['phase'] = 'round';
 $state['active_player_index'] = 0;
@@ -140,6 +142,12 @@ $state['players_cards']['102'] = [
     'facts' => ['text' => 'Afraid of darkness', 'revealed' => false, 'tags' => []],
     'luggage' => ['text' => 'Rope', 'revealed' => false, 'tags' => []],
 ];
+$state['players_cards']['103'] = [
+    'professions' => ['text' => 'Engineer', 'revealed' => false, 'tags' => []],
+    'health' => ['text' => 'Healthy', 'revealed' => false, 'tags' => []],
+    'facts' => ['text' => 'Knows ventilation', 'revealed' => false, 'tags' => []],
+    'luggage' => ['text' => 'Toolbox', 'revealed' => false, 'tags' => []],
+];
 
 $room = [
     'id' => $roomId,
@@ -152,12 +160,19 @@ echo "=== Bunker turn smoke test ===\n";
 try {
     $host = $users['101'];
     $guest = $users['102'];
+    $third = $users['103'];
 
     $result = handleGameAction($pdo, $room, $host, ['type' => 'reveal_card', 'card_type' => 'health']);
-    assertTrue(($result['status'] ?? null) === 'ok', 'Host reveal should succeed');
+    assertTrue(($result['status'] ?? null) === 'error', 'Health before profession should be rejected');
+
+    $result = handleGameAction($pdo, $room, $host, ['type' => 'reveal_card', 'card_type' => 'professions']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Host profession reveal should succeed');
     $state = $GLOBALS['TEST_BUNKER_STATE'];
-    assertTrue($state['players_cards']['101']['health']['revealed'] === true, 'Host health card should be revealed');
+    assertTrue($state['players_cards']['101']['professions']['revealed'] === true, 'Host profession card should be revealed');
     assertTrue($state['turn_phase'] === 'discussion', 'Turn should switch to discussion after reveal');
+
+    $result = handleGameAction($pdo, ['id' => $roomId, 'is_host' => true, 'game_state' => json_encode($state)], $host, ['type' => 'reveal_card', 'card_type' => 'health']);
+    assertTrue(($result['status'] ?? null) === 'error', 'Second reveal in same turn should be rejected');
 
     $room['game_state'] = json_encode($state);
     $result = handleGameAction($pdo, $room, $host, ['type' => 'end_turn']);
@@ -175,17 +190,44 @@ try {
     $result = handleGameAction($pdo, $room, $guest, ['type' => 'end_turn']);
     assertTrue(($result['status'] ?? null) === 'ok', 'Second player end_turn should succeed');
     $state = $GLOBALS['TEST_BUNKER_STATE'];
-    assertTrue($state['phase'] === 'voting', 'Round should enter voting after last player turn');
+    assertTrue($state['current_player_id'] === '103', 'Turn should pass to third player');
+
+    $room['game_state'] = json_encode($state);
+    $result = handleGameAction($pdo, $room, $third, ['type' => 'reveal_card', 'card_type' => 'professions']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Third player reveal should succeed');
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+
+    $room['game_state'] = json_encode($state);
+    $result = handleGameAction($pdo, $room, $third, ['type' => 'end_turn']);
+    assertTrue(($result['status'] ?? null) === 'ok', 'Third player end_turn should succeed');
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+    assertTrue($state['phase'] === 'vote_query', 'Round should enter optional vote query after last player turn');
+
+    $room['game_state'] = json_encode($state);
+    $result = handleGameAction($pdo, $room, $host, ['type' => 'vote_kick', 'target_id' => '102']);
+    assertTrue(($result['status'] ?? null) === 'error', 'Kick vote before voting phase should be rejected');
+
+    foreach (['101', '102', '103'] as $voterId) {
+        $room['game_state'] = json_encode($state);
+        handleGameAction($pdo, $room, $users[$voterId], ['type' => 'vote_query_answer', 'answer' => 'yes']);
+        $state = $GLOBALS['TEST_BUNKER_STATE'];
+    }
+    assertTrue($state['phase'] === 'voting', 'Yes majority should start voting');
 
     $room['game_state'] = json_encode($state);
     handleGameAction($pdo, $room, $host, ['type' => 'vote_kick', 'target_id' => '102']);
     $state = $GLOBALS['TEST_BUNKER_STATE'];
     $room['game_state'] = json_encode($state);
-    handleGameAction($pdo, $room, $guest, ['type' => 'vote_kick', 'target_id' => '102']);
+    $selfVote = handleGameAction($pdo, $room, $guest, ['type' => 'vote_kick', 'target_id' => '102']);
+    assertTrue(($selfVote['status'] ?? null) === 'error', 'Self vote should be rejected');
+    handleGameAction($pdo, $room, $guest, ['type' => 'vote_kick', 'target_id' => '101']);
+    $state = $GLOBALS['TEST_BUNKER_STATE'];
+    $room['game_state'] = json_encode($state);
+    handleGameAction($pdo, $room, $third, ['type' => 'vote_kick', 'target_id' => '102']);
     $state = $GLOBALS['TEST_BUNKER_STATE'];
 
-    assertTrue(in_array('102', $state['kicked_players'], true), 'Second player should be kicked after unanimous vote');
-    assertTrue($state['phase'] === 'outro', 'Game should end when survivor count fits bunker capacity');
+    assertTrue(in_array('102', $state['kicked_players'], true), 'Second player should be kicked by majority vote');
+    assertTrue($state['phase'] === 'vote_results', 'Game should show vote results when more players than capacity remain');
 
     echo "PASS\n";
 } catch (Throwable $e) {

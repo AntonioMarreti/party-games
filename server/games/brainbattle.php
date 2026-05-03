@@ -18,28 +18,186 @@ function getInitialState()
         'phase' => 'setup',
         'current_round' => 0,
         'total_rounds' => 5,
+        'round_id' => null,
         'remaining_games' => [], // Очередь для честной ротации
         'scores' => [],
         'round_data' => null,
         'round_results' => [],
+        'round_history' => [],
         'selected_categories' => ['logic', 'attention', 'motor', 'memory', 'erudition'],
-        'previous_game_type' => null
+        'previous_game_type' => null,
+        'round_chat_sent' => false
     ];
+}
+
+function bbNormalizeState($state)
+{
+    if (!is_array($state)) {
+        $state = getInitialState();
+    }
+
+    $defaults = getInitialState();
+    foreach ($defaults as $key => $value) {
+        if (!array_key_exists($key, $state)) {
+            $state[$key] = $value;
+        }
+    }
+
+    if (!is_array($state['scores'])) {
+        $state['scores'] = [];
+    }
+    if (!is_array($state['round_results'])) {
+        $state['round_results'] = [];
+    }
+    if (!is_array($state['round_history'])) {
+        $state['round_history'] = [];
+    }
+
+    return $state;
+}
+
+function bbGetPlayerIds($pdo, $roomId)
+{
+    $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? ORDER BY id ASC");
+    $stmt->execute([$roomId]);
+    return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function bbGetHumanIds($pdo, $roomId)
+{
+    $stmt = $pdo->prepare("SELECT rp.user_id FROM room_players rp JOIN users u ON u.id = rp.user_id WHERE rp.room_id = ? AND u.is_bot = 0 ORDER BY rp.id ASC");
+    $stmt->execute([$roomId]);
+    return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function bbEnsureScoreRows(&$state, $playerIds)
+{
+    foreach ($playerIds as $pid) {
+        $pid = (string) $pid;
+        if (!isset($state['scores'][$pid])) {
+            $state['scores'][$pid] = 0;
+        }
+    }
+}
+
+function bbScoreFactor($gameType)
+{
+    $factors = [
+        // Быстрые игры (реакция) - штраф жесткий
+        'reaction_test' => 5,
+        'timing_safe' => 6,
+        'color_chaos' => 7,
+
+        // Игры средней сложности
+        'math_blitz' => 8,
+        'greater_less' => 8,
+        'odd_one_out' => 10,
+        'find_duplicate' => 10,
+        'defuse_numbers' => 8,
+        'alchemy' => 10,
+        'simon_says' => 10,
+
+        // Медленные/сложные игры (где нужно время на подумать/посмотреть) - штраф мягкий
+        'thimbles' => 15,
+        'count_objects' => 12,
+        'photo_memory' => 15,
+        'blind_timer' => 8,
+        'ai_quiz' => 20,
+        'fact_check' => 18,
+        'edible_inedible' => 12
+    ];
+
+    return $factors[$gameType] ?? 8;
+}
+
+function bbCalculateScore($gameType, $timeMs, $isCorrect)
+{
+    return (int) bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect)['final_score'];
+}
+
+function bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect, $meta = [])
+{
+    $gameType = (string) $gameType;
+    $timeMs = max(0, min(60000, (float) $timeMs));
+    $factor = bbScoreFactor($gameType);
+    $tooFastRejected = !empty($meta['too_fast_rejected']);
+    $isBlindTimer = $gameType === 'blind_timer';
+
+    if (!$isCorrect) {
+        return [
+            'game_type' => $gameType,
+            'time_ms' => $timeMs,
+            'score_factor' => $factor,
+            'raw_score' => 0,
+            'final_score' => 0,
+            'minimum_applied' => false,
+            'is_blind_timer' => $isBlindTimer,
+            'reason' => $tooFastRejected ? 'too_fast_rejected' : 'incorrect'
+        ];
+    }
+
+    $rawScore = (int) (1000 - floor($timeMs / $factor));
+    $finalScore = (int) max(100, $rawScore);
+
+    return [
+        'game_type' => $gameType,
+        'time_ms' => $timeMs,
+        'score_factor' => $factor,
+        'raw_score' => $rawScore,
+        'final_score' => $finalScore,
+        'minimum_applied' => $rawScore < 100,
+        'is_blind_timer' => $isBlindTimer,
+        'reason' => ($rawScore < 100) ? 'correct_minimum_applied' : 'correct'
+    ];
+}
+
+function bbStoreRoundHistoryEntry(&$state)
+{
+    $roundData = is_array($state['round_data'] ?? null) ? $state['round_data'] : [];
+    $results = is_array($state['round_results'] ?? null) ? $state['round_results'] : [];
+    $scores = is_array($state['scores'] ?? null) ? $state['scores'] : [];
+
+    $entry = [
+        'round_number' => (int) ($state['current_round'] ?? 0),
+        'round_id' => (string) ($state['round_id'] ?? ''),
+        'game_type' => (string) ($state['previous_game_type'] ?? ($roundData['type'] ?? '')),
+        'title' => (string) ($roundData['title'] ?? 'Раунд'),
+        'question' => (string) ($roundData['question'] ?? ''),
+        'correct_val' => $roundData['correct_val'] ?? null,
+        'score_factor' => bbScoreFactor((string) ($state['previous_game_type'] ?? ($roundData['type'] ?? ''))),
+        'round_results' => $results,
+        'scores_after_round' => $scores
+    ];
+
+    $history = $state['round_history'] ?? [];
+    $replaced = false;
+    foreach ($history as $index => $existing) {
+        if (($existing['round_id'] ?? '') === $entry['round_id']) {
+            $history[$index] = $entry;
+            $replaced = true;
+            break;
+        }
+    }
+    if (!$replaced) {
+        $history[] = $entry;
+    }
+    $state['round_history'] = array_values($history);
 }
 
 function handleGameAction($pdo, $room, $user, $postData)
 {
-    $state = json_decode($room['game_state'], true);
-    $type = $postData['type'];
+    $state = bbNormalizeState(json_decode($room['game_state'] ?? '', true));
+    $type = $postData['type'] ?? '';
     $userId = (string) $user['id'];
 
     if ($type === 'setup_game') {
         if (!$room['is_host'])
             return;
-        $state['total_rounds'] = (int) $postData['rounds'];
-        $state['selected_categories'] = json_decode($postData['categories'], true);
-        $state['selected_games'] = json_decode($postData['selected_games'] ?? '[]', true);
+        $state['total_rounds'] = max(1, min(50, (int) ($postData['rounds'] ?? 10)));
+        $state['selected_categories'] = json_decode($postData['categories'] ?? '[]', true) ?: [];
+        $state['selected_games'] = json_decode($postData['selected_games'] ?? '[]', true) ?: [];
         $state['scores'] = [];
+        bbEnsureScoreRows($state, bbGetPlayerIds($pdo, $room['id']));
         $state['current_round'] = 0;
         $state['remaining_games'] = []; // СБРАСЫВАЕМ ОЧЕРЕДЬ ПРИ НОВОЙ НАСТРОЙКЕ
         startNextRound($state);
@@ -53,70 +211,45 @@ function handleGameAction($pdo, $room, $user, $postData)
 
     if ($type === 'force_reset') {
         if (!$room['is_host']) return;
-        $state = [
-            'phase' => 'setup',
-            'round' => 0,
-            'scores' => [],
-            'total_rounds' => 5
-        ];
+        $state = getInitialState();
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
 
     if ($type === 'submit_result') {
+        if (($state['phase'] ?? '') !== 'playing') {
+            return ['status' => 'error', 'message' => 'Раунд уже не активен'];
+        }
+        if (!empty($state['round_id']) && isset($postData['round_id']) && $postData['round_id'] !== $state['round_id']) {
+            return ['status' => 'ok', 'ignored' => 'stale_round'];
+        }
         // Если игрок уже отвечал в этом раунде - игнорируем (защита от дабл-клика)
         if (isset($state['round_results'][$userId]))
             return ['status' => 'ok'];
 
-        $time = (float) $postData['time_ms'];
-        $isCorrect = $postData['success'] === 'true';
+        $time = max(0, min(60000, (float) ($postData['time_ms'] ?? 0)));
+        $isCorrect = filter_var($postData['success'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $gameType = $state['previous_game_type'] ?? '';
+        $tooFastRejected = false;
 
         // Анти-чит: если ответ пришел быстрее 100мс - скорее всего это бот или баг
         // Исключаем blind_timer, так как там "время" - это модуль ошибки (0ms = идеально)
         if ($time < 100 && $gameType !== 'blind_timer') {
             $isCorrect = false;
+            $tooFastRejected = true;
         }
 
-        $score = 0;
-        if ($isCorrect) {
-            // Веса штрафа за время для разных игр (чем больше число, тем медленнее "сгорают" очки)
-            $penaltyFactor = 8; // По умолчанию (средний)
-            
-            $factors = [
-                // Быстрые игры (реакция) - штраф жесткий
-                'reaction_test' => 5,
-                'timing_safe' => 6,
-                'color_chaos' => 7,
-                
-                // Игры средней сложности
-                'math_blitz' => 8,
-                'greater_less' => 8,
-                'odd_one_out' => 10,
-                'find_duplicate' => 10,
-                
-                // Медленные/сложные игры (где нужно время на подумать/посмотреть) - штраф мягкий
-                'thimbles' => 15, 
-                'count_objects' => 12,
-                'photo_memory' => 15,
-                'ai_quiz' => 20, 
-                'fact_check' => 18,
-                'edible_inedible' => 12
-            ];
-
-            if (isset($factors[$gameType])) {
-                $penaltyFactor = $factors[$gameType];
-            }
-
-            // Формула очков: база 1000 - время / фактор
-            $score = max(100, 1000 - floor($time / $penaltyFactor));
-
-        }
+        $scoreBreakdown = bbBuildScoreBreakdown($gameType, $time, $isCorrect, [
+            'too_fast_rejected' => $tooFastRejected
+        ]);
+        $score = (int) $scoreBreakdown['final_score'];
 
         $state['round_results'][$userId] = [
             'time' => $time,
             'correct' => $isCorrect,
-            'score' => (int) $score
+            'score' => (int) $score,
+            'answer' => $postData['answer'] ?? null,
+            'score_breakdown' => $scoreBreakdown
         ];
 
         if (!isset($state['scores'][$userId]))
@@ -125,6 +258,7 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         // Process Bots!
         processBots($pdo, $room['id'], $state);
+        bbStoreRoundHistoryEntry($state);
 
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
@@ -133,10 +267,21 @@ function handleGameAction($pdo, $room, $user, $postData)
     if ($type === 'next_round') {
         if (!$room['is_host'])
             return;
+        if (($state['phase'] ?? '') === 'playing') {
+            processBots($pdo, $room['id'], $state);
+        }
+        if (($state['phase'] ?? '') === 'playing') {
+            foreach (bbGetHumanIds($pdo, $room['id']) as $pid) {
+                if (!isset($state['round_results'][$pid])) {
+                    return ['status' => 'error', 'message' => 'Не все игроки ответили'];
+                }
+            }
+        }
         if ($state['current_round'] < $state['total_rounds']) {
             startNextRound($state);
         } else {
             $state['phase'] = 'game_over';
+            bbStoreRoundHistoryEntry($state);
         }
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
@@ -147,16 +292,22 @@ function startNextRound(&$state)
 {
     $library = getGameLibrary();
     $state['current_round']++;
+    $state['round_id'] = uniqid('bb_', true);
     $state['phase'] = 'playing';
     $state['round_results'] = [];
+    $state['round_chat_sent'] = false;
 
     // Определяем доступный пул игр
     $pool = [];
     $selectedGames = $state['selected_games'] ?? [];
+    $allGames = [];
+    foreach ($library as $games) {
+        $allGames = array_merge($allGames, $games);
+    }
     
     if (!empty($selectedGames)) {
         // Если выбраны конкретные игры - используем только их
-        $pool = $selectedGames;
+        $pool = array_values(array_intersect($selectedGames, $allGames));
     } else {
         // Иначе - по категориям
         $cats = $state['selected_categories'] ?? ['logic', 'attention', 'motor', 'memory', 'erudition'];
@@ -250,7 +401,7 @@ function generateTaskData($type)
         return [
             'type' => $type,
             'title' => 'Что больше?',
-            'question' => 'Выбери максимальное значение',
+            'question' => 'Выбери, что больше',
             'n1_text' => $item1['text'],
             'n1_val' => $item1['val'],
             'n2_text' => $item2['text'],
@@ -301,7 +452,7 @@ function generateTaskData($type)
         $opts = array_merge($opts, array_slice($others, 0, 3));
         shuffle($opts);
 
-        return ['type' => $type, 'title' => 'Цвета', 'question' => 'Жми на ЦВЕТ текста!', 'text' => $c[$tk], 'color' => $ck, 'options' => $opts, 'correct_val' => $correct_val];
+        return ['type' => $type, 'title' => 'Цвета', 'question' => 'Выбери цвет, которым написано слово', 'text' => $c[$tk], 'color' => $ck, 'options' => $opts, 'correct_val' => $correct_val];
     }
 
     // 4. ЛИШНИЙ
@@ -346,7 +497,7 @@ function generateTaskData($type)
         $opts = array_fill(0, 15, $maj);
         $opts[] = $min;
         shuffle($opts);
-        return ['type' => $type, 'title' => 'Найди лишний', 'question' => 'Найди отличающуюся иконку', 'options' => $opts, 'correct_val' => $min];
+        return ['type' => $type, 'title' => 'Найди лишний', 'question' => 'Найди одну отличающуюся иконку', 'options' => $opts, 'correct_val' => $min];
     }
 
     // 5. РЕАКЦИЯ
@@ -462,7 +613,7 @@ function generateTaskData($type)
         for ($i = 1; $i < 15; $i++)
             $grid[] = $set[$i];
         shuffle($grid);
-        return ['type' => $type, 'title' => 'Внимание', 'question' => 'Найди ПАРУ (2 одинаковых)', 'grid' => $grid, 'correct_val' => $target];
+        return ['type' => $type, 'title' => 'Внимание', 'question' => 'Найди две одинаковые иконки', 'grid' => $grid, 'correct_val' => $target];
     }
 
     // === МОТОРИКА ===
@@ -490,7 +641,7 @@ function generateTaskData($type)
         return [
             'type' => 'blind_timer',
             'title' => 'Чувство времени',
-            'question' => "Останови на $targetSec.00 сек",
+            'question' => "Нажми СТОП ровно через {$targetSec} сек",
             'target' => $targetMs
         ];
     }
@@ -504,7 +655,6 @@ function generateTaskData($type)
             ['name' => 'Бургер', 'type' => 'yes'],
             ['name' => 'Мыло', 'type' => 'no'],
             ['name' => 'Суп', 'type' => 'yes'],
-            ['name' => 'Кактус', 'type' => 'no'],
             ['name' => 'Пицца', 'type' => 'yes'],
             ['name' => 'Камень', 'type' => 'no'],
             ['name' => 'Банан', 'type' => 'yes'],
@@ -557,7 +707,6 @@ function generateTaskData($type)
             ['name' => 'Ножницы', 'type' => 'no'],
             ['name' => 'Абрикос', 'type' => 'yes'],
             ['name' => 'Пуговица', 'type' => 'no'],
-            ['name' => 'Грибы', 'type' => 'yes'],
             ['name' => 'Карандаш', 'type' => 'no'],
             ['name' => 'Ананас', 'type' => 'yes'],
             ['name' => 'Ластик', 'type' => 'no'],
@@ -579,7 +728,10 @@ function generateTaskData($type)
             ['name' => 'Молоток', 'type' => 'no'],
             ['name' => 'Йогурт', 'type' => 'yes'],
             ['name' => 'Краска', 'type' => 'no'],
-            ['name' => 'Киви', 'type' => 'yes']
+            ['name' => 'Киви', 'type' => 'yes'],
+            ['name' => 'Диван', 'type' => 'no'],
+            ['name' => 'Виноград', 'type' => 'yes'],
+            ['name' => 'Шуруп', 'type' => 'no']
         ];
         $item = $items[array_rand($items)];
         return [
@@ -599,17 +751,15 @@ function generateTaskData($type)
             ['text' => 'Натуральный мед никогда не портится.', 'is_true' => true],
             ['text' => 'Отпечатки пальцев коалы неотличимы от человеческих.', 'is_true' => true],
             ['text' => 'У осьминога три сердца.', 'is_true' => true],
-            ['text' => 'Дельфины спят с одним открытым глазом.', 'is_true' => true],
             ['text' => 'В Антарктиде нет белых медведей.', 'is_true' => true],
             ['text' => 'Самая длинная война в истории длилась 335 лет и прошла без единого выстрела.', 'is_true' => true],
             ['text' => 'Арахис — это не орех, а бобовая культура.', 'is_true' => true],
-            ['text' => 'На Юпитере и Сатурне идут дожди из алмазов.', 'is_true' => true],
-            ['text' => 'Клубника — единственная "ягода", семена которой снаружи.', 'is_true' => true],
             ['text' => 'Оксфордский университет старше империи ацтеков.', 'is_true' => true],
             ['text' => 'Акулы существовали на Земле раньше, чем деревья.', 'is_true' => true],
             ['text' => 'Зажигалку изобрели раньше, чем спички.', 'is_true' => true],
-            ['text' => 'ДНК человека на 50% совпадает с ДНК банана.', 'is_true' => true],
             ['text' => 'Самая короткая война в истории длилась 38 минут.', 'is_true' => true],
+            ['text' => 'У жирафов и людей одинаковое количество шейных позвонков.', 'is_true' => true],
+            ['text' => 'Венера горячее Меркурия.', 'is_true' => true],
 
             // ВЫДУМКА
             ['text' => 'Великую Китайскую стену видно из космоса невооруженным глазом.', 'is_true' => false],
@@ -633,7 +783,6 @@ function generateTaskData($type)
             ['text' => 'Кофе обезвоживает организм.', 'is_true' => false],
             ['text' => 'Пингвины живут в Арктике.', 'is_true' => false],
             ['text' => 'У Наполеона был комплекс маленького роста (он был выше среднего).', 'is_true' => false],
-            ['text' => 'Вакцины вызывают аутизм.', 'is_true' => false],
             ['text' => 'Стекло — это сверхвязкая жидкость.', 'is_true' => false],
             ['text' => 'В космосе нет гравитации.', 'is_true' => false],
             ['text' => 'Мы глотаем 8 пауков в год во сне.', 'is_true' => false]
@@ -641,16 +790,14 @@ function generateTaskData($type)
 
         // Добавляем еще немного правды для баланса
         $trueFacts = [
-            ['text' => 'Мед — единственный продукт, который не портится.', 'is_true' => true],
             ['text' => 'W — единственная буква в английском алфавите, в которой больше одного слога.', 'is_true' => true],
             ['text' => 'У кошек нет ключиц.', 'is_true' => true],
-            ['text' => 'Суммарный вес всех муравьев на Земле примерно равен весу всех людей.', 'is_true' => true],
             ['text' => 'Венера — самая горячая планета в Солнечной системе.', 'is_true' => true],
             ['text' => 'Косатки — это на самом деле дельфины.', 'is_true' => true],
-            ['text' => 'Франция — самая посещаемая страна в мире.', 'is_true' => true],
-            ['text' => 'У жирафов и людей одинаковое количество шейных позвонков.', 'is_true' => true],
             ['text' => 'Кровь омара бесцветная, но синеет при контакте с кислородом.', 'is_true' => true],
             ['text' => 'Ковбойские шляпы были изобретены не ковбоями, а Джоном Стетсоном.', 'is_true' => true],
+            ['text' => 'Австралия одновременно является страной и континентом.', 'is_true' => true],
+            ['text' => 'На флаге Японии изображен круг.', 'is_true' => true],
         ];
         $facts = array_merge($facts, $trueFacts);
 
@@ -690,7 +837,7 @@ function generateTaskData($type)
         return [
             'type' => $type,
             'title' => 'Внимание',
-            'question' => "Сколько тут $target ?",
+            'question' => "Сколько здесь $target?",
             'target' => $target,
             'grid' => $grid,
             'options' => $opts,
@@ -748,9 +895,17 @@ function generateTaskData($type)
         $bk = $backups[array_rand($backups)];
 
         try {
-            $system = "Ты генератор викторины/квиза. Тема: $topic. Ответь JSON.";
-            $prompt = "Придумай вопрос с 4 вариантами. Один правильный.
-            JSON: {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"correct_index\": 0}";
+            $system = "Ты генератор быстрых и понятных вопросов для мобильной викторины. Тема: $topic. Нужен только короткий, однозначный, проверяемый вопрос без подвохов, без оценочных формулировок и без спорных фактов. Ответь только JSON.";
+            $prompt = "Сформируй 1 вопрос для быстрой игры.
+Требования:
+- вопрос до 90 символов;
+- 4 коротких варианта ответа;
+- ровно 1 правильный ответ;
+- без двусмысленности;
+- без формулировок, зависящих от мнения или трактовки;
+- без очень узких или сомнительных фактов;
+- correct_index только от 0 до 3.
+JSON: {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"correct_index\": 0}";
 
             // $response = GigaChat::getInstance()->chat([['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]], 0.8);
             $response = AIService::getProvider('text')->text([['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]], ['temperature' => 0.8]);
@@ -765,15 +920,29 @@ function generateTaskData($type)
 
                 $json = json_decode($content, true);
 
-                if ($json && isset($json['question']) && isset($json['options'])) {
+                if (
+                    $json
+                    && isset($json['question'], $json['options'], $json['correct_index'])
+                    && is_array($json['options'])
+                    && count($json['options']) === 4
+                    && isset($json['options'][(int) $json['correct_index']])
+                    && mb_strlen(trim((string) $json['question'])) <= 90
+                ) {
+                    $options = array_map(fn($opt) => trim((string) $opt), $json['options']);
+                    $question = trim((string) $json['question']);
+                    $correctIndex = (int) $json['correct_index'];
+                    $uniqueOptions = array_unique($options);
+
+                    if (count($uniqueOptions) === 4 && $correctIndex >= 0 && $correctIndex < 4) {
                     return [
                         'type' => 'ai_quiz',
                         'title' => 'AI: ' . $topic,
-                        'question' => $json['question'],
-                        'options' => $json['options'],
-                        'correct_val' => $json['options'][$json['correct_index']],
+                        'question' => $question,
+                        'options' => $options,
+                        'correct_val' => $options[$correctIndex],
                         'is_ai' => true
                     ];
+                    }
                 }
             }
         } catch (Exception $e) {
@@ -790,6 +959,10 @@ function processBots($pdo, $roomId, &$state)
 {
     require_once __DIR__ . '/../lib/AI/Bot/BotManager.php';
 
+    if (($state['phase'] ?? '') !== 'playing' || empty($state['round_data']) || !is_array($state['round_data'])) {
+        return;
+    }
+
     // 1. Get Bots in Room
     $stmt = $pdo->prepare("SELECT u.* FROM room_players rp JOIN users u ON rp.user_id = u.id WHERE rp.room_id = ? AND u.is_bot = 1");
     $stmt->execute([$roomId]);
@@ -799,7 +972,7 @@ function processBots($pdo, $roomId, &$state)
         return;
 
     $roundData = $state['round_data'];
-    $correctVal = $roundData['correct_val'];
+    $correctVal = $roundData['correct_val'] ?? null;
     $options = $roundData['options'] ?? [];
 
     // Determine correct index
@@ -816,6 +989,7 @@ function processBots($pdo, $roomId, &$state)
 
     foreach ($bots as $bot) {
         $botId = $bot['id'];
+        $chosenIndex = null;
 
         // Skip if already answered
         if (isset($state['round_results'][$botId]))
@@ -862,43 +1036,41 @@ function processBots($pdo, $roomId, &$state)
             }
         }
 
-        // Calculate Score
-        $score = 0;
-        if ($isCorrect) {
-            if ($gameType === 'blind_timer') {
-                // Score calc for blind timer is handled in frontend usually? 
-                // Wait, submit_result handles score calc: max(100, 1000 - floor($time / 5))
-                // But for blind timer, "time" passed to submit_result is the ACTUAL TIME STOPPED?
-                // Let's check submit_result logic: "Formula: base 1000. Subtract time/5".
-                // That formula implies "Time taken to answer".
-                // For Blind Timer, score logic might be different? 
-                // Checked submit_result: "if($time < 100 && $gameType !== 'blind_timer')".
-                // It applies standard formula? If so, blind timer "time" should be "delta"?
-                // Let's look at submit_result again. It takes `time_ms`.
-                // If I pass "delta" as time_ms, then smaller is better. Yes.
-                // So for blind timer, let's simulate delta.
-                if ($gameType === 'blind_timer') {
-                    $timeMs = abs($state['round_data']['target'] - $timeMs); // Delta
-                }
-            }
-
-            $score = max(100, 1000 - floor($timeMs / 5));
+        if ($isCorrect && $gameType === 'blind_timer') {
+            $timeMs = abs(($state['round_data']['target'] ?? 0) - $timeMs); // Delta
         }
+        $scoreBreakdown = bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect);
+        $score = (int) $scoreBreakdown['final_score'];
 
         // Record Result
-        $state['round_results'][$botId] = [
+        $botAnswer = null;
+        if ($gameType === 'blind_timer') {
+            $botAnswer = (string) $timeMs;
+        } elseif ($correctIndex !== -1 && isset($options[$chosenIndex])) {
+            $botAnswer = $options[$chosenIndex];
+        } elseif ($gameType === 'reaction_test') {
+            $botAnswer = 'tap';
+        }
+
+        $state['round_results'][(string) $botId] = [
             'time' => $timeMs,
             'correct' => $isCorrect,
-            'score' => (int) $score
+            'score' => (int) $score,
+            'answer' => $botAnswer,
+            'score_breakdown' => $scoreBreakdown
         ];
 
-        if (!isset($state['scores'][$botId]))
-            $state['scores'][$botId] = 0;
-        $state['scores'][$botId] += (int) $score;
+        if (!isset($state['scores'][(string) $botId]))
+            $state['scores'][(string) $botId] = 0;
+        $state['scores'][(string) $botId] += (int) $score;
     }
 
     // --- Chat Logic ---
     // Try to chat
+    if (!empty($state['round_chat_sent'])) {
+        return;
+    }
+
     $chatData = BotManager::maybeChat($pdo, $roomId, []); // Empty history for now, or fetch recent events
 
     if ($chatData) {
@@ -911,5 +1083,6 @@ function processBots($pdo, $roomId, &$state)
 
         $pdo->prepare("INSERT INTO room_events (room_id, user_id, type, payload) VALUES (?, ?, 'chat', ?)")
             ->execute([$roomId, $botId, $payload]);
+        $state['round_chat_sent'] = true;
     }
 }
