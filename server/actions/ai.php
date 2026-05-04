@@ -195,6 +195,60 @@ function action_generate_content($pdo, $currentUser, $params)
                 6. Тон: драматичный, живой, глубокий. Сделай так, чтобы игроки почувствовали вес своих решений.";
                 break;
 
+            case 'brainbattle_summary':
+                $room = null;
+                if (function_exists('getRoom')) {
+                    $room = getRoom($currentUser['id']);
+                }
+
+                if (!$room) {
+                    echo json_encode(['status' => 'error', 'message' => 'Комната не найдена']);
+                    return;
+                }
+
+                $state = json_decode($room['game_state'] ?? '', true);
+                if (!is_array($state) || ($state['phase'] ?? '') !== 'game_over') {
+                    echo json_encode(['status' => 'error', 'message' => 'Матч еще не завершен']);
+                    return;
+                }
+
+                if (isset($state['ai_summary'])) {
+                    echo json_encode(['status' => 'ok', 'data' => $state['ai_summary'], 'cached' => true]);
+                    return;
+                }
+
+                $summaryLockName = 'brainbattle_summary_' . (int) $room['id'];
+                $lockStmt = $pdo->prepare("SELECT GET_LOCK(?, 0)");
+                $lockStmt->execute([$summaryLockName]);
+                $summaryLockAcquired = (int) $lockStmt->fetchColumn() === 1;
+
+                if (!$summaryLockAcquired) {
+                    echo json_encode(['status' => 'pending', 'message' => 'Summary generation already in progress']);
+                    return;
+                }
+
+                $freshStmt = $pdo->prepare("SELECT game_state FROM rooms WHERE id = ?");
+                $freshStmt->execute([$room['id']]);
+                $freshState = json_decode($freshStmt->fetchColumn() ?: '', true);
+                if (isset($freshState['ai_summary'])) {
+                    $releaseStmt = $pdo->prepare("SELECT RELEASE_LOCK(?)");
+                    $releaseStmt->execute([$summaryLockName]);
+                    $summaryLockAcquired = false;
+                    echo json_encode(['status' => 'ok', 'data' => $freshState['ai_summary'], 'cached' => true]);
+                    return;
+                }
+
+                require_once __DIR__ . '/../games/brainbattle.php';
+
+                $playersStmt = $pdo->prepare("SELECT u.id, u.first_name, u.is_bot FROM room_players rp JOIN users u ON u.id = rp.user_id WHERE rp.room_id = ? ORDER BY rp.id ASC");
+                $playersStmt->execute([$room['id']]);
+                $players = $playersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $payload = bbBuildMatchSummaryPayload($freshState ?: $state, $players);
+                $system = "Ты ведущий короткого пост-матч разбора BrainBattle. Напиши 2-4 живых предложения без Markdown и без списков. Не выдумывай факты вне данных. Тон: энергичный, но не крикливый.";
+                $prompt = "Сделай краткий разбор матча на русском языке. Упомяни победителя, один-два поворотных момента и общий рисунок игры. Держи текст в пределах 450 символов.\n\nДанные матча:\n" . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                break;
+
             default:
                 echo json_encode(['status' => 'error', 'message' => 'Unknown type']);
                 return;
@@ -219,7 +273,7 @@ function action_generate_content($pdo, $currentUser, $params)
             $content = $response['content'];
 
             // --- SAVE TO CACHE IF IT'S A BUNKER SUMMARY ---
-            if ($type === 'bunker_summary' && isset($room['id'])) {
+            if (($type === 'bunker_summary' || $type === 'brainbattle_summary') && isset($room['id'])) {
                 $freshStmt = $pdo->prepare("SELECT game_state FROM rooms WHERE id = ?");
                 $freshStmt->execute([$room['id']]);
                 $state = json_decode($freshStmt->fetchColumn() ?: '', true);
@@ -239,7 +293,7 @@ function action_generate_content($pdo, $currentUser, $params)
             // ----------------------------------------------
 
             // Try to parse JSON if expected
-            if ($type !== 'word_hint' && $type !== 'bunker_summary') {
+            if ($type !== 'word_hint' && $type !== 'bunker_summary' && $type !== 'brainbattle_summary') {
                 if (preg_match('/```json(.*?)```/s', $content, $matches)) {
                     $content = trim($matches[1]);
                 }

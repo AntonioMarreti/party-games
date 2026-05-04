@@ -18,27 +18,28 @@ window.BB_MECHANICS.color_chaos = function (wrapper, task) {
     };
 
     let html = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 pb-5 pt-5">
+        <div class="bb-round-shell">
             <div class="bb-game-badge d-flex align-items-center gap-2">
                 <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
                     <i class="bi bi-x-circle"></i>
                 </button>
             </div>
             
-            <h2 class="mb-4 text-center fw-bold" style="color:var(--text-muted);">${task.question}</h2>
+            <div class="bb-question-card bb-question-card--hero">
+                <div class="bb-question-kicker">${task.question}</div>
+                <h1 class="bb-question-text bb-question-text--hero animate__animated animate__tada text-break px-3 text-center" 
+                    style="color: ${mapColor[task.color]};">
+                    ${task.text}
+                </h1>
+            </div>
             
-            <h1 class="display-3 fw-bold mb-5 animate__animated animate__tada text-break px-3 text-center" 
-                style="color: ${mapColor[task.color]}; font-size: 3rem; text-shadow: var(--shadow-sm); line-height: 1.2;">
-                ${task.text}
-            </h1>
-            
-            <div class="d-grid gap-3 w-100" style="grid-template-columns: 1fr 1fr;">
+            <div class="bb-options-grid bb-options-grid--2">
     `;
 
     task.options.forEach(opt => {
-        html += `<button class="btn bb-glass-card border-0 shadow-sm p-3 fs-5 fw-bold" style="color:var(--text-main);" 
-            onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${opt}</button>`;
+        html += `<button class="btn bb-option-btn p-3 fs-5" 
+            ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${opt}</button>`;
     });
 
     html += `</div></div>`;
@@ -48,15 +49,18 @@ window.BB_MECHANICS.color_chaos = function (wrapper, task) {
 // 2. НАЙДИ ЛИШНЕЕ
 window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
     let html = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 pb-5 pt-5">
+        <div class="bb-round-shell">
             <div class="bb-game-badge d-flex align-items-center gap-2">
                 <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
                     <i class="bi bi-x-circle"></i>
                 </button>
             </div>
-            <h2 class="mb-5 fw-bold text-center animate__animated animate__fadeIn" style="color:var(--text-main);">${task.question}</h2>
-            <div class="d-grid gap-2 w-100 px-3" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Найди лишнее</div>
+                <h2 class="bb-question-text bb-question-text--medium animate__animated animate__fadeIn">${task.question}</h2>
+            </div>
+            <div class="d-grid gap-2 w-100 px-3" style="grid-template-columns: repeat(4, 1fr); max-width: 420px; margin: 0 auto;">
     `;
 
     task.options.forEach(opt => {
@@ -65,9 +69,9 @@ window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
             ? `<i class="bi ${opt}" style="pointer-events:none;"></i>`
             : opt;
 
-        html += `<button class="btn bb-glass-card border-0 shadow-sm rounded-4 d-flex align-items-center justify-content-center p-0" 
+        html += `<button class="btn bb-option-btn d-flex align-items-center justify-content-center p-0" 
             style="font-size: 2.5rem; height: 80px; color: var(--primary-color);" 
-            onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${content}</button>`;
+            ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${content}</button>`;
     });
     html += `</div></div>`;
     wrapper.innerHTML = html;
@@ -76,19 +80,22 @@ window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
 // 3. НАЙДИ ДУБЛИКАТ
 window.BB_MECHANICS.find_duplicate = function (wrapper, task) {
     wrapper.innerHTML = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+        <div class="bb-round-shell">
             <div class="bb-game-badge d-flex align-items-center gap-2">
                 <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
                     <i class="bi bi-x-circle"></i>
                 </button>
             </div>
-            <h4 class="mb-4 text-center fw-bold" style="color:var(--text-muted);">${task.question}</h4>
-            <div class="d-grid gap-2 px-3" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Найди совпадение</div>
+                <h4 class="bb-question-text bb-question-text--small">${task.question}</h4>
+            </div>
+            <div class="bb-grid-compact-4 px-3">
                 ${task.grid.map(emoji => `
-                    <button class="btn bb-glass-card shadow-sm border-0 rounded-4 d-flex align-items-center justify-content-center p-0" 
+                    <button class="btn bb-option-btn d-flex align-items-center justify-content-center p-0" 
                         style="font-size: 2.2rem; height: 75px;"
-                        onclick="window.bbSubmit('${emoji}', '${task.correct_val}')">
+                        ${window.bbBuildSubmitActionAttrs(emoji, task.correct_val)}>
                         ${emoji.startsWith('bi-') ? `<i class="bi ${emoji}" style="pointer-events:none;"></i>` : emoji}
                     </button>
                 `).join('')}
@@ -104,24 +111,27 @@ window.BB_MECHANICS.count_objects = function (wrapper, task) {
     }
 
     wrapper.innerHTML = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+        <div class="bb-round-shell bb-round-shell--compact">
             <div class="bb-game-badge d-flex align-items-center gap-2">
                 <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" onclick="confirmForceExit()" title="Выйти в настройки">
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
                     <i class="bi bi-x-circle"></i>
                 </button>
             </div>
-            <h4 class="mb-4 text-center text-muted fw-bold">${questionHtml}</h4>
-            
-            <div class="bb-glass-card p-4 rounded-4 mb-5 d-flex flex-wrap justify-content-center gap-3" style="max-width:320px; background: var(--bg-glass);">
-                ${task.grid.map(emoji => `<span class="animate__animated animate__bounceIn" style="font-size: 2.5rem;">${emoji.startsWith('bi-') ? `<i class="bi ${emoji}"></i>` : emoji}</span>`).join('')}
+            <div class="bb-question-card" style="margin-bottom: 18px;">
+                <div class="bb-question-kicker">Внимание к деталям</div>
+                <h4 class="bb-question-text bb-question-text--small">${questionHtml}</h4>
             </div>
             
-            <div class="d-flex justify-content-center gap-3 w-100 px-3">
+            <div class="bb-glass-card p-3 rounded-4 mb-4 d-flex flex-wrap justify-content-center gap-3 mx-auto" style="max-width:320px; background: var(--bg-glass);">
+                ${task.grid.map(emoji => `<span class="animate__animated animate__bounceIn" style="font-size: 2.2rem; line-height: 1;">${emoji.startsWith('bi-') ? `<i class="bi ${emoji}"></i>` : emoji}</span>`).join('')}
+            </div>
+            
+            <div class="bb-options-grid bb-options-grid--2" style="max-width: 360px;">
                 ${task.options.map(opt => `
-                    <button class="btn bb-glass-card shadow-sm border-0 rounded-4 flex-grow-1 fw-bold fs-2" 
-                        style="height: 70px; color: var(--primary-color) !important;" 
-                        onclick="window.bbSubmit('${opt}', '${task.correct_val}')">
+                    <button class="btn bb-option-btn bb-option-btn--primary fw-bold fs-2" 
+                        style="min-height: 64px;" 
+                        ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>
                         ${opt}
                     </button>
                 `).join('')}
@@ -131,13 +141,14 @@ window.BB_MECHANICS.count_objects = function (wrapper, task) {
 
 // 5. НАПЕРСТКИ (Thimbles / Shell game)
 window.BB_MECHANICS.thimbles = function (wrapper, task) {
+    const roundId = window.bbActiveRoundId || '';
     if (!task.cups || !Array.isArray(task.swaps)) {
         wrapper.innerHTML = `
             <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100 px-4">
                 <i class="bi bi-exclamation-triangle-fill text-warning mb-3" style="font-size: 3rem;"></i>
                 <h4 class="fw-bold text-center mb-2">Игра устарела</h4>
                 <p class="text-muted text-center mb-4">Данные этого раунда сломаны. Нажмите кнопку ниже, чтобы сбросить игру и начать заново.</p>
-                <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold" onclick="confirmForceExit()">
+                <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold" data-bb-action="force-exit">
                     <i class="bi bi-arrow-counterclockwise me-2"></i>Сбросить игру
                 </button>
             </div>`;
@@ -148,15 +159,20 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
     const GAP = 110; // расстояние между позициями
 
     wrapper.innerHTML = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+        <div class="bb-round-shell">
             <div class="bb-game-badge d-flex align-items-center gap-2">
                 <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50" onclick="confirmForceExit()" title="Выйти">
+                <button class="btn btn-sm p-0 border-0 text-white opacity-50" data-bb-action="force-exit" title="Выйти">
                     <i class="bi bi-x-circle"></i>
                 </button>
             </div>
-            <h3 class="mb-5 fw-bold text-center px-3" id="thimbles-status" style="color:var(--text-main);">${task.question}</h3>
-            <div id="thimbles-stage" style="position:relative; height:130px; width:${(N-1)*GAP+80}px; margin:0 auto;"></div>
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Следи за шариком</div>
+                <h3 class="bb-question-text bb-question-text--small" id="thimbles-status">${task.question}</h3>
+            </div>
+            <div class="bb-stage-card">
+                <div id="thimbles-stage" style="position:relative; height:130px; width:${(N-1)*GAP+80}px; margin:0 auto; max-width:100%;"></div>
+            </div>
         </div>`;
 
     const stage = document.getElementById('thimbles-stage');
@@ -179,6 +195,7 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
     const cups = [];
     // cupX[i] = текущий translateX стаканчика i (в пикселях)
     const cupX = [];
+    let thimblesReady = false;
 
     for (let i = 0; i < N; i++) {
         const c = document.createElement('div');
@@ -197,13 +214,15 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
             will-change: transform;
         `;
         c.innerHTML = `<i class="bi bi-cup-hot-fill" style="font-size:2.8rem;color:rgba(255,255,255,0.15);pointer-events:none;"></i>`;
-        c.addEventListener('click', () => { if (window.thimblesReady) window.handleCupClick(i); });
+        c.addEventListener('click', () => {
+            if (typeof window.brainBattleRoundState?.thimblesCupClick === 'function') {
+                window.brainBattleRoundState.thimblesCupClick(i);
+            }
+        });
         stage.appendChild(c);
         cups.push(c);
         cupX.push(tx);
     }
-
-    window.thimblesReady = false;
 
     // Логическая позиция: cupLogicPos[dom-index] = какой позиции сейчас находится стаканчик i
     const cupLogicPos = Array.from({length: N}, (_, i) => i);
@@ -240,13 +259,19 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
 
     // Фаза 1: показываем шарик
     const initDom = cupAtLogic(task.initial_ball);
-    setTimeout(() => {
+    window.bbSetTimeout(() => {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
         setCupTransform(initDom, cupX[initDom], -80, 500);
-        setTimeout(() => {
+        window.bbSetTimeout(() => {
+            if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
             setCupTransform(initDom, cupX[initDom], 0, 500);
-            setTimeout(() => {
+            window.bbSetTimeout(() => {
+                if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
                 ball.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
-                setTimeout(() => runSwaps(0), 600);
+                window.bbSetTimeout(() => {
+                    if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
+                    runSwaps(0);
+                }, 600);
             }, 1000);
         }, 900);
     }, 400);
@@ -254,8 +279,9 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
     let ballLogicPos = task.initial_ball;
 
     function runSwaps(idx) {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
         if (idx >= task.swaps.length) {
-            window.thimblesReady = true;
+            thimblesReady = true;
             if (window.bbResetTimer) window.bbResetTimer();
             if (statusEl) {
                 statusEl.innerText = 'ГДЕ ШАРИК?';
@@ -300,12 +326,15 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
         if (ballLogicPos === posA) ballLogicPos = posB;
         else if (ballLogicPos === posB) ballLogicPos = posA;
 
-        setTimeout(() => runSwaps(idx + 1), duration + 150);
+        window.bbSetTimeout(() => {
+            if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
+            runSwaps(idx + 1);
+        }, duration + 150);
     }
 
-    window.handleCupClick = function(domId) {
-        if (!window.thimblesReady) return;
-        window.thimblesReady = false;
+    window.brainBattleRoundState.thimblesCupClick = function(domId) {
+        if (!thimblesReady) return;
+        thimblesReady = false;
 
         setCupTransform(domId, cupX[domId], -80, 400);
 
@@ -316,13 +345,13 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
         ball.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: 'forwards' });
 
         if (clickedLogicPos !== correctLogicPos) {
-            setTimeout(() => {
+            window.bbSetTimeout(() => {
                 const correctDom = cupAtLogic(correctLogicPos);
                 setCupTransform(correctDom, cupX[correctDom], -80, 400);
             }, 400);
         }
 
-        setTimeout(() => {
+        window.bbSetTimeout(() => {
             window.bbSubmit(clickedLogicPos.toString(), task.correct_val.toString());
         }, 1500);
     };

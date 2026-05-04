@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 require_once 'config.php';
 require_once 'auth.php';
 require_once 'lib/TelegramLogger.php';
+require_once 'lib/room_lifecycle.php';
 
 // Error Handling
 ini_set('display_errors', 0);
@@ -195,11 +196,6 @@ function updateGameState($roomId, $state)
     global $pdo;
     $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
         ->execute([json_encode($state), $roomId]);
-}
-
-function clearUserRooms($pdo, $userId)
-{
-    $pdo->prepare("DELETE FROM room_players WHERE user_id = ?")->execute([$userId]);
 }
 
 function sendError($message)

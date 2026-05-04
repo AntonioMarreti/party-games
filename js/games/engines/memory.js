@@ -1,49 +1,87 @@
 if (!window.BB_MECHANICS) window.BB_MECHANICS = {};
 
+function bbFormatMemoryItem(item) {
+    if (typeof item !== 'string' || item.trim() === '') {
+        return '<span class="opacity-50">?</span>';
+    }
+    return item.startsWith('bi-') ? `<i class="bi ${item}"></i>` : item;
+}
+
+function bbPlayMemoryFeedback(soundKey, hapticType = 'selection', hapticDetail = 'light') {
+    if (window.audioManager) window.audioManager.play(soundKey);
+    if (window.triggerHaptic) window.triggerHaptic(hapticType, hapticDetail);
+}
+
 // ФОТОПАМЯТЬ
 // 1. ФОТОПАМЯТЬ
 window.BB_MECHANICS.photo_memory = function (wrapper, task) {
+    const roundId = window.bbActiveRoundId || '';
     // Фаза 1: Показ
     let html = `
-        <div id="mem-phase-1" class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
+        <div id="mem-phase-1" class="bb-round-shell">
             <div class="bb-game-badge">${task.title}</div>
-            <h2 class="mb-5 fw-bold" style="color:var(--text-main);">Запомни!</h2>
-            <div class="d-flex flex-wrap justify-content-center gap-3 mb-5 px-3">
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Фаза запоминания</div>
+                <h2 class="bb-question-text bb-question-text--medium">Запомни!</h2>
+            </div>
+            <div class="bb-memory-grid mb-4 px-3">
                 ${task.shown_items.map(i => `
-                    <div class="bb-glass-card d-flex align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px; font-size: 2.5rem; color: var(--text-main);">
-                        ${i.startsWith('bi-') ? `<i class="bi ${i}"></i>` : i}
+                    <div class="bb-glass-card bb-memory-card shadow-sm">
+                        ${bbFormatMemoryItem(i)}
                     </div>
                 `).join('')}
             </div>
-            <div class="progress w-75 rounded-pill" style="height: 12px; background: var(--bg-secondary);">
-                <div class="progress-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color), white 30%)); border-radius: 10px;"></div>
+            <div class="bb-status-rail">
+                <div class="bb-status-rail__top">
+                    <span>Фаза запоминания</span>
+                    <span>3 сек</span>
+                </div>
+                <div class="bb-status-rail__track">
+                    <div class="bb-status-rail__bar" id="bb-memory-phase1-bar"></div>
+                </div>
             </div>
         </div>
     `;
 
     wrapper.innerHTML = html;
+    bbPlayMemoryFeedback('reveal', 'selection', 'light');
 
     // Анимация таймера
-    setTimeout(() => {
-        const bar = wrapper.querySelector('.progress-bar');
+    window.bbSetTimeout(() => {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
+        const bar = document.getElementById('bb-memory-phase1-bar');
         if (bar) bar.style.width = '0%';
     }, 100);
 
     // Фаза 2: Вопрос (через 3 сек)
-    setTimeout(() => {
-        if (wrapper.dataset.taskId !== JSON.stringify(task)) return; // Если ушли с экрана
+    window.bbSetTimeout(() => {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
+        bbPlayMemoryFeedback('round_start', 'impact', 'medium');
 
         let html2 = `
-            <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+            <div class="bb-round-shell">
                 <div class="bb-game-badge">${task.title}</div>
-                <h2 class="mb-5 animate__animated animate__fadeIn fw-bold text-center" style="color:var(--text-main);">${task.phase2_q}</h2>
-                <div class="d-grid gap-3 w-100 px-3" style="grid-template-columns: 1fr 1fr;">
+                <div class="bb-question-card animate__animated animate__fadeIn">
+                    <div class="bb-question-kicker">Фаза ответа</div>
+                    <h2 class="bb-question-text bb-question-text--medium">${task.phase2_q}</h2>
+                </div>
+                <div class="bb-memory-grid w-100 px-3">
         `;
         task.options.forEach(opt => {
-            html2 += `<button class="btn bb-glass-card p-4 fs-3 fw-bold border-0 d-flex align-items-center justify-content-center" style="color:var(--text-main);" 
-                onclick="window.bbSubmit('${opt}', '${task.correct_val}')">${opt.startsWith('bi-') ? `<i class="bi ${opt}"></i>` : opt}</button>`;
+            html2 += `<button class="btn bb-option-btn bb-memory-option p-4 fw-bold d-flex align-items-center justify-content-center" style="color:var(--text-main);" 
+                ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${bbFormatMemoryItem(opt)}</button>`;
         });
-        html2 += `</div></div>`;
+        html2 += `</div>
+            <div class="bb-status-rail">
+                <div class="bb-status-rail__top">
+                    <span>Выбери ответ</span>
+                    <span>Идет отсчет ответа</span>
+                </div>
+                <div class="bb-status-rail__track">
+                    <div class="bb-status-rail__bar is-indeterminate"></div>
+                </div>
+            </div>
+        </div>`;
         wrapper.innerHTML = html2;
 
         if (window.bbResetTimer) window.bbResetTimer();
@@ -53,79 +91,79 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
 
 // СЛЕПОЙ СЕКУНДОМЕР
 window.BB_MECHANICS.blind_timer = function (wrapper, task) {
-    window.bbBattleStartTime = 0;
-    window.bbBlindTarget = task.target || 5000;
+    let blindStartTime = 0;
+    const blindTarget = task.target || 5000;
+    let blindState = 'ready';
 
     let html = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center">
+        <div class="bb-round-shell text-center">
             <div class="bb-game-badge">${task.title}</div>
-            <h3 class="h3 fw-bold mb-3 px-3" style="color:var(--text-main);">${task.question}</h3>
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Чувство времени</div>
+                <h3 class="bb-question-text bb-question-text--small">${task.question}</h3>
+            </div>
             
             <div id="blind-timer-display" class="display-1 fw-bold font-monospace mt-5 mb-2 text-primary" style="font-variant-numeric: tabular-nums; transition: color 0.3s;">0.00</div>
             <div id="blind-timer-hint" class="fw-bold mb-4" style="color: var(--text-muted); opacity: 0; transition: opacity 0.5s; height: 24px;">Считай про себя... 🤫</div>
             
             <div class="d-grid w-100 px-4">
-                <button id="blind-btn" class="bb-start-btn" onclick="window.bbBlindClick()">СТАРТ</button>
+                <button id="blind-btn" class="bb-start-btn" data-bb-action="blind-click">СТАРТ</button>
             </div>
         </div>
     `;
     wrapper.innerHTML = html;
 
-    window.bbBlindState = 'ready'; // ready -> running -> stopped
-};
+    window.brainBattleRoundState.blindClick = function () {
+        const display = document.getElementById('blind-timer-display');
+        const btn = document.getElementById('blind-btn');
+        if (!display || !btn) return;
 
-window.bbBlindClick = function () {
-    const display = document.getElementById('blind-timer-display');
-    const btn = document.getElementById('blind-btn');
+        if (blindState === 'ready') {
+            bbPlayMemoryFeedback('round_start', 'impact', 'medium');
+            blindState = 'running';
+            blindStartTime = performance.now();
+            btn.innerText = "СТОП";
+            btn.style.background = "linear-gradient(135deg, #FF7675 0%, #D63031 100%)";
+            btn.style.boxShadow = "0 10px 30px rgba(214, 48, 49, 0.3)";
 
-    if (window.bbBlindState === 'ready') {
-        // СТАРТ
-        window.bbBlindState = 'running';
-        window.bbBattleStartTime = performance.now();
-        btn.innerText = "СТОП";
-        btn.style.background = "linear-gradient(135deg, #FF7675 0%, #D63031 100%)";
-        btn.style.boxShadow = "0 10px 30px rgba(214, 48, 49, 0.3)";
+            const hideTimeSec = (blindTarget / 1000) * 0.4;
 
-        const hideTimeSec = (window.bbBlindTarget / 1000) * 0.4; // Прячем после 40% времени
+            window.bbBlindInterval = window.bbSetInterval(() => {
+                const diff = (performance.now() - blindStartTime) / 1000;
 
-        // Тикаем немного, потом скрываем
-        window.bbBlindInterval = setInterval(() => {
-            const diff = (performance.now() - window.bbBattleStartTime) / 1000;
+                if (diff > hideTimeSec) {
+                    display.innerText = "-.--";
+                    display.style.color = "var(--border-main)";
+                    document.getElementById('blind-timer-hint').style.opacity = '1';
+                } else {
+                    display.innerText = diff.toFixed(2);
+                }
+            }, 50);
+        } else if (blindState === 'running') {
+            bbPlayMemoryFeedback('tick_soft', 'selection', 'light');
+            blindState = 'stopped';
+            window.bbClearInterval(window.bbBlindInterval);
+            window.bbBlindInterval = null;
+            const timeMs = performance.now() - blindStartTime;
+            const timeSec = timeMs / 1000;
 
-            if (diff > hideTimeSec) {
-                display.innerText = "-.--";
-                display.style.color = "var(--border-main)";
-                document.getElementById('blind-timer-hint').style.opacity = '1';
-            } else {
-                display.innerText = diff.toFixed(2);
-            }
-        }, 50);
+            display.style.color = "var(--primary-color)";
+            display.innerHTML = timeSec.toFixed(3);
 
-    } else if (window.bbBlindState === 'running') {
-        // СТОП
-        clearInterval(window.bbBlindInterval);
-        const timeMs = performance.now() - window.bbBattleStartTime;
-        const timeSec = timeMs / 1000;
+            const diff = Math.abs(blindTarget - timeMs);
 
-        display.style.color = "var(--primary-color)";
-        display.innerHTML = timeSec.toFixed(3); // Показываем точный результат
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
 
-        // Считаем точность
-        const target = window.bbBlindTarget || 5000;
-        const diff = Math.abs(target - timeMs);
-
-        // Визуальный фидбек по кнопке
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-
-        // Отправляем
-        setTimeout(() => {
-            window.bbSubmit(null, null, diff, true);
-        }, 1200);
-    }
+            window.bbSetTimeout(() => {
+                window.bbSubmit(null, null, diff, true);
+            }, 1200);
+        }
+    };
 };
 
 window.BB_MECHANICS.simon_says = function (wrapper, task) {
+    const roundId = window.bbActiveRoundId || '';
     const sequence = task.sequence; // Массив цветов
     let userSequence = [];
 
@@ -138,21 +176,24 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
 
     // 1. Отрисовываем поле
     wrapper.innerHTML = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1">
+        <div class="bb-round-shell">
             <div class="bb-game-badge">${task.title}</div>
-            <h4 id="simon-status" class="mb-5 fw-bold text-center px-3" style="color:var(--text-muted); line-height:1.4;">ЗАПОМНИ ЭТУ ПОСЛЕДОВАТЕЛЬНОСТЬ</h4>
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Последовательность цветов</div>
+                <h4 id="simon-status" class="bb-question-text bb-question-text--small">ЗАПОМНИ ЭТУ ПОСЛЕДОВАТЕЛЬНОСТЬ</h4>
+            </div>
             
-            <div id="simon-display" class="mb-5 rounded-circle shadow-sm d-flex align-items-center justify-content-center animate__animated" 
+            <div id="simon-display" class="mb-5 mx-auto rounded-circle shadow-sm d-flex align-items-center justify-content-center animate__animated" 
                  style="width: 140px; height: 140px; background: white; border: 4px solid #f1f2f6;">
                  <i class="bi bi-eye-fill" style="font-size: 3rem; color:var(--text-muted);"></i>
             </div>
 
-            <div class="d-grid gap-3 w-100 px-3" style="grid-template-columns: 1fr 1fr;" id="simon-buttons">
+            <div class="bb-options-grid bb-options-grid--2" id="simon-buttons" style="max-width: 420px;">
                 ${Object.keys(colorMap).map(c => `
                     <button class="btn p-0 rounded-4 border-0 shadow-sm simon-btn disabled" 
                             id="btn-simon-${c}"
                             style="background: ${colorMap[c].bg}; height: 100px; transition: transform 0.1s; border: 1px solid var(--border-glass) !important;" 
-                            onclick="window.handleSimonClick('${c}', '${task.correct_val}')">
+                            data-bb-action="simon-click" data-bb-color="${c}" data-bb-correct="${window.bbEncodeActionValue(task.correct_val)}">
                     </button>
                 `).join('')}
             </div>
@@ -161,9 +202,13 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
 
     // 2. Показываем последовательность (МЕДЛЕННЕЕ)
     let i = 0;
-    const interval = setInterval(() => {
+    const interval = window.bbSetInterval(() => {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) {
+            window.bbClearInterval(interval);
+            return;
+        }
         const display = document.getElementById('simon-display');
-        if (!display) { clearInterval(interval); return; }
+        if (!display) { window.bbClearInterval(interval); return; }
 
         if (i < sequence.length) {
             const color = sequence[i];
@@ -181,7 +226,7 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
             display.style.borderColor = colorMap[color].active;
             display.classList.add('animate__pulse');
 
-            setTimeout(() => {
+            window.bbSetTimeout(() => {
                 if (btn) {
                     btn.style.transform = 'scale(1)';
                     btn.style.filter = 'none';
@@ -194,7 +239,7 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
             }, 800); // Increased view time
             i++;
         } else {
-            clearInterval(interval);
+            window.bbClearInterval(interval);
             // 3. Даем игроку нажимать
             const status = document.getElementById('simon-status');
             if (status) {
@@ -210,13 +255,14 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
     }, 1300); // 1300ms interval (Slower)
 
     // 4. Обработка клика
-    window.handleSimonClick = function (color, correctStr) {
+    window.brainBattleRoundState.simonClick = function (color, correctStr) {
+        bbPlayMemoryFeedback('tick_soft', 'selection', 'light');
         // Визуальный отклик
         const btn = document.getElementById(`btn-simon-${color}`);
         if (btn) {
             btn.style.transform = 'scale(0.95)';
             btn.style.filter = 'brightness(1.2)';
-            setTimeout(() => {
+            window.bbSetTimeout(() => {
                 btn.style.transform = 'scale(1)';
                 btn.style.filter = 'none';
             }, 150);
@@ -231,9 +277,9 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
                 void display.offsetWidth; // Trigger reflow to restart animation
                 display.classList.add('animate__pulse');
 
-                if (window.simonUserClickTimeout) clearTimeout(window.simonUserClickTimeout);
+                if (window.simonUserClickTimeout) window.bbClearTimeout(window.simonUserClickTimeout);
 
-                window.simonUserClickTimeout = setTimeout(() => {
+                window.simonUserClickTimeout = window.bbSetTimeout(() => {
                     display.style.background = 'white';
                     display.style.borderColor = '#f1f2f6';
                     display.innerHTML = '<i class="bi bi-eye-fill" style="font-size: 3rem; color:var(--text-muted);"></i>';
@@ -259,10 +305,14 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
 
 // 4. СЕКРЕТНЫЙ КОД (Secret Code)
 window.BB_MECHANICS.secret_code = function (wrapper, task) {
+    const roundId = window.bbActiveRoundId || '';
     let html = `
-        <div id="sc-phase-1" class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
+        <div id="sc-phase-1" class="bb-round-shell">
             <div class="bb-game-badge">${task.title}</div>
-            <h2 class="mb-5 fw-bold text-center px-3" style="color:var(--text-main);">${task.question}</h2>
+            <div class="bb-question-card">
+                <div class="bb-question-kicker">Секретный код</div>
+                <h2 class="bb-question-text bb-question-text--small">${task.question}</h2>
+            </div>
             <div class="bb-glass-card px-5 py-4 d-flex align-items-center justify-content-center mb-5" style="border: 2px dashed var(--primary-color);">
                 <h1 class="display-1 fw-bold mb-0 text-break text-center w-100" style="letter-spacing: 12px; margin-right: -12px; color: var(--primary-color);">${task.pin}</h1>
             </div>
@@ -274,19 +324,23 @@ window.BB_MECHANICS.secret_code = function (wrapper, task) {
     wrapper.innerHTML = html;
 
     // Анимация таймера
-    setTimeout(() => {
+    window.bbSetTimeout(() => {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
         const bar = wrapper.querySelector('.sc-timer-bar');
         if (bar) bar.style.width = '0%';
     }, 100);
 
     // Переход ко второй фазе через 3 сек
-    setTimeout(() => {
-        if (wrapper.dataset.taskId !== JSON.stringify(task)) return; // Если ушли с экрана
+    window.bbSetTimeout(() => {
+        if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
 
         let htmlPhase2 = `
-            <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100 w-100 animate__animated animate__fadeIn">
+            <div class="bb-round-shell animate__animated animate__fadeIn">
                 <div class="bb-game-badge">${task.title}</div>
-                <h4 class="mb-4 text-center fw-bold text-muted">Введи пароль:</h4>
+                <div class="bb-question-card" style="max-width: 320px;">
+                    <div class="bb-question-kicker">Фаза ввода</div>
+                    <h4 class="bb-question-text bb-question-text--small">Введи пароль</h4>
+                </div>
                 
                 <div class="bb-glass-card w-100 px-4 py-3 mb-4 d-flex align-items-center justify-content-center shadow-sm" style="max-width:280px; height: 75px; border-bottom: 4px solid var(--primary-color);">
                     <h1 id="sc-display" class="display-3 fw-bold mb-0 text-center w-100" style="letter-spacing: 10px; margin-right: -10px; color: var(--text-main);"></h1>
@@ -305,37 +359,37 @@ window.BB_MECHANICS.secret_code = function (wrapper, task) {
             if (k === 'empty') {
                 htmlPhase2 += `<div></div>`;
             } else if (k === 'clear') {
-                htmlPhase2 += `<button class="btn btn-light shadow-sm border-0 d-flex align-items-center justify-content-center" style="height: 70px; font-size: 1.5rem; color: var(--status-error);" onclick="window.handleSecretCodeClear()"><i class="bi bi-backspace-fill"></i></button>`;
+                htmlPhase2 += `<button class="btn btn-light shadow-sm border-0 d-flex align-items-center justify-content-center" style="height: 70px; font-size: 1.5rem; color: var(--status-error);" data-bb-action="secret-clear"><i class="bi bi-backspace-fill"></i></button>`;
             } else {
-                htmlPhase2 += `<button class="btn bb-glass-card shadow-sm border-0 d-flex align-items-center justify-content-center fw-bold text-dark" style="height: 70px; font-size: 2rem; transition: transform 0.1s ease;" onclick="window.handleSecretCodeClick(this, '${k}', '${task.correct_val}')">${k}</button>`;
+                htmlPhase2 += `<button class="btn bb-glass-card shadow-sm border-0 d-flex align-items-center justify-content-center fw-bold text-dark" style="height: 70px; font-size: 2rem; transition: transform 0.1s ease;" data-bb-action="secret-digit" data-bb-value="${k}" data-bb-correct="${window.bbEncodeActionValue(task.correct_val)}">${k}</button>`;
             }
         });
 
         htmlPhase2 += `</div></div>`;
         wrapper.innerHTML = htmlPhase2;
 
-        window.scCurrentInput = '';
+        let currentInput = '';
 
-        window.handleSecretCodeClear = function () {
-            window.scCurrentInput = '';
+        window.brainBattleRoundState.secretClear = function () {
+            currentInput = '';
             document.getElementById('sc-display').innerText = '';
         };
 
-        window.handleSecretCodeClick = function (btn, num, correctStr) {
+        window.brainBattleRoundState.secretDigit = function (btn, num, correctStr) {
             btn.style.transform = 'scale(0.9)';
             btn.style.background = 'var(--bg-secondary)';
-            setTimeout(() => {
+            window.bbSetTimeout(() => {
                 btn.style.transform = 'none';
                 btn.style.background = '';
             }, 100);
 
-            if (window.scCurrentInput.length < correctStr.length) {
-                window.scCurrentInput += num;
-                document.getElementById('sc-display').innerText = window.scCurrentInput; // Показываем введенные цифры
+            if (currentInput.length < correctStr.length) {
+                currentInput += num;
+                document.getElementById('sc-display').innerText = currentInput;
 
-                if (window.scCurrentInput.length === correctStr.length) {
-                    setTimeout(() => {
-                        window.bbSubmit(window.scCurrentInput, correctStr);
+                if (currentInput.length === correctStr.length) {
+                    window.bbSetTimeout(() => {
+                        window.bbSubmit(currentInput, correctStr);
                     }, 200);
                 }
             }

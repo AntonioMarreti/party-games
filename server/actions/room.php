@@ -10,6 +10,39 @@ function action_create_room($pdo, $user, $data)
     try {
         $pdo->beginTransaction();
 
+        $existingStmt = $pdo->prepare("
+            SELECT r.*, rp.is_host
+            FROM room_players rp
+            JOIN rooms r ON r.id = rp.room_id
+            WHERE rp.user_id = ?
+            ORDER BY rp.id DESC
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $existingStmt->execute([$user['id']]);
+        $existingRoom = $existingStmt->fetch();
+
+        if (
+            $existingRoom
+            && (int) ($existingRoom['is_host'] ?? 0) === 1
+            && isRoomWaitingState($existingRoom)
+            && !empty($existingRoom['created_at'])
+        ) {
+            $createdAtTs = strtotime($existingRoom['created_at']);
+            if ($createdAtTs !== false && (time() - $createdAtTs) <= 10) {
+                $pdo->commit();
+                logRoomLifecycle('create_noop', [
+                    'room_id' => (int) $existingRoom['id'],
+                    'room_code' => $existingRoom['room_code'],
+                    'actor_user_id' => (int) $user['id'],
+                    'host_user_id' => (int) $existingRoom['host_user_id'],
+                    'status' => $existingRoom['status'] ?? null,
+                ], 'Room create noop');
+                echo json_encode(['status' => 'ok', 'room_code' => $existingRoom['room_code']]);
+                return;
+            }
+        }
+
         // 1. Сначала удаляем игрока из старых комнат
         clearUserRooms($pdo, $user['id']);
 
@@ -30,11 +63,14 @@ function action_create_room($pdo, $user, $data)
 
         $pdo->commit();
 
-        TelegramLogger::logEvent('room', "Room Created", [
-            'id' => $rid,
-            'code' => $code,
-            'host' => $user['first_name'] . " (ID: " . $user['id'] . ")"
-        ]);
+        logRoomLifecycle('created', [
+            'room_id' => (int) $rid,
+            'room_code' => $code,
+            'actor_user_id' => (int) $user['id'],
+            'host_user_id' => (int) $user['id'],
+            'has_password' => $pass ? 1 : 0,
+            'status' => 'waiting',
+        ], 'Room created');
 
         echo json_encode(['status' => 'ok', 'room_code' => $code]);
     } catch (Exception $e) {
@@ -46,30 +82,38 @@ function action_create_room($pdo, $user, $data)
 
 function action_join_room($pdo, $user, $data)
 {
-    $code = strtoupper($data['room_code'] ?? '');
-
-    $stmt = $pdo->prepare("SELECT * FROM rooms WHERE room_code = ?");
-    $stmt->execute([$code]);
-    $room = $stmt->fetch();
-
-    if (!$room)
-        sendError('Комната не найдена');
-    if ($room['password'] && !password_verify($data['password'] ?? '', $room['password']))
-        sendError('Неверный пароль');
-
     try {
         $pdo->beginTransaction();
-
-        // 1. Сначала удаляем игрока из старых комнат
-        clearUserRooms($pdo, $user['id']);
-
-        // 2. Добавляем в новую
-        $pdo->prepare("INSERT INTO room_players (room_id, user_id) VALUES (?, ?)")->execute([$room['id'], $user['id']]);
-
+        $result = performRoomJoin(
+            $pdo,
+            $user,
+            (string) ($data['room_code'] ?? ''),
+            (string) ($data['password'] ?? '')
+        );
         $pdo->commit();
+
+        $room = $result['room'];
+        $updatedCounts = $result['counts'];
+        $code = $result['room_code'];
+        logRoomLifecycle($result['lifecycle_action'], [
+            'room_id' => (int) $room['id'],
+            'room_code' => $code,
+            'actor_user_id' => (int) $user['id'],
+            'host_user_id' => (int) $room['host_user_id'],
+            'status' => $room['status'],
+            'players_total' => $updatedCounts['total_players'],
+            'humans_total' => $updatedCounts['human_players'],
+        ], $result['lifecycle_message']);
         echo json_encode(['status' => 'ok', 'room_code' => $code]);
+    } catch (RuntimeException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        sendError($e->getMessage());
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         TelegramLogger::log("Join Room Error", ['error' => $e->getMessage(), 'user_id' => $user['id']]);
         sendError('Join Error');
     }
@@ -77,53 +121,35 @@ function action_join_room($pdo, $user, $data)
 
 function action_leave_room($pdo, $user, $data)
 {
-    // 1. Get Room BEFORE leaving (to check if it becomes empty)
-    $room = getRoom($user['id']);
+    try {
+        $pdo->beginTransaction();
 
-    // 2. Remove User
-    clearUserRooms($pdo, $user['id']);
+        $userLockStmt = $pdo->prepare("SELECT id FROM users WHERE id = ? FOR UPDATE");
+        $userLockStmt->execute([$user['id']]);
 
-    // 3. Cleanup Logic
-    if ($room) {
-        $roomId = $room['id'];
+        $membershipCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE user_id = ? FOR UPDATE");
+        $membershipCheckStmt->execute([$user['id']]);
+        $membershipsCount = (int) $membershipCheckStmt->fetchColumn();
 
-        // Count REMAINING Humans
-        // We join with users table and check is_bot flag
-        // (Assuming we added is_bot column in previous repairs, or we check telegram_id < 0)
-        // Safer to check room_players count where associated user is NOT a bot.
-
-        // Note: RP table now has is_bot column (added in migration/repair).
-        // Let's use that for efficiency.
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ? AND is_bot = 0");
-        $stmt->execute([$roomId]);
-        $humansLeft = $stmt->fetchColumn();
-
-        if ($humansLeft == 0) {
-            // No humans left. Kill the room and all bots in it.
-
-            // A. Get Bot User IDs to delete their Shadow User accounts
-            $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
-            $stmt->execute([$roomId]);
-            $botIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-            // B. Delete Room
-            $pdo->prepare("DELETE FROM rooms WHERE id = ?")->execute([$roomId]);
-
-            // C. Delete Room Players (Cascade might handle this if FK, but do explicit)
-            $pdo->prepare("DELETE FROM room_players WHERE room_id = ?")->execute([$roomId]);
-
-            // D. Delete Shadow Users (Clean up users table) - DISABLED FOR SINGLETON BOTS
-            // We now want bots to persist to keep their stats/achievements.
-            // if (!empty($botIds)) {
-            //    $placeholders = implode(',', array_fill(0, count($botIds), '?'));
-            //    $pdo->prepare("DELETE FROM users WHERE id IN ($placeholders)")->execute($botIds);
-            // }
-
-            TelegramLogger::logEvent('room_cleanup', "Cleaned Bot Room (Bots Persisted)", ['room_id' => $roomId, 'bots_in_room' => count($botIds)]);
+        if ($membershipsCount <= 0) {
+            $pdo->commit();
+            logRoomLifecycle('leave_noop', [
+                'actor_user_id' => (int) $user['id'],
+            ], 'Room leave noop');
+            echo json_encode(['status' => 'ok']);
+            return;
         }
-    }
 
-    echo json_encode(['status' => 'ok']);
+        clearUserRooms($pdo, $user['id']);
+        $pdo->commit();
+        echo json_encode(['status' => 'ok']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        TelegramLogger::log("Leave Room Error", ['error' => $e->getMessage(), 'user_id' => $user['id']]);
+        sendError('Leave Error');
+    }
 }
 
 function action_kick_player($pdo, $user, $data)
@@ -140,6 +166,15 @@ function action_kick_player($pdo, $user, $data)
 
     $stmt = $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?");
     $stmt->execute([$room['id'], $targetId]);
+
+    logRoomLifecycle('member_kicked', [
+        'room_id' => (int) $room['id'],
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (int) $user['id'],
+        'target_user_id' => (int) $targetId,
+        'status' => $room['status'] ?? null,
+    ], 'Room member kicked');
+
     echo json_encode(['status' => 'ok']);
 }
 
@@ -210,7 +245,13 @@ function action_add_bot($pdo, $user, $data)
             ->execute([$room['id'], $botUserId, $difficulty]);
 
         // Log it
-        TelegramLogger::logEvent('room_event', "Added Bot to Room", ['room_id' => $room['id'], 'bot_id' => $botUserId, 'diff' => $difficulty]);
+        logRoomLifecycle('bot_added', [
+            'room_id' => (int) $room['id'],
+            'room_code' => $room['room_code'] ?? null,
+            'actor_user_id' => (int) $user['id'],
+            'target_user_id' => (int) $botUserId,
+            'difficulty' => $difficulty,
+        ], 'Bot added to room');
 
         $pdo->commit();
         echo json_encode(['status' => 'ok', 'user_id' => $botUserId]);
@@ -252,6 +293,13 @@ function action_remove_bot($pdo, $user, $data)
     $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?")->execute([$room['id'], $targetId]);
     // Optionally delete shadow user to keep DB clean
     $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$targetId]);
+
+    logRoomLifecycle('bot_removed', [
+        'room_id' => (int) $room['id'],
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (int) $user['id'],
+        'target_user_id' => (int) $targetId,
+    ], 'Bot removed from room');
 
     echo json_encode(['status' => 'ok']);
 }
@@ -391,6 +439,7 @@ function cleanupOldRooms($pdo)
         // 2. Delete orphaned room_players (where room_id no longer exists)
         // This ensures bots (and humans) are removed from the mapping table if the room is gone.
         $pdo->exec("DELETE FROM room_players WHERE room_id NOT IN (SELECT id FROM rooms)");
+        $pdo->exec("DELETE FROM public_rooms WHERE room_id NOT IN (SELECT id FROM rooms)");
 
     } catch (Exception $e) {
         // Ignore cleanup errors
@@ -404,6 +453,12 @@ function action_make_room_public($pdo, $user, $data)
     $room = getRoom($user['id']);
     if (!$room || !$room['is_host'])
         sendError('Not host');
+    if (!isRoomWaitingState($room))
+        sendError('Публичной может быть только waiting-комната');
+
+    $counts = getRoomPlayerCounts($pdo, $room['id']);
+    if ($counts['active_humans'] <= 0)
+        sendError('Для публичной комнаты нужен активный хост');
 
     $title = trim($data['title'] ?? 'Party Game');
     $desc = trim($data['description'] ?? '');
@@ -430,13 +485,19 @@ function action_get_public_rooms($pdo, $user, $data)
 {
     $stmt = $pdo->query("
         SELECT pr.*, r.game_type, r.room_code, r.game_state,
+               CASE WHEN r.password IS NULL OR r.password = '' THEN 0 ELSE 1 END as has_password,
                (SELECT COUNT(*) FROM room_players WHERE room_id = r.id) as players_count,
-               u.photo_url as host_avatar, u.first_name as host_name
+               u.photo_url as host_avatar, u.first_name as host_name,
+               COALESCE(host_rp.last_active, r.created_at) as host_last_active
         FROM public_rooms pr
         JOIN rooms r ON r.id = pr.room_id
-        JOIN users u ON u.id = r.host_user_id
+        JOIN room_players host_rp ON host_rp.room_id = r.id AND host_rp.user_id = r.host_user_id AND host_rp.is_host = 1
+        JOIN users u ON u.id = host_rp.user_id
         WHERE r.status = 'waiting' 
         AND pr.visibility = 'public'
+        AND u.is_bot = 0
+        AND COALESCE(host_rp.last_active, r.created_at) > (NOW() - INTERVAL 10 MINUTE)
+        ORDER BY players_count DESC, host_last_active DESC, pr.id DESC
         LIMIT 20
     ");
     $rooms = $stmt->fetchAll();
@@ -462,12 +523,18 @@ function action_get_local_rooms($pdo, $user, $data)
 
     $stmt = $pdo->prepare("
         SELECT r.room_code, r.game_type, r.game_state,
+               CASE WHEN r.password IS NULL OR r.password = '' THEN 0 ELSE 1 END as has_password,
                (SELECT COUNT(*) FROM room_players WHERE room_id = r.id) as players_count,
-               u.photo_url as host_avatar, u.first_name as host_name
+               u.photo_url as host_avatar, u.first_name as host_name,
+               COALESCE(host_rp.last_active, r.created_at) as host_last_active
         FROM rooms r
-        JOIN users u ON u.id = r.host_user_id
+        JOIN room_players host_rp ON host_rp.room_id = r.id AND host_rp.user_id = r.host_user_id AND host_rp.is_host = 1
+        JOIN users u ON u.id = host_rp.user_id
         WHERE r.ip_hash = ? 
         AND r.status = 'waiting'
+        AND u.is_bot = 0
+        AND COALESCE(host_rp.last_active, r.created_at) > (NOW() - INTERVAL 10 MINUTE)
+        ORDER BY players_count DESC, host_last_active DESC, r.id DESC
         LIMIT 10
     ");
     $stmt->execute([$ipHash]);
@@ -475,4 +542,3 @@ function action_get_local_rooms($pdo, $user, $data)
 
     echo json_encode(['status' => 'ok', 'rooms' => $rooms]);
 }
-

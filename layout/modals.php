@@ -162,7 +162,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-2">
-                <form onsubmit="joinRoom(); closeModal('joinModal'); return false;">
+                <form onsubmit="joinRoom(); return false;">
                     <input type="text" id="join-room-code"
                         class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold"
                         placeholder="A1B2C3"

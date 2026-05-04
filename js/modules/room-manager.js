@@ -7,10 +7,18 @@
 let isLeavingProcess = false;
 let pollInterval = null;
 let lastPlayersJson = '';
+let isCreateRoomPending = false;
+let isJoinRoomPending = false;
+
+function setPollingSuspended(value) {
+    window.__pgSuspendPolling = !!value;
+}
 
 // === ROOM ACTIONS ===
 
 async function createRoom() {
+    if (isCreateRoomPending) return;
+
     const passInput = document.getElementById('create-room-pass');
     const titleInput = document.getElementById('create-room-title');
 
@@ -22,35 +30,73 @@ async function createRoom() {
 
     if (typeof window.apiRequest !== 'function') return;
 
-    const res = await window.apiRequest({ action: 'create_room', password: passInput ? passInput.value : '' });
-    if (res.status === 'ok') {
-        // Safe Modal Closing
-        const modalEl = document.getElementById('createModal');
-        if (modalEl && window.bootstrap) {
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.hide();
+    isCreateRoomPending = true;
+    setPollingSuspended(true);
+    try {
+        const res = await window.apiRequest({ action: 'create_room', password: passInput ? passInput.value : '' });
+        if (res.status === 'ok') {
+            // Safe Modal Closing
+            const modalEl = document.getElementById('createModal');
+            if (modalEl && window.bootstrap) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.hide();
 
-            // Force cleanup of stuck backdrops
-            setTimeout(() => {
-                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = '';
-            }, 300);
-        }
+                // Force cleanup of stuck backdrops
+                setTimeout(() => {
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                }, 300);
+            }
 
-        if (isPublic) {
-            await window.apiRequest({
-                action: 'make_room_public',
-                title: roomTitle,
-                description: 'Все сюда!',
-                visibility: 'public'
-            });
+            if (isPublic) {
+                await window.apiRequest({
+                    action: 'make_room_public',
+                    title: roomTitle,
+                    description: 'Все сюда!',
+                    visibility: 'public'
+                });
+            }
+            if (typeof window.checkState === 'function') await window.checkState();
         }
-        if (typeof window.checkState === 'function') window.checkState();
+    } finally {
+        setPollingSuspended(false);
+        isCreateRoomPending = false;
     }
 }
 
-async function joinRoom(code = null) {
+function getPublicRoomGameName(gameType) {
+    if (Array.isArray(window.AVAILABLE_GAMES)) {
+        const match = window.AVAILABLE_GAMES.find(g => g.id === gameType);
+        if (match && match.name) return match.name;
+    }
+    return gameType || 'Игра';
+}
+
+function getPublicRoomGameMeta(gameType) {
+    if (Array.isArray(window.AVAILABLE_GAMES)) {
+        const match = window.AVAILABLE_GAMES.find(g => g.id === gameType);
+        if (match) {
+            return {
+                name: match.name || getPublicRoomGameName(gameType),
+                icon: match.icon || 'bi-controller',
+                bgColor: match.bgColor || 'var(--bg-secondary)',
+                color: match.color || 'var(--primary-color)'
+            };
+        }
+    }
+
+    return {
+        name: getPublicRoomGameName(gameType),
+        icon: 'bi-controller',
+        bgColor: 'var(--bg-secondary)',
+        color: 'var(--primary-color)'
+    };
+}
+
+async function joinRoom(code = null, passwordOverride = null) {
+    if (isJoinRoomPending) return;
+
     if (!code) {
         const input = document.getElementById('join-room-code');
         code = input ? input.value : '';
@@ -60,29 +106,69 @@ async function joinRoom(code = null) {
         return;
     }
     const passInput = document.getElementById('join-room-pass');
-    const res = await window.apiRequest({ action: 'join_room', room_code: code, password: passInput ? passInput.value : '' });
-    if (res.status === 'ok') {
-        // Safe Modal Closing
-        const modalEl = document.getElementById('joinModal');
-        if (modalEl && window.bootstrap) {
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.hide();
+    const password = passwordOverride !== null ? passwordOverride : (passInput ? passInput.value : '');
+    isJoinRoomPending = true;
+    setPollingSuspended(true);
+    try {
+        const res = await window.apiRequest({ action: 'join_room', room_code: code, password });
+        if (res.status === 'ok') {
+            // Safe Modal Closing
+            const modalEl = document.getElementById('joinModal');
+            if (modalEl && window.bootstrap) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.hide();
+            }
+
+            // Force cleanup of stuck backdrops
+            setTimeout(() => {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+            }, 300);
+
+            if (typeof window.checkState === 'function') await window.checkState();
+        } else {
+            if (window.showAlert) window.showAlert("Ошибка", res.message, 'error');
         }
-
-        // Force cleanup of stuck backdrops
-        setTimeout(() => {
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-        }, 300);
-
-        if (typeof window.checkState === 'function') window.checkState();
-    } else {
-        if (window.showAlert) window.showAlert("Ошибка", res.message, 'error');
+    } finally {
+        setPollingSuspended(false);
+        isJoinRoomPending = false;
     }
 }
 
-function leaveRoom() {
+function handlePublicRoomJoin(room) {
+    if (!room) return;
+
+    if (Number(room.has_password) === 1) {
+        if (typeof window.showPrompt === 'function') {
+            window.showPrompt(
+                'Пароль комнаты',
+                `Введите пароль для комнаты ${window.safeHTML ? window.safeHTML(room.title || room.room_code) : (room.title || room.room_code)}`,
+                (value) => joinRoom(room.room_code, value),
+                {
+                    confirmText: 'Войти',
+                    cancelText: 'Отмена',
+                    placeholder: 'Пароль комнаты'
+                }
+            );
+            return;
+        }
+    }
+
+    joinRoom(room.room_code);
+}
+
+function handleRoomJoinByData(roomCode, hasPassword = 0, title = '') {
+    handlePublicRoomJoin({
+        room_code: roomCode,
+        has_password: hasPassword,
+        title: title || roomCode
+    });
+}
+
+async function leaveRoom() {
+    if (isLeavingProcess) return;
+
     const amIHost = window.isHost;
     const title = 'Выход из комнаты';
     const text = amIHost ? 'Вы Хост. Если вы выйдете, комната будет закрыта для всех. Продолжить?' : 'Вы уверены, что хотите покинуть комнату?';
@@ -128,21 +214,29 @@ function leaveRoom() {
 async function loadPublicRooms() {
     const container = document.getElementById('public-rooms-list');
     if (!container) return; // Not in view
-    container.innerHTML = '<p class="text-center text-muted small">Обновление...</p>';
+    container.innerHTML = '<p class="text-center text-muted small py-4">Обновление...</p>';
 
     const res = await window.apiRequest({ action: 'get_public_rooms' });
     if (res.status === 'ok') {
         const refreshBtn = `
-            <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm position-absolute d-flex align-items-center justify-content-center" 
-                    style="top: -10px; right: 0px; width: 36px; height: 36px; z-index: 10;">
+            <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                    style="width: 36px; height: 36px;">
                 <i class="bi bi-arrow-clockwise" style="font-size: 18px;"></i>
             </button>
         `;
 
+        const headerHtml = `<div class="public-rooms-header d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <div class="fw-bold" style="color:var(--text-main);">Публичные комнаты</div>
+                <div class="small text-muted">Только живые waiting-комнаты</div>
+            </div>
+            ${refreshBtn}
+        </div>`;
+
         if (res.rooms.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-4 rounded-4 shadow-sm position-relative" style="background: var(--bg-glass); backdrop-filter: blur(10px); border: 1px solid var(--border-glass);">
-                    ${refreshBtn}
+                ${headerHtml}
+                <div class="public-room-card public-room-empty text-center py-4">
                      <div class="mb-2 text-primary opacity-50"><i class="bi bi-telescope" style="font-size: 40px;"></i></div>
                      <div class="fw-bold" style="color: var(--text-main)">Пусто</div>
                      <div class="text-muted small mb-3">Никто не играет в открытую</div>
@@ -152,30 +246,41 @@ async function loadPublicRooms() {
             return;
         }
 
-        container.innerHTML = refreshBtn;
+        container.innerHTML = headerHtml;
 
         res.rooms.forEach(r => {
             const div = document.createElement('div');
-            div.className = 'd-flex justify-content-between align-items-center mb-2 p-3 shadow-sm';
-            div.style.borderRadius = '16px';
-            div.style.border = '1px solid var(--border-glass)';
-            div.style.background = 'var(--bg-glass)';
-            div.style.backdropFilter = 'blur(10px)';
-            div.onclick = () => joinRoom(r.room_code);
+            div.className = 'public-room-card shadow-sm';
+            div.onclick = () => handlePublicRoomJoin(r);
             div.style.cursor = 'pointer';
+            const gameMeta = getPublicRoomGameMeta(r.game_type);
+            const safeTitle = window.safeHTML(r.title) || ('Комната ' + window.safeHTML(r.host_name));
+            const safeDescription = window.safeHTML(r.description) || 'Присоединяйтесь!';
+            const hostName = window.safeHTML(r.host_name || 'Хост');
+            const gameName = window.safeHTML(gameMeta.name);
+            const lockBadge = Number(r.has_password) === 1
+                ? `<span class="public-room-badge"><i class="bi bi-lock-fill me-1"></i>Пароль</span>`
+                : `<span class="public-room-badge"><i class="bi bi-unlock me-1"></i>Открытая</span>`;
 
             div.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="avatar-sm" style="background-image: url('${r.host_avatar || ''}')"></div>
-                        <div>
-                            <div class="fw-bold" style="color:var(--text-main);">${window.safeHTML(r.title) || ('Комната ' + window.safeHTML(r.host_name))}</div>
-                            <div class="small text-muted">${window.safeHTML(r.description) || 'Присоединяйтесь!'}</div>
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div class="d-flex align-items-start gap-3 flex-grow-1 min-w-0">
+                        <div class="public-room-game-icon" style="background:${gameMeta.bgColor}; color:${gameMeta.color};">
+                            <i class="bi ${gameMeta.icon}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="fw-bold public-room-title">${safeTitle}</div>
+                            <div class="small text-muted public-room-description mb-2">${safeDescription}</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="public-room-badge"><i class="bi bi-controller me-1"></i>${gameName}</span>
+                                ${lockBadge}
+                                <span class="public-room-badge"><i class="bi bi-person-circle me-1"></i>${hostName}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-end">
-                         <div class="badge bg-primary rounded-pill mb-1">${r.players_count} чел.</div>
-                         <div class="small fw-bold text-primary">#${r.room_code}</div>
+                    <div class="text-end flex-shrink-0">
+                         <div class="public-room-count">${r.players_count} чел.</div>
+                         <div class="small fw-bold text-primary mt-2">#${r.room_code}</div>
                     </div>
                 </div>
             `;
@@ -192,17 +297,19 @@ async function loadLocalRooms() {
     const res = await window.apiRequest({ action: 'get_local_rooms' });
     if (res.status === 'ok') {
         const backBtn = `
-            <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm position-absolute d-flex align-items-center justify-content-center" 
-                    style="top: -10px; right: 0px; width: 36px; height: 36px; z-index: 10;">
+            <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                    style="width: 36px; height: 36px;">
                 <i class="bi bi-globe" style="font-size: 18px;"></i>
             </button>
         `;
 
-        const title = `<h6 class="text-start ms-2 mb-3 text-primary"><i class="bi bi-wifi me-2"></i>Комнаты рядом</h6>`;
+        const title = `<div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="text-start ms-2 mb-0 text-primary"><i class="bi bi-wifi me-2"></i>Комнаты рядом</h6>
+            ${backBtn}
+        </div>`;
 
         if (!res.rooms || res.rooms.length === 0) {
             container.innerHTML = `
-                ${backBtn}
                 ${title}
                 <div class="text-center py-4 rounded-4 shadow-sm position-relative" style="background: var(--bg-glass); backdrop-filter: blur(10px); border: 1px solid var(--border-glass);">
                      <div class="mb-2 text-primary opacity-50"><i class="bi bi-router" style="font-size: 40px;"></i></div>
@@ -214,22 +321,31 @@ async function loadLocalRooms() {
             return;
         }
 
-        let html = backBtn + title;
+        let html = title;
 
         res.rooms.forEach(r => {
+            const gameMeta = getPublicRoomGameMeta(r.game_type);
+            const lockBadge = Number(r.has_password) === 1
+                ? `<span class="public-room-badge"><i class="bi bi-lock-fill me-1"></i>Пароль</span>`
+                : '';
             html += `
-            <div class="d-flex justify-content-between align-items-center mb-2 p-3 shadow-sm clickable" onclick="joinRoom('${r.room_code}')"
-                 style="border-radius: 16px; border: 1px solid var(--border-glass); background: var(--bg-glass); backdrop-filter: blur(10px); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="avatar-sm" style="background-image: url('${r.host_avatar || ''}')"></div>
-                        <div>
-                            <div class="fw-bold" style="color:var(--text-main);">${window.safeHTML(r.host_name)}</div>
-                            <div class="small text-success"><i class="bi bi-wifi"></i> В вашей сети</div>
+            <div class="public-room-card clickable" onclick="handleRoomJoinByData('${r.room_code}', ${Number(r.has_password) === 1 ? 1 : 0}, '${window.safeHTML(r.host_name || '').replace(/'/g, "\\'")}')">
+                <div class="d-flex justify-content-between align-items-center w-100 gap-3">
+                    <div class="d-flex align-items-center gap-3 min-w-0">
+                        <div class="public-room-game-icon" style="background:${gameMeta.bgColor}; color:${gameMeta.color};">
+                            <i class="bi ${gameMeta.icon}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="fw-bold public-room-title">${window.safeHTML(r.host_name)}</div>
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                <span class="public-room-badge"><i class="bi bi-controller me-1"></i>${window.safeHTML(gameMeta.name)}</span>
+                                <span class="public-room-badge text-success"><i class="bi bi-wifi me-1"></i>В вашей сети</span>
+                                ${lockBadge}
+                            </div>
                         </div>
                     </div>
                     <div class="text-end">
-                         <div class="badge bg-success rounded-pill mb-1">Рядом</div>
+                         <div class="public-room-count">${r.players_count} чел.</div>
                          <div class="small fw-bold text-primary">#${r.room_code}</div>
                     </div>
                 </div>
@@ -244,6 +360,7 @@ async function loadLocalRooms() {
 function startPolling() {
     if (pollInterval) return;
     pollInterval = setInterval(() => {
+        if (window.__pgSuspendPolling) return;
         if (typeof window.checkState === 'function') window.checkState();
     }, 3000);
 }

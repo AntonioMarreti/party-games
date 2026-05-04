@@ -281,6 +281,10 @@ window.checkState = async function () {
 
             const isMenuScreen = ['settings', 'profile-edit', 'game-detail', 'friends', 'leaderboard'].includes(window.location.hash.substring(1));
             const gameType = res.room.game_type; // Fix: Define gameType properly
+            const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
+                ? window.AVAILABLE_GAMES.find(g => g.id === gameType)
+                : null;
+            const renderFnName = gameConfig?.renderFunction || `render_${gameType}`;
 
             if (gameType === 'lobby') {
                 if (!isScreenActive('room') && !isMenuScreen) showScreen('room');
@@ -288,7 +292,7 @@ window.checkState = async function () {
             } else {
                 if (window.GameManager && window.GameManager.loadGameScript) {
                     try {
-                        if (!window[`render_${gameType}`]) {
+                        if (!window[renderFnName]) {
                             const gameArea = document.getElementById('game-area');
                             if (gameArea && !gameArea.querySelector('.spinner-border')) {
                                 gameArea.innerHTML = `<div class="d-flex flex-column align-items-center justify-content-center h-100" style="padding-top: 30vh;"><div class="spinner-border text-primary mb-3"></div><div class="text-muted">Загрузка модуля игры...</div></div>`;
@@ -301,12 +305,12 @@ window.checkState = async function () {
                 }
 
                 let attempts = 0;
-                while (!window[`render_${gameType}`] && attempts < 20) {
+                while (!window[renderFnName] && attempts < 20) {
                     await new Promise(r => setTimeout(r, 100));
                     attempts++;
                 }
 
-                const renderFunc = window[`render_${gameType}`];
+                const renderFunc = window[renderFnName];
                 if (typeof renderFunc === 'function') {
                     if (!isScreenActive('game') && !isMenuScreen) showScreen('game');
                     try {
@@ -316,6 +320,8 @@ window.checkState = async function () {
                         const gameArea = document.getElementById('game-area');
                         if (gameArea) gameArea.innerHTML = `<div class="p-5 text-center"><h3 class="mb-3 text-danger">Ошибка отображения</h3><p class="text-muted mb-4">${e.message}</p><button class="btn btn-outline-danger" onclick="leaveRoom()">Выйти</button></div>`;
                     }
+                } else {
+                    console.error(`Render function not found for ${gameType}: ${renderFnName}`);
                 }
             }
 

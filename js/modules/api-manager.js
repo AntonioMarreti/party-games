@@ -8,6 +8,19 @@ let authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_toke
 let serverTimeOffset = 0;
 let consecutiveGetStateTimeouts = 0;
 
+function getApiTimeoutMs(action) {
+    switch (String(action || '')) {
+        case 'start_game':
+        case 'create_room':
+        case 'join_room':
+            return 20000;
+        case 'get_state':
+            return 15000;
+        default:
+            return 10000;
+    }
+}
+
 async function apiRequest(data) {
     let body;
     if (data instanceof FormData) {
@@ -26,7 +39,8 @@ async function apiRequest(data) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutMs = getApiTimeoutMs(data?.action);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
         const localBefore = Date.now();
@@ -71,10 +85,10 @@ async function apiRequest(data) {
                 if (data?.action === 'get_state') {
                     consecutiveGetStateTimeouts++;
                     if (consecutiveGetStateTimeouts >= 3) {
-                        window.logClientError("API Timeout", `Action: get_state, Timeout: 10s, Consecutive: ${consecutiveGetStateTimeouts}`);
+                        window.logClientError("API Timeout", `Action: get_state, Timeout: ${timeoutMs}ms, Consecutive: ${consecutiveGetStateTimeouts}`);
                     }
                 } else {
-                    window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: 10s`);
+                    window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: ${timeoutMs}ms`);
                 }
             }
         }

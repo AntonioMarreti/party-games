@@ -9,23 +9,33 @@ let reactionThrottleTimer = null;
 const lastSourceShowTime = new Map(); // Track when we last showed a user's nameplate
 let seenReactionIds = new Map(); // Prevent duplicate event processing (TTL based)
 const loadedGameScripts = new Set(); // Track loaded scripts to prevent duplicates
+let isStartGamePending = false;
 
 // === DYNAMIC LOADING ===
 async function loadGameScript(gameType) {
-    if (loadedGameScripts.has(gameType) || window[`render_${gameType}`]) {
-        return Promise.resolve();
-    }
-
-    // 1. Try to find config
     const gameConfig = window.AVAILABLE_GAMES
         ? window.AVAILABLE_GAMES.find(g => g.id === gameType)
         : null;
+    const renderFnName = gameConfig?.renderFunction || `render_${gameType}`;
+
+    if (loadedGameScripts.has(gameType) || window[renderFnName]) {
+        return Promise.resolve();
+    }
 
     // 2. Determine files to load
     let filesToLoad = [];
 
-    if (gameConfig && gameConfig.files && gameConfig.files.length > 0) {
-        filesToLoad = gameConfig.files;
+    if (gameConfig) {
+        if (Array.isArray(gameConfig.files) && gameConfig.files.length > 0) {
+            filesToLoad = gameConfig.files.slice();
+        } else {
+            if (Array.isArray(gameConfig.css) && gameConfig.css.length > 0) {
+                filesToLoad.push(...gameConfig.css);
+            }
+            if (Array.isArray(gameConfig.scripts) && gameConfig.scripts.length > 0) {
+                filesToLoad.push(...gameConfig.scripts);
+            }
+        }
     } else {
         // Fallback for legacy/simple games
         const complexGames = ['bunker', 'wordclash'];
@@ -907,8 +917,18 @@ async function tryGameNow(gameId) {
 }
 
 async function startGame(gameName) {
-    await window.apiRequest({ action: 'start_game', game_name: gameName });
-    if (window.checkState) window.checkState();
+    if (isStartGamePending) return { status: 'ignored' };
+
+    isStartGamePending = true;
+    window.__pgSuspendPolling = true;
+    try {
+        const res = await window.apiRequest({ action: 'start_game', game_name: gameName });
+        if (window.checkState) await window.checkState();
+        return res;
+    } finally {
+        window.__pgSuspendPolling = false;
+        isStartGamePending = false;
+    }
 }
 
 async function finishGameSession() {

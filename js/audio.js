@@ -6,15 +6,41 @@ class AudioManager {
         this.sounds = {};
         this.basePath = 'sounds/';
         this.unlocked = false;
+        this.volumes = {
+            click: 0.28,
+            tick_soft: 0.18,
+            hover: 0.2,
+            success: 0.24,
+            success_bright: 0.2,
+            error: 0.2,
+            error_soft: 0.16,
+            notification: 0.18,
+            pop: 0.22,
+            reveal: 0.14,
+            round_start: 0.16,
+            move: 0.18,
+            win: 0.24,
+            join: 0.18,
+            leave: 0.18,
+            alert: 0.18,
+            glitch: 0.16,
+            scratch: 0.14,
+            ambient_glass: 0.12
+        };
 
         // Define sound library
         this.library = {
             'click': 'click_001.ogg',
+            'tick_soft': 'tick_001.ogg',
             'hover': 'switch_001.ogg',
             'success': 'confirmation_001.ogg',
+            'success_bright': 'confirmation_004.ogg',
             'error': 'error_001.ogg',
+            'error_soft': 'error_004.ogg',
             'notification': 'toggle_001.ogg',
             'pop': 'drop_002.ogg',
+            'reveal': 'glass_003.ogg',
+            'round_start': 'maximize_008.ogg',
             'move': 'pluck_001.ogg',
             'win': 'confirmation_004.ogg',
             'join': 'switch_003.ogg',
@@ -32,7 +58,7 @@ class AudioManager {
         for (const [key, file] of Object.entries(this.library)) {
             const audio = new Audio(this.basePath + file);
             audio.preload = 'auto'; // Force browser to start downloading
-            audio.volume = 0.5;
+            audio.volume = this.volumes[key] ?? 0.2;
             this.sounds[key] = audio;
             // Trigger load for especially critical sounds
             audio.load();

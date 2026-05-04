@@ -184,6 +184,192 @@ function bbStoreRoundHistoryEntry(&$state)
     $state['round_history'] = array_values($history);
 }
 
+function bbBuildLeaderboardSnapshot($state, $players)
+{
+    $scores = is_array($state['scores'] ?? null) ? $state['scores'] : [];
+    $entries = [];
+
+    foreach ($players as $player) {
+        $playerId = (string) ($player['id'] ?? '');
+        if ($playerId === '') {
+            continue;
+        }
+
+        $entries[] = [
+            'id' => $playerId,
+            'name' => (string) ($player['first_name'] ?? ('Player ' . $playerId)),
+            'score' => (int) ($scores[$playerId] ?? 0)
+        ];
+    }
+
+    usort($entries, function ($a, $b) {
+        if ($a['score'] === $b['score']) {
+            return strcmp($a['name'], $b['name']);
+        }
+        return $b['score'] <=> $a['score'];
+    });
+
+    foreach ($entries as $index => &$entry) {
+        $entry['rank'] = $index + 1;
+    }
+    unset($entry);
+
+    return $entries;
+}
+
+function bbBuildMatchSummaryPayload($state, $players)
+{
+    $history = is_array($state['round_history'] ?? null) ? $state['round_history'] : [];
+    $leaderboard = bbBuildLeaderboardSnapshot($state, $players);
+    $statsByPlayer = [];
+
+    foreach ($leaderboard as $entry) {
+        $statsByPlayer[$entry['id']] = [
+            'name' => $entry['name'],
+            'score' => (int) $entry['score'],
+            'rank' => (int) $entry['rank'],
+            'correct_answers' => 0,
+            'wrong_answers' => 0,
+            'answered_rounds' => 0,
+            'first_places' => 0,
+            'best_round_score' => 0,
+            'fastest_correct_ms' => null
+        ];
+    }
+
+    $roundNotes = [];
+    $fastestAnswer = null;
+
+    foreach ($history as $round) {
+        $roundResults = is_array($round['round_results'] ?? null) ? $round['round_results'] : [];
+        $topScore = null;
+        $topNames = [];
+
+        foreach ($roundResults as $playerId => $result) {
+            $playerId = (string) $playerId;
+            if (!isset($statsByPlayer[$playerId])) {
+                continue;
+            }
+
+            $score = (int) ($result['score'] ?? 0);
+            $correct = !empty($result['correct']);
+            $timeMs = (int) round((float) ($result['time'] ?? 0));
+
+            $statsByPlayer[$playerId]['answered_rounds']++;
+            $statsByPlayer[$playerId]['best_round_score'] = max($statsByPlayer[$playerId]['best_round_score'], $score);
+
+            if ($correct) {
+                $statsByPlayer[$playerId]['correct_answers']++;
+                if ($statsByPlayer[$playerId]['fastest_correct_ms'] === null || $timeMs < $statsByPlayer[$playerId]['fastest_correct_ms']) {
+                    $statsByPlayer[$playerId]['fastest_correct_ms'] = $timeMs;
+                }
+
+                if ($fastestAnswer === null || $timeMs < $fastestAnswer['time_ms']) {
+                    $fastestAnswer = [
+                        'name' => $statsByPlayer[$playerId]['name'],
+                        'time_ms' => $timeMs,
+                        'round_number' => (int) ($round['round_number'] ?? 0),
+                        'game_type' => (string) ($round['game_type'] ?? '')
+                    ];
+                }
+            } else {
+                $statsByPlayer[$playerId]['wrong_answers']++;
+            }
+
+            if ($topScore === null || $score > $topScore) {
+                $topScore = $score;
+                $topNames = [$statsByPlayer[$playerId]['name']];
+            } elseif ($score === $topScore) {
+                $topNames[] = $statsByPlayer[$playerId]['name'];
+            }
+        }
+
+        foreach ($roundResults as $playerId => $result) {
+            if ((int) ($result['score'] ?? 0) === (int) $topScore && isset($statsByPlayer[(string) $playerId])) {
+                $statsByPlayer[(string) $playerId]['first_places']++;
+            }
+        }
+
+        if ($topScore !== null) {
+            $roundNotes[] = [
+                'round' => (int) ($round['round_number'] ?? 0),
+                'title' => (string) ($round['title'] ?? ($round['game_type'] ?? 'Раунд')),
+                'winner_names' => array_values(array_unique($topNames)),
+                'top_score' => (int) $topScore
+            ];
+        }
+    }
+
+    $bestAccuracy = null;
+    $mostWins = null;
+    foreach ($statsByPlayer as $playerId => $playerStats) {
+        $accuracy = $playerStats['answered_rounds'] > 0
+            ? round(($playerStats['correct_answers'] / $playerStats['answered_rounds']) * 100)
+            : 0;
+        $statsByPlayer[$playerId]['accuracy_percent'] = (int) $accuracy;
+
+        if ($bestAccuracy === null || $accuracy > $bestAccuracy['accuracy_percent']) {
+            $bestAccuracy = [
+                'name' => $playerStats['name'],
+                'accuracy_percent' => (int) $accuracy
+            ];
+        }
+
+        if ($mostWins === null || $playerStats['first_places'] > $mostWins['first_places']) {
+            $mostWins = [
+                'name' => $playerStats['name'],
+                'first_places' => (int) $playerStats['first_places']
+            ];
+        }
+    }
+
+    $winner = $leaderboard[0] ?? null;
+    $runnerUp = $leaderboard[1] ?? null;
+
+    return [
+        'mode' => 'brainbattle',
+        'total_rounds' => (int) ($state['total_rounds'] ?? count($history)),
+        'played_rounds' => count($history),
+        'winner' => $winner ? [
+            'name' => $winner['name'],
+            'score' => (int) $winner['score']
+        ] : null,
+        'runner_up' => $runnerUp ? [
+            'name' => $runnerUp['name'],
+            'score' => (int) $runnerUp['score']
+        ] : null,
+        'leaderboard' => array_map(function ($entry) use ($statsByPlayer) {
+            $stats = $statsByPlayer[$entry['id']] ?? [];
+            return [
+                'rank' => (int) $entry['rank'],
+                'name' => $entry['name'],
+                'score' => (int) $entry['score'],
+                'correct_answers' => (int) ($stats['correct_answers'] ?? 0),
+                'accuracy_percent' => (int) ($stats['accuracy_percent'] ?? 0),
+                'first_places' => (int) ($stats['first_places'] ?? 0),
+                'best_round_score' => (int) ($stats['best_round_score'] ?? 0)
+            ];
+        }, array_slice($leaderboard, 0, 6)),
+        'highlights' => array_values(array_filter([
+            $fastestAnswer ? [
+                'type' => 'fastest_answer',
+                'text' => $fastestAnswer['name'] . ' дал самый быстрый верный ответ за ' . $fastestAnswer['time_ms'] . ' мс'
+            ] : null,
+            $bestAccuracy ? [
+                'type' => 'best_accuracy',
+                'text' => $bestAccuracy['name'] . ' показал лучшую точность: ' . $bestAccuracy['accuracy_percent'] . '%'
+            ] : null,
+            $mostWins ? [
+                'type' => 'most_round_wins',
+                'text' => $mostWins['name'] . ' чаще всех забирал раунды: ' . $mostWins['first_places']
+            ] : null
+        ])),
+        'round_notes' => array_slice(array_map(function ($note) {
+            return 'Раунд ' . $note['round'] . ': ' . implode(', ', $note['winner_names']) . ' взял "' . $note['title'] . '" на +' . $note['top_score'];
+        }, $roundNotes), 0, 6)
+    ];
+}
+
 function handleGameAction($pdo, $room, $user, $postData)
 {
     $state = bbNormalizeState(json_decode($room['game_state'] ?? '', true));
@@ -197,6 +383,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state['selected_categories'] = json_decode($postData['categories'] ?? '[]', true) ?: [];
         $state['selected_games'] = json_decode($postData['selected_games'] ?? '[]', true) ?: [];
         $state['scores'] = [];
+        unset($state['ai_summary']);
         bbEnsureScoreRows($state, bbGetPlayerIds($pdo, $room['id']));
         $state['current_round'] = 0;
         $state['remaining_games'] = []; // СБРАСЫВАЕМ ОЧЕРЕДЬ ПРИ НОВОЙ НАСТРОЙКЕ
@@ -413,8 +600,8 @@ function generateTaskData($type)
     if ($type === 'simon_says') {
         $colors = ['red', 'blue', 'green', 'yellow'];
         $sequence = [];
-        // Генерируем цепочку из 3 цветов (было 5)
-        for ($i = 0; $i < 3; $i++) {
+        // Генерируем цепочку из 4 цветов
+        for ($i = 0; $i < 4; $i++) {
             $sequence[] = $colors[array_rand($colors)];
         }
 
@@ -510,13 +697,11 @@ function generateTaskData($type)
     // 6. ФОТОПАМЯТЬ (Memory)
     if ($type === 'photo_memory') {
         $icons = [
-            'bi-apple', 'bi-car-front-fill', 'bi-bug-fill', 'bi-egg-fill', 'bi-trophy-fill', 
-            'bi-rocket-takeoff-fill', 'bi-gem', 'bi-alarm', 'bi-incognito', 'bi-robot', 
-            'bi-lightning-charge-fill', 'bi-heart-fill', 'bi-star-fill', 'bi-moon-stars-fill', 
-            'bi-tree-fill', 'bi-umbrella-fill', 'bi-gift-fill', 'bi-camera-reels-fill', 
-            'bi-controller', 'bi-bicycle', 'bi-airplane-fill', 'bi-anchor', 
-            'bi-brightness-high-fill', 'bi-cloud-rain-fill', 'bi-emoji-smile-fill', 'bi-peace-fill',
-            'bi-puzzle-fill', 'bi-music-note-beamed', 'bi-palette-fill', 'bi-hammer'
+            'bi-hammer', 'bi-airplane-fill', 'bi-robot', 'bi-controller', 'bi-gift-fill',
+            'bi-moon-stars-fill', 'bi-star-fill', 'bi-heart-fill', 'bi-bicycle', 'bi-anchor',
+            'bi-umbrella-fill', 'bi-cloud-rain-fill', 'bi-music-note-beamed', 'bi-puzzle-fill', 'bi-palette-fill',
+            'bi-trophy-fill', 'bi-bug-fill', 'bi-tree-fill', 'bi-alarm-fill', 'bi-camera-fill',
+            'bi-emoji-smile-fill', 'bi-brightness-high-fill', 'bi-lightning-charge-fill', 'bi-apple', 'bi-egg-fill'
         ];
         shuffle($icons);
         $shown = array_slice($icons, 0, 4); // Показываем 4

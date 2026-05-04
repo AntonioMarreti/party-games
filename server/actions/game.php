@@ -1,12 +1,74 @@
 <?php
 
+function failGameLifecycle($message, $data = [])
+{
+    logRoomLifecycle('game_guard_rejected', $data, $message);
+    sendError($message);
+}
+
+function getMinPlayersForGame(string $gameName): int
+{
+    $minPlayers = [
+        'bunker' => 4,
+        'brainbattle' => 1,
+        'partybattle' => 3,
+        'tictactoe_ultimate' => 2,
+        'blokus' => 2,
+        'wordclash' => 1,
+        'tictactoe' => 2,
+        'spyfall' => 3,
+        'minesweeper_br' => 2,
+        'backgammon_game' => 2,
+    ];
+
+    return $minPlayers[$gameName] ?? 2;
+}
+
 function action_start_game($pdo, $user, $data)
 {
     $room = getRoom($user['id']);
-    if (!$room || !$room['is_host'])
-        return;
+    if (!$room)
+        failGameLifecycle('No room', ['actor_user_id' => (int) $user['id'], 'requested_action' => 'start_game']);
+    if (!$room['is_host'])
+        failGameLifecycle('Not host', ['actor_user_id' => (int) $user['id'], 'room_id' => (int) $room['id'], 'room_code' => $room['room_code'] ?? null, 'requested_action' => 'start_game']);
 
     $gameName = preg_replace('/[^a-z0-9_]/', '', $data['game_name'] ?? '');
+    if ($gameName === '') {
+        failGameLifecycle('Game is required', ['actor_user_id' => (int) $user['id'], 'room_id' => (int) $room['id'], 'room_code' => $room['room_code'] ?? null, 'requested_action' => 'start_game']);
+    }
+
+    if (!isRoomWaitingState($room)) {
+        if (isRoomPlayingState($room) && ($room['game_type'] ?? '') === $gameName) {
+            logRoomLifecycle('game_start_noop', [
+                'room_id' => (int) $room['id'],
+                'room_code' => $room['room_code'] ?? null,
+                'actor_user_id' => (int) $user['id'],
+                'host_user_id' => (int) $room['host_user_id'],
+                'game_type' => $room['game_type'] ?? null,
+                'status' => $room['status'] ?? null,
+            ], 'Game start noop');
+            echo json_encode(['status' => 'ok']);
+            return;
+        }
+
+        failGameLifecycle('Game already started', ['actor_user_id' => (int) $user['id'], 'room_id' => (int) $room['id'], 'room_code' => $room['room_code'] ?? null, 'requested_action' => 'start_game', 'status' => $room['status'] ?? null, 'game_type' => $room['game_type'] ?? null]);
+    }
+
+    $counts = getRoomPlayerCounts($pdo, $room['id']);
+    $minPlayers = getMinPlayersForGame($gameName);
+    if ($counts['total_players'] < $minPlayers) {
+        failGameLifecycle("Нужно минимум {$minPlayers} игрока(ов)", [
+            'actor_user_id' => (int) $user['id'],
+            'room_id' => (int) $room['id'],
+            'room_code' => $room['room_code'] ?? null,
+            'requested_action' => 'start_game',
+            'game_type' => $gameName,
+            'min_players' => $minPlayers,
+            'players_total' => $counts['total_players'],
+            'humans_total' => $counts['human_players'],
+        ]);
+    }
+
     $gameFile = __DIR__ . "/../games/$gameName.php";
 
     if (file_exists($gameFile)) {
@@ -15,6 +77,19 @@ function action_start_game($pdo, $user, $data)
             $initialState = getInitialState();
             $pdo->prepare("UPDATE rooms SET game_type = ?, status = 'playing', game_state = ? WHERE id = ?")
                 ->execute([$gameName, json_encode($initialState), $room['id']]);
+
+            logRoomLifecycle('game_started', [
+                'room_id' => (int) $room['id'],
+                'room_code' => $room['room_code'] ?? null,
+                'actor_user_id' => (int) $user['id'],
+                'host_user_id' => (int) $room['host_user_id'],
+                'game_type' => $gameName,
+                'players_total' => $counts['total_players'],
+                'humans_total' => $counts['human_players'],
+                'previous_status' => $room['status'] ?? null,
+                'new_status' => 'playing',
+            ], 'Game started');
+
             echo json_encode(['status' => 'ok']);
         } else {
             TelegramLogger::log("Start Game Error: getInitialState not found", ['game' => $gameName]);
@@ -29,17 +104,54 @@ function action_start_game($pdo, $user, $data)
 function action_stop_game($pdo, $user, $data)
 {
     $room = getRoom($user['id']);
-    if (!$room || !$room['is_host'])
+    if (!$room)
+        failGameLifecycle('No room', ['actor_user_id' => (int) $user['id'], 'requested_action' => 'stop_game']);
+    if (!$room['is_host'])
+        failGameLifecycle('Not host', ['actor_user_id' => (int) $user['id'], 'room_id' => (int) $room['id'], 'room_code' => $room['room_code'] ?? null, 'requested_action' => 'stop_game']);
+    if (!isRoomPlayingState($room)) {
+        logRoomLifecycle('game_stop_noop', [
+            'room_id' => (int) $room['id'],
+            'room_code' => $room['room_code'] ?? null,
+            'actor_user_id' => (int) $user['id'],
+            'game_type' => $room['game_type'] ?? null,
+            'status' => $room['status'] ?? null,
+        ], 'Game stop noop');
+        echo json_encode(['status' => 'ok']);
         return;
+    }
     $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")->execute([$room['id']]);
+
+    logRoomLifecycle('game_stopped', [
+        'room_id' => (int) $room['id'],
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (int) $user['id'],
+        'host_user_id' => (int) $room['host_user_id'],
+        'game_type' => $room['game_type'] ?? null,
+        'previous_status' => $room['status'] ?? null,
+        'new_status' => 'waiting',
+    ], 'Game stopped');
+
     echo json_encode(['status' => 'ok']);
 }
 
 function action_finish_game_session($pdo, $user, $data)
 {
     $room = getRoom($user['id']);
-    if (!$room || !$room['is_host'])
+    if (!$room)
+        failGameLifecycle('No room', ['actor_user_id' => (int) $user['id'], 'requested_action' => 'finish_game_session']);
+    if (!$room['is_host'])
+        failGameLifecycle('Not host', ['actor_user_id' => (int) $user['id'], 'room_id' => (int) $room['id'], 'room_code' => $room['room_code'] ?? null, 'requested_action' => 'finish_game_session']);
+    if (!isRoomPlayingState($room)) {
+        logRoomLifecycle('game_finish_noop', [
+            'room_id' => (int) $room['id'],
+            'room_code' => $room['room_code'] ?? null,
+            'actor_user_id' => (int) $user['id'],
+            'game_type' => $room['game_type'] ?? null,
+            'status' => $room['status'] ?? null,
+        ], 'Game finish noop');
+        echo json_encode(['status' => 'ok']);
         return;
+    }
 
     // Logic: Move to lobby but keep players
     // NOTE: Statistics are normally saved via 'game_finished' action (stats.php).
@@ -48,6 +160,17 @@ function action_finish_game_session($pdo, $user, $data)
 
     $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")
         ->execute([$room['id']]);
+
+    logRoomLifecycle('game_finished_session', [
+        'room_id' => (int) $room['id'],
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (int) $user['id'],
+        'host_user_id' => (int) $room['host_user_id'],
+        'game_type' => $room['game_type'] ?? null,
+        'previous_status' => $room['status'] ?? null,
+        'new_status' => 'waiting',
+    ], 'Game session finished');
+
     echo json_encode(['status' => 'ok']);
 }
 
