@@ -27,35 +27,38 @@ window.render_partybattle = function (res) {
     }
     pb_lastStateString = stateStr;
 
-    const gameState = typeof stateStr === 'string'
+    const rawState = typeof stateStr === 'string'
         ? JSON.parse(stateStr)
         : stateStr;
 
-    if (!gameState) return;
+    if (!rawState) return;
+    const gameState = window.PartyBattleUI?.normalizeGameState
+        ? window.PartyBattleUI.normalizeGameState(rawState)
+        : rawState;
+    window.APP_STATE.room.game_state_normalized = gameState;
 
     console.log("Rendering PartyBattle", gameState);
-
-    // Delegate to UI based on phase
-    const phase = gameState.phase || 'lobby';
 
     if (!window.PartyBattleUI) {
         gameArea.innerHTML = `<div class="p-5">UI Module Loading...</div>`;
         return;
     }
 
-    if (phase === 'lobby' || phase === 'intro') {
+    const view = gameState.view || 'lobby';
+
+    if (view === 'lobby') {
         window.PartyBattleUI.renderLobby(gameState);
-    } else if (phase === 'round_situation') {
+    } else if (view === 'round_intro') {
         window.PartyBattleUI.renderSituation(gameState);
-    } else if (phase === 'round_submission') {
+    } else if (view === 'round_submission') {
         window.PartyBattleUI.renderSubmissionScreen(gameState);
-    } else if (phase === 'round_voting') {
+    } else if (view === 'round_voting') {
         window.PartyBattleUI.renderVotingScreen(gameState);
-    } else if (phase === 'round_results') {
+    } else if (view === 'round_results') {
         window.PartyBattleUI.renderRoundResults(gameState);
-    } else if (phase === 'results') {
+    } else if (view === 'results') {
         window.PartyBattleUI.renderGameResults(gameState);
     } else {
-        gameArea.innerHTML = `<div class="p-5">Unknown Phase: ${phase}</div>`;
+        gameArea.innerHTML = `<div class="p-5">Unknown View: ${view}</div>`;
     }
 }

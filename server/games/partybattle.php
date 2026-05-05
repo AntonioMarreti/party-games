@@ -3,171 +3,153 @@
 
 function getInitialState()
 {
-    // Return base state for the lobby
     return [
-        'phase' => 'lobby', // lobby, round_situation, round_submission, round_voting, round_results, results
-        'mode' => 'meme', // meme, joke, whoami
+        'phase' => 'lobby',
+        'mode' => 'meme',
         'current_round' => 0,
         'total_rounds' => 5,
+        'selected_modes' => pb_getDefaultModes(),
+        'theme' => 'base',
+        'ai_mode' => false,
         'situations_deck' => [],
         'current_situation' => null,
-        'scores' => [], // { userId: score }
+        'scores' => [],
         'history' => [],
-        'hands' => [], // For meme mode: { userId: [gifs] }
-        'submissions' => [], // { userId: text/url }
-        'votes' => [] // { voterId: targetId_or_submissionId }
+        'hands' => [],
+        'submissions' => [],
+        'votes' => [],
+        'last_round_data' => null,
+        'round' => null,
     ];
 }
 
 function handleGameAction($pdo, $room, $user, $postData)
 {
     $state = json_decode($room['game_state'], true);
-    $type = $postData['type'];
+    if (!is_array($state)) {
+        $state = getInitialState();
+    }
+    $type = $postData['type'] ?? '';
     $userId = (string) $user['id'];
 
     if ($type === 'start_game') {
-        error_log("PartyBattle: Starting game... rounds=" . ($postData['rounds'] ?? 5));
-        if (!$room['is_host'])
+        if (!$room['is_host']) {
             return ['status' => 'error', 'message' => 'Only host'];
+        }
 
         $rounds = max(1, min(20, (int) ($postData['rounds'] ?? 5)));
-        $modes = $postData['mode'] ?? ['meme'];
-        if (!is_array($modes)) {
-            $modes = [$modes];
-        }
-        if (empty($modes))
-            $modes = ['meme'];
-
+        $modes = pb_normalizeModes($postData['mode'] ?? ['meme']);
         $theme = $postData['theme'] ?? 'base';
         $aiMode = !empty($postData['ai_mode']);
         $customTopic = $postData['custom_topic'] ?? '';
 
-        $state['phase'] = 'round_situation';
-        $state['mode'] = $modes[0];
-        $state['current_round'] = 1;
+        $state = getInitialState();
         $state['total_rounds'] = $rounds;
-        $state['scores'] = [];
+        $state['selected_modes'] = $modes;
         $state['theme'] = $theme;
         $state['ai_mode'] = $aiMode;
+        $state['scores'] = [];
 
-        // Init scores
-        $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ?");
-        $stmt->execute([$room['id']]);
-        $allIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
         foreach ($allIds as $id) {
             $state['scores'][(string) $id] = 0;
         }
 
-        error_log("PartyBattle: Generating deck for modes: " . implode(',', $modes));
-        // Generate mixed deck
         $mixedDeck = [];
-        foreach ($modes as $m) {
-            $deck = pb_generateDeck($pdo, $m, $theme, $aiMode, $customTopic, $rounds);
+        foreach ($modes as $mode) {
+            $deck = pb_generateDeck($pdo, $mode, $theme, $aiMode, $customTopic, $rounds);
             if (empty($deck)) {
-                error_log("PartyBattle: WARNING: Deck for mode $m is empty!");
+                error_log("PartyBattle: WARNING: Deck for mode $mode is empty");
                 continue;
             }
+
             shuffle($deck);
-            // Take up to $rounds from each to ensure enough variety after final shuffle
             $limit = max(3, $rounds);
-            $deck = array_slice($deck, 0, $limit);
-            foreach ($deck as $card) {
-                $mixedDeck[] = ['_mode' => $m, 'situation' => $card];
+            foreach (array_slice($deck, 0, $limit) as $card) {
+                $mixedDeck[] = pb_buildDeckCard($mode, $card);
             }
         }
         shuffle($mixedDeck);
 
-        // Ensure enough cards
-        if (count($mixedDeck) < $rounds && count($mixedDeck) > 0) {
-            $baseRounds = $rounds;
-            while (count($mixedDeck) < $baseRounds) {
-                $mixedDeck = array_merge($mixedDeck, $mixedDeck);
-            }
+        while (!empty($mixedDeck) && count($mixedDeck) < $rounds) {
+            $mixedDeck = array_merge($mixedDeck, $mixedDeck);
         }
+        $state['situations_deck'] = array_slice($mixedDeck, 0, $rounds);
 
-        if (empty($mixedDeck)) {
-            error_log("PartyBattle: ERROR: Failed to generate deck!");
+        if (empty($state['situations_deck'])) {
             return ['status' => 'error', 'message' => 'Не удалось сгенерировать колоду. Попробуйте другой набор или отключите AI.'];
         }
 
-        $state['situations_deck'] = array_slice($mixedDeck, 0, $rounds);
-
-        error_log("PartyBattle: Deck generated, starting first round.");
-        pb_nextRound($state);
+        pb_startNextRound($pdo, $room, $state);
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
 
     if ($type === 'refresh_hand') {
-        if ($state['mode'] !== 'meme')
+        if (($state['round']['mode'] ?? null) !== 'meme') {
             return ['status' => 'error'];
-        if ($state['phase'] !== 'round_submission')
-            return ['status' => 'error'];
-
-        require_once __DIR__ . '/../lib/GifProvider.php';
-        $gifProvider = GifProviderFactory::create();
-
-        $situation = pb_getSituationText($state['current_situation']);
-        $keywords = pb_extractKeywords($situation);
-        $query = !empty($keywords) ? implode(' ', array_slice($keywords, 0, 3)) : 'funny meme';
-
-        try {
-            $data = $gifProvider->search($query, 12);
-            $gifs = $data['results'] ?? [];
-            if (empty($gifs))
-                $gifs = $gifProvider->search('funny', 12)['results'] ?? [];
-            shuffle($gifs);
-            $state['hands'][$userId] = array_slice($gifs, 0, 6);
-            updateGameState($room['id'], $state);
-            return ['status' => 'ok', 'hand' => $state['hands'][$userId]];
-        } catch (Exception $e) {
-            return ['status' => 'error', 'message' => $e->getMessage()];
         }
+        if (($state['round']['step'] ?? null) !== 'submit') {
+            return ['status' => 'error'];
+        }
+
+        pb_generatePlayerHand($state, $userId);
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok', 'hand' => $state['hands'][$userId] ?? []];
     }
 
-
     if ($type === 'search_gifs') {
-        if ($state['mode'] !== 'meme')
+        if (($state['round']['mode'] ?? null) !== 'meme') {
             return ['status' => 'error', 'message' => 'Not in meme mode'];
+        }
 
         require_once __DIR__ . '/../lib/GifProvider.php';
         $gifProvider = GifProviderFactory::create();
-        $query = trim($postData['query'] ?? 'funny');
-        if (empty($query))
+        $query = trim($postData['query'] ?? 'funny meme');
+        if ($query === '') {
             $query = 'funny meme';
+        }
 
         try {
             $data = $gifProvider->search($query, 12);
-            $results = $data['results'] ?? [];
-            return ['status' => 'ok', 'results' => $results];
+            return ['status' => 'ok', 'results' => $data['results'] ?? []];
         } catch (Exception $e) {
             return ['status' => 'error', 'message' => $e->getMessage()];
         }
     }
 
     if ($type === 'submit_answer') {
-        if ($state['phase'] !== 'round_submission')
+        $round = $state['round'] ?? null;
+        if (!is_array($round) || ($round['step'] ?? null) !== 'submit') {
             return ['status' => 'error', 'message' => 'Wrong phase'];
-        if (isset($state['submissions'][$userId]))
+        }
+
+        $config = pb_getModeConfig($round['mode']);
+        if (empty($config['has_submission'])) {
+            return ['status' => 'error', 'message' => 'This mode does not accept submissions'];
+        }
+        if (isset($round['submissions']['entries'][$userId])) {
             return ['status' => 'error', 'message' => 'Already submitted'];
+        }
 
-        $answer = trim($postData['answer'] ?? '');
-        if (empty($answer))
+        $answer = trim((string) ($postData['answer'] ?? ''));
+        if ($answer === '') {
             return ['status' => 'error', 'message' => 'Empty answer'];
+        }
 
-        $state['submissions'][$userId] = $answer;
+        $round['submissions']['entries'][$userId] = [
+            'id' => $userId,
+            'author_id' => $userId,
+            'kind' => $config['submission_kind'],
+            'value' => $answer,
+        ];
+        $state['round'] = $round;
 
-        $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ?");
-        $stmt->execute([$room['id']]);
-        $allIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-        if (count($state['submissions']) >= count($allIds)) {
-            if ($state['mode'] === 'bluff') {
-                // Inject the true fact
-                $state['submissions']['truth'] = $state['current_situation']['truth'] ?? 'ПРАВДА ПОТЕРЯНА';
-            }
-            $state['phase'] = 'round_voting';
-            $state['votes'] = [];
+        $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
+        if (count(pb_getHumanSubmissionEntries($round)) >= count($allIds)) {
+            pb_closeSubmissionStep($state);
+        } else {
+            pb_syncLegacyState($state);
         }
 
         updateGameState($room['id'], $state);
@@ -175,53 +157,35 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     if ($type === 'vote') {
-        if ($state['phase'] !== 'round_voting')
+        $round = $state['round'] ?? null;
+        if (!is_array($round) || ($round['step'] ?? null) !== 'vote') {
             return ['status' => 'error', 'message' => 'Wrong phase'];
-        if (isset($state['votes'][$userId]))
+        }
+        if (isset($round['voting']['votes'][$userId])) {
             return ['status' => 'error', 'message' => 'Already voted'];
+        }
 
-        $targetId = $postData['target_id'];
-        // В WhoAmI разрешено «голосовать за себя», в других режимах — нет
-        if ($state['mode'] !== 'whoami' && $targetId === $userId)
+        $targetId = (string) ($postData['target_id'] ?? '');
+        if ($targetId === '') {
+            return ['status' => 'error', 'message' => 'Missing target'];
+        }
+
+        $config = pb_getModeConfig($round['mode']);
+        if (empty($round['voting']['options'][$targetId])) {
+            return ['status' => 'error', 'message' => 'Invalid target'];
+        }
+        if (empty($config['allow_self_vote']) && $targetId === $userId) {
             return ['status' => 'error', 'message' => 'Cannot vote for self'];
+        }
 
-        $state['votes'][$userId] = $targetId;
+        $round['voting']['votes'][$userId] = $targetId;
+        $state['round'] = $round;
 
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ?");
-        $stmt->execute([$room['id']]);
-        $playerCount = $stmt->fetchColumn();
-
-        if (count($state['votes']) >= $playerCount) {
-            $roundScores = [];
-            foreach ($state['votes'] as $voter => $target) {
-                if ($state['mode'] === 'bluff') {
-                    if ($target === 'truth') {
-                        // Voter guessed the truth correctly
-                        if (!isset($state['scores'][$voter]))
-                            $state['scores'][$voter] = 0;
-                        $state['scores'][$voter] += 100;
-                        $roundScores[$voter] = ($roundScores[$voter] ?? 0) + 1; // Mark that voter got it right
-                    } else {
-                        // Voter fell for someone's lie. Award points to the liar.
-                        if (!isset($state['scores'][$target]))
-                            $state['scores'][$target] = 0;
-                        $state['scores'][$target] += 100;
-                        $roundScores[$target] = ($roundScores[$target] ?? 0) + 1;
-                    }
-                } else {
-                    // Standard scoring for all other modes: target gets points
-                    if (!isset($state['scores'][$target]))
-                        $state['scores'][$target] = 0;
-                    $state['scores'][$target] += 100;
-                    $roundScores[$target] = ($roundScores[$target] ?? 0) + 1;
-                }
-            }
-
-            $state['phase'] = 'round_results';
-            $state['last_round_data'] = [
-                'votes' => $state['votes'],
-                'scores' => $roundScores
-            ];
+        $playerCount = count(pb_getRoomPlayerIds($pdo, $room['id']));
+        if (count($round['voting']['votes']) >= $playerCount) {
+            pb_closeVotingStep($state);
+        } else {
+            pb_syncLegacyState($state);
         }
 
         updateGameState($room['id'], $state);
@@ -229,30 +193,15 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     if ($type === 'next_round') {
-        if (!$room['is_host'])
+        if (!$room['is_host']) {
             return ['status' => 'error'];
+        }
 
-        if ($state['phase'] === 'round_situation') {
-            if ($state['mode'] === 'whoami') {
-                // WhoAmI не требует submission, сразу к голосованию
-                $state['phase'] = 'round_voting';
-                $state['submissions'] = (object) []; // пустой объект, не массив
-                $state['votes'] = [];
-            } else {
-                $state['phase'] = 'round_submission';
-                if ($state['mode'] === 'meme') {
-                    pb_generateHands($pdo, $room, $state);
-                }
-                $state['submissions'] = [];
-                $state['votes'] = [];
-            }
-        } elseif ($state['phase'] === 'round_results') {
-            $state['current_round']++;
-            if ($state['current_round'] > $state['total_rounds']) {
-                $state['phase'] = 'results';
-            } else {
-                pb_nextRound($state);
-            }
+        $round = $state['round'] ?? null;
+        if (is_array($round) && ($round['step'] ?? null) === 'intro') {
+            pb_advanceRoundFromIntro($pdo, $room, $state);
+        } elseif (($state['phase'] ?? null) === 'round_results') {
+            pb_startNextRound($pdo, $room, $state);
         }
 
         updateGameState($room['id'], $state);
@@ -272,147 +221,727 @@ function handleGameAction($pdo, $room, $user, $postData)
 
 function processGameBots($pdo, $room, &$state)
 {
-    $allPlayers = [];
-    $stmt = $pdo->prepare("SELECT user_id, is_bot FROM room_players WHERE room_id = ?");
-    $stmt->execute([$room['id']]);
-    while ($row = $stmt->fetch()) {
-        $allPlayers[(string) $row['user_id']] = $row['is_bot'];
-    }
-
-    $bots = array_filter($allPlayers, function ($isBot) {
-        return $isBot;
+    $players = pb_getRoomPlayers($pdo, $room['id']);
+    $bots = array_filter($players, function ($player) {
+        return !empty($player['is_bot']);
     });
 
-    if (empty($bots))
+    if (empty($bots)) {
         return false;
+    }
+
+    $round = $state['round'] ?? null;
+    if (!is_array($round)) {
+        return false;
+    }
 
     $changed = false;
+    $config = pb_getModeConfig($round['mode']);
 
-    // Phase 1: Round Submission
-    if ($state['phase'] === 'round_submission') {
-        foreach ($bots as $botId => $_) {
-            if (!isset($state['submissions'][$botId])) {
-                // Determine bot answer based on mode
-                $answer = null;
-                if ($state['mode'] === 'meme') {
-                    $hand = $state['hands'][$botId] ?? [];
-                    if (!empty($hand)) {
-                        $card = $hand[array_rand($hand)];
-                        $answer = $card['media_formats']['tinygif']['url'] ?? $card['media_formats']['gif']['url'] ?? $card['url'];
-                    }
-                } elseif (in_array($state['mode'], ['joke', 'advice', 'acronym', 'bluff', 'caption'])) {
-                    $contentPath = __DIR__ . '/packs/partybattle_bots.json';
-                    $funnyLibrary = ["Я здесь просто ради еды.", "Ахаха, лол.", "Я не понял шутку.", "Это слишком сложно."]; // Fallback
-                    if (file_exists($contentPath)) {
-                        $contentData = json_decode(file_get_contents($contentPath), true);
-                        if (!empty($contentData['bot_jokes'])) {
-                            $funnyLibrary = $contentData['bot_jokes'];
-                        }
-                    }
-                    $answer = $funnyLibrary[array_rand($funnyLibrary)];
-                }
-
-                if ($answer) {
-                    $state['submissions'][$botId] = $answer;
-                    $changed = true;
-                }
+    if (($round['step'] ?? null) === 'submit' && !empty($config['has_submission'])) {
+        $missingBotIds = [];
+        foreach ($bots as $bot) {
+            $botId = (string) $bot['user_id'];
+            if (!isset($round['submissions']['entries'][$botId])) {
+                $missingBotIds[] = $botId;
             }
         }
 
-        // Check if all submitted
-        if (count($state['submissions']) >= count($allPlayers)) {
-            $state['phase'] = 'round_voting';
-            $state['votes'] = [];
+        $batchAnswers = pb_generateBotSubmissionBatch($state, $missingBotIds);
+        foreach ($bots as $bot) {
+            $botId = (string) $bot['user_id'];
+            if (isset($round['submissions']['entries'][$botId])) {
+                continue;
+            }
+
+            $answer = $batchAnswers[$botId] ?? pb_generateBotSubmission($state, $botId);
+            if ($answer === null) {
+                continue;
+            }
+
+            $round['submissions']['entries'][$botId] = [
+                'id' => $botId,
+                'author_id' => $botId,
+                'kind' => $config['submission_kind'],
+                'value' => $answer,
+            ];
             $changed = true;
+        }
+
+        $state['round'] = $round;
+        if (count(pb_getHumanSubmissionEntries($round)) >= count($players)) {
+            pb_closeSubmissionStep($state);
+        } else {
+            pb_syncLegacyState($state);
         }
     }
 
-    // Phase 2: Round Voting
-    if ($state['phase'] === 'round_voting') {
-        foreach ($bots as $botId => $_) {
-            if (!isset($state['votes'][$botId])) {
-                // Bot picks a favorite (can't be self in meme/joke)
-                $candidates = array_keys($allPlayers);
-                if ($state['mode'] !== 'whoami') {
-                    $candidates = array_filter($candidates, function ($id) use ($botId) {
-                        return $id !== $botId;
-                    });
-                }
-
-                // In bluff mode, bots should sometimes pick the truth
-                if ($state['mode'] === 'bluff') {
-                    $candidates[] = 'truth';
-                }
-
-                if (!empty($candidates)) {
-                    $targetId = $candidates[array_rand($candidates)];
-                    $state['votes'][$botId] = $targetId;
-                    $changed = true;
-                }
+    $round = $state['round'] ?? null;
+    if (is_array($round) && ($round['step'] ?? null) === 'vote') {
+        foreach ($bots as $bot) {
+            $botId = (string) $bot['user_id'];
+            if (isset($round['voting']['votes'][$botId])) {
+                continue;
             }
+
+            $candidateIds = array_keys($round['voting']['options'] ?? []);
+            if (empty($config['allow_self_vote'])) {
+                $candidateIds = array_values(array_filter($candidateIds, function ($candidateId) use ($botId) {
+                    return $candidateId !== $botId;
+                }));
+            }
+            if (empty($candidateIds)) {
+                continue;
+            }
+
+            $round['voting']['votes'][$botId] = $candidateIds[array_rand($candidateIds)];
+            $changed = true;
         }
 
-        // Check if all voted
-        if (count($state['votes']) >= count($allPlayers)) {
-            $roundScores = [];
-            foreach ($state['votes'] as $voter => $target) {
-                if (!isset($state['scores'][$target]))
-                    $state['scores'][$target] = 0;
-                $state['scores'][$target] += 100;
-                $roundScores[$target] = ($roundScores[$target] ?? 0) + 1;
-            }
-
-            $state['phase'] = 'round_results';
-            $state['last_round_data'] = [
-                'votes' => $state['votes'],
-                'scores' => $roundScores
-            ];
-            $changed = true;
+        $state['round'] = $round;
+        if (count($round['voting']['votes']) >= count($players)) {
+            pb_closeVotingStep($state);
+        } else {
+            pb_syncLegacyState($state);
         }
     }
 
     return $changed;
 }
 
-/* HELPER FUNCTIONS */
+function pb_normalizeModes($modes)
+{
+    if (!is_array($modes)) {
+        $modes = [$modes];
+    }
 
-function pb_nextRound(&$state)
+    $normalized = [];
+    foreach ($modes as $mode) {
+        $mode = (string) $mode;
+        if (pb_getModeConfig($mode) !== null) {
+            $normalized[] = $mode;
+        }
+    }
+
+    return empty($normalized) ? pb_getDefaultModes() : array_values(array_unique($normalized));
+}
+
+function pb_getDefaultModes()
+{
+    return ['meme', 'joke', 'advice', 'acronym', 'caption', 'bluff'];
+}
+
+function pb_getModeConfig($mode)
+{
+    static $configs = [
+        'meme' => [
+            'family' => 'creative_vote',
+            'prompt_kind' => 'text',
+            'submission_kind' => 'gif',
+            'ballot_kind' => 'submission',
+            'scoring_strategy' => 'popular_vote',
+            'has_intro' => true,
+            'has_submission' => true,
+            'allow_self_vote' => false,
+        ],
+        'joke' => [
+            'family' => 'creative_vote',
+            'prompt_kind' => 'text',
+            'submission_kind' => 'text',
+            'ballot_kind' => 'submission',
+            'scoring_strategy' => 'popular_vote',
+            'has_intro' => false,
+            'has_submission' => true,
+            'allow_self_vote' => false,
+        ],
+        'advice' => [
+            'family' => 'creative_vote',
+            'prompt_kind' => 'text',
+            'submission_kind' => 'text',
+            'ballot_kind' => 'submission',
+            'scoring_strategy' => 'popular_vote',
+            'has_intro' => false,
+            'has_submission' => true,
+            'allow_self_vote' => false,
+        ],
+        'acronym' => [
+            'family' => 'creative_vote',
+            'prompt_kind' => 'text',
+            'submission_kind' => 'text',
+            'ballot_kind' => 'submission',
+            'scoring_strategy' => 'popular_vote',
+            'has_intro' => false,
+            'has_submission' => true,
+            'allow_self_vote' => false,
+        ],
+        'caption' => [
+            'family' => 'creative_vote',
+            'prompt_kind' => 'image',
+            'submission_kind' => 'text',
+            'ballot_kind' => 'submission',
+            'scoring_strategy' => 'popular_vote',
+            'has_intro' => false,
+            'has_submission' => true,
+            'allow_self_vote' => false,
+        ],
+        'whoami' => [
+            'family' => 'direct_vote',
+            'prompt_kind' => 'player_question',
+            'submission_kind' => null,
+            'ballot_kind' => 'player',
+            'scoring_strategy' => 'popular_vote',
+            'has_intro' => true,
+            'has_submission' => false,
+            'allow_self_vote' => true,
+        ],
+        'bluff' => [
+            'family' => 'bluff',
+            'prompt_kind' => 'fact',
+            'submission_kind' => 'text',
+            'ballot_kind' => 'truth_guess',
+            'scoring_strategy' => 'truth_guess',
+            'has_intro' => false,
+            'has_submission' => true,
+            'allow_self_vote' => false,
+        ],
+    ];
+
+    return $configs[$mode] ?? null;
+}
+
+function pb_buildDeckCard($mode, $rawCard)
+{
+    $config = pb_getModeConfig($mode);
+    $prompt = [
+        'kind' => $config['prompt_kind'],
+        'title' => null,
+        'body' => null,
+        'media_url' => null,
+        'truth' => null,
+    ];
+
+    if ($mode === 'caption') {
+        $prompt['media_url'] = (string) $rawCard;
+    } elseif ($mode === 'bluff' && is_array($rawCard)) {
+        $prompt['body'] = $rawCard['text'] ?? '';
+        $prompt['truth'] = $rawCard['truth'] ?? null;
+    } else {
+        $prompt['body'] = is_array($rawCard)
+            ? ($rawCard['text'] ?? $rawCard['question'] ?? json_encode($rawCard))
+            : (string) $rawCard;
+    }
+
+    return [
+        'mode' => $mode,
+        'family' => $config['family'],
+        'prompt' => $prompt,
+        'raw' => $rawCard,
+    ];
+}
+
+function pb_startNextRound($pdo, $room, &$state)
 {
     if (empty($state['situations_deck'])) {
+        $state['round'] = null;
         $state['phase'] = 'results';
+        $state['current_situation'] = null;
+        $state['submissions'] = [];
+        $state['votes'] = [];
         return;
     }
 
+    $state['current_round'] = (int) ($state['current_round'] ?? 0) + 1;
     $card = array_shift($state['situations_deck']);
-    if (is_array($card) && isset($card['_mode'])) {
-        $state['mode'] = $card['_mode'];
-        $state['current_situation'] = $card['situation'];
-    } else {
-        $state['current_situation'] = $card;
+    $config = pb_getModeConfig($card['mode']);
+    $step = !empty($config['has_intro']) ? 'intro' : (!empty($config['has_submission']) ? 'submit' : 'vote');
+
+    $state['round'] = [
+        'id' => 'pb-round-' . $state['current_round'] . '-' . substr(sha1(uniqid('', true)), 0, 8),
+        'number' => $state['current_round'],
+        'mode' => $card['mode'],
+        'family' => $card['family'],
+        'step' => $step,
+        'prompt' => $card['prompt'],
+        'submissions' => [
+            'status' => !empty($config['has_submission']) ? 'open' : 'skipped',
+            'entries' => [],
+        ],
+        'voting' => [
+            'status' => $step === 'vote' ? 'open' : ($config['ballot_kind'] === 'player' ? 'pending' : 'closed'),
+            'ballot_kind' => $config['ballot_kind'],
+            'options' => [],
+            'votes' => [],
+        ],
+        'scoring' => [
+            'strategy' => $config['scoring_strategy'],
+            'awards' => [],
+        ],
+        'result' => null,
+        'started_at' => time(),
+    ];
+
+    $state['hands'] = [];
+    $state['last_round_data'] = null;
+
+    if ($step === 'submit' && $card['mode'] === 'meme') {
+        pb_generateHands($pdo, $room, $state);
+    } elseif ($step === 'vote') {
+        pb_prepareVotingOptions($pdo, $room, $state);
     }
 
-    $state['submissions'] = [];
-    $state['votes'] = [];
-    unset($state['last_round_data']);
+    pb_syncLegacyState($state);
+}
 
-    // Determine initial phase for this round
-    // Text-based modes can skip the focus screen and go straight to input
-    $fastModes = ['acronym', 'advice', 'joke', 'bluff'];
-    if (in_array($state['mode'], $fastModes)) {
-        $state['phase'] = 'round_submission';
+function pb_advanceRoundFromIntro($pdo, $room, &$state)
+{
+    $round = $state['round'] ?? null;
+    if (!is_array($round) || ($round['step'] ?? null) !== 'intro') {
+        return;
+    }
+
+    $config = pb_getModeConfig($round['mode']);
+    if (!empty($config['has_submission'])) {
+        $round['step'] = 'submit';
+        $round['submissions']['status'] = 'open';
+        $round['voting']['status'] = 'closed';
+        $round['voting']['votes'] = [];
+        $state['round'] = $round;
+
+        if ($round['mode'] === 'meme') {
+            pb_generateHands($pdo, $room, $state);
+        }
     } else {
+        $round['step'] = 'vote';
+        $round['submissions']['status'] = 'skipped';
+        $state['round'] = $round;
+        pb_prepareVotingOptions($pdo, $room, $state);
+    }
+
+    pb_syncLegacyState($state);
+}
+
+function pb_prepareVotingOptions($pdo, $room, &$state)
+{
+    $round = $state['round'] ?? null;
+    if (!is_array($round)) {
+        return;
+    }
+
+    $options = [];
+    if (($round['family'] ?? null) === 'direct_vote') {
+        foreach (pb_getRoomPlayerIds($pdo, $room['id']) as $playerId) {
+            $options[(string) $playerId] = [
+                'id' => (string) $playerId,
+                'type' => 'player',
+                'author_id' => (string) $playerId,
+                'value' => (string) $playerId,
+            ];
+        }
+    } else {
+        foreach ($round['submissions']['entries'] ?? [] as $entryId => $entry) {
+            $options[(string) $entryId] = [
+                'id' => (string) $entryId,
+                'type' => $entry['kind'] ?? 'submission',
+                'author_id' => $entry['author_id'] ?? null,
+                'value' => $entry['value'] ?? null,
+            ];
+        }
+    }
+
+    $round['step'] = 'vote';
+    $round['voting']['status'] = 'open';
+    $round['voting']['options'] = $options;
+    $round['voting']['votes'] = [];
+    $state['round'] = $round;
+}
+
+function pb_closeSubmissionStep(&$state)
+{
+    $round = $state['round'] ?? null;
+    if (!is_array($round)) {
+        return;
+    }
+
+    $config = pb_getModeConfig($round['mode']);
+    if (($round['mode'] ?? null) === 'bluff' && !isset($round['submissions']['entries']['truth'])) {
+        $round['submissions']['entries']['truth'] = [
+            'id' => 'truth',
+            'author_id' => null,
+            'kind' => 'truth',
+            'value' => $round['prompt']['truth'] ?? 'ПРАВДА ПОТЕРЯНА',
+        ];
+    }
+
+    $round['submissions']['status'] = 'closed';
+    $round['voting']['status'] = 'pending';
+    $round['voting']['votes'] = [];
+    $state['round'] = $round;
+
+    if (($config['family'] ?? null) === 'direct_vote') {
+        pb_syncLegacyState($state);
+        return;
+    }
+
+    $options = [];
+    foreach ($round['submissions']['entries'] as $entryId => $entry) {
+        $options[(string) $entryId] = [
+            'id' => (string) $entryId,
+            'type' => $entry['kind'] ?? 'submission',
+            'author_id' => $entry['author_id'] ?? null,
+            'value' => $entry['value'] ?? null,
+        ];
+    }
+
+    $round['step'] = 'vote';
+    $round['voting']['status'] = 'open';
+    $round['voting']['options'] = $options;
+    $round['voting']['votes'] = [];
+    $state['round'] = $round;
+    pb_syncLegacyState($state);
+}
+
+function pb_closeVotingStep(&$state)
+{
+    $round = $state['round'] ?? null;
+    if (!is_array($round)) {
+        return;
+    }
+
+    $strategy = $round['scoring']['strategy'] ?? 'popular_vote';
+    $voteCounts = [];
+    $roundScores = [];
+    $awards = [];
+
+    foreach ($round['voting']['votes'] ?? [] as $voterId => $targetId) {
+        $voteCounts[$targetId] = ($voteCounts[$targetId] ?? 0) + 1;
+
+        if ($strategy === 'truth_guess') {
+            if ($targetId === 'truth') {
+                $state['scores'][$voterId] = ($state['scores'][$voterId] ?? 0) + 100;
+                $roundScores[$voterId] = ($roundScores[$voterId] ?? 0) + 1;
+                $awards[] = [
+                    'player_id' => $voterId,
+                    'points' => 100,
+                    'reason' => 'guessed_truth',
+                    'source_vote' => $voterId,
+                ];
+            } else {
+                $state['scores'][$targetId] = ($state['scores'][$targetId] ?? 0) + 100;
+                $roundScores[$targetId] = ($roundScores[$targetId] ?? 0) + 1;
+                $awards[] = [
+                    'player_id' => $targetId,
+                    'points' => 100,
+                    'reason' => 'fooled_player',
+                    'source_vote' => $voterId,
+                ];
+            }
+        } else {
+            $state['scores'][$targetId] = ($state['scores'][$targetId] ?? 0) + 100;
+            $roundScores[$targetId] = ($roundScores[$targetId] ?? 0) + 1;
+            $awards[] = [
+                'player_id' => $targetId,
+                'points' => 100,
+                'reason' => 'received_vote',
+                'source_vote' => $voterId,
+            ];
+        }
+    }
+
+    $winnerId = null;
+    $winnerVotes = 0;
+    if (!empty($voteCounts)) {
+        arsort($voteCounts);
+        $winnerId = (string) array_key_first($voteCounts);
+        $winnerVotes = (int) reset($voteCounts);
+    }
+
+    $winnerPlayerId = $winnerId === 'truth' ? null : $winnerId;
+    $winnerContent = null;
+    if ($winnerId !== null) {
+        if (($round['family'] ?? null) === 'direct_vote') {
+            $winnerContent = $winnerId;
+        } else {
+            $winnerContent = $round['submissions']['entries'][$winnerId]['value'] ?? null;
+        }
+    }
+
+    $round['step'] = 'results';
+    $round['voting']['status'] = 'closed';
+    $round['scoring']['awards'] = $awards;
+    $round['result'] = [
+        'vote_counts' => $voteCounts,
+        'round_scores' => $roundScores,
+        'winner_id' => $winnerId,
+        'winner_player_id' => $winnerPlayerId,
+        'winner_content' => $winnerContent,
+        'winner_votes' => $winnerVotes,
+        'winner_type' => $winnerId === 'truth' ? 'truth' : (($round['family'] ?? null) === 'direct_vote' ? 'player' : 'submission'),
+    ];
+
+    $state['round'] = $round;
+    $state['phase'] = 'round_results';
+    $state['last_round_data'] = [
+        'votes' => $round['voting']['votes'],
+        'scores' => $roundScores,
+        'vote_counts' => $voteCounts,
+        'winner_id' => $winnerId,
+        'winner_player_id' => $winnerPlayerId,
+        'winner_content' => $winnerContent,
+        'winner_votes' => $winnerVotes,
+        'winner_type' => $round['result']['winner_type'],
+        'awards' => $awards,
+    ];
+    $state['history'][] = [
+        'round_id' => $round['id'],
+        'number' => $round['number'],
+        'mode' => $round['mode'],
+        'family' => $round['family'],
+        'result' => $round['result'],
+    ];
+
+    pb_syncLegacyState($state);
+}
+
+function pb_syncLegacyState(&$state)
+{
+    $round = $state['round'] ?? null;
+    if (!is_array($round)) {
+        return;
+    }
+
+    $state['mode'] = $round['mode'];
+    $state['current_round'] = $round['number'];
+    $state['current_situation'] = pb_legacySituationFromPrompt($round['mode'], $round['prompt']);
+
+    $step = $round['step'] ?? 'intro';
+    if ($step === 'intro') {
         $state['phase'] = 'round_situation';
+    } elseif ($step === 'submit') {
+        $state['phase'] = 'round_submission';
+    } elseif ($step === 'vote') {
+        $state['phase'] = 'round_voting';
+    } elseif ($step === 'results') {
+        $state['phase'] = 'round_results';
     }
 
-    $state['timer_start'] = time();
+    $legacySubmissions = [];
+    foreach ($round['submissions']['entries'] ?? [] as $entryId => $entry) {
+        if ($entryId === 'truth') {
+            $legacySubmissions['truth'] = $entry['value'] ?? '';
+        } elseif (isset($entry['author_id'])) {
+            $legacySubmissions[(string) $entry['author_id']] = $entry['value'] ?? '';
+        }
+    }
+
+    $state['submissions'] = !empty($legacySubmissions)
+        ? $legacySubmissions
+        : (($round['family'] ?? null) === 'direct_vote' ? (object) [] : []);
+    $state['votes'] = $round['voting']['votes'] ?? [];
+}
+
+function pb_legacySituationFromPrompt($mode, $prompt)
+{
+    $kind = $prompt['kind'] ?? 'text';
+    if ($kind === 'image') {
+        return (string) ($prompt['media_url'] ?? '');
+    }
+    if ($mode === 'bluff') {
+        return [
+            'text' => $prompt['body'] ?? '',
+            'truth' => $prompt['truth'] ?? null,
+        ];
+    }
+    return (string) ($prompt['body'] ?? '');
+}
+
+function pb_getRoomPlayers($pdo, $roomId)
+{
+    $stmt = $pdo->prepare("SELECT user_id, is_bot FROM room_players WHERE room_id = ?");
+    $stmt->execute([$roomId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function pb_getRoomPlayerIds($pdo, $roomId)
+{
+    $players = pb_getRoomPlayers($pdo, $roomId);
+    return array_map(function ($player) {
+        return (string) $player['user_id'];
+    }, $players);
+}
+
+function pb_getHumanSubmissionEntries($round)
+{
+    $entries = [];
+    foreach ($round['submissions']['entries'] ?? [] as $entryId => $entry) {
+        if ($entryId === 'truth') {
+            continue;
+        }
+        $entries[$entryId] = $entry;
+    }
+    return $entries;
+}
+
+function pb_generateBotSubmission($state, $botId)
+{
+    $mode = $state['round']['mode'] ?? null;
+    if ($mode === 'meme') {
+        $hand = $state['hands'][$botId] ?? [];
+        if (empty($hand)) {
+            return null;
+        }
+        $card = $hand[array_rand($hand)];
+        return $card['media_formats']['tinygif']['url'] ?? $card['media_formats']['gif']['url'] ?? $card['url'] ?? null;
+    }
+
+    $contentPath = __DIR__ . '/packs/partybattle_bots.json';
+    $funnyLibrary = [
+        "Я здесь просто ради еды.",
+        "Ахаха, лол.",
+        "Я не понял шутку.",
+        "Это слишком сложно.",
+    ];
+    if (file_exists($contentPath)) {
+        $contentData = json_decode(file_get_contents($contentPath), true);
+        if (!empty($contentData['bot_jokes'])) {
+            $funnyLibrary = $contentData['bot_jokes'];
+        }
+    }
+
+    return $funnyLibrary[array_rand($funnyLibrary)];
+}
+
+function pb_generateBotSubmissionBatch($state, $botIds)
+{
+    $botIds = array_values(array_filter(array_map('strval', $botIds)));
+    if (empty($botIds)) {
+        return [];
+    }
+
+    $mode = $state['round']['mode'] ?? null;
+    if ($mode === 'meme' || $mode === 'whoami' || !$mode) {
+        return [];
+    }
+
+    $prompt = $state['round']['prompt'] ?? [];
+    $question = trim((string) ($prompt['body'] ?? ''));
+    if ($question === '') {
+        return [];
+    }
+
+    $task = pb_getBotAnswerTask($mode, $prompt);
+    $count = count($botIds);
+    $truthLine = '';
+    if ($mode === 'bluff' && !empty($prompt['truth'])) {
+        $truthLine = "Настоящий ответ: " . $prompt['truth'] . "\n";
+    }
+
+    $system = "Ты генерируешь короткие ответы ботов для party-game. Верни только JSON без Markdown.";
+    $userPrompt = "Нужно {$count} разных ответов на русском языке для режима {$mode}.\n"
+        . "Задача: {$task}\n"
+        . "Ситуация: {$question}\n"
+        . $truthLine
+        . "Правила: каждый ответ 2-10 слов, без повторов, без пояснений, без нумерации, без кавычек вокруг всего массива.\n"
+        . "Формат строго: {\"answers\":[\"...\",\"...\"]}";
+
+    try {
+        require_once __DIR__ . '/../lib/AI/AIService.php';
+        $response = AIService::getProvider('text')->text([
+            ['role' => 'system', 'content' => $system],
+            ['role' => 'user', 'content' => $userPrompt],
+        ], ['temperature' => 0.9]);
+
+        $content = trim((string) ($response['content'] ?? ''));
+        if (preg_match('/```json(.*?)```/s', $content, $matches)) {
+            $content = trim($matches[1]);
+        } elseif (preg_match('/```(.*?)```/s', $content, $matches)) {
+            $content = trim($matches[1]);
+        }
+
+        $json = json_decode($content, true);
+        $answers = $json['answers'] ?? null;
+        if (!is_array($answers)) {
+            return [];
+        }
+
+        $answers = array_values(array_filter(array_map(function ($answer) {
+            return trim((string) $answer);
+        }, $answers)));
+
+        if (empty($answers)) {
+            return [];
+        }
+
+        $mapped = [];
+        foreach ($botIds as $index => $botId) {
+            $candidate = $answers[$index] ?? $answers[$index % count($answers)] ?? null;
+            $candidate = pb_sanitizeBotAnswer($candidate, $mode, $prompt);
+            if ($candidate !== null) {
+                $mapped[$botId] = $candidate;
+            }
+        }
+
+        return $mapped;
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function pb_getBotAnswerTask($mode, $prompt)
+{
+    switch ($mode) {
+        case 'advice':
+            return 'дай вредный, абсурдный, но тематически подходящий совет';
+        case 'acronym':
+            return 'смешно расшифруй аббревиатуру, сохраняя ощущение набора букв';
+        case 'caption':
+            return 'придумай короткую смешную подпись к картинке';
+        case 'bluff':
+            return 'придумай правдоподобную ложную концовку, которая звучит как реальный факт, но не совпадает с настоящим ответом';
+        case 'joke':
+        default:
+            return 'придумай короткую смешную добивку';
+    }
+}
+
+function pb_sanitizeBotAnswer($answer, $mode, $prompt)
+{
+    $answer = trim((string) $answer);
+    if ($answer === '') {
+        return null;
+    }
+
+    $answer = preg_replace('/\s+/u', ' ', $answer);
+    $answer = trim($answer, "\"' \t\n\r\0\x0B");
+    if ($answer === '') {
+        return null;
+    }
+
+    if ($mode === 'bluff') {
+        $truth = trim((string) ($prompt['truth'] ?? ''));
+        if ($truth !== '' && mb_strtolower($answer) === mb_strtolower($truth)) {
+            return null;
+        }
+    }
+
+    return mb_substr($answer, 0, 150);
 }
 
 function pb_generateHands($pdo, $room, &$state)
 {
+    $playerIds = pb_getRoomPlayerIds($pdo, $room['id']);
+    $state['hands'] = [];
+    foreach ($playerIds as $playerId) {
+        pb_generatePlayerHand($state, $playerId);
+    }
+}
+
+function pb_generatePlayerHand(&$state, $userId)
+{
     require_once __DIR__ . '/../lib/GifProvider.php';
     $gifProvider = GifProviderFactory::create();
 
-    $situation = pb_getSituationText($state['current_situation']);
+    $prompt = $state['round']['prompt'] ?? [];
+    $situation = pb_getPromptDisplayText($prompt);
     $keywords = pb_extractKeywords($situation);
     $query = !empty($keywords) ? implode(' ', array_slice($keywords, 0, 3)) : 'funny meme';
 
@@ -422,20 +951,22 @@ function pb_generateHands($pdo, $room, &$state)
         if (count($pool) < 20) {
             $pool = array_merge($pool, $gifProvider->search('funny', 30)['results'] ?? []);
         }
-
-        $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ?");
-        $stmt->execute([$room['id']]);
-        $players = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-        $state['hands'] = [];
-        foreach ($players as $pid) {
-            shuffle($pool);
-            $state['hands'][(string) $pid] = array_slice($pool, 0, 6);
-        }
+        shuffle($pool);
+        $state['hands'][(string) $userId] = array_slice($pool, 0, 6);
     } catch (Exception $e) {
-        if (class_exists('TelegramLogger'))
+        if (class_exists('TelegramLogger')) {
             TelegramLogger::logError('partybattle_hands', ['message' => $e->getMessage()]);
+        }
+        $state['hands'][(string) $userId] = [];
     }
+}
+
+function pb_getPromptDisplayText($prompt)
+{
+    if (($prompt['kind'] ?? null) === 'image') {
+        return 'funny meme';
+    }
+    return (string) ($prompt['body'] ?? '');
 }
 
 function pb_getSituationText($situation)
@@ -449,20 +980,31 @@ function pb_getSituationText($situation)
 function pb_extractKeywords($text)
 {
     $words = mb_split('\s+', $text);
-    return array_filter($words, function ($w) {
-        return mb_strlen($w) > 3;
-    });
+    return array_values(array_filter($words, function ($word) {
+        return mb_strlen($word) > 3;
+    }));
 }
 
 function pb_generateDeck($pdo, $mode, $theme, $aiMode = false, $customTopic = '', $rounds = 5)
 {
-    // Mapping for themes
-    if ($theme === 'adult')
+    if ($theme === 'adult') {
         $theme = '18plus';
+    }
 
-    $situations = [];
+    if ($mode === 'meme') {
+        $packPath = __DIR__ . "/packs/memebattle/{$theme}.json";
+        if (!file_exists($packPath)) {
+            $packPath = __DIR__ . '/packs/memebattle/base.json';
+        }
+        if (file_exists($packPath)) {
+            $pack = json_decode(file_get_contents($packPath), true);
+            $situations = $pack['situations'] ?? [];
+            shuffle($situations);
+            return $situations;
+        }
+        return [];
+    }
 
-    // WhoAmI logic
     if ($mode === 'whoami') {
         $packPath = __DIR__ . "/packs/partybattle/whoami/{$theme}.json";
         if (!file_exists($packPath)) {
@@ -472,72 +1014,77 @@ function pb_generateDeck($pdo, $mode, $theme, $aiMode = false, $customTopic = ''
         if (file_exists($packPath)) {
             $pack = json_decode(file_get_contents($packPath), true);
             $situations = $pack['questions'] ?? [];
+            shuffle($situations);
+            return $situations;
         }
-        shuffle($situations);
-        return $situations;
+        return [];
     }
 
-    // Standard text-based modes (Joke, Advice, Acronym, Caption, Bluff)
+    $situations = [];
     if ($aiMode && $mode === 'joke') {
         require_once __DIR__ . '/../lib/AI/AIService.php';
         try {
-            $prompt = "Придумай {$rounds} коротких сетапов (начало шутки) для игры 'Добивка'. 
-            Люди будут придумывать смешные концовки сами.
-            Формат JSON: {\"situations\": [\"Заходит улитка в бар и говорит...\", \"Самый плохой совет на первом свидании это...\"]}
-            Не используй Markdown, только чистый JSON.";
-
+            $topicSuffix = $customTopic !== '' ? " Тема: {$customTopic}." : '';
+            $prompt = "Придумай {$rounds} коротких сетапов (начало шутки) для игры 'Добивка'.{$topicSuffix} Люди будут придумывать смешные концовки сами. Формат JSON: {\"situations\": [\"Заходит улитка в бар и говорит...\", \"Самый плохой совет на первом свидании это...\"]}. Не используй Markdown, только чистый JSON.";
             $response = AIService::getProvider('text')->text([['role' => 'user', 'content' => $prompt]], ['temperature' => 0.8]);
             $content = trim(preg_replace('/```json|```/i', '', $response['content'] ?? ''));
             $aiData = json_decode($content, true);
-            if ($aiData && !empty($aiData['situations']))
+            if (!empty($aiData['situations']) && is_array($aiData['situations'])) {
                 $situations = $aiData['situations'];
+            }
         } catch (Exception $e) {
-            // Fallback
+            // Fallback to file packs.
         }
     }
 
-    if (empty($situations)) {
-        $validModes = ['joke', 'advice', 'acronym', 'caption', 'bluff'];
-        if (in_array($mode, $validModes)) {
-            $packPath = __DIR__ . "/packs/partybattle/{$mode}/{$theme}.json";
-            if (!file_exists($packPath)) {
-                $packPath = __DIR__ . "/packs/partybattle/{$mode}/base.json";
-            }
-            if (!file_exists($packPath) && $mode === 'caption') {
-                // Fallback images for caption if no pack exists
-                $situations = [
-                    "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif",
-                    "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif"
+    if (!empty($situations)) {
+        shuffle($situations);
+        return array_slice($situations, 0, $rounds);
+    }
+
+    $validModes = ['joke', 'advice', 'acronym', 'caption', 'bluff'];
+    if (!in_array($mode, $validModes, true)) {
+        return [];
+    }
+
+    $packPath = __DIR__ . "/packs/partybattle/{$mode}/{$theme}.json";
+    if (!file_exists($packPath)) {
+        $packPath = __DIR__ . "/packs/partybattle/{$mode}/base.json";
+    }
+
+    if (!file_exists($packPath) && $mode === 'caption') {
+        return [
+            "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif",
+            "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif",
+        ];
+    }
+
+    if (!file_exists($packPath)) {
+        return ["Разработчик забыл добавить карточки для этого режима..."];
+    }
+
+    $pack = json_decode(file_get_contents($packPath), true);
+    if ($mode === 'bluff') {
+        if (!empty($pack['situations']) && is_array($pack['situations'])) {
+            $situations = $pack['situations'];
+        } else {
+            $truths = $pack['truths'] ?? [];
+            $lies = $pack['lies'] ?? [];
+            $situations = array_map(function ($truth, $index) use ($lies) {
+                return [
+                    'text' => $truth['text'] ?? ($truth['question'] ?? ''),
+                    'truth' => $truth['truth'] ?? ($lies[$index]['truth'] ?? null),
                 ];
-            } else if (file_exists($packPath)) {
-                $pack = json_decode(file_get_contents($packPath), true);
-                if ($mode === 'bluff') {
-                    // Bluff mode has 'truths' and 'lies'
-                    $situations = array_merge($pack['truths'] ?? [], $pack['lies'] ?? []);
-                } else {
-                    if (!empty($pack['situations'])) {
-                        $situations = $pack['situations'];
-                    }
-                }
-            }
-            // Ultimate fallback
-            if (empty($situations)) {
-                $situations = ["Разработчик забыл добавить карточки для этого режима..."];
-            }
+            }, $truths, array_keys($truths));
         }
+    } else {
+        $situations = $pack['situations'] ?? [];
+    }
+
+    if (empty($situations)) {
+        $situations = ["Разработчик забыл добавить карточки для этого режима..."];
     }
 
     shuffle($situations);
     return array_slice($situations, 0, $rounds);
-
-    // Meme mode logic
-    $packPath = __DIR__ . "/packs/memebattle/{$theme}.json";
-    if (!file_exists($packPath))
-        $packPath = __DIR__ . '/packs/memebattle/base.json';
-    if (file_exists($packPath)) {
-        $pack = json_decode(file_get_contents($packPath), true);
-        $situations = $pack['situations'] ?? [];
-    }
-    shuffle($situations);
-    return $situations;
 }

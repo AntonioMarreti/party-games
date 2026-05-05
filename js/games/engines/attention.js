@@ -4,6 +4,27 @@
 
 if (!window.BB_MECHANICS) window.BB_MECHANICS = {};
 
+function bbAttentionExitButtonHtml(title = 'Выйти в настройки', extraClass = 'opacity-50 hover-opacity-100') {
+    return `<button class="btn btn-sm p-0 border-0 text-white ${extraClass}" data-bb-action="force-exit" title="${title}">
+        <i class="bi bi-x-circle"></i>
+    </button>`;
+}
+
+function bbAttentionGameBadgeHtml(title, exitTitle = 'Выйти в настройки', exitClass = 'opacity-50 hover-opacity-100') {
+    return `
+        <div class="bb-game-badge d-flex align-items-center gap-2">
+            <span>${title}</span>
+            ${bbAttentionExitButtonHtml(exitTitle, exitClass)}
+        </div>
+    `;
+}
+
+function bbAttentionRenderOptionContent(value, className = '', style = 'pointer-events:none;') {
+    return value.startsWith('bi-')
+        ? `<i class="bi ${value}${className ? ` ${className}` : ''}" style="${style}"></i>`
+        : value;
+}
+
 // 1. ЦВЕТОВОЙ ХАОС
 window.BB_MECHANICS.color_chaos = function (wrapper, task) {
     const mapColor = {
@@ -19,12 +40,7 @@ window.BB_MECHANICS.color_chaos = function (wrapper, task) {
 
     let html = `
         <div class="bb-round-shell">
-            <div class="bb-game-badge d-flex align-items-center gap-2">
-                <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-            </div>
+            ${bbAttentionGameBadgeHtml(task.title)}
             
             <div class="bb-question-card bb-question-card--hero">
                 <div class="bb-question-kicker">${task.question}</div>
@@ -50,12 +66,7 @@ window.BB_MECHANICS.color_chaos = function (wrapper, task) {
 window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
     let html = `
         <div class="bb-round-shell">
-            <div class="bb-game-badge d-flex align-items-center gap-2">
-                <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-            </div>
+            ${bbAttentionGameBadgeHtml(task.title)}
             <div class="bb-question-card">
                 <div class="bb-question-kicker">Найди лишнее</div>
                 <h2 class="bb-question-text bb-question-text--medium animate__animated animate__fadeIn">${task.question}</h2>
@@ -64,10 +75,7 @@ window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
     `;
 
     task.options.forEach(opt => {
-        // Check if it's an icon class
-        const content = opt.startsWith('bi-')
-            ? `<i class="bi ${opt}" style="pointer-events:none;"></i>`
-            : opt;
+        const content = bbAttentionRenderOptionContent(opt);
 
         html += `<button class="btn bb-option-btn d-flex align-items-center justify-content-center p-0" 
             style="font-size: 2.5rem; height: 80px; color: var(--primary-color);" 
@@ -81,12 +89,7 @@ window.BB_MECHANICS.odd_one_out = function (wrapper, task) {
 window.BB_MECHANICS.find_duplicate = function (wrapper, task) {
     wrapper.innerHTML = `
         <div class="bb-round-shell">
-            <div class="bb-game-badge d-flex align-items-center gap-2">
-                <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-            </div>
+            ${bbAttentionGameBadgeHtml(task.title)}
             <div class="bb-question-card">
                 <div class="bb-question-kicker">Найди совпадение</div>
                 <h4 class="bb-question-text bb-question-text--small">${task.question}</h4>
@@ -96,7 +99,7 @@ window.BB_MECHANICS.find_duplicate = function (wrapper, task) {
                     <button class="btn bb-option-btn d-flex align-items-center justify-content-center p-0" 
                         style="font-size: 2.2rem; height: 75px;"
                         ${window.bbBuildSubmitActionAttrs(emoji, task.correct_val)}>
-                        ${emoji.startsWith('bi-') ? `<i class="bi ${emoji}" style="pointer-events:none;"></i>` : emoji}
+                        ${bbAttentionRenderOptionContent(emoji)}
                     </button>
                 `).join('')}
             </div>
@@ -112,19 +115,14 @@ window.BB_MECHANICS.count_objects = function (wrapper, task) {
 
     wrapper.innerHTML = `
         <div class="bb-round-shell bb-round-shell--compact">
-            <div class="bb-game-badge d-flex align-items-center gap-2">
-                <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50 hover-opacity-100" data-bb-action="force-exit" title="Выйти в настройки">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-            </div>
+            ${bbAttentionGameBadgeHtml(task.title)}
             <div class="bb-question-card" style="margin-bottom: 18px;">
                 <div class="bb-question-kicker">Внимание к деталям</div>
                 <h4 class="bb-question-text bb-question-text--small">${questionHtml}</h4>
             </div>
             
             <div class="bb-glass-card p-3 rounded-4 mb-4 d-flex flex-wrap justify-content-center gap-3 mx-auto" style="max-width:320px; background: var(--bg-glass);">
-                ${task.grid.map(emoji => `<span class="animate__animated animate__bounceIn" style="font-size: 2.2rem; line-height: 1;">${emoji.startsWith('bi-') ? `<i class="bi ${emoji}"></i>` : emoji}</span>`).join('')}
+                ${task.grid.map(emoji => `<span class="animate__animated animate__bounceIn" style="font-size: 2.2rem; line-height: 1;">${bbAttentionRenderOptionContent(emoji, '', '')}</span>`).join('')}
             </div>
             
             <div class="bb-options-grid bb-options-grid--2" style="max-width: 360px;">
@@ -160,12 +158,7 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
 
     wrapper.innerHTML = `
         <div class="bb-round-shell">
-            <div class="bb-game-badge d-flex align-items-center gap-2">
-                <span>${task.title}</span>
-                <button class="btn btn-sm p-0 border-0 text-white opacity-50" data-bb-action="force-exit" title="Выйти">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-            </div>
+            ${bbAttentionGameBadgeHtml(task.title, 'Выйти', 'opacity-50')}
             <div class="bb-question-card">
                 <div class="bb-question-kicker">Следи за шариком</div>
                 <h3 class="bb-question-text bb-question-text--small" id="thimbles-status">${task.question}</h3>
@@ -213,7 +206,10 @@ window.BB_MECHANICS.thimbles = function (wrapper, task) {
             transform: translateX(${tx}px) translateY(0px);
             will-change: transform;
         `;
-        c.innerHTML = `<i class="bi bi-cup-hot-fill" style="font-size:2.8rem;color:rgba(255,255,255,0.15);pointer-events:none;"></i>`;
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-cup-hot-fill';
+        icon.style.cssText = 'font-size:2.8rem;color:rgba(255,255,255,0.15);pointer-events:none;';
+        c.appendChild(icon);
         c.addEventListener('click', () => {
             if (typeof window.brainBattleRoundState?.thimblesCupClick === 'function') {
                 window.brainBattleRoundState.thimblesCupClick(i);

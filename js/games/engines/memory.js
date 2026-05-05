@@ -16,34 +16,82 @@ function bbPlayMemoryFeedback(soundKey, hapticType = 'selection', hapticDetail =
 // 1. ФОТОПАМЯТЬ
 window.BB_MECHANICS.photo_memory = function (wrapper, task) {
     const roundId = window.bbActiveRoundId || '';
-    // Фаза 1: Показ
-    let html = `
-        <div id="mem-phase-1" class="bb-round-shell">
+    wrapper.innerHTML = `
+        <div id="mem-phase-shell" class="bb-round-shell">
             <div class="bb-game-badge">${task.title}</div>
             <div class="bb-question-card">
-                <div class="bb-question-kicker">Фаза запоминания</div>
-                <h2 class="bb-question-text bb-question-text--medium">Запомни!</h2>
+                <div id="bb-memory-kicker" class="bb-question-kicker"></div>
+                <h2 id="bb-memory-question" class="bb-question-text bb-question-text--medium"></h2>
             </div>
-            <div class="bb-memory-grid mb-4 px-3">
-                ${task.shown_items.map(i => `
-                    <div class="bb-glass-card bb-memory-card shadow-sm">
-                        ${bbFormatMemoryItem(i)}
-                    </div>
-                `).join('')}
-            </div>
-            <div class="bb-status-rail">
-                <div class="bb-status-rail__top">
-                    <span>Фаза запоминания</span>
-                    <span>3 сек</span>
-                </div>
-                <div class="bb-status-rail__track">
-                    <div class="bb-status-rail__bar" id="bb-memory-phase1-bar"></div>
-                </div>
-            </div>
+            <div id="bb-memory-content"></div>
+            <div id="bb-memory-status"></div>
         </div>
     `;
 
-    wrapper.innerHTML = html;
+    const kicker = wrapper.querySelector('#bb-memory-kicker');
+    const question = wrapper.querySelector('#bb-memory-question');
+    const content = wrapper.querySelector('#bb-memory-content');
+    const status = wrapper.querySelector('#bb-memory-status');
+
+    const renderPhase1 = () => {
+        if (kicker) kicker.textContent = 'Фаза запоминания';
+        if (question) question.textContent = 'Запомни!';
+        if (content) {
+            content.innerHTML = `
+                <div class="bb-memory-grid mb-4 px-3">
+                    ${task.shown_items.map((item) => `
+                        <div class="bb-glass-card bb-memory-card shadow-sm">
+                            ${bbFormatMemoryItem(item)}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        if (status) {
+            status.innerHTML = `
+                <div class="bb-status-rail">
+                    <div class="bb-status-rail__top">
+                        <span>Фаза запоминания</span>
+                        <span>3 сек</span>
+                    </div>
+                    <div class="bb-status-rail__track">
+                        <div class="bb-status-rail__bar" id="bb-memory-phase1-bar"></div>
+                    </div>
+                </div>
+            `;
+        }
+    };
+
+    const renderPhase2 = () => {
+        if (kicker) kicker.textContent = 'Фаза ответа';
+        if (question) question.textContent = task.phase2_q;
+        if (content) {
+            content.innerHTML = `
+                <div class="bb-memory-grid w-100 px-3">
+                    ${task.options.map((opt) => `
+                        <button class="btn bb-option-btn bb-memory-option p-4 fw-bold d-flex align-items-center justify-content-center" style="color:var(--text-main);"
+                            ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${bbFormatMemoryItem(opt)}</button>
+                    `).join('')}
+                </div>
+            `;
+        }
+        if (status) {
+            status.innerHTML = `
+                <div class="bb-status-rail">
+                    <div class="bb-status-rail__top">
+                        <span>Выбери ответ</span>
+                        <span>Идет отсчет ответа</span>
+                    </div>
+                    <div class="bb-status-rail__track">
+                        <div class="bb-status-rail__bar is-indeterminate"></div>
+                    </div>
+                </div>
+            `;
+        }
+        if (window.bbResetTimer) window.bbResetTimer();
+    };
+
+    renderPhase1();
     bbPlayMemoryFeedback('reveal', 'selection', 'light');
 
     // Анимация таймера
@@ -57,35 +105,7 @@ window.BB_MECHANICS.photo_memory = function (wrapper, task) {
     window.bbSetTimeout(() => {
         if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
         bbPlayMemoryFeedback('round_start', 'impact', 'medium');
-
-        let html2 = `
-            <div class="bb-round-shell">
-                <div class="bb-game-badge">${task.title}</div>
-                <div class="bb-question-card animate__animated animate__fadeIn">
-                    <div class="bb-question-kicker">Фаза ответа</div>
-                    <h2 class="bb-question-text bb-question-text--medium">${task.phase2_q}</h2>
-                </div>
-                <div class="bb-memory-grid w-100 px-3">
-        `;
-        task.options.forEach(opt => {
-            html2 += `<button class="btn bb-option-btn bb-memory-option p-4 fw-bold d-flex align-items-center justify-content-center" style="color:var(--text-main);" 
-                ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${bbFormatMemoryItem(opt)}</button>`;
-        });
-        html2 += `</div>
-            <div class="bb-status-rail">
-                <div class="bb-status-rail__top">
-                    <span>Выбери ответ</span>
-                    <span>Идет отсчет ответа</span>
-                </div>
-                <div class="bb-status-rail__track">
-                    <div class="bb-status-rail__bar is-indeterminate"></div>
-                </div>
-            </div>
-        </div>`;
-        wrapper.innerHTML = html2;
-
-        if (window.bbResetTimer) window.bbResetTimer();
-
+        renderPhase2();
     }, 3000);
 };
 
@@ -306,22 +326,69 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
 // 4. СЕКРЕТНЫЙ КОД (Secret Code)
 window.BB_MECHANICS.secret_code = function (wrapper, task) {
     const roundId = window.bbActiveRoundId || '';
-    let html = `
-        <div id="sc-phase-1" class="bb-round-shell">
+    wrapper.innerHTML = `
+        <div id="sc-phase-shell" class="bb-round-shell">
             <div class="bb-game-badge">${task.title}</div>
             <div class="bb-question-card">
                 <div class="bb-question-kicker">Секретный код</div>
-                <h2 class="bb-question-text bb-question-text--small">${task.question}</h2>
+                <h2 id="sc-question" class="bb-question-text bb-question-text--small"></h2>
             </div>
-            <div class="bb-glass-card px-5 py-4 d-flex align-items-center justify-content-center mb-5" style="border: 2px dashed var(--primary-color);">
-                <h1 class="display-1 fw-bold mb-0 text-break text-center w-100" style="letter-spacing: 12px; margin-right: -12px; color: var(--primary-color);">${task.pin}</h1>
-            </div>
-            <div class="progress w-75 rounded-pill" style="height: 12px; background: var(--bg-secondary);">
-                <div class="progress-bar sc-timer-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color), white 30%)); border-radius: 10px;"></div>
-            </div>
+            <div id="sc-content"></div>
+            <div id="sc-footer"></div>
         </div>
     `;
-    wrapper.innerHTML = html;
+
+    const question = wrapper.querySelector('#sc-question');
+    const content = wrapper.querySelector('#sc-content');
+    const footer = wrapper.querySelector('#sc-footer');
+
+    const renderPhase1 = () => {
+        if (question) question.textContent = task.question;
+        if (content) {
+            content.innerHTML = `
+                <div class="bb-glass-card px-5 py-4 d-flex align-items-center justify-content-center mb-5" style="border: 2px dashed var(--primary-color);">
+                    <h1 class="display-1 fw-bold mb-0 text-break text-center w-100" style="letter-spacing: 12px; margin-right: -12px; color: var(--primary-color);">${task.pin}</h1>
+                </div>
+            `;
+        }
+        if (footer) {
+            footer.innerHTML = `
+                <div class="progress w-75 rounded-pill mx-auto" style="height: 12px; background: var(--bg-secondary);">
+                    <div class="progress-bar sc-timer-bar" style="width: 100%; transition: width 3s linear; background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color), white 30%)); border-radius: 10px;"></div>
+                </div>
+            `;
+        }
+    };
+
+    const renderPhase2 = () => {
+        if (question) question.textContent = 'Введи пароль';
+
+        const paddedKeypad = [];
+        for (let i = 0; i < 9; i++) paddedKeypad.push(task.keypad[i]);
+        paddedKeypad.push('empty');
+        paddedKeypad.push(task.keypad[9]);
+        paddedKeypad.push('clear');
+
+        if (content) {
+            content.innerHTML = `
+                <div class="bb-glass-card w-100 px-4 py-3 mb-4 d-flex align-items-center justify-content-center shadow-sm mx-auto" style="max-width:280px; height: 75px; border-bottom: 4px solid var(--primary-color);">
+                    <h1 id="sc-display" class="display-3 fw-bold mb-0 text-center w-100" style="letter-spacing: 10px; margin-right: -10px; color: var(--text-main);"></h1>
+                </div>
+                <div class="d-grid gap-2 px-3 w-100 mx-auto" style="grid-template-columns: repeat(3, 1fr); max-width: 300px;">
+                    ${paddedKeypad.map((key) => {
+                        if (key === 'empty') return '<div></div>';
+                        if (key === 'clear') {
+                            return `<button class="btn btn-light shadow-sm border-0 d-flex align-items-center justify-content-center" style="height: 70px; font-size: 1.5rem; color: var(--status-error);" data-bb-action="secret-clear"><i class="bi bi-backspace-fill"></i></button>`;
+                        }
+                        return `<button class="btn bb-glass-card shadow-sm border-0 d-flex align-items-center justify-content-center fw-bold text-dark" style="height: 70px; font-size: 2rem; transition: transform 0.1s ease;" data-bb-action="secret-digit" data-bb-value="${key}" data-bb-correct="${window.bbEncodeActionValue(task.correct_val)}">${key}</button>`;
+                    }).join('')}
+                </div>
+            `;
+        }
+        if (footer) footer.innerHTML = '';
+    };
+
+    renderPhase1();
 
     // Анимация таймера
     window.bbSetTimeout(() => {
@@ -333,40 +400,7 @@ window.BB_MECHANICS.secret_code = function (wrapper, task) {
     // Переход ко второй фазе через 3 сек
     window.bbSetTimeout(() => {
         if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
-
-        let htmlPhase2 = `
-            <div class="bb-round-shell animate__animated animate__fadeIn">
-                <div class="bb-game-badge">${task.title}</div>
-                <div class="bb-question-card" style="max-width: 320px;">
-                    <div class="bb-question-kicker">Фаза ввода</div>
-                    <h4 class="bb-question-text bb-question-text--small">Введи пароль</h4>
-                </div>
-                
-                <div class="bb-glass-card w-100 px-4 py-3 mb-4 d-flex align-items-center justify-content-center shadow-sm" style="max-width:280px; height: 75px; border-bottom: 4px solid var(--primary-color);">
-                    <h1 id="sc-display" class="display-3 fw-bold mb-0 text-center w-100" style="letter-spacing: 10px; margin-right: -10px; color: var(--text-main);"></h1>
-                </div>
-
-                <div class="d-grid gap-2 px-3 w-100 mx-auto" style="grid-template-columns: repeat(3, 1fr); max-width: 300px;">
-        `;
-
-        let paddedKeypad = [];
-        for (let i = 0; i < 9; i++) paddedKeypad.push(task.keypad[i]);
-        paddedKeypad.push('empty');
-        paddedKeypad.push(task.keypad[9]);
-        paddedKeypad.push('clear');
-
-        paddedKeypad.forEach(k => {
-            if (k === 'empty') {
-                htmlPhase2 += `<div></div>`;
-            } else if (k === 'clear') {
-                htmlPhase2 += `<button class="btn btn-light shadow-sm border-0 d-flex align-items-center justify-content-center" style="height: 70px; font-size: 1.5rem; color: var(--status-error);" data-bb-action="secret-clear"><i class="bi bi-backspace-fill"></i></button>`;
-            } else {
-                htmlPhase2 += `<button class="btn bb-glass-card shadow-sm border-0 d-flex align-items-center justify-content-center fw-bold text-dark" style="height: 70px; font-size: 2rem; transition: transform 0.1s ease;" data-bb-action="secret-digit" data-bb-value="${k}" data-bb-correct="${window.bbEncodeActionValue(task.correct_val)}">${k}</button>`;
-            }
-        });
-
-        htmlPhase2 += `</div></div>`;
-        wrapper.innerHTML = htmlPhase2;
+        renderPhase2();
 
         let currentInput = '';
 

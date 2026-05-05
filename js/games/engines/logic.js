@@ -4,11 +4,19 @@
 
 if (!window.BB_MECHANICS) window.BB_MECHANICS = {};
 
+function bbLogicShell(wrapper, badgeTitle, contentHtml, extraClass = '') {
+    wrapper.innerHTML = `
+        <div class="bb-round-shell${extraClass ? ` ${extraClass}` : ''}">
+            <div class="bb-game-badge">${badgeTitle}</div>
+            ${contentHtml}
+        </div>
+    `;
+}
+
 // 1. МАТЕМАТИКА
 window.BB_MECHANICS.math_blitz = function (wrapper, task) {
     let html = `
-        <div class="bb-round-shell text-center">
-            <div class="bb-game-badge">${task.title}</div>
+        <div class="text-center">
             <div class="bb-question-card bb-question-card--hero animate__animated animate__zoomIn">
                 <h1 class="bb-question-text bb-question-text--hero text-break">${task.question}</h1>
             </div>
@@ -19,41 +27,36 @@ window.BB_MECHANICS.math_blitz = function (wrapper, task) {
             ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${opt}</button>`;
     });
     html += `</div></div>`;
-    wrapper.innerHTML = html;
+    bbLogicShell(wrapper, task.title, html, 'text-center');
 };
 
 // 2. БОЛЬШЕ / МЕНЬШЕ
 window.BB_MECHANICS.greater_less = function (wrapper, task) {
     let html = `
-        <div class="bb-round-shell">
-            <div class="bb-game-badge">${task.title}</div>
-            <div class="bb-question-card">
-                <div class="bb-question-kicker">Выбери большее значение</div>
-                <h4 class="bb-question-text bb-question-text--small">${task.question}</h4>
-            </div>
+        <div class="bb-question-card">
+            <div class="bb-question-kicker">Выбери большее значение</div>
+            <h4 class="bb-question-text bb-question-text--small">${task.question}</h4>
+        </div>
+        
+        <div class="bb-options-grid bb-options-grid--2">
+            <button class="btn bb-option-btn bb-option-btn--primary d-flex align-items-center justify-content-center animate__animated animate__fadeInLeft" 
+                style="font-size: 38px; line-height: 1.2;"
+                ${window.bbBuildSubmitActionAttrs(task.n1_val, task.correct_val)}>
+                ${task.n1_text}
+            </button>
             
-            <div class="bb-options-grid bb-options-grid--2">
-                <button class="btn bb-option-btn bb-option-btn--primary d-flex align-items-center justify-content-center animate__animated animate__fadeInLeft" 
-                    style="font-size: 38px; line-height: 1.2;"
-                    ${window.bbBuildSubmitActionAttrs(task.n1_val, task.correct_val)}>
-                    ${task.n1_text}
-                </button>
-                
-                <button class="btn bb-option-btn bb-option-btn--primary d-flex align-items-center justify-content-center animate__animated animate__fadeInRight" 
-                    style="font-size: 38px; line-height: 1.2;"
-                    ${window.bbBuildSubmitActionAttrs(task.n2_val, task.correct_val)}>
-                    ${task.n2_text}
-                </button>
-            </div>
+            <button class="btn bb-option-btn bb-option-btn--primary d-flex align-items-center justify-content-center animate__animated animate__fadeInRight" 
+                style="font-size: 38px; line-height: 1.2;"
+                ${window.bbBuildSubmitActionAttrs(task.n2_val, task.correct_val)}>
+                ${task.n2_text}
+            </button>
         </div>`;
-    wrapper.innerHTML = html;
+    bbLogicShell(wrapper, task.title, html);
 };
 
 // Кости
 window.BB_MECHANICS.dice_sum = function (wrapper, task) {
-    wrapper.innerHTML = `
-        <div class="bb-round-shell">
-            <div class="bb-game-badge">${task.title}</div>
+    bbLogicShell(wrapper, task.title, `
             <div class="bb-question-card bb-question-card--hero">
                 <div class="bb-question-kicker">Сложи значения</div>
                 <div class="d-flex justify-content-center gap-3 flex-wrap" style="font-size: 5rem; color: var(--primary-color); filter: drop-shadow(0 5px 5px rgba(0,0,0,0.1));">
@@ -66,14 +69,12 @@ window.BB_MECHANICS.dice_sum = function (wrapper, task) {
                         ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${opt}</button>
                 `).join('')}
             </div>
-        </div>`;
+    `);
 };
 
 // Алхимия
 window.BB_MECHANICS.alchemy = function (wrapper, task) {
-    wrapper.innerHTML = `
-        <div class="bb-round-shell text-center">
-            <div class="bb-game-badge">${task.title}</div>
+    bbLogicShell(wrapper, task.title, `
             <div class="bb-question-card bb-question-card--hero">
                 <h1 class="bb-question-text bb-question-text--medium text-break" style="white-space: pre-wrap;">${task.question}</h1>
             </div>
@@ -83,7 +84,7 @@ window.BB_MECHANICS.alchemy = function (wrapper, task) {
                         ${window.bbBuildSubmitActionAttrs(opt, task.correct_val)}>${opt}</button>
                 `).join('')}
             </div>
-        </div>`;
+    `, 'text-center');
 };
 
 // ПРОДОЛЖИ РЯД
@@ -93,9 +94,7 @@ window.BB_MECHANICS.number_sequence = function (wrapper, task) {
     const parts = task.is_icons ? [...task.seq_array, '?'] : task.question.split(', ');
 
     let html = `
-        <div class="bb-round-shell text-center w-100">
-            <div class="bb-game-badge">${task.title}</div>
-            
+        <div class="text-center w-100">
             <div class="bb-question-card">
                 <div class="bb-question-kicker">Продолжи ряд</div>
                 <div class="d-flex flex-wrap justify-content-center gap-2 w-100 px-2" style="max-width: 400px; margin: 0 auto;">
@@ -133,5 +132,5 @@ window.BB_MECHANICS.number_sequence = function (wrapper, task) {
             </div>
         </div>`;
 
-    wrapper.innerHTML = html;
+    bbLogicShell(wrapper, task.title, html, 'text-center w-100');
 };

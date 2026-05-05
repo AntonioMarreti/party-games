@@ -10,11 +10,22 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
     overlay.id = 'bb-overlay-layer';
     overlay.className = 'animate__animated animate__fadeIn';
     overlay.style.background = 'var(--status-error)'; // Start Red
-    overlay.innerHTML = `
-        <div id="reaction-icon" style="font-size: 6rem;">✋</div>
-        <h1 id="reaction-text" class="fw-bold mt-3 text-white">ЖДИ...</h1>
-        <p class="opacity-75 text-white">Нажми, когда станет зеленым</p>
-    `;
+
+    const icon = document.createElement('div');
+    icon.style.fontSize = '6rem';
+    icon.textContent = '✋';
+
+    const title = document.createElement('h1');
+    title.className = 'fw-bold mt-3 text-white';
+    title.textContent = 'ЖДИ...';
+
+    const hint = document.createElement('p');
+    hint.className = 'opacity-75 text-white';
+    hint.textContent = 'Нажми, когда станет зеленым';
+
+    overlay.appendChild(icon);
+    overlay.appendChild(title);
+    overlay.appendChild(hint);
 
     document.body.appendChild(overlay);
 
@@ -24,33 +35,33 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
         if (window.bbIsRoundActive && !window.bbIsRoundActive(roundId)) return;
         if (overlay) {
             overlay.style.background = 'var(--status-success)'; // Green
-            document.getElementById('reaction-text').innerText = "ЖМИ!";
-            document.getElementById('reaction-icon').innerText = "⚡️";
+            title.textContent = 'ЖМИ!';
+            icon.textContent = '⚡️';
             reactionStartTime = performance.now();
-            overlay.dataset.ready = "true";
+            overlay.dataset.ready = 'true';
             if (window.triggerHaptic) window.triggerHaptic('notification', 'success');
             if (window.audioManager) window.audioManager.play('tick_soft');
         }
     }, randomDelay);
 
     overlay.addEventListener('click', () => {
-        if (!overlay || overlay.dataset.finished === "true") return;
+        if (!overlay || overlay.dataset.finished === 'true') return;
 
         const finish = (time, success) => {
-            if (overlay.dataset.finished === "true") return;
-            overlay.dataset.finished = "true";
+            if (overlay.dataset.finished === 'true') return;
+            overlay.dataset.finished = 'true';
             overlay.remove();
             window.bbSubmit(null, null, time, success);
         };
 
-        if (overlay.dataset.ready === "true") {
+        if (overlay.dataset.ready === 'true') {
             const time = performance.now() - reactionStartTime;
             if (window.triggerHaptic) window.triggerHaptic('impact', 'medium');
             finish(time, true);
         } else {
             if (window.bbReactionTimeout) window.bbClearTimeout(window.bbReactionTimeout);
             overlay.style.background = 'var(--bg-dark)';
-            document.getElementById('reaction-text').innerText = "РАНО!";
+            title.textContent = 'РАНО!';
             if (window.triggerHaptic) window.triggerHaptic('notification', 'error');
             window.bbSetTimeout(() => {
                 finish(9999, false);
@@ -58,8 +69,16 @@ window.BB_MECHANICS.reaction_test = function (wrapper, task) {
         }
     });
 
-    // Placeholder in wrapper (optional)
-    wrapper.innerHTML = '<div class="text-center text-muted mt-5">Игра на весь экран...</div>';
+    wrapper.innerHTML = `
+        <div class="bb-round-shell text-center">
+            <div class="bb-game-badge">${task.title}</div>
+            <div class="bb-question-card" style="max-width: 360px;">
+                <div class="bb-question-kicker">Реакция</div>
+                <h3 class="bb-question-text bb-question-text--small">Смотри на экран и жми только на зеленый сигнал</h3>
+            </div>
+            <div class="text-muted fw-bold mt-4">Игра идет в полноэкранном режиме</div>
+        </div>
+    `;
 };
 
 // Разминирование
