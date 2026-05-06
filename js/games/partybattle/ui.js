@@ -100,6 +100,7 @@ window.PartyBattleUI = {
                             ${selectedTheme === 'adult' ? '18+ Полный треш' : 'Базовая колода'}
                         </span>
                     </div>
+                    ${this.renderThemeScopeSummary(selectedTheme, selectedModes)}
 
                     <div class="d-flex flex-column gap-3 mb-4">
                         <button class="btn btn-outline-primary w-100 fw-bold rounded-4" style="background: rgba(var(--primary-rgb), 0.06); border: 1px solid rgba(var(--primary-rgb), 0.25);"
@@ -220,14 +221,14 @@ window.PartyBattleUI = {
                             <input class="form-check-input pb-theme-radio m-0" type="radio" name="pb-theme-radio" value="base" ${selectedTheme === 'base' ? 'checked' : ''} style="transform: scale(1.3);">
                                 <div class="ms-3">
                                     <div class="fw-bold" style="color:var(--text-main); font-size: 1.1rem;">Базовая колода</div>
-                                    <div class="small text-muted">Стандартный набор ситуаций (12+)</div>
+                                    <div class="small text-muted">Стандартный набор ситуаций для всех режимов</div>
                                 </div>
                         </label>
                         <label class="form-check d-flex align-items-center p-3 rounded-4 m-0" style="background: var(--bg-main); border: 2px solid var(--border-glass); cursor: pointer;" onclick="PartyBattleUI.selectTheme('adult')">
                             <input class="form-check-input pb-theme-radio m-0" type="radio" name="pb-theme-radio" value="adult" ${selectedTheme === 'adult' ? 'checked' : ''} style="transform: scale(1.3);">
                                 <div class="ms-3">
                                     <div class="fw-bold text-danger" style="font-size: 1.1rem;">18+ Полный треш</div>
-                                    <div class="small text-muted">Жесткий юмор для взрослых компаний</div>
+                                    <div class="small text-muted">Жесткий юмор для режимов с adult-паками, остальные останутся на базе</div>
                                 </div>
                         </label>
                     </div>
@@ -305,6 +306,12 @@ window.PartyBattleUI = {
         } else {
             preview.innerHTML = `<span class="badge bg-primary rounded-pill px-3 py-2">Базовая колода</span>`;
         }
+
+        const summary = document.getElementById('pb-theme-scope-summary');
+        if (summary) {
+            const checkedModes = Array.from(document.querySelectorAll('.pb-mode-cb:checked')).map(cb => cb.value);
+            summary.innerHTML = this.renderThemeScopeSummary(val, checkedModes, true);
+        }
     },
 
     updateModesPreview: function () {
@@ -330,6 +337,49 @@ window.PartyBattleUI = {
         preview.innerHTML = checked.map(cb => {
             return `<span class="badge bg-primary rounded-pill px-3 py-2 me-1 mb-1">${labels[cb.value]}</span>`;
         }).join('');
+
+        const summary = document.getElementById('pb-theme-scope-summary');
+        const themeInput = document.getElementById('pb-theme');
+        if (summary && themeInput) {
+            summary.innerHTML = this.renderThemeScopeSummary(themeInput.value, checked.map(cb => cb.value), true);
+        }
+    },
+
+    renderThemeScopeSummary: function (selectedTheme, selectedModes, innerOnly = false) {
+        const labels = {
+            meme: 'МемоБатл',
+            joke: 'Добивка',
+            whoami: 'Кто из нас?',
+            advice: 'Вредные советы',
+            acronym: 'Дешифратор',
+            caption: 'Подпиши картинку',
+            bluff: 'Блеф'
+        };
+        const adultSupported = new Set(['meme', 'joke', 'advice', 'acronym', 'bluff', 'whoami']);
+        const modes = Array.isArray(selectedModes) ? selectedModes : [];
+
+        let body = '';
+        if (selectedTheme === 'adult') {
+            const adultModes = modes.filter(mode => adultSupported.has(mode));
+            const baseModes = modes.filter(mode => !adultSupported.has(mode));
+            body += `<div class="small text-muted mb-2" style="line-height:1.35;">18+ применяется только к режимам со взрослыми паками. Остальные выбранные режимы пойдут на базовой теме.</div>`;
+            if (adultModes.length > 0) {
+                body += `<div class="small fw-bold mb-1" style="color:var(--text-main);">Получат 18+:</div>`;
+                body += `<div class="d-flex flex-wrap gap-2 mb-2">${adultModes.map(mode => `<span class="badge rounded-pill px-3 py-2" style="background: rgba(220, 53, 69, 0.12); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.16);">${labels[mode] || mode}</span>`).join('')}</div>`;
+            }
+            if (baseModes.length > 0) {
+                body += `<div class="small fw-bold mb-1" style="color:var(--text-main);">Останутся на базе:</div>`;
+                body += `<div class="d-flex flex-wrap gap-2">${baseModes.map(mode => `<span class="badge rounded-pill px-3 py-2" style="background: rgba(108, 117, 125, 0.12); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.16);">${labels[mode] || mode}</span>`).join('')}</div>`;
+            }
+        } else {
+            body += `<div class="small text-muted" style="line-height:1.35;">Базовая тема работает для всех режимов без исключений.</div>`;
+        }
+
+        if (innerOnly) {
+            return body;
+        }
+
+        return `<div id="pb-theme-scope-summary" class="mb-3">${body}</div>`;
     },
 
     selectRounds: function (val) {
@@ -409,13 +459,15 @@ window.PartyBattleUI = {
             ? `Раунд ${gameState.current_round} из ${gameState.total_rounds}`
             : '';
         return `
-            <div class="header-container px-3 pt-2 pb-3 text-center" style="background: transparent;">
-                <div class="d-flex justify-content-center gap-2 flex-wrap mb-2">
-                    ${roundText ? `<span class="badge rounded-pill px-3 py-2" style="background: rgba(var(--primary-rgb), 0.12); color: var(--primary-color); border: 1px solid rgba(var(--primary-rgb), 0.16); font-size: 11px; letter-spacing: 0.08em;">${roundText}</span>` : ''}
-                    ${modeMeta.label ? `<span class="badge rounded-pill px-3 py-2" style="background: rgba(255,255,255,0.7); color: var(--text-main); border: 1px solid var(--border-glass); font-size: 11px; letter-spacing: 0.08em;">${modeMeta.label}</span>` : ''}
-                </div>
-                <h3 class="fw-black m-0 mb-1" style="color:var(--text-main); line-height: 1; letter-spacing: -0.04em;">Party Battle</h3>
-                <div class="small fw-bold text-uppercase" style="color:var(--text-muted); letter-spacing: 0.18em;">${stageMeta.label}</div>
+            <div class="header-container px-3 pt-2 pb-2 text-center" style="background: transparent;">
+                <h2 class="fw-black m-0 mb-1" style="color:var(--text-main); line-height: 1; letter-spacing: -0.04em;">Party Battle</h2>
+                <div class="small fw-bold text-uppercase mb-2" style="color:var(--text-muted); letter-spacing: 0.18em;">${stageMeta.label}</div>
+                ${roundText || modeMeta.label ? `
+                    <div class="d-flex flex-column align-items-center gap-2" style="padding-left: 110px; padding-right: 110px;">
+                        ${roundText ? `<span class="badge rounded-pill px-3 py-2" style="max-width: 100%; background: rgba(90, 103, 255, 0.12); color: #5a67ff; border: 1px solid rgba(90, 103, 255, 0.16); font-size: 11px; letter-spacing: 0.08em; white-space: nowrap;">${roundText}</span>` : ''}
+                        ${modeMeta.label ? `<span class="badge rounded-pill px-3 py-2 text-truncate" style="max-width: 100%; background: rgba(255,255,255,0.78); color: var(--text-main); border: 1px solid var(--border-glass); font-size: 11px; letter-spacing: 0.08em;">${modeMeta.label}</span>` : ''}
+                    </div>
+                ` : ''}
             </div>
             `;
     },
@@ -448,26 +500,22 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column h-100" style="padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState)}
-                <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 pb-5 pt-1 animate__animated animate__fadeIn px-3" style="margin-top: -6px;">
+                <div class="d-flex flex-column align-items-center justify-content-start flex-grow-1 pb-4 pt-1 animate__animated animate__fadeIn px-3">
         `;
 
         const sitText = gameState.displayPrompt.body || '';
         const imageUrl = gameState.displayPrompt.mediaUrl || '';
 
         html += `
-            <div class="text-center mb-3">
-                <div class="small fw-bold text-uppercase mb-2" style="color:var(--text-muted); letter-spacing:0.18em;">Раунд открыт</div>
-                <div class="fw-semibold" style="color:var(--text-main); opacity:0.82; max-width:420px;">Сейчас игроки увидят общий prompt и перейдут к действию.</div>
-            </div>
-            <div class="badge rounded-pill mb-3 border shadow-sm px-3 py-2" style="font-size: 12px; background: rgba(var(--primary-rgb), 0.12); color: var(--primary-color); border-color: rgba(var(--primary-rgb), 0.16) !important; letter-spacing:0.12em;">СИТУАЦИЯ</div>
+            <div class="badge rounded-pill mb-3 border shadow-sm px-3 py-2" style="font-size: 12px; background: rgba(90, 103, 255, 0.12); color: #5a67ff; border-color: rgba(90, 103, 255, 0.16) !important; letter-spacing:0.12em;">СИТУАЦИЯ</div>
             <div class="p-4 mb-4 shadow-lg rounded-4 d-flex align-items-center justify-content-center text-center position-relative overflow-hidden" 
-                 style="min-height: 220px; width: 100%; max-width: 600px; background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(var(--primary-rgb), 0.05)); border: 1px solid var(--border-glass) !important; box-shadow: 0 24px 60px rgba(31, 38, 135, 0.08) !important; padding: ${gameState.displayPrompt.kind === 'image' ? '0 !important' : 'var(--bs-p-4)'}">
+                 style="min-height: 180px; width: 100%; max-width: 600px; background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(90, 103, 255, 0.04)); border: 1px solid var(--border-glass) !important; box-shadow: 0 18px 42px rgba(31, 38, 135, 0.06) !important; padding: ${gameState.displayPrompt.kind === 'image' ? '0 !important' : 'var(--bs-p-4)'}">
                 ${gameState.displayPrompt.kind === 'image' ? `
                     ${pb_renderPromptImage(imageUrl, 'w-100 h-100 object-fit-cover position-absolute top-0 start-0')}
                 ` : `
                     <i class="bi bi-masks-theater position-absolute" style="top: -10px; left: -10px; font-size: 80px; opacity: 0.05; transform: rotate(-15deg);"></i>
                     <i class="bi bi-emoji-laughing position-absolute" style="bottom: -10px; right: -10px; font-size: 80px; opacity: 0.05; transform: rotate(15deg);"></i>
-                    <h3 class="fw-bold m-0 position-relative z-1" style="color:var(--text-main); line-height: 1.4;">${sitText}</h3>
+                    <h3 class="fw-bold m-0 position-relative z-1" style="color:var(--text-main); line-height: 1.34;">${sitText}</h3>
                 `}
             </div>
         `;
@@ -530,18 +578,18 @@ window.PartyBattleUI = {
         const hasSubmitted = gameState.submissionEntries.some(entry => String(entry.authorId) === myId);
 
         let html = `
-            <div class="d-flex flex-column min-vh-100 pb-4" style="padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column min-vh-100 pb-3" style="padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState)}
                 
                 <div class="px-3 py-2 animate__animated animate__fadeInDown">
-                    <div class="p-3 shadow-lg rounded-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(var(--primary-rgb), 0.04)); border: 1px solid var(--border-glass); box-shadow: 0 24px 60px rgba(31, 38, 135, 0.08) !important;">
+                    <div class="p-3 shadow-lg rounded-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(90, 103, 255, 0.04)); border: 1px solid var(--border-glass); box-shadow: 0 18px 42px rgba(31, 38, 135, 0.06) !important;">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                             <div class="small text-muted fw-bold opacity-75 text-uppercase" style="font-size: 10px; letter-spacing: 0.14em;">${modeMeta.label}</div>
-                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); border: 1px solid rgba(var(--primary-rgb), 0.14);">Сбор ответов</span>
+                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.1); color: #5a67ff; border: 1px solid rgba(90, 103, 255, 0.14);">Сбор ответов</span>
                         </div>
                         ${gameState.displayPrompt?.kind === 'image'
                 ? pb_renderPromptImage(situation, 'w-100 rounded-3 object-fit-cover shadow-sm', 'max-height: 250px;')
-                : `<div class="fw-bold text-main" style="font-size: 1.15rem; line-height: 1.3;">${situation}</div>`
+                : `<div class="fw-bold text-main" style="font-size: 1.08rem; line-height: 1.28;">${situation}</div>`
             }
                     </div>
                 </div>
@@ -563,7 +611,7 @@ window.PartyBattleUI = {
             `;
         } else {
             html += `
-                <div class="flex-grow-1 px-3">
+                <div class="flex-grow-1 px-3 d-flex flex-column">
                     ${window.PartyBattleModes.renderSubmission(gameState, myHand)}
                 </div>
             `;
@@ -665,19 +713,18 @@ window.PartyBattleUI = {
                 ${this.renderHeader(gameState)}
                 
                 <div class="flex-grow-1 px-3 animate__animated animate__fadeIn">
-                    <div class="text-center mb-3">
-                        <div class="small text-muted fw-bold opacity-75 text-uppercase mb-2" style="letter-spacing:0.18em;">ГОЛОСОВАНИЕ</div>
-                        <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
-                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); border: 1px solid rgba(var(--primary-rgb), 0.14);">${modeMeta.label}</span>
-                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(255,255,255,0.7); color: var(--text-main); border: 1px solid var(--border-glass);">Выбери лучший вариант</span>
+                    <div class="p-3 mb-3 rounded-4 shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.04)); border: 1px solid var(--border-glass);">
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                            <div class="small text-muted fw-bold text-uppercase" style="letter-spacing:0.14em;">${modeMeta.label}</div>
+                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.1); color: #5a67ff; border: 1px solid rgba(90, 103, 255, 0.14);">${hasVoted ? 'Голос принят' : 'Выбери лучший вариант'}</span>
                         </div>
                         ${gameState.displayPrompt?.kind === 'image'
-                ? `<div class="mb-3">${pb_renderPromptImage(situation, 'w-100 rounded-4 object-fit-cover shadow-sm mx-auto', 'max-width: 600px; max-height: 260px;')}</div>`
-                : `<div class="fw-bold fs-5 mx-auto" style="color:var(--text-main); max-width: 680px; line-height:1.32;">${situation}</div>`}
+                ? `<div>${pb_renderPromptImage(situation, 'w-100 rounded-4 object-fit-cover shadow-sm mx-auto', 'max-width: 600px; max-height: 220px;')}</div>`
+                : `<div class="fw-bold fs-4 mx-auto" style="color:var(--text-main); max-width: 680px; line-height:1.28;">${situation}</div>`}
                     </div>
                     
                     ${hasVoted ? `
-                        <div class="p-3 mb-4 mx-auto rounded-4 shadow-sm animate__animated animate__pulse text-center" 
+                        <div class="p-3 mb-3 mx-auto rounded-4 shadow-sm animate__animated animate__pulse text-center" 
                              style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.9), rgba(34, 197, 94, 0.9)); color: white; border: none; max-width: 240px;">
                             <div class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i> Голос принят!</div>
                             <div class="small opacity-75">Ждем остальных...</div>
@@ -737,11 +784,10 @@ window.PartyBattleUI = {
             <div class="d-flex flex-column h-100" style="padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState)}
                 <div class="flex-grow-1 d-flex flex-column align-items-center p-3 text-center position-relative animate__animated animate__fadeIn">
-                    <div class="small text-uppercase fw-bold mb-2" style="color:var(--text-muted); letter-spacing:0.18em;">${modeMeta.label}</div>
                     <h2 class="fw-bold mb-2" style="color:var(--text-main);">${title}</h2>
-                    <div class="text-muted fw-semibold mb-4" style="max-width:420px;">${winnerType === 'truth' ? subtitle : 'Лучший ответ раунда по мнению игроков.'}</div>
+                    <div class="text-muted fw-semibold mb-3" style="max-width:420px;">${winnerType === 'truth' ? subtitle : modeMeta.label}</div>
                     <div class="p-4 rounded-4 shadow-lg animate__animated animate__tada"
-                        style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.06)); border: 1px solid rgba(var(--primary-rgb), 0.22); max-width: 420px; width: 100%; box-shadow: 0 28px 70px rgba(var(--primary-rgb), 0.12) !important;">
+                        style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.06)); border: 1px solid rgba(90, 103, 255, 0.18); max-width: 420px; width: 100%; box-shadow: 0 18px 42px rgba(31, 38, 135, 0.07) !important;">
                         ${winnerType === 'truth' ? `
                             <div class="d-flex align-items-center justify-content-center mb-3">
                                 <span class="badge bg-success rounded-pill px-3 py-2">Это была правда</span>
@@ -760,9 +806,9 @@ window.PartyBattleUI = {
                             <div class="mb-3">
                                 ${pb_renderPromptImage(gameState.displayPrompt?.mediaUrl || '', 'w-100 rounded-4 object-fit-cover shadow-sm', 'max-height: 220px;')}
                             </div>
-                            <h3 class="fw-bold mb-4" style="color:var(--text-main); line-height: 1.4;">${winnerContent}</h3>
+                            <h3 class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.32;">${winnerContent}</h3>
                         ` : (mode === 'whoami' ? '' : `
-                            <h3 class="fw-bold mb-4" style="color:var(--text-main); line-height: 1.4;">${winnerContent}</h3>
+                            <h3 class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.32;">${winnerContent}</h3>
                         `))}
                         <div class="text-center rounded-4 p-3" style="background: rgba(var(--primary-rgb), 0.06);">
                             ${winnerType === 'truth'
@@ -817,7 +863,7 @@ window.PartyBattleUI = {
             const isMe = String(uid) === myId;
             return `
                             <div class="d-flex justify-content-between align-items-center p-3 mb-2 rounded-4 shadow-sm animate__animated animate__fadeInUp" 
-                                    style="background: ${isWinner ? 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.92), rgba(104, 92, 255, 0.82))' : 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04))'}; border: 1px solid ${isMe ? 'rgba(var(--primary-rgb), 0.34)' : 'var(--border-glass)'}; color: ${isWinner ? 'white' : 'var(--text-main)'}; transition-delay: ${index * 0.1}s; box-shadow:${isWinner ? '0 20px 45px rgba(var(--primary-rgb), 0.18)' : '0 10px 28px rgba(31, 38, 135, 0.05)'};">
+                                    style="background: ${isWinner ? 'linear-gradient(135deg, #4a58f5, #6f63ff)' : 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.04))'}; border: 1px solid ${isMe ? 'rgba(90, 103, 255, 0.34)' : 'var(--border-glass)'}; color: ${isWinner ? 'white' : 'var(--text-main)'}; transition-delay: ${index * 0.1}s; box-shadow:${isWinner ? '0 20px 45px rgba(90, 103, 255, 0.22)' : '0 10px 28px rgba(31, 38, 135, 0.05)'};">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="fw-bold" style="color:${isWinner ? 'white' : 'var(--text-main)'}; width: 24px;">#${index + 1}</div>
                                     <div style="width:36px; height:36px; margin-right:6px;">${pb_renderAvatar(player, 'sm')}</div>

@@ -13,3 +13,6 @@ vendor/
 node_modules/
 server/config.php
 *.db
+data/import/*
+!data/import/.gitkeep
+!data/import/README.md

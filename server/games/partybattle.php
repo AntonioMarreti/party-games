@@ -15,7 +15,9 @@ function getInitialState()
         'current_situation' => null,
         'scores' => [],
         'history' => [],
+        'recent_cards' => [],
         'hands' => [],
+        'gif_search_cache' => [],
         'submissions' => [],
         'votes' => [],
         'last_round_data' => null,
@@ -42,6 +44,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $theme = $postData['theme'] ?? 'base';
         $aiMode = !empty($postData['ai_mode']);
         $customTopic = $postData['custom_topic'] ?? '';
+        $recentCards = pb_normalizeRecentCards($state['recent_cards'] ?? []);
 
         $state = getInitialState();
         $state['total_rounds'] = $rounds;
@@ -49,6 +52,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state['theme'] = $theme;
         $state['ai_mode'] = $aiMode;
         $state['scores'] = [];
+        $state['recent_cards'] = $recentCards;
 
         $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
         foreach ($allIds as $id) {
@@ -57,7 +61,15 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         $mixedDeck = [];
         foreach ($modes as $mode) {
-            $deck = pb_generateDeck($pdo, $mode, $theme, $aiMode, $customTopic, $rounds);
+            $deck = pb_generateDeck(
+                $pdo,
+                $mode,
+                $theme,
+                $aiMode,
+                $customTopic,
+                $rounds,
+                $state['recent_cards'][$mode] ?? []
+            );
             if (empty($deck)) {
                 error_log("PartyBattle: WARNING: Deck for mode $mode is empty");
                 continue;
@@ -103,16 +115,21 @@ function handleGameAction($pdo, $room, $user, $postData)
             return ['status' => 'error', 'message' => 'Not in meme mode'];
         }
 
-        require_once __DIR__ . '/../lib/GifProvider.php';
-        $gifProvider = GifProviderFactory::create();
-        $query = trim($postData['query'] ?? 'funny meme');
+        $query = trim((string) ($postData['query'] ?? ''));
         if ($query === '') {
-            $query = 'funny meme';
+            $query = pb_getPromptDisplayText($state['round']['prompt'] ?? []);
+        }
+
+        $cacheKey = pb_normalizeGifCacheKey($query);
+        if (!empty($state['gif_search_cache'][$cacheKey])) {
+            return ['status' => 'ok', 'results' => $state['gif_search_cache'][$cacheKey]];
         }
 
         try {
-            $data = $gifProvider->search($query, 12);
-            return ['status' => 'ok', 'results' => $data['results'] ?? []];
+            $results = pb_searchGifResults($query, 12);
+            $state['gif_search_cache'][$cacheKey] = $results;
+            updateGameState($room['id'], $state);
+            return ['status' => 'ok', 'results' => $results];
         } catch (Exception $e) {
             return ['status' => 'error', 'message' => $e->getMessage()];
         }
@@ -421,7 +438,9 @@ function pb_buildDeckCard($mode, $rawCard)
     ];
 
     if ($mode === 'caption') {
-        $prompt['media_url'] = (string) $rawCard;
+        $prompt['media_url'] = is_array($rawCard)
+            ? (string) ($rawCard['media_url'] ?? '')
+            : (string) $rawCard;
     } elseif ($mode === 'bluff' && is_array($rawCard)) {
         $prompt['body'] = $rawCard['text'] ?? '';
         $prompt['truth'] = $rawCard['truth'] ?? null;
@@ -433,6 +452,7 @@ function pb_buildDeckCard($mode, $rawCard)
 
     return [
         'mode' => $mode,
+        'card_id' => pb_getRawCardId($mode, $rawCard),
         'family' => $config['family'],
         'prompt' => $prompt,
         'raw' => $rawCard,
@@ -459,6 +479,7 @@ function pb_startNextRound($pdo, $room, &$state)
         'id' => 'pb-round-' . $state['current_round'] . '-' . substr(sha1(uniqid('', true)), 0, 8),
         'number' => $state['current_round'],
         'mode' => $card['mode'],
+        'card_id' => $card['card_id'] ?? null,
         'family' => $card['family'],
         'step' => $step,
         'prompt' => $card['prompt'],
@@ -479,6 +500,8 @@ function pb_startNextRound($pdo, $room, &$state)
         'result' => null,
         'started_at' => time(),
     ];
+
+    pb_markRecentCardUsed($state, $card['mode'], $card['card_id'] ?? null);
 
     $state['hands'] = [];
     $state['last_round_data'] = null;
@@ -568,7 +591,7 @@ function pb_closeSubmissionStep(&$state)
             'id' => 'truth',
             'author_id' => null,
             'kind' => 'truth',
-            'value' => $round['prompt']['truth'] ?? 'ПРАВДА ПОТЕРЯНА',
+            'value' => $round['prompt']['truth'] ?? 'Верный ответ недоступен',
         ];
     }
 
@@ -930,35 +953,22 @@ function pb_generateHands($pdo, $room, &$state)
 {
     $playerIds = pb_getRoomPlayerIds($pdo, $room['id']);
     $state['hands'] = [];
+    $pool = pb_getRoundGifPool($state);
     foreach ($playerIds as $playerId) {
-        pb_generatePlayerHand($state, $playerId);
+        pb_generatePlayerHand($state, $playerId, $pool);
     }
 }
 
-function pb_generatePlayerHand(&$state, $userId)
+function pb_generatePlayerHand(&$state, $userId, $sharedPool = null)
 {
-    require_once __DIR__ . '/../lib/GifProvider.php';
-    $gifProvider = GifProviderFactory::create();
-
-    $prompt = $state['round']['prompt'] ?? [];
-    $situation = pb_getPromptDisplayText($prompt);
-    $keywords = pb_extractKeywords($situation);
-    $query = !empty($keywords) ? implode(' ', array_slice($keywords, 0, 3)) : 'funny meme';
-
-    try {
-        $data = $gifProvider->search($query, 30);
-        $pool = $data['results'] ?? [];
-        if (count($pool) < 20) {
-            $pool = array_merge($pool, $gifProvider->search('funny', 30)['results'] ?? []);
-        }
-        shuffle($pool);
-        $state['hands'][(string) $userId] = array_slice($pool, 0, 6);
-    } catch (Exception $e) {
-        if (class_exists('TelegramLogger')) {
-            TelegramLogger::logError('partybattle_hands', ['message' => $e->getMessage()]);
-        }
+    $pool = is_array($sharedPool) ? $sharedPool : pb_getRoundGifPool($state);
+    if (empty($pool)) {
         $state['hands'][(string) $userId] = [];
+        return;
     }
+
+    shuffle($pool);
+    $state['hands'][(string) $userId] = array_slice($pool, 0, 6);
 }
 
 function pb_getPromptDisplayText($prompt)
@@ -979,46 +989,149 @@ function pb_getSituationText($situation)
 
 function pb_extractKeywords($text)
 {
-    $words = mb_split('\s+', $text);
-    return array_values(array_filter($words, function ($word) {
-        return mb_strlen($word) > 3;
-    }));
+    $clean = mb_strtolower((string) $text);
+    $clean = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $clean);
+    $words = preg_split('/\s+/u', trim($clean)) ?: [];
+    $stopWords = [
+        'когда', 'после', 'перед', 'тебя', 'тебе', 'твое', 'твоя', 'твой', 'твои',
+        'если', 'потому', 'чтобы', 'который', 'которая', 'которые', 'очень', 'просто',
+        'сразу', 'потом', 'всегда', 'никогда', 'почему', 'зачем', 'этот', 'эта', 'эти',
+        'будет', 'когда', 'только', 'ночью', 'мешок', 'лопату'
+    ];
+    $keywords = [];
+    foreach ($words as $word) {
+        if (mb_strlen($word) < 4 || in_array($word, $stopWords, true)) {
+            continue;
+        }
+        $keywords[] = $word;
+    }
+    return array_values(array_unique($keywords));
 }
 
-function pb_generateDeck($pdo, $mode, $theme, $aiMode = false, $customTopic = '', $rounds = 5)
+function pb_getRoundGifPool(&$state)
+{
+    $round = $state['round'] ?? null;
+    if (!is_array($round) || ($round['mode'] ?? null) !== 'meme') {
+        return [];
+    }
+
+    if (!empty($round['gif_pool']) && is_array($round['gif_pool'])) {
+        return $round['gif_pool'];
+    }
+
+    $prompt = $round['prompt'] ?? [];
+    $queries = pb_buildGifSearchQueries($prompt);
+    $pool = [];
+
+    try {
+        foreach ($queries as $query) {
+            $pool = pb_mergeGifPools($pool, pb_searchGifResults($query, 18));
+            if (count($pool) >= 30) {
+                break;
+            }
+        }
+    } catch (Exception $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('partybattle_hands', ['message' => $e->getMessage()]);
+        }
+        $pool = [];
+    }
+
+    if (empty($pool)) {
+        $pool = pb_searchFallbackGifs();
+    }
+
+    shuffle($pool);
+    $state['round']['gif_pool'] = $pool;
+    return $pool;
+}
+
+function pb_buildGifSearchQueries($prompt)
+{
+    $text = pb_getPromptDisplayText($prompt);
+    $keywords = pb_extractKeywords($text);
+    $queries = [];
+
+    if (!empty($keywords)) {
+        $queries[] = implode(' ', array_slice($keywords, 0, 3));
+        $queries[] = implode(' ', array_slice($keywords, 0, 2)) . ' мем';
+        $queries[] = implode(' ', array_slice($keywords, 0, 2)) . ' реакция';
+    }
+
+    $queries[] = 'мем реакция';
+    $queries[] = 'funny reaction meme';
+    $queries[] = 'wtf reaction';
+
+    return array_values(array_unique(array_filter(array_map('trim', $queries))));
+}
+
+function pb_searchGifResults($query, $count = 12)
+{
+    require_once __DIR__ . '/../lib/GifProvider.php';
+    $gifProvider = GifProviderFactory::create();
+    $normalized = pb_normalizeGifQuery($query);
+    $data = $gifProvider->search($normalized, $count);
+    return $data['results'] ?? [];
+}
+
+function pb_searchFallbackGifs()
+{
+    $fallback = [
+        'мем реакция',
+        'funny reaction meme',
+        'facepalm reaction',
+    ];
+    $pool = [];
+    foreach ($fallback as $query) {
+        try {
+            $pool = pb_mergeGifPools($pool, pb_searchGifResults($query, 18));
+            if (count($pool) >= 24) {
+                break;
+            }
+        } catch (Exception $e) {
+        }
+    }
+    return $pool;
+}
+
+function pb_mergeGifPools($base, $extra)
+{
+    $merged = [];
+    $seen = [];
+    foreach (array_merge($base, $extra) as $gif) {
+        $key = $gif['id']
+            ?? ($gif['media_formats']['tinygif']['url']
+            ?? ($gif['media_formats']['gif']['url']
+            ?? ($gif['url'] ?? md5(json_encode($gif)))));
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $merged[] = $gif;
+    }
+    return $merged;
+}
+
+function pb_normalizeGifQuery($query)
+{
+    $query = mb_strtolower(trim((string) $query));
+    $query = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $query);
+    $query = preg_replace('/\s+/u', ' ', $query);
+    return trim($query) !== '' ? trim($query) : 'мем реакция';
+}
+
+function pb_normalizeGifCacheKey($query)
+{
+    return sha1(pb_normalizeGifQuery($query));
+}
+
+function pb_generateDeck($pdo, $mode, $theme, $aiMode = false, $customTopic = '', $rounds = 5, $recentCardIds = [])
 {
     if ($theme === 'adult') {
         $theme = '18plus';
     }
 
-    if ($mode === 'meme') {
-        $packPath = __DIR__ . "/packs/memebattle/{$theme}.json";
-        if (!file_exists($packPath)) {
-            $packPath = __DIR__ . '/packs/memebattle/base.json';
-        }
-        if (file_exists($packPath)) {
-            $pack = json_decode(file_get_contents($packPath), true);
-            $situations = $pack['situations'] ?? [];
-            shuffle($situations);
-            return $situations;
-        }
-        return [];
-    }
-
-    if ($mode === 'whoami') {
-        $packPath = __DIR__ . "/packs/partybattle/whoami/{$theme}.json";
-        if (!file_exists($packPath)) {
-            $files = glob(__DIR__ . '/packs/partybattle/whoami/*.json');
-            $packPath = $files[0] ?? '';
-        }
-        if (file_exists($packPath)) {
-            $pack = json_decode(file_get_contents($packPath), true);
-            $situations = $pack['questions'] ?? [];
-            shuffle($situations);
-            return $situations;
-        }
-        return [];
-    }
+    $theme = pb_resolvePartyBattleTheme($mode, $theme);
 
     $situations = [];
     if ($aiMode && $mode === 'joke') {
@@ -1042,49 +1155,548 @@ function pb_generateDeck($pdo, $mode, $theme, $aiMode = false, $customTopic = ''
         return array_slice($situations, 0, $rounds);
     }
 
-    $validModes = ['joke', 'advice', 'acronym', 'caption', 'bluff'];
-    if (!in_array($mode, $validModes, true)) {
+    $situations = pb_loadPartyBattlePackEntries($mode, $theme);
+
+    if (empty($situations)) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('partybattle_pack_fallback', [
+                'mode' => $mode,
+                'theme' => $theme,
+            ]);
+        }
+        $situations = pb_getEmergencyPartyBattleEntries($mode);
+    }
+
+    $situations = pb_filterRecentDeckEntries($mode, $situations, $recentCardIds, $rounds);
+    shuffle($situations);
+    return array_slice($situations, 0, $rounds);
+}
+
+function pb_getPartyBattlePackRegistry()
+{
+    $root = __DIR__ . '/packs';
+    return [
+        'meme' => [
+            'base' => [$root . '/partybattle/meme/base.json'],
+            '18plus' => [$root . '/partybattle/meme/18plus.json'],
+            'office' => [$root . '/partybattle/meme/office.json'],
+            'relationships' => [$root . '/partybattle/meme/relationships.json'],
+            'school' => [$root . '/partybattle/meme/school.json'],
+            'it' => [$root . '/partybattle/meme/it.json'],
+            'simple_base' => [$root . '/partybattle/meme/simple_base.json'],
+        ],
+        'joke' => [
+            'base' => [$root . '/partybattle/joke/base.json'],
+            '18plus' => [$root . '/partybattle/joke/18plus.json'],
+        ],
+        'advice' => [
+            'base' => [$root . '/partybattle/advice/base.json'],
+            '18plus' => [$root . '/partybattle/advice/18plus.json'],
+        ],
+        'acronym' => [
+            'base' => [$root . '/partybattle/acronym/base.json'],
+            '18plus' => [$root . '/partybattle/acronym/18plus.json'],
+        ],
+        'caption' => [
+            'base' => [$root . '/partybattle/caption/base.json'],
+        ],
+        'bluff' => [
+            'base' => [$root . '/partybattle/bluff/base.json'],
+            '18plus' => [$root . '/partybattle/bluff/18plus.json'],
+        ],
+        'whoami' => [
+            'base' => [$root . '/partybattle/whoami/base.json'],
+            '18plus' => [$root . '/partybattle/whoami/18plus.json'],
+        ],
+    ];
+}
+
+function pb_resolvePartyBattleTheme($mode, $theme)
+{
+    $registry = pb_getPartyBattlePackRegistry();
+    $modeRegistry = $registry[$mode] ?? null;
+    if (!$modeRegistry) {
+        return 'base';
+    }
+
+    if (isset($modeRegistry[$theme])) {
+        return $theme;
+    }
+
+    return 'base';
+}
+
+function pb_loadPartyBattlePackEntries($mode, $theme)
+{
+    $registry = pb_getPartyBattlePackRegistry();
+    $modeRegistry = $registry[$mode] ?? null;
+    if (!$modeRegistry) {
         return [];
     }
 
-    $packPath = __DIR__ . "/packs/partybattle/{$mode}/{$theme}.json";
-    if (!file_exists($packPath)) {
-        $packPath = __DIR__ . "/packs/partybattle/{$mode}/base.json";
+    $paths = $modeRegistry[$theme] ?? $modeRegistry['base'] ?? [];
+    if (!is_array($paths)) {
+        return [];
     }
 
-    if (!file_exists($packPath) && $mode === 'caption') {
+    $entries = pb_loadPartyBattlePackEntriesFromPaths($mode, $theme, $paths);
+    $entries = pb_maybeBackfillThemePool($mode, $theme, $entries, $modeRegistry);
+    return pb_dedupePackEntries($mode, $entries);
+}
+
+function pb_loadPartyBattlePackEntriesFromPaths($mode, $theme, $paths)
+{
+    if (!is_array($paths)) {
+        return [];
+    }
+
+    $entries = [];
+    foreach ($paths as $path) {
+        if (!file_exists($path)) {
+            continue;
+        }
+
+        $pack = pb_readJsonFile($path);
+        $validatedPack = pb_validatePartyBattlePack($pack, $mode, $theme, $path);
+        if ($validatedPack === null) {
+            continue;
+        }
+        $entries = array_merge($entries, pb_extractModePackEntries($validatedPack, $mode));
+    }
+
+    return pb_dedupePackEntries($mode, $entries);
+}
+
+function pb_maybeBackfillThemePool($mode, $theme, $entries, $modeRegistry)
+{
+    if ($theme === 'base') {
+        return $entries;
+    }
+
+    $targetSize = pb_getRecommendedThemePoolSize($mode);
+    if (count($entries) >= $targetSize) {
+        return $entries;
+    }
+
+    $basePaths = $modeRegistry['base'] ?? [];
+    if (!is_array($basePaths) || empty($basePaths)) {
+        return $entries;
+    }
+
+    $baseEntries = pb_loadPartyBattlePackEntriesFromPaths($mode, 'base', $basePaths);
+    if (empty($baseEntries)) {
+        return $entries;
+    }
+
+    return pb_dedupePackEntries($mode, array_merge($entries, $baseEntries));
+}
+
+function pb_getRecommendedThemePoolSize($mode)
+{
+    switch ($mode) {
+        case 'meme':
+        case 'caption':
+            return 80;
+        case 'whoami':
+            return 100;
+        case 'bluff':
+            return 60;
+        case 'joke':
+        case 'advice':
+            return 70;
+        case 'acronym':
+            return 90;
+        default:
+            return 60;
+    }
+}
+
+function pb_readJsonFile($path)
+{
+    $content = @file_get_contents($path);
+    if ($content === false) {
+        return [];
+    }
+
+    $data = json_decode($content, true);
+    return is_array($data) ? $data : [];
+}
+
+function pb_extractModePackEntries($pack, $mode)
+{
+    $entries = $pack['entries'] ?? null;
+    if (!is_array($entries)) {
+        return [];
+    }
+
+    $theme = (string) (($pack['meta'] ?? [])['theme'] ?? 'base');
+    $normalized = [];
+    foreach ($entries as $entry) {
+        $candidate = pb_normalizePackEntry($mode, $theme, $entry);
+        if ($candidate !== null) {
+            $normalized[] = $candidate;
+        }
+    }
+
+    return pb_dedupePackEntries($mode, $normalized);
+}
+
+function pb_validatePartyBattlePack($pack, $mode, $theme, $path = '')
+{
+    if (!is_array($pack)) {
+        pb_logPartyBattlePackIssue('invalid_payload', $mode, $theme, $path);
+        return null;
+    }
+
+    $meta = $pack['meta'] ?? null;
+    $entries = $pack['entries'] ?? null;
+    if (!is_array($meta) || !is_array($entries)) {
+        pb_logPartyBattlePackIssue('missing_meta_or_entries', $mode, $theme, $path);
+        return null;
+    }
+
+    $expectedKind = pb_getExpectedPackKind($mode);
+    $packMode = (string) ($meta['mode'] ?? '');
+    $packTheme = (string) ($meta['theme'] ?? '');
+    $packKind = (string) ($meta['kind'] ?? '');
+
+    if ($packMode !== $mode) {
+        pb_logPartyBattlePackIssue('mode_mismatch', $mode, $theme, $path, ['pack_mode' => $packMode]);
+        return null;
+    }
+
+    if ($packTheme !== $theme && !($theme === 'base' && $packTheme === 'base')) {
+        pb_logPartyBattlePackIssue('theme_mismatch', $mode, $theme, $path, ['pack_theme' => $packTheme]);
+        return null;
+    }
+
+    if ($packKind !== $expectedKind) {
+        pb_logPartyBattlePackIssue('kind_mismatch', $mode, $theme, $path, [
+            'pack_kind' => $packKind,
+            'expected_kind' => $expectedKind,
+        ]);
+        return null;
+    }
+
+    if (empty($entries)) {
+        pb_logPartyBattlePackIssue('empty_entries', $mode, $theme, $path);
+        return null;
+    }
+
+    return $pack;
+}
+
+function pb_getExpectedPackKind($mode)
+{
+    switch ($mode) {
+        case 'caption':
+            return 'image';
+        case 'whoami':
+            return 'player_question';
+        case 'bluff':
+            return 'fact';
+        default:
+            return 'text';
+    }
+}
+
+function pb_logPartyBattlePackIssue($reason, $mode, $theme, $path = '', $extra = [])
+{
+    if (!class_exists('TelegramLogger')) {
+        return;
+    }
+
+    TelegramLogger::logError('partybattle_pack_validation', array_merge([
+        'reason' => $reason,
+        'mode' => $mode,
+        'theme' => $theme,
+        'path' => $path,
+    ], $extra));
+}
+
+function pb_dedupeStringEntries($entries)
+{
+    $seen = [];
+    $result = [];
+    foreach ($entries as $entry) {
+        $value = trim((string) $entry);
+        if ($value === '') {
+            continue;
+        }
+        $key = mb_strtolower($value);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $result[] = $value;
+    }
+    return $result;
+}
+
+function pb_dedupeBluffEntries($entries)
+{
+    $seen = [];
+    $result = [];
+    foreach ($entries as $entry) {
+        $text = trim((string) ($entry['text'] ?? ''));
+        $truth = trim((string) ($entry['truth'] ?? ''));
+        if ($text === '' || $truth === '') {
+            continue;
+        }
+        $key = mb_strtolower($text . '|' . $truth);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $normalized = [
+            'text' => $text,
+            'truth' => $truth,
+        ];
+        if (!empty($entry['id'])) {
+            $normalized['id'] = (string) $entry['id'];
+        }
+        if (!empty($entry['tags']) && is_array($entry['tags'])) {
+            $normalized['tags'] = array_values(array_filter(array_map('strval', $entry['tags'])));
+        }
+        $result[] = $normalized;
+    }
+    return $result;
+}
+
+function pb_dedupePackEntries($mode, $entries)
+{
+    if ($mode === 'bluff') {
+        return pb_dedupeBluffEntries($entries);
+    }
+
+    $seen = [];
+    $result = [];
+    foreach ($entries as $entry) {
+        $cardId = pb_getRawCardId($mode, $entry);
+        if ($cardId === null || isset($seen[$cardId])) {
+            continue;
+        }
+        $seen[$cardId] = true;
+        $result[] = $entry;
+    }
+    return $result;
+}
+
+function pb_normalizePackEntry($mode, $theme, $entry)
+{
+    if (!is_array($entry)) {
+        return null;
+    }
+
+    if ($mode === 'caption') {
+        $mediaUrl = trim((string) ($entry['media_url'] ?? ''));
+        if ($mediaUrl === '') {
+            return null;
+        }
         return [
-            "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif",
-            "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif",
+            'id' => trim((string) ($entry['id'] ?? pb_buildCanonicalCardId($mode, $theme, $mediaUrl))),
+            'media_url' => $mediaUrl,
+            'tags' => array_values(array_filter(array_map('strval', $entry['tags'] ?? []))),
         ];
     }
 
-    if (!file_exists($packPath)) {
-        return ["Разработчик забыл добавить карточки для этого режима..."];
-    }
-
-    $pack = json_decode(file_get_contents($packPath), true);
     if ($mode === 'bluff') {
-        if (!empty($pack['situations']) && is_array($pack['situations'])) {
-            $situations = $pack['situations'];
-        } else {
-            $truths = $pack['truths'] ?? [];
-            $lies = $pack['lies'] ?? [];
-            $situations = array_map(function ($truth, $index) use ($lies) {
-                return [
-                    'text' => $truth['text'] ?? ($truth['question'] ?? ''),
-                    'truth' => $truth['truth'] ?? ($lies[$index]['truth'] ?? null),
-                ];
-            }, $truths, array_keys($truths));
+        $text = trim((string) ($entry['text'] ?? ''));
+        $truth = trim((string) ($entry['truth'] ?? ''));
+        if ($text === '' || $truth === '') {
+            return null;
         }
-    } else {
-        $situations = $pack['situations'] ?? [];
+        return [
+            'id' => trim((string) ($entry['id'] ?? pb_buildCanonicalCardId($mode, $theme, $text . '|' . $truth))),
+            'text' => $text,
+            'truth' => $truth,
+            'tags' => array_values(array_filter(array_map('strval', $entry['tags'] ?? []))),
+        ];
     }
 
-    if (empty($situations)) {
-        $situations = ["Разработчик забыл добавить карточки для этого режима..."];
+    $text = trim((string) ($entry['text'] ?? ''));
+    if ($text === '') {
+        return null;
     }
 
-    shuffle($situations);
-    return array_slice($situations, 0, $rounds);
+    return [
+        'id' => trim((string) ($entry['id'] ?? pb_buildCanonicalCardId($mode, $theme, $text))),
+        'text' => $text,
+        'tags' => array_values(array_filter(array_map('strval', $entry['tags'] ?? []))),
+    ];
+}
+
+function pb_buildCanonicalCardId($mode, $theme, $value)
+{
+    return $mode . '_' . $theme . '_' . substr(sha1($mode . '|' . $theme . '|' . trim((string) $value)), 0, 16);
+}
+
+function pb_getRawCardId($mode, $rawCard)
+{
+    if (is_array($rawCard) && !empty($rawCard['id'])) {
+        return (string) $rawCard['id'];
+    }
+
+    if ($mode === 'caption') {
+        $value = is_array($rawCard) ? ($rawCard['media_url'] ?? '') : $rawCard;
+        $value = trim((string) $value);
+        return $value !== '' ? pb_buildCanonicalCardId($mode, 'legacy', $value) : null;
+    }
+
+    if ($mode === 'bluff') {
+        $text = trim((string) (is_array($rawCard) ? ($rawCard['text'] ?? '') : ''));
+        $truth = trim((string) (is_array($rawCard) ? ($rawCard['truth'] ?? '') : ''));
+        return ($text !== '' && $truth !== '') ? pb_buildCanonicalCardId($mode, 'legacy', $text . '|' . $truth) : null;
+    }
+
+    $value = is_array($rawCard)
+        ? ($rawCard['text'] ?? $rawCard['question'] ?? '')
+        : $rawCard;
+    $value = trim((string) $value);
+    return $value !== '' ? pb_buildCanonicalCardId($mode, 'legacy', $value) : null;
+}
+
+function pb_filterRecentDeckEntries($mode, $entries, $recentCardIds, $rounds)
+{
+    if (empty($entries)) {
+        return [];
+    }
+
+    $recentLookup = [];
+    foreach (array_values(array_filter(array_map('strval', (array) $recentCardIds))) as $recentId) {
+        $recentLookup[$recentId] = true;
+    }
+
+    if (empty($recentLookup)) {
+        return $entries;
+    }
+
+    $fresh = [];
+    $fallback = [];
+    foreach ($entries as $entry) {
+        $cardId = pb_getRawCardId($mode, $entry);
+        if ($cardId !== null && isset($recentLookup[$cardId])) {
+            $fallback[] = $entry;
+            continue;
+        }
+        $fresh[] = $entry;
+    }
+
+    if (count($fresh) >= $rounds) {
+        return $fresh;
+    }
+
+    return array_merge($fresh, $fallback);
+}
+
+function pb_normalizeRecentCards($recentCards)
+{
+    if (!is_array($recentCards)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($recentCards as $mode => $ids) {
+        if (!is_array($ids)) {
+            continue;
+        }
+        $normalized[(string) $mode] = array_values(
+            array_slice(
+                array_unique(array_filter(array_map('strval', $ids))),
+                -pb_getRecentCardHistoryLimit()
+            )
+        );
+    }
+    return $normalized;
+}
+
+function pb_markRecentCardUsed(&$state, $mode, $cardId)
+{
+    $mode = (string) $mode;
+    $cardId = trim((string) $cardId);
+    if ($mode === '' || $cardId === '') {
+        return;
+    }
+
+    if (!isset($state['recent_cards']) || !is_array($state['recent_cards'])) {
+        $state['recent_cards'] = [];
+    }
+    if (!isset($state['recent_cards'][$mode]) || !is_array($state['recent_cards'][$mode])) {
+        $state['recent_cards'][$mode] = [];
+    }
+
+    $existing = array_values(array_filter(array_map('strval', $state['recent_cards'][$mode])));
+    $existing = array_values(array_filter($existing, function ($existingId) use ($cardId) {
+        return $existingId !== $cardId;
+    }));
+    $existing[] = $cardId;
+    $state['recent_cards'][$mode] = array_slice($existing, -pb_getRecentCardHistoryLimit());
+}
+
+function pb_getRecentCardHistoryLimit()
+{
+    return 120;
+}
+
+function pb_getEmergencyPartyBattleEntries($mode)
+{
+    switch ($mode) {
+        case 'meme':
+        case 'caption':
+            return [
+                "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif",
+                "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif",
+                "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+            ];
+
+        case 'joke':
+            return [
+                "Заходит улитка в бар и говорит...",
+                "Самый неловкий момент на первом свидании это когда...",
+                "Настоящий признак взрослой жизни это когда...",
+                "Если бы будильники умели говорить, они бы начинали утро с фразы...",
+            ];
+
+        case 'advice':
+            return [
+                "Что делать, если ты случайно отправил сообщение не тому человеку?",
+                "Как объяснить опоздание, если ты просто не хотел выходить из дома?",
+                "Что делать, если на тебя внезапно направили камеру?",
+                "Как выкрутиться, если ты забыл имя человека через пять секунд после знакомства?",
+            ];
+
+        case 'acronym':
+            return [
+                "ЖКХ",
+                "МЧС",
+                "ГИБДД",
+                "ПТУ",
+            ];
+
+        case 'whoami':
+            return [
+                "Кто первым устроит драму из мелочи?",
+                "Кто скорее всего заснет в самый неподходящий момент?",
+                "Кто сможет заболтать вообще любого человека?",
+                "Кто первым предложит заказать еду еще раз?",
+            ];
+
+        case 'bluff':
+            return [
+                [
+                    'text' => 'У осьминога целых _______ сердца.',
+                    'truth' => 'три',
+                ],
+                [
+                    'text' => 'Бананы технически считаются не деревом, а гигантской _______.',
+                    'truth' => 'травой',
+                ],
+                [
+                    'text' => 'На Аляске когда-то мэром был целый _______.',
+                    'truth' => 'кот',
+                ],
+            ];
+    }
+
+    return [];
 }

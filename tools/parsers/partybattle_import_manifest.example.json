@@ -1,0 +1,19 @@
+{
+  "imports": [
+    {
+      "source_path": "data/import/full_jokes.txt",
+      "mode": "joke",
+      "theme": "base",
+      "format": "lines",
+      "output": "server/games/packs/partybattle/joke/base.json"
+    },
+    {
+      "source_path": "data/import/russian_jokes.csv",
+      "mode": "advice",
+      "theme": "base",
+      "format": "csv",
+      "field": "text",
+      "output": "server/games/packs/partybattle/advice/base.json"
+    }
+  ]
+}

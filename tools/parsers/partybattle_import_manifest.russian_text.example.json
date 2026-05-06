@@ -1,0 +1,25 @@
+{
+  "imports": [
+    {
+      "source_path": "data/import/full_jokes.txt",
+      "mode": "joke",
+      "theme": "base",
+      "format": "lines",
+      "output": "server/games/packs/partybattle/joke/base.json"
+    },
+    {
+      "source_path": "data/import/full_jokes.txt",
+      "mode": "advice",
+      "theme": "base",
+      "format": "lines",
+      "output": "server/games/packs/partybattle/advice/base.json"
+    },
+    {
+      "source_path": "data/import/full_jokes.txt",
+      "mode": "meme",
+      "theme": "base",
+      "format": "lines",
+      "output": "server/games/packs/partybattle/meme/base.json"
+    }
+  ]
+}

@@ -40,13 +40,13 @@ window.PartyBattleModes = {
         }
 
         return `
-            <div class="px-2 pb-4 animate__animated animate__fadeIn">
-                <div class="mb-3 text-center">
+            <div class="px-2 pb-2 animate__animated animate__fadeIn">
+                <div class="mb-2 text-center">
                     <label class="form-label fw-bold small text-muted text-uppercase mb-2" style="letter-spacing: 0.16em; opacity: 0.78;">${promptText}</label>
-                    <textarea id="pb-joke-input" class="form-control rounded-4 p-3 shadow-sm mb-3" rows="3" placeholder="${placeholderText}" maxlength="150" 
+                    <textarea id="pb-joke-input" class="form-control rounded-4 p-3 shadow-sm mb-3" rows="2" placeholder="${placeholderText}" maxlength="150" 
                         style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid var(--border-glass); color: var(--text-main); font-size: 1.1rem; resize: none; box-shadow: 0 18px 42px rgba(31, 38, 135, 0.06);"></textarea>
                     
-                    <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold fs-5 shadow-sm" style="box-shadow: 0 18px 42px rgba(var(--primary-rgb), 0.22) !important;" onclick="window.PartyBattleUI.submitAnswer()">
+                    <button id="pb-submit-answer-btn" class="btn btn-primary w-100 py-3 rounded-4 fw-bold fs-5 shadow-sm" style="box-shadow: 0 18px 42px rgba(var(--primary-rgb), 0.22) !important;" onclick="window.PartyBattleUI.submitAnswer()">
                         <i class="bi bi-send-fill me-2"></i> ${btnText}
                     </button>
                     
@@ -54,10 +54,24 @@ window.PartyBattleModes = {
                 </div>
             </div>
             <script>
-                document.getElementById('pb-joke-input')?.addEventListener('input', function(e) {
+                (function() {
+                    const input = document.getElementById('pb-joke-input');
                     const count = document.getElementById('pb-joke-count');
-                    if(count) count.innerText = e.target.value.length;
-                });
+                    const button = document.getElementById('pb-submit-answer-btn');
+                    if (!input) return;
+
+                    const keepComposerVisible = function() {
+                        setTimeout(function() {
+                            button?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }, 120);
+                    };
+
+                    input.addEventListener('input', function(e) {
+                        if (count) count.innerText = e.target.value.length;
+                    });
+                    input.addEventListener('focus', keepComposerVisible);
+                    input.addEventListener('click', keepComposerVisible);
+                })();
             </script>
         `;
     },
@@ -67,23 +81,23 @@ window.PartyBattleModes = {
         const sorted = [...entries].sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
         return `
-            <div class="row g-3 px-2">
+            <div class="row g-2 px-2">
                 ${sorted.map(entry => {
             const isMe = String(entry.authorId) === myId;
             return `
                         <div class="col-12">
-                            <div class="p-4 rounded-4 shadow-sm position-relative ${isMe ? 'border-primary' : ''}" 
+                            <div class="p-3 rounded-4 shadow-sm position-relative ${isMe ? 'border-primary' : ''}" 
                                  style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid ${isMe ? 'rgba(var(--primary-rgb), 0.34)' : 'var(--border-glass)'}; transition: all 0.2s; box-shadow: 0 14px 34px rgba(31, 38, 135, 0.05); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
                                 
-                                <h4 class="fw-bold m-0 mb-3" style="color:var(--text-main); line-height: 1.4;">${entry.value}</h4>
+                                <div class="fw-bold mb-2 pe-5" style="color:var(--text-main); line-height: 1.28; font-size: 1.9rem;">${entry.value}</div>
                                 
                                 ${!hasVoted && !isMe ? `
-                                    <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm" style="position: relative; z-index: 9999 !important; min-height: 54px;" onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
+                                    <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="position: relative; z-index: 9999 !important; min-height: 48px;" onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
                                         ВЫБРАТЬ
                                     </button>
                                 ` : ''}
-                                ${isMe ? `<div class="badge rounded-pill position-absolute top-0 end-0 m-2" style="background: var(--primary-gradient);">Твой ответ</div>` : ''}
+                                ${isMe ? `<div class="badge rounded-pill position-absolute top-0 end-0 m-2" style="background: var(--primary-gradient); font-size: 10px;">Твой ответ</div>` : ''}
                                 ${hasVoted && !isMe ? `<div class="position-absolute inset-0 bg-black bg-opacity-10 rounded-4" style="pointer-events:none;"></div>` : ''}
                             </div>
                         </div>
@@ -213,7 +227,7 @@ window.PartyBattleModes = {
         }
 
         return `
-            <div class="row g-3 px-2 pb-4">
+            <div class="row g-2 px-2 pb-4">
                 ${shuffled.map(entry => {
             const isMe = String(entry.authorId) === myId;
             if (isMe) return ''; // Hide user's own lie from themselves so they can't vote for it
@@ -223,11 +237,11 @@ window.PartyBattleModes = {
                             <div class="card shadow-sm border-0 rounded-4"
                                  style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid ${hasVoted ? 'var(--border-glass)' : 'rgba(var(--primary-rgb), 0.26)'} !important; box-shadow: 0 14px 34px rgba(31, 38, 135, 0.05); ${!hasVoted ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
-                                <div class="card-body p-4 text-center">
-                                    <h5 class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.4;">${entry.value}</h5>
+                                <div class="card-body p-3 text-center">
+                                    <div class="fw-bold mb-2" style="color:var(--text-main); line-height: 1.28; font-size: 1.3rem;">${entry.value}</div>
                                     
                                     ${!hasVoted ? `
-                                        <button class="btn btn-outline-primary w-100 py-3 rounded-4 fw-bold"
+                                        <button class="btn btn-outline-primary w-100 py-2 rounded-4 fw-bold"
                                                 onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
                                             ЭТО ПРАВДА
                                         </button>
