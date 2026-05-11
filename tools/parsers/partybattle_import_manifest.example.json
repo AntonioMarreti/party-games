@@ -5,6 +5,7 @@
       "mode": "joke",
       "theme": "base",
       "format": "lines",
+      "rebuild": true,
       "output": "server/games/packs/partybattle/joke/base.json"
     },
     {
@@ -13,6 +14,18 @@
       "theme": "base",
       "format": "csv",
       "field": "text",
+      "rebuild": true,
+      "output": "server/games/packs/partybattle/advice/base.json"
+    },
+    {
+      "source_path": "data/import/ru_qna_333k/data.parquet",
+      "mode": "advice",
+      "theme": "base",
+      "format": "parquet",
+      "field": "question",
+      "profile": "advice_question",
+      "preview_limit": 25,
+      "rebuild": true,
       "output": "server/games/packs/partybattle/advice/base.json"
     }
   ]

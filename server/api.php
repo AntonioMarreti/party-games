@@ -1,5 +1,19 @@
 <?php
 header('Content-Type: application/json');
+
+$deployLockPath = __DIR__ . '/deploy.lock';
+if (file_exists($deployLockPath)) {
+    http_response_code(503);
+    header('Retry-After: 5');
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'server_updating',
+        'code' => 'server_updating',
+        'retry_after' => 5,
+    ]);
+    exit;
+}
+
 require_once 'config.php';
 require_once 'auth.php';
 require_once 'lib/TelegramLogger.php';

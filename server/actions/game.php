@@ -75,6 +75,12 @@ function action_start_game($pdo, $user, $data)
         require_once $gameFile;
         if (function_exists('getInitialState')) {
             $initialState = getInitialState();
+            if ($gameName === 'partybattle' && function_exists('pb_extractPersistedRecentCards')) {
+                $persistedRecentCards = pb_extractPersistedRecentCards($room['game_state'] ?? null);
+                if (!empty($persistedRecentCards)) {
+                    $initialState['recent_cards'] = $persistedRecentCards;
+                }
+            }
             $pdo->prepare("UPDATE rooms SET game_type = ?, status = 'playing', game_state = ? WHERE id = ?")
                 ->execute([$gameName, json_encode($initialState), $room['id']]);
 
@@ -119,7 +125,18 @@ function action_stop_game($pdo, $user, $data)
         echo json_encode(['status' => 'ok']);
         return;
     }
-    $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")->execute([$room['id']]);
+    $persistedState = null;
+    if (($room['game_type'] ?? '') === 'partybattle') {
+        $gameFile = __DIR__ . "/../games/partybattle.php";
+        if (file_exists($gameFile)) {
+            require_once $gameFile;
+            if (function_exists('pb_buildPersistentLobbyState')) {
+                $decodedState = json_decode($room['game_state'] ?? '', true);
+                $persistedState = json_encode(pb_buildPersistentLobbyState(is_array($decodedState) ? $decodedState : []));
+            }
+        }
+    }
+    $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = ? WHERE id = ?")->execute([$persistedState, $room['id']]);
 
     logRoomLifecycle('game_stopped', [
         'room_id' => (int) $room['id'],
@@ -158,8 +175,20 @@ function action_finish_game_session($pdo, $user, $data)
     // This action (finish_game_session) is for forced stop.
     // We could optionally log a "cancelled" game event here if desired.
 
-    $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")
-        ->execute([$room['id']]);
+    $persistedState = null;
+    if (($room['game_type'] ?? '') === 'partybattle') {
+        $gameFile = __DIR__ . "/../games/partybattle.php";
+        if (file_exists($gameFile)) {
+            require_once $gameFile;
+            if (function_exists('pb_buildPersistentLobbyState')) {
+                $decodedState = json_decode($room['game_state'] ?? '', true);
+                $persistedState = json_encode(pb_buildPersistentLobbyState(is_array($decodedState) ? $decodedState : []));
+            }
+        }
+    }
+
+    $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = ? WHERE id = ?")
+        ->execute([$persistedState, $room['id']]);
 
     logRoomLifecycle('game_finished_session', [
         'room_id' => (int) $room['id'],

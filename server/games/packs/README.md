@@ -39,7 +39,7 @@ Offline import workflow:
 
 1. Download the source dataset locally.
 2. Put it into a repo-relative folder such as `data/import/`.
-3. Run `php tools/parsers/partybattle_importer.php --source=data/import/file --mode=joke --theme=base --format=lines`.
+3. Run `php tools/parsers/partybattle_importer.php --source=data/import/file --mode=joke --theme=base --format=lines --rebuild`.
 4. Review the resulting canonical pack in `server/games/packs/partybattle/*`.
 5. Commit the imported pack so the project stays self-contained.
 6. For batch imports, start from `tools/parsers/partybattle_import_manifest.russian_text.example.json`.
@@ -55,7 +55,20 @@ Useful importer inputs:
 - `jsonl`: one JSON object per line
 - `json_array`: a JSON array of strings or objects
 - `csv`: CSV with a named field such as `text`
+- `parquet`: parquet with a named field such as `text`
 - `hf_conversations_json`: Hugging Face style conversations dumps
+
+Useful importer flags:
+
+- `--dry-run`: inspect counts without rewriting the target pack
+- `--preview-limit=N`: show top accepted candidates by score
+- `--rebuild`: rebuild the target pack from the filtered source instead of only merging new rows into existing entries
+
+Parquet note:
+
+- `format=parquet` uses the local project virtualenv at `.venv/bin/python` when available;
+- parquet imports require `pyarrow` installed in that environment.
+- question-like sources such as `ru-QnA-333K` should usually use `profile=advice_question` instead of `advice_prompt`.
 
 Coverage snapshot:
 

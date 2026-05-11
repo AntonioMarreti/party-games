@@ -1,6 +1,7 @@
 // js/games/partybattle/index.js
 
 let pb_lastStateString = null;
+let pb_lastView = null;
 
 window.render_partybattle = function (res) {
     const gameArea = document.getElementById('game-area');
@@ -45,6 +46,8 @@ window.render_partybattle = function (res) {
     }
 
     const view = gameState.view || 'lobby';
+    const viewChanged = pb_lastView !== view;
+    pb_lastView = view;
 
     if (view === 'lobby') {
         window.PartyBattleUI.renderLobby(gameState);
@@ -60,5 +63,16 @@ window.render_partybattle = function (res) {
         window.PartyBattleUI.renderGameResults(gameState);
     } else {
         gameArea.innerHTML = `<div class="p-5">Unknown View: ${view}</div>`;
+    }
+
+    if (viewChanged) {
+        requestAnimationFrame(() => {
+            if (typeof window.resetAppScroll === 'function') {
+                window.resetAppScroll(gameArea);
+            } else {
+                window.scrollTo(0, 0);
+                gameArea.scrollTop = 0;
+            }
+        });
     }
 }

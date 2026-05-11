@@ -25,6 +25,58 @@ function getInitialState()
     ];
 }
 
+function pb_extractPersistedRecentCards($rawState)
+{
+    if (is_string($rawState)) {
+        $decoded = json_decode($rawState, true);
+        $rawState = is_array($decoded) ? $decoded : [];
+    }
+
+    if (!is_array($rawState)) {
+        return [];
+    }
+
+    $meta = $rawState['partybattle_meta'] ?? null;
+    if (is_array($meta) && isset($meta['recent_cards'])) {
+        return pb_normalizeRecentCards($meta['recent_cards']);
+    }
+
+    if (isset($rawState['recent_cards'])) {
+        return pb_normalizeRecentCards($rawState['recent_cards']);
+    }
+
+    return [];
+}
+
+function pb_buildPersistentLobbyState($state)
+{
+    return [
+        'partybattle_meta' => [
+            'recent_cards' => pb_normalizeRecentCards($state['recent_cards'] ?? []),
+            'saved_at' => time(),
+        ],
+    ];
+}
+
+function pb_logDebug($tag, $payload = [])
+{
+    if (!class_exists('TelegramLogger')) {
+        return;
+    }
+
+    if (!is_array($payload)) {
+        $payload = ['value' => $payload];
+    }
+
+    array_walk_recursive($payload, function (&$value) {
+        if (is_string($value) && mb_strlen($value) > 280) {
+            $value = mb_substr($value, 0, 280) . '...';
+        }
+    });
+
+    TelegramLogger::info($tag, $payload);
+}
+
 function handleGameAction($pdo, $room, $user, $postData)
 {
     $state = json_decode($room['game_state'], true);
@@ -81,12 +133,20 @@ function handleGameAction($pdo, $room, $user, $postData)
                 $mixedDeck[] = pb_buildDeckCard($mode, $card);
             }
         }
+        $mixedDeck = pb_dedupeDeckCards($mixedDeck);
         shuffle($mixedDeck);
-
-        while (!empty($mixedDeck) && count($mixedDeck) < $rounds) {
-            $mixedDeck = array_merge($mixedDeck, $mixedDeck);
-        }
         $state['situations_deck'] = array_slice($mixedDeck, 0, $rounds);
+
+        $availableRounds = count($state['situations_deck']);
+        if ($availableRounds > 0 && $availableRounds < $rounds) {
+            $state['total_rounds'] = $availableRounds;
+            pb_logDebug('partybattle_rounds_truncated', [
+                'requested_rounds' => $rounds,
+                'available_rounds' => $availableRounds,
+                'modes' => $modes,
+                'theme' => $theme,
+            ]);
+        }
 
         if (empty($state['situations_deck'])) {
             return ['status' => 'error', 'message' => 'Не удалось сгенерировать колоду. Попробуйте другой набор или отключите AI.'];
@@ -122,6 +182,13 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         $cacheKey = pb_normalizeGifCacheKey($query);
         if (!empty($state['gif_search_cache'][$cacheKey])) {
+            pb_logDebug('partybattle_gif_search_cache', [
+                'room_id' => $room['id'] ?? null,
+                'user_id' => $userId,
+                'query' => $query,
+                'cache_key' => $cacheKey,
+                'results' => count($state['gif_search_cache'][$cacheKey] ?? []),
+            ]);
             return ['status' => 'ok', 'results' => $state['gif_search_cache'][$cacheKey]];
         }
 
@@ -129,8 +196,21 @@ function handleGameAction($pdo, $room, $user, $postData)
             $results = pb_searchGifResults($query, 12);
             $state['gif_search_cache'][$cacheKey] = $results;
             updateGameState($room['id'], $state);
+            pb_logDebug('partybattle_gif_search_success', [
+                'room_id' => $room['id'] ?? null,
+                'user_id' => $userId,
+                'query' => $query,
+                'cache_key' => $cacheKey,
+                'results' => count($results),
+            ]);
             return ['status' => 'ok', 'results' => $results];
         } catch (Exception $e) {
+            pb_logDebug('partybattle_gif_search_fail', [
+                'room_id' => $room['id'] ?? null,
+                'user_id' => $userId,
+                'query' => $query,
+                'message' => $e->getMessage(),
+            ]);
             return ['status' => 'error', 'message' => $e->getMessage()];
         }
     }
@@ -227,8 +307,9 @@ function handleGameAction($pdo, $room, $user, $postData)
 
     if ($type === 'back_to_lobby') {
         if ($room['is_host']) {
-            $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")
-                ->execute([$room['id']]);
+            $persistedState = pb_buildPersistentLobbyState($state);
+            $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = ? WHERE id = ?")
+                ->execute([json_encode($persistedState), $room['id']]);
         }
         return ['status' => 'ok', 'redirect' => 'lobby'];
     }
@@ -271,7 +352,7 @@ function processGameBots($pdo, $room, &$state)
                 continue;
             }
 
-            $answer = $batchAnswers[$botId] ?? pb_generateBotSubmission($state, $botId);
+            $answer = pb_resolveBotSubmissionCandidate($state, $round, $botId, $batchAnswers[$botId] ?? null);
             if ($answer === null) {
                 continue;
             }
@@ -471,7 +552,16 @@ function pb_startNextRound($pdo, $room, &$state)
     }
 
     $state['current_round'] = (int) ($state['current_round'] ?? 0) + 1;
-    $card = array_shift($state['situations_deck']);
+    $card = pb_popNextUnusedDeckCard($state);
+    if ($card === null) {
+        $state['current_round'] = max(0, (int) $state['current_round'] - 1);
+        $state['round'] = null;
+        $state['phase'] = 'results';
+        $state['current_situation'] = null;
+        $state['submissions'] = [];
+        $state['votes'] = [];
+        return;
+    }
     $config = pb_getModeConfig($card['mode']);
     $step = !empty($config['has_intro']) ? 'intro' : (!empty($config['has_submission']) ? 'submit' : 'vote');
 
@@ -718,6 +808,7 @@ function pb_closeVotingStep(&$state)
         'round_id' => $round['id'],
         'number' => $round['number'],
         'mode' => $round['mode'],
+        'card_id' => $round['card_id'] ?? null,
         'family' => $round['family'],
         'result' => $round['result'],
     ];
@@ -816,21 +907,54 @@ function pb_generateBotSubmission($state, $botId)
         return $card['media_formats']['tinygif']['url'] ?? $card['media_formats']['gif']['url'] ?? $card['url'] ?? null;
     }
 
-    $contentPath = __DIR__ . '/packs/partybattle_bots.json';
-    $funnyLibrary = [
-        "Я здесь просто ради еды.",
-        "Ахаха, лол.",
-        "Я не понял шутку.",
-        "Это слишком сложно.",
-    ];
-    if (file_exists($contentPath)) {
-        $contentData = json_decode(file_get_contents($contentPath), true);
-        if (!empty($contentData['bot_jokes'])) {
-            $funnyLibrary = $contentData['bot_jokes'];
+    $fallbacks = pb_getBotFallbackLibrary($mode);
+    return $fallbacks[array_rand($fallbacks)];
+}
+
+function pb_resolveBotSubmissionCandidate($state, $round, $botId, $candidate = null)
+{
+    $mode = $round['mode'] ?? null;
+    if (!$mode) {
+        return null;
+    }
+
+    if ($mode === 'meme') {
+        return pb_generateBotSubmission($state, $botId);
+    }
+
+    $prompt = $round['prompt'] ?? [];
+    $existingLookup = [];
+    foreach (($round['submissions']['entries'] ?? []) as $entry) {
+        $value = trim((string) ($entry['value'] ?? ''));
+        if ($value !== '') {
+            $existingLookup[mb_strtolower($value)] = true;
         }
     }
 
-    return $funnyLibrary[array_rand($funnyLibrary)];
+    $tryAnswer = function ($value) use ($mode, $prompt, $existingLookup) {
+        $sanitized = pb_sanitizeBotAnswer($value, $mode, $prompt);
+        if ($sanitized === null) {
+            return null;
+        }
+
+        return isset($existingLookup[mb_strtolower($sanitized)]) ? null : $sanitized;
+    };
+
+    $resolved = $tryAnswer($candidate);
+    if ($resolved !== null) {
+        return $resolved;
+    }
+
+    $fallbacks = pb_getBotFallbackLibrary($mode);
+    shuffle($fallbacks);
+    foreach ($fallbacks as $fallback) {
+        $resolved = $tryAnswer($fallback);
+        if ($resolved !== null) {
+            return $resolved;
+        }
+    }
+
+    return $tryAnswer(pb_generateBotSubmission($state, $botId));
 }
 
 function pb_generateBotSubmissionBatch($state, $botIds)
@@ -880,9 +1004,15 @@ function pb_generateBotSubmissionBatch($state, $botIds)
             $content = trim($matches[1]);
         }
 
-        $json = json_decode($content, true);
+        $json = pb_decodeBotAnswersPayload($content);
         $answers = $json['answers'] ?? null;
         if (!is_array($answers)) {
+            pb_logDebug('partybattle_ai_bot_answers_invalid', [
+                'mode' => $mode,
+                'bots' => count($botIds),
+                'prompt' => $question,
+                'raw_preview' => $content,
+            ]);
             return [];
         }
 
@@ -891,6 +1021,11 @@ function pb_generateBotSubmissionBatch($state, $botIds)
         }, $answers)));
 
         if (empty($answers)) {
+            pb_logDebug('partybattle_ai_bot_answers_empty', [
+                'mode' => $mode,
+                'bots' => count($botIds),
+                'prompt' => $question,
+            ]);
             return [];
         }
 
@@ -903,8 +1038,21 @@ function pb_generateBotSubmissionBatch($state, $botIds)
             }
         }
 
+        pb_logDebug('partybattle_ai_bot_answers_success', [
+            'mode' => $mode,
+            'bots_requested' => count($botIds),
+            'bots_mapped' => count($mapped),
+            'prompt' => $question,
+            'truth_present' => !empty($prompt['truth']),
+        ]);
         return $mapped;
     } catch (Exception $e) {
+        pb_logDebug('partybattle_ai_bot_answers_fail', [
+            'mode' => $mode,
+            'bots' => count($botIds),
+            'prompt' => $question,
+            'message' => $e->getMessage(),
+        ]);
         return [];
     }
 }
@@ -939,14 +1087,121 @@ function pb_sanitizeBotAnswer($answer, $mode, $prompt)
         return null;
     }
 
+    $lower = mb_strtolower($answer);
+    $bannedPatterns = [
+        '/\b(хуй|пизд|еба|бля|нах|сук|мудак)\p{L}*/u',
+        '/\b(ахаха|лол|кринж|го некст|а ч[её] всмысле|я бот, мне можно)\b/u',
+        '/\b(продам гараж|шутка юмора за 300|всё ид[её]т по плану|где тут кнопка)\b/u',
+        '/\b(test|testing|debug|null|undefined|n\/a)\b/i',
+    ];
+    foreach ($bannedPatterns as $pattern) {
+        if (preg_match($pattern, $lower)) {
+            return null;
+        }
+    }
+
+    if (preg_match('/^[\p{L}\p{N}\s!?.,-]+$/u', $answer) !== 1) {
+        return null;
+    }
+
+    if ($mode !== 'bluff' && mb_strlen($answer) < 6) {
+        return null;
+    }
+
     if ($mode === 'bluff') {
         $truth = trim((string) ($prompt['truth'] ?? ''));
         if ($truth !== '' && mb_strtolower($answer) === mb_strtolower($truth)) {
             return null;
         }
+
+        if (mb_strlen($answer) < 3) {
+            return null;
+        }
+    }
+
+    if ($mode === 'advice' && !preg_match('/\b(сделай|скажи|притворись|обвини|просто|сразу|начни|ответь|улыбнись|соври|уйди|переведи)\b/u', $lower)) {
+        return null;
+    }
+
+    if ($mode === 'caption' && mb_strlen($answer) > 60) {
+        return null;
+    }
+
+    if (in_array($mode, ['joke', 'caption'], true) && preg_match('/^[\p{L}\p{N}]+$/u', $answer)) {
+        return null;
     }
 
     return mb_substr($answer, 0, 150);
+}
+
+function pb_decodeBotAnswersPayload($content)
+{
+    $content = trim((string) $content);
+    if ($content === '') {
+        return null;
+    }
+
+    $decoded = json_decode($content, true);
+    if (is_array($decoded)) {
+        return $decoded;
+    }
+
+    if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+        $decoded = json_decode(trim($matches[0]), true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+    }
+
+    return null;
+}
+
+function pb_getBotFallbackLibrary($mode)
+{
+    $libraries = [
+        'advice' => [
+            'Скажи, что это был социальный эксперимент.',
+            'Сделай уверенный вид и обвиняй обстоятельства.',
+            'Притворись экспертом и говори загадками.',
+            'Ответь так странно, чтобы никто не спорил.',
+            'Переведи тему на что угодно, только не на правду.',
+            'Сделай вид, что именно так и было задумано.',
+        ],
+        'caption' => [
+            'Когда работаешь на чистом отчаянии.',
+            'Лицо человека, у которого всё по плану. Почти.',
+            'Я в момент, когда дедлайн уже в комнате.',
+            'Когда надо выглядеть уверенно, а внутри паника.',
+            'Ожидание: контроль. Реальность: хаос.',
+            'Собрался с мыслями. Мысли не пришли.',
+        ],
+        'bluff' => [
+            'еловой смолы',
+            'рыбьих костей',
+            'порошка из мела',
+            'сушёных ягод',
+            'коры деревьев',
+            'перетёртых орехов',
+        ],
+        'acronym' => [
+            'Срочно Требуется Очень Ловкий Агент',
+            'Система Тайного Общения Лентяев',
+            'Самый Тревожный Отдел Легенд',
+            'Союз Тех, Кто Опоздал Логично',
+            'Секретная Техника Очень Лёгкой Атаки',
+            'Сервис Тупо Очень Ломает Атмосферу',
+        ],
+        'joke' => [
+            'Потому что план Б снова испугался.',
+            'Именно так рождаются плохие идеи.',
+            'Зато теперь есть что вспоминать.',
+            'Так обычно и начинается катастрофа.',
+            'Ну хоть скучно не было.',
+            'Это уже звучит как успех.',
+        ],
+    ];
+
+    return $libraries[$mode] ?? $libraries['joke'];
 }
 
 function pb_generateHands($pdo, $room, &$state)
@@ -1022,27 +1277,37 @@ function pb_getRoundGifPool(&$state)
     $prompt = $round['prompt'] ?? [];
     $queries = pb_buildGifSearchQueries($prompt);
     $pool = [];
+    $executedQueries = [];
 
     try {
         foreach ($queries as $query) {
+            $executedQueries[] = $query;
             $pool = pb_mergeGifPools($pool, pb_searchGifResults($query, 18));
             if (count($pool) >= 30) {
                 break;
             }
         }
     } catch (Exception $e) {
-        if (class_exists('TelegramLogger')) {
-            TelegramLogger::logError('partybattle_hands', ['message' => $e->getMessage()]);
-        }
+        pb_logDebug('partybattle_hands', ['message' => $e->getMessage()]);
         $pool = [];
     }
 
     if (empty($pool)) {
         $pool = pb_searchFallbackGifs();
+        pb_logDebug('partybattle_gif_pool_fallback', [
+            'mode' => $round['mode'] ?? null,
+            'queries' => $queries,
+            'results' => count($pool),
+        ]);
     }
 
     shuffle($pool);
     $state['round']['gif_pool'] = $pool;
+    pb_logDebug('partybattle_gif_pool_ready', [
+        'mode' => $round['mode'] ?? null,
+        'executed_queries' => $executedQueries,
+        'results' => count($pool),
+    ]);
     return $pool;
 }
 
@@ -1070,8 +1335,18 @@ function pb_searchGifResults($query, $count = 12)
     require_once __DIR__ . '/../lib/GifProvider.php';
     $gifProvider = GifProviderFactory::create();
     $normalized = pb_normalizeGifQuery($query);
-    $data = $gifProvider->search($normalized, $count);
-    return $data['results'] ?? [];
+    try {
+        $data = $gifProvider->search($normalized, $count);
+        return $data['results'] ?? [];
+    } catch (Exception $e) {
+        pb_logDebug('partybattle_gif_provider_fail', [
+            'query' => $query,
+            'normalized_query' => $normalized,
+            'requested' => $count,
+            'message' => $e->getMessage(),
+        ]);
+        throw $e;
+    }
 }
 
 function pb_searchFallbackGifs()
@@ -1144,9 +1419,30 @@ function pb_generateDeck($pdo, $mode, $theme, $aiMode = false, $customTopic = ''
             $aiData = json_decode($content, true);
             if (!empty($aiData['situations']) && is_array($aiData['situations'])) {
                 $situations = $aiData['situations'];
+                pb_logDebug('partybattle_ai_deck_success', [
+                    'mode' => $mode,
+                    'theme' => $theme,
+                    'rounds' => $rounds,
+                    'topic' => $customTopic,
+                    'generated' => count($situations),
+                ]);
+            } else {
+                pb_logDebug('partybattle_ai_deck_invalid', [
+                    'mode' => $mode,
+                    'theme' => $theme,
+                    'rounds' => $rounds,
+                    'topic' => $customTopic,
+                    'raw_preview' => $content,
+                ]);
             }
         } catch (Exception $e) {
-            // Fallback to file packs.
+            pb_logDebug('partybattle_ai_deck_fail', [
+                'mode' => $mode,
+                'theme' => $theme,
+                'rounds' => $rounds,
+                'topic' => $customTopic,
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -1489,7 +1785,7 @@ function pb_normalizePackEntry($mode, $theme, $entry)
     }
 
     if ($mode === 'caption') {
-        $mediaUrl = trim((string) ($entry['media_url'] ?? ''));
+        $mediaUrl = pb_normalizeCaptionMediaUrl($entry['media_url'] ?? '');
         if ($mediaUrl === '') {
             return null;
         }
@@ -1529,6 +1825,20 @@ function pb_normalizePackEntry($mode, $theme, $entry)
 function pb_buildCanonicalCardId($mode, $theme, $value)
 {
     return $mode . '_' . $theme . '_' . substr(sha1($mode . '|' . $theme . '|' . trim((string) $value)), 0, 16);
+}
+
+function pb_normalizeCaptionMediaUrl($url)
+{
+    $url = trim((string) $url);
+    if ($url === '') {
+        return '';
+    }
+
+    if (preg_match('#https?://media\.giphy\.com/media/([^/]+)/giphy\.gif#i', $url, $matches)) {
+        return 'https://i.giphy.com/media/' . $matches[1] . '/giphy.gif';
+    }
+
+    return $url;
 }
 
 function pb_getRawCardId($mode, $rawCard)
@@ -1631,6 +1941,89 @@ function pb_markRecentCardUsed(&$state, $mode, $cardId)
     }));
     $existing[] = $cardId;
     $state['recent_cards'][$mode] = array_slice($existing, -pb_getRecentCardHistoryLimit());
+}
+
+function pb_dedupeDeckCards($cards)
+{
+    $deduped = [];
+    $seen = [];
+    foreach ((array) $cards as $card) {
+        $key = pb_getDeckCardKey($card);
+        if ($key === null || isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $deduped[] = $card;
+    }
+    return $deduped;
+}
+
+function pb_getDeckCardKey($card)
+{
+    if (!is_array($card)) {
+        return null;
+    }
+
+    $mode = trim((string) ($card['mode'] ?? ''));
+    $cardId = trim((string) ($card['card_id'] ?? ''));
+    if ($mode !== '' && $cardId !== '') {
+        return $mode . '|' . $cardId;
+    }
+
+    $prompt = $card['prompt'] ?? [];
+    if (!is_array($prompt)) {
+        return null;
+    }
+
+    $promptKey = trim((string) (($prompt['body'] ?? '') . '|' . ($prompt['media_url'] ?? '') . '|' . ($prompt['truth'] ?? '')));
+    return $mode !== '' && $promptKey !== '' ? $mode . '|prompt|' . sha1($promptKey) : null;
+}
+
+function pb_getPlayedDeckCardLookup($state)
+{
+    $lookup = [];
+
+    foreach (($state['history'] ?? []) as $historyEntry) {
+        if (!is_array($historyEntry)) {
+            continue;
+        }
+        $mode = trim((string) ($historyEntry['mode'] ?? ''));
+        $cardId = trim((string) ($historyEntry['card_id'] ?? ''));
+        if ($mode !== '' && $cardId !== '') {
+            $lookup[$mode . '|' . $cardId] = true;
+        }
+    }
+
+    $round = $state['round'] ?? null;
+    if (is_array($round)) {
+        $mode = trim((string) ($round['mode'] ?? ''));
+        $cardId = trim((string) ($round['card_id'] ?? ''));
+        if ($mode !== '' && $cardId !== '') {
+            $lookup[$mode . '|' . $cardId] = true;
+        }
+    }
+
+    return $lookup;
+}
+
+function pb_popNextUnusedDeckCard(&$state)
+{
+    $playedLookup = pb_getPlayedDeckCardLookup($state);
+
+    while (!empty($state['situations_deck'])) {
+        $card = array_shift($state['situations_deck']);
+        $key = pb_getDeckCardKey($card);
+        if ($key !== null && isset($playedLookup[$key])) {
+            pb_logDebug('partybattle_duplicate_round_skipped', [
+                'mode' => $card['mode'] ?? null,
+                'card_id' => $card['card_id'] ?? null,
+            ]);
+            continue;
+        }
+        return $card;
+    }
+
+    return null;
 }
 
 function pb_getRecentCardHistoryLimit()

@@ -7,6 +7,7 @@ const API_URL = 'server/api.php';
 let authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_token').trim() : null;
 let serverTimeOffset = 0;
 let consecutiveGetStateTimeouts = 0;
+let lastDeployLockNoticeAt = 0;
 
 function getApiTimeoutMs(action) {
     switch (String(action || '')) {
@@ -64,6 +65,25 @@ async function apiRequest(data) {
         const res = await response.json();
         if (data?.action === 'get_state') {
             consecutiveGetStateTimeouts = 0;
+        }
+
+        if (res?.code === 'server_updating' || res?.message === 'server_updating') {
+            const humanMessage = 'Сервер сейчас обновляется. Попробуй ещё раз через несколько секунд.';
+            const isSilent = data?.action === 'get_state' || data?.action === 'update_session_info';
+            const now = Date.now();
+
+            if (!isSilent && now - lastDeployLockNoticeAt > 8000) {
+                lastDeployLockNoticeAt = now;
+                if (window.showAlert) {
+                    window.showAlert('Идёт обновление', humanMessage, 'info');
+                }
+            }
+
+            return {
+                ...res,
+                message: humanMessage,
+                is_server_updating: true,
+            };
         }
 
         // Handle token updates if server returns one

@@ -3,6 +3,57 @@
  * Handles simplified screen navigation, modals, tabs, and safe DOM manipulation.
  */
 
+function resetAppScroll(root = null) {
+    const nestedScrollables = root
+        ? Array.from(root.querySelectorAll('*')).filter(node => {
+            try {
+                return node.scrollHeight > node.clientHeight + 8;
+            } catch (e) {
+                return false;
+            }
+        })
+        : [];
+
+    const targets = [
+        document.scrollingElement,
+        document.documentElement,
+        document.body,
+        root,
+        root?.closest?.('.screen'),
+        root?.closest?.('.tab-content'),
+        document.getElementById('screen-game'),
+        document.getElementById('screen-game-detail'),
+        document.getElementById('game-area'),
+        ...nestedScrollables,
+    ].filter(Boolean);
+
+    const uniqueTargets = Array.from(new Set(targets));
+
+    const resetNode = target => {
+        try {
+            if (typeof target.scrollTo === 'function') {
+                target.scrollTo(0, 0);
+            }
+            target.scrollTop = 0;
+        } catch (e) {
+            // noop
+        }
+    };
+
+    try {
+        window.scrollTo(0, 0);
+    } catch (e) {
+        // noop
+    }
+
+    uniqueTargets.forEach(resetNode);
+
+    requestAnimationFrame(() => uniqueTargets.forEach(resetNode));
+    setTimeout(() => uniqueTargets.forEach(resetNode), 80);
+}
+
+window.resetAppScroll = resetAppScroll;
+
 // === NAVIGATION ===
 
 function showScreen(screenId) {
@@ -47,7 +98,7 @@ function showScreen(screenId) {
     // END: Deep Link Protection
 
     // Scroll to top
-    window.scrollTo(0, 0);
+    resetAppScroll(screen);
 
     // Update Tab Bar visibility
     const tabBar = document.querySelector('.bottom-nav');

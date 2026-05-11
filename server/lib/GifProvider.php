@@ -44,10 +44,6 @@ class GiphyProvider implements GifProviderInterface
 
         $data = json_decode($response, true);
 
-        // Log Success
-        $count = count($data['data'] ?? []);
-        TelegramLogger::info('giphy_success', ['query' => $query, 'count' => $count]);
-
         // Transform to Klipy-compatible format
         $results = [];
         foreach ($data['data'] ?? [] as $gif) {

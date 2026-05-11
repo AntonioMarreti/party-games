@@ -19,85 +19,81 @@ window.PartyBattleModes = {
     renderJokeSubmission: function (gameState) {
         let promptText = "ПРИДУМАЙ СМЕШНУЮ ДОБИВКУ:";
         let placeholderText = "Твоя огненная шутка...";
-        let btnText = "ОТПРАВИТЬ ШУТКУ";
-
         if (gameState.activeMode === 'caption') {
             promptText = "ПРИДУМАЙ ПОДПИСЬ К МЕМУ:";
             placeholderText = "Что происходит на картинке?";
-            btnText = "ОТПРАВИТЬ ОТВЕТ";
         } else if (gameState.activeMode === 'advice') {
             promptText = "ДАЙ ВРЕДНЫЙ СОВЕТ:";
             placeholderText = "Твой худший совет...";
-            btnText = "ОТПРАВИТЬ СОВЕТ";
         } else if (gameState.activeMode === 'acronym') {
             promptText = "РАСШИФРУЙ АББРЕВИАТУРУ:";
             placeholderText = "Твоя расшифровка...";
-            btnText = "ОТПРАВИТЬ";
         } else if (gameState.activeMode === 'bluff') {
             promptText = "ПРИДУМАЙ ПРАВДОПОДОБНУЮ ЛОЖЬ:";
             placeholderText = "Твое вранье...";
-            btnText = "ОТПРАВИТЬ ЛОЖЬ";
         }
 
         return `
-            <div class="px-2 pb-2 animate__animated animate__fadeIn">
-                <div class="mb-2 text-center">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2" style="letter-spacing: 0.16em; opacity: 0.78;">${promptText}</label>
-                    <textarea id="pb-joke-input" class="form-control rounded-4 p-3 shadow-sm mb-3" rows="2" placeholder="${placeholderText}" maxlength="150" 
-                        style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid var(--border-glass); color: var(--text-main); font-size: 1.1rem; resize: none; box-shadow: 0 18px 42px rgba(31, 38, 135, 0.06);"></textarea>
-                    
-                    <button id="pb-submit-answer-btn" class="btn btn-primary w-100 py-3 rounded-4 fw-bold fs-5 shadow-sm" style="box-shadow: 0 18px 42px rgba(var(--primary-rgb), 0.22) !important;" onclick="window.PartyBattleUI.submitAnswer()">
-                        <i class="bi bi-send-fill me-2"></i> ${btnText}
-                    </button>
-                    
-                    <div class="text-end small text-muted mt-2 opacity-50"><span id="pb-joke-count">0</span>/150</div>
+            <div class="pb-composer-card px-2 pb-2 animate__animated animate__fadeIn">
+                <div class="rounded-4 p-2 shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.04)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                        <label class="form-label fw-bold small text-muted text-uppercase m-0" style="letter-spacing: 0.14em; opacity: 0.78; font-size: 0.73rem;">${promptText}</label>
+                        <div class="small text-muted opacity-50" style="font-size: 0.78rem;"><span id="pb-joke-count">0</span>/150</div>
+                    </div>
+                    <textarea id="pb-joke-input" class="form-control rounded-4 p-2 shadow-sm" rows="3" placeholder="${placeholderText}" maxlength="150" 
+                        style="background: rgba(255,255,255,0.92); border: 1px solid rgba(var(--primary-rgb), 0.12); color: var(--text-main); font-size: 0.92rem; line-height:1.24; resize: none; min-height: 88px; box-shadow: none;"></textarea>
                 </div>
             </div>
             <script>
                 (function() {
                     const input = document.getElementById('pb-joke-input');
                     const count = document.getElementById('pb-joke-count');
-                    const button = document.getElementById('pb-submit-answer-btn');
                     if (!input) return;
-
-                    const keepComposerVisible = function() {
-                        setTimeout(function() {
-                            button?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }, 120);
-                    };
 
                     input.addEventListener('input', function(e) {
                         if (count) count.innerText = e.target.value.length;
                     });
-                    input.addEventListener('focus', keepComposerVisible);
-                    input.addEventListener('click', keepComposerVisible);
                 })();
             </script>
         `;
     },
 
     renderJokeVoting: function (entries, hasVoted, myId) {
-        // Sort by UID for stability
-        const sorted = [...entries].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        const sorted = [...entries].sort((a, b) => {
+            const aIsMe = String(a.authorId) === myId ? 1 : 0;
+            const bIsMe = String(b.authorId) === myId ? 1 : 0;
+            if (aIsMe !== bIsMe) {
+                return bIsMe - aIsMe;
+            }
+            return String(a.id).localeCompare(String(b.id));
+        });
 
         return `
-            <div class="row g-2 px-2">
-                ${sorted.map(entry => {
+            <div class="row g-2 px-2 pb-4">
+                ${sorted.map((entry, index) => {
             const isMe = String(entry.authorId) === myId;
             return `
                         <div class="col-12">
                             <div class="p-3 rounded-4 shadow-sm position-relative ${isMe ? 'border-primary' : ''}" 
-                                 style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid ${isMe ? 'rgba(var(--primary-rgb), 0.34)' : 'var(--border-glass)'}; transition: all 0.2s; box-shadow: 0 14px 34px rgba(31, 38, 135, 0.05); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
+                                 style="background: ${isMe ? 'linear-gradient(180deg, rgba(90, 103, 255, 0.06), rgba(255,255,255,0.98))' : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.02))'}; border: 1px solid ${isMe ? 'rgba(var(--primary-rgb), 0.28)' : 'rgba(90, 103, 255, 0.08)'}; transition: all 0.2s; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
-                                
-                                <div class="fw-bold mb-2 pe-5" style="color:var(--text-main); line-height: 1.28; font-size: 1.9rem;">${entry.value}</div>
-                                
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                    <div class="small fw-bold text-uppercase" style="letter-spacing:0.12em; color:${isMe ? '#5a67ff' : 'var(--text-muted)'}; font-size:0.7rem;">${isMe ? 'Твой ответ' : `Вариант ${index + 1}`}</div>
+                                    ${isMe ? `<span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12); font-size: 0.68rem; font-weight:700;">Твой ответ</span>` : ''}
+                                </div>
+                                <div class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.18; font-size: 0.98rem;">${entry.value}</div>
+
                                 ${!hasVoted && !isMe ? `
-                                    <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="position: relative; z-index: 9999 !important; min-height: 48px;" onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
+                                    <div class="d-flex justify-content-end">
+                                        <button class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm" style="position: relative; min-height: 34px; min-width: 124px; font-size: 0.78rem; box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.18) !important;" onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
                                         ВЫБРАТЬ
-                                    </button>
+                                        </button>
+                                    </div>
+                                ` : isMe ? `
+                                    <div class="rounded-pill py-2 px-3 text-center fw-bold" style="background:#eef1f7; color:var(--text-muted); font-size:0.72rem; letter-spacing:0.04em;">
+                                        ТВОЙ ВАРИАНТ
+                                    </div>
                                 ` : ''}
-                                ${isMe ? `<div class="badge rounded-pill position-absolute top-0 end-0 m-2" style="background: var(--primary-gradient); font-size: 10px;">Твой ответ</div>` : ''}
                                 ${hasVoted && !isMe ? `<div class="position-absolute inset-0 bg-black bg-opacity-10 rounded-4" style="pointer-events:none;"></div>` : ''}
                             </div>
                         </div>
@@ -112,8 +108,8 @@ window.PartyBattleModes = {
         return `
              <div class="p-3 pb-5">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="small fw-bold text-muted opacity-75">ТВОЯ РУКА:</span>
-                    <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center" onclick="window.PartyBattleUI.refreshHand(event)">
+                    <span class="small fw-bold text-muted opacity-75" style="letter-spacing:0.12em; font-size:0.74rem;">ТВОЯ РУКА</span>
+                    <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center" style="font-size:0.8rem;" onclick="window.PartyBattleUI.refreshHand(event)">
                         <i class="bi bi-arrow-clockwise me-1"></i> Обновить
                     </button>
                 </div>
@@ -139,7 +135,7 @@ window.PartyBattleModes = {
                 `}
 
                 <div class="mt-4 text-center" id="search-toggle-div">
-                    <button class="btn btn-outline-primary w-100 py-3 rounded-4 fw-bold shadow-sm" onclick="document.getElementById('manual-search-div').style.display='block'; document.getElementById('search-toggle-div').style.display='none'">
+                    <button class="btn btn-outline-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.9rem;" onclick="document.getElementById('manual-search-div').style.display='block'; document.getElementById('search-toggle-div').style.display='none'">
                             <i class="bi bi-search"></i> Найти свой мем
                     </button>
                 </div>
@@ -156,24 +152,33 @@ window.PartyBattleModes = {
     },
 
     renderMemeVoting: function (entries, hasVoted, myId) {
-        const sorted = [...entries].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        const sorted = [...entries].sort((a, b) => {
+            const aIsMe = String(a.authorId) === myId ? 1 : 0;
+            const bIsMe = String(b.authorId) === myId ? 1 : 0;
+            if (aIsMe !== bIsMe) {
+                return bIsMe - aIsMe;
+            }
+            return String(a.id).localeCompare(String(b.id));
+        });
         return `
             <div class="row g-3 px-2 pb-4">
                 ${sorted.map(entry => {
             const isMe = String(entry.authorId) === myId;
             return `
                         <div class="col-6">
-                            <div class="rounded-4 overflow-hidden shadow-sm mb-2 position-relative" style="aspect-ratio: 1; border: ${isMe ? '3px solid var(--primary-color)' : '2px solid transparent'}; ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
+                            <div class="rounded-4 overflow-hidden shadow-sm mb-2 position-relative" style="aspect-ratio: 1; border: ${isMe ? '2px solid var(--primary-color)' : '1px solid rgba(90, 103, 255, 0.08)'}; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.parentNode.querySelector('button'))"` : ''}>
                                 <img src="${entry.value}" class="w-100 h-100 object-fit-cover">
-                                ${isMe ? `<div class="position-absolute top-0 end-0 m-1"><span class="badge rounded-pill" style="font-size:10px; background: var(--primary-gradient);">Твой ответ</span></div>` : ''}
+                                ${isMe ? `<div class="position-absolute top-0 start-0 m-2"><span class="badge rounded-pill px-3 py-2" style="font-size:0.68rem; background: rgba(255,255,255,0.92); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">Твой ответ</span></div>` : ''}
                                 ${hasVoted && !isMe ? `<div class="position-absolute inset-0 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.3);"><i class="bi bi-check-circle-fill text-white fs-1"></i></div>` : ''}
                             </div>
                             ${!hasVoted && !isMe ? `
-                                <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold"
+                                <button class="btn btn-primary w-100 py-2 rounded-pill fw-bold" style="min-height:34px; font-size:0.78rem; box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.18) !important;"
                                         onclick="window.PartyBattleUI.submitVote('${entry.id}', this)">
-                                    <i class=\"bi bi-hand-index-thumb me-1\"></i>ВЫБРАТЬ
+                                    ВЫБРАТЬ
                                 </button>
+                            ` : isMe ? `
+                                <div class="rounded-pill py-2 px-3 text-center fw-bold" style="background:#eef1f7; color:var(--text-muted); font-size:0.7rem; letter-spacing:0.04em;">ТВОЙ ВАРИАНТ</div>
                             ` : ''}
                         </div>`;
         }).join('')}
@@ -197,11 +202,11 @@ window.PartyBattleModes = {
                                     ${pb_renderAvatar(p, 'lg')}
                                 </div>
                                 <div class="fw-bold text-truncate mb-2" style="color:var(--text-main); font-size: 0.9rem;">${p.display_name}</div>
-                                ${isMe ? `<div class="badge rounded-pill mb-3" style="font-size:10px; background: var(--primary-gradient);">Это я</div>` : ''}
+                                ${isMe ? `<div class="badge rounded-pill mb-3 px-3 py-2" style="font-size:0.68rem; background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">Это я</div>` : ''}
                                 
                                 ${!hasVoted ? `
-                                        <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm"
-                                            style="position:relative; z-index:999 !important;"
+                                        <button class="btn btn-primary w-100 py-2 rounded-pill fw-bold shadow-sm"
+                                            style="position:relative; min-height:34px; font-size:0.78rem; box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.18) !important;"
                                             onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${pid}', this)">
                                             ${isMe ? 'ЭТО Я!' : 'ЭТО ОН!'}
                                         </button>
@@ -219,34 +224,52 @@ window.PartyBattleModes = {
 
     /* --- BLUFF MODE --- */
     renderBluffVoting: function (entries, hasVoted, myId) {
-        // Shuffle options to avoid visually pinning the truth.
-        const shuffled = [...entries];
-        for (let i = shuffled.length - 1; i > 0; i--) {
+        const mine = [];
+        const others = [];
+        [...entries].forEach(entry => {
+            if (String(entry.authorId) === myId) {
+                mine.push(entry);
+            } else {
+                others.push(entry);
+            }
+        });
+
+        for (let i = others.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            [others[i], others[j]] = [others[j], others[i]];
         }
+        const shuffled = [...mine, ...others];
 
         return `
             <div class="row g-2 px-2 pb-4">
-                ${shuffled.map(entry => {
+                ${shuffled.map((entry, index) => {
             const isMe = String(entry.authorId) === myId;
-            if (isMe) return ''; // Hide user's own lie from themselves so they can't vote for it
 
             return `
                         <div class="col-12 animate__animated animate__fadeInUp">
                             <div class="card shadow-sm border-0 rounded-4"
-                                 style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid ${hasVoted ? 'var(--border-glass)' : 'rgba(var(--primary-rgb), 0.26)'} !important; box-shadow: 0 14px 34px rgba(31, 38, 135, 0.05); ${!hasVoted ? 'cursor:pointer;' : ''}"
-                                 ${!hasVoted ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
+                                 style="background: ${isMe ? 'linear-gradient(180deg, rgba(90, 103, 255, 0.06), rgba(255,255,255,0.98))' : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.02))'}; border: 1px solid ${isMe ? 'rgba(90, 103, 255, 0.24)' : (hasVoted ? 'var(--border-glass)' : 'rgba(90, 103, 255, 0.08)')} !important; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
+                                 ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
                                 <div class="card-body p-3 text-center">
-                                    <div class="fw-bold mb-2" style="color:var(--text-main); line-height: 1.28; font-size: 1.3rem;">${entry.value}</div>
+                                    <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                        <div class="small fw-bold text-uppercase" style="letter-spacing:0.12em; color:${isMe ? '#5a67ff' : 'var(--text-muted)'}; font-size:0.7rem;">${isMe ? 'Твой ответ' : `Вариант ${index + 1}`}</div>
+                                        ${isMe ? `<span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12); font-size:0.68rem; font-weight:700;">Твой ответ</span>` : ''}
+                                    </div>
+                                    <div class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.18; font-size: 0.98rem;">${entry.value}</div>
                                     
-                                    ${!hasVoted ? `
-                                        <button class="btn btn-outline-primary w-100 py-2 rounded-4 fw-bold"
-                                                onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
-                                            ЭТО ПРАВДА
+                                    ${!hasVoted && !isMe ? `
+                                        <div class="d-flex justify-content-end">
+                                            <button class="btn btn-outline-primary px-4 py-2 rounded-pill fw-bold" style="min-height:34px; min-width:124px; font-size:0.78rem;"
+                                                    onclick="event.stopPropagation(); window.PartyBattleUI.submitVote('${entry.id}', this)">
+                                                ЭТО ПРАВДА
+                                            </button>
+                                    </div>
+                                    ` : isMe ? `
+                                        <button class="btn btn-light w-100 py-2 rounded-pill fw-bold" style="min-height:34px; font-size:0.72rem; background:#eef1f7; color:var(--text-muted); letter-spacing:0.02em;" disabled>
+                                            НЕЛЬЗЯ ГОЛОСОВАТЬ ЗА СВОЙ ВАРИАНТ
                                         </button>
                                     ` : `
-                                        <button class="btn btn-secondary w-100 py-2 rounded-pill fw-bold" disabled>
+                                        <button class="btn btn-secondary w-100 py-2 rounded-pill fw-bold" style="min-height:34px; font-size:0.74rem;" disabled>
                                             <i class="bi bi-check2-circle me-1"></i>ОЖИДАНИЕ...
                                         </button>
                                     `}
