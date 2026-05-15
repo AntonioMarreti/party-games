@@ -205,14 +205,16 @@ const ROUTE_ACTIONS = {
     'profile-edit': 'openProfileEditor',
     'settings': 'openSettingsScreen',
     'friends': 'openFriendsScreen',
+    // Leaderboard is not a bottom-nav tab; it remains a secondary route that opens separately.
     'leaderboard': 'openLeaderboardScreen'
 };
 
 function switchTab(tabId) {
+    document.body.classList.remove('history-details-open');
+
     // 1. Update visual state of tab buttons
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.classList.remove('active');
-        btn.style.opacity = '0.4'; // Muted for inactive
         const icon = btn.querySelector('i');
         if (icon) {
             // In the new design, we ALWAYS use filled icons.
@@ -229,10 +231,9 @@ function switchTab(tabId) {
     const activeBtn = document.getElementById('nav-tab-' + tabId);
     if (activeBtn) {
         activeBtn.classList.add('active');
-        activeBtn.style.opacity = '1';
         const icon = activeBtn.querySelector('i');
         if (icon) {
-            // Ensure filled icon + full opacity
+            // Ensure filled icon
             icon.classList.forEach(cls => {
                 if (cls.startsWith('bi-') && cls !== 'bi' && !cls.endsWith('-fill')) {
                     icon.classList.remove(cls);

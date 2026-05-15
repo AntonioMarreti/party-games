@@ -1176,6 +1176,19 @@ function showGameDetailsModalById(historyId) {
     showGameDetailsModal(window.currentHistoryItems[index]);
 }
 
+function openHistoryDetails(historyId) {
+    if (historyId === undefined || historyId === null) return;
+
+    if (typeof historyId === 'object') {
+        showGameDetailsModal(historyId);
+        return;
+    }
+
+    if (typeof historyId === 'number' || (typeof historyId === 'string' && historyId.trim() !== '' && !isNaN(Number(historyId)))) {
+        showGameDetailsModalById(historyId);
+    }
+}
+
 function showGameDetailsModal(item) {
     if (!item) return;
 
@@ -1307,6 +1320,7 @@ window.selectEmoji = selectEmoji;
 window.selectColor = selectColor;
 window.openGameHistory = openGameHistory;
 window.loadGameHistory = loadGameHistory;
+window.openHistoryDetails = openHistoryDetails;
 window.replayHistoryGame = replayHistoryGame;
 window.showGameDetailsModalById = showGameDetailsModalById;
 window.closeHistoryDetails = closeHistoryDetails;

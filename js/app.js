@@ -281,7 +281,7 @@ window.checkState = async function () {
             window.currentRoomId = res.room.id;
             window.isHost = (res.is_host == 1);
 
-            const isMenuScreen = ['settings', 'profile-edit', 'game-detail', 'friends', 'leaderboard'].includes(window.location.hash.substring(1));
+            const isMenuScreen = ['settings', 'profile-edit', 'game-detail', 'friends', 'history'].includes(window.location.hash.substring(1));
             const gameType = res.room.game_type; // Fix: Define gameType properly
             const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
                 ? window.AVAILABLE_GAMES.find(g => g.id === gameType)
