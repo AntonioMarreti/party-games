@@ -339,24 +339,6 @@ function action_get_state($pdo, $user, $data)
     $stmt->execute([$room['id']]);
     $players = $stmt->fetchAll();
 
-    // PARTY BATTLE: BOT PROCESSING HOOK
-    if ($room['game_type'] === 'partybattle' && $room['status'] === 'playing' && !empty($room['game_state'])) {
-        $gameFile = __DIR__ . "/../games/partybattle.php";
-        if (file_exists($gameFile)) {
-            require_once $gameFile;
-            if (function_exists('processGameBots')) {
-                $gameState = json_decode($room['game_state'], true);
-                if (processGameBots($pdo, $room, $gameState)) {
-                    // State was updated by bots, save it
-                    $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
-                        ->execute([json_encode($gameState), $room['id']]);
-                    // Refresh room data to reflect new state
-                    $room['game_state'] = json_encode($gameState);
-                }
-            }
-        }
-    }
-
     // Optimized Polling: Insert Notifications
     // We fetch unread notifications here to avoid separate polling request in game
     $notifs = [];
@@ -484,19 +466,24 @@ function action_make_room_public($pdo, $user, $data)
 function action_get_public_rooms($pdo, $user, $data)
 {
     $stmt = $pdo->query("
-        SELECT pr.*, r.game_type, r.room_code, r.game_state,
+        SELECT pr.id, pr.room_id, pr.title, pr.description, pr.visibility,
+               r.game_type, r.room_code,
                CASE WHEN r.password IS NULL OR r.password = '' THEN 0 ELSE 1 END as has_password,
-               (SELECT COUNT(*) FROM room_players WHERE room_id = r.id) as players_count,
+               COUNT(rp_count.user_id) as players_count,
                u.photo_url as host_avatar, u.first_name as host_name,
                COALESCE(host_rp.last_active, r.created_at) as host_last_active
         FROM public_rooms pr
         JOIN rooms r ON r.id = pr.room_id
         JOIN room_players host_rp ON host_rp.room_id = r.id AND host_rp.user_id = r.host_user_id AND host_rp.is_host = 1
+        LEFT JOIN room_players rp_count ON rp_count.room_id = r.id
         JOIN users u ON u.id = host_rp.user_id
         WHERE r.status = 'waiting' 
         AND pr.visibility = 'public'
         AND u.is_bot = 0
         AND COALESCE(host_rp.last_active, r.created_at) > (NOW() - INTERVAL 10 MINUTE)
+        GROUP BY pr.id, pr.room_id, pr.title, pr.description, pr.visibility,
+                 r.game_type, r.room_code, r.password, u.photo_url, u.first_name,
+                 host_rp.last_active, r.created_at
         ORDER BY players_count DESC, host_last_active DESC, pr.id DESC
         LIMIT 20
     ");

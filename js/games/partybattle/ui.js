@@ -735,7 +735,7 @@ window.PartyBattleUI = {
                     <div class="p-4 rounded-4 shadow-lg animate__animated animate__bounceIn mb-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(var(--primary-rgb), 0.05)); border: 1px solid var(--border-glass); box-shadow: 0 24px 60px rgba(31, 38, 135, 0.08) !important;">
                         <i class="bi bi-check-circle-fill text-success display-1 mb-4 d-block"></i>
                         <h3 class="fw-bold" style="color:var(--text-main);">Принято!</h3>
-                        <p class="text-muted small mb-4">Ждем остальных игроков...</p>
+                        <p class="text-muted small mb-4">${gameState.activeMode === 'bluff' ? 'Ложь записана. Ждем остальные ответы...' : 'Ответ отправлен. Ждем остальных игроков...'}</p>
                         <div class="d-flex align-items-center justify-content-center gap-2 bg-secondary bg-opacity-10 rounded-pill px-3 py-2 mx-auto" style="max-width: fit-content;">
                             <div class="spinner-border spinner-border-sm text-primary"></div>
                             <span class="small fw-bold opacity-75">Сдали: ${submittedCount} / ${totalPlayers}</span>
@@ -837,17 +837,6 @@ window.PartyBattleUI = {
         const hasVoted = gameState.voteMap && gameState.voteMap[myId];
         const situation = gameState.displayPrompt?.body || gameState.displayPrompt?.mediaUrl || '';
         const modeMeta = pb_getModeMeta(gameState.activeMode);
-
-        // DIAGNOSTIC LOG
-        console.log('[PartyBattle] renderVotingScreen', {
-            myId,
-            hasVoted,
-            votes: gameState.voteMap,
-            mode: gameState.activeMode,
-            submissions: gameState.submissionEntries.map(entry => entry.id),
-            renderAvatarExists: typeof window.renderAvatar,
-            players: (window.APP_STATE?.room?.players || []).map(p => ({ id: p.id, photo_url: !!p.photo_url, custom_avatar: !!p.custom_avatar }))
-        });
         const entries = gameState.votingOptions;
 
         const totalPlayers = gameState.scores ? Object.keys(gameState.scores).length : 0;
@@ -927,6 +916,9 @@ window.PartyBattleUI = {
             ? 'Игроки чаще всего выбрали правильный вариант.'
             : (winnerPlayer?.display_name || winnerPlayer?.first_name || 'Игрок');
         const modeMeta = pb_getModeMeta(mode);
+        const bluffTruth = mode === 'bluff'
+            ? String(gameState.displayPrompt?.truth || gameState.round?.prompt?.truth || '').trim()
+            : '';
         const bluffAwardSummary = mode === 'bluff'
             ? bluffAwards.reduce((acc, award) => {
                 const playerId = String(award?.player_id || '');
@@ -991,6 +983,12 @@ window.PartyBattleUI = {
                     ${mode === 'bluff' ? `
                         <div class="mt-3 p-3 rounded-4 shadow-sm" style="background: rgba(255,255,255,0.98); border: 1px solid rgba(90, 103, 255, 0.08); max-width: 420px; width: 100%; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04) !important;">
                             <div class="small fw-bold text-uppercase text-muted mb-2" style="letter-spacing:0.14em;">Как начислены очки</div>
+                            ${bluffTruth ? `
+                                <div class="rounded-4 px-3 py-2 mb-3 text-start" style="background:#f6f8ff;">
+                                    <div class="small fw-bold text-uppercase text-muted mb-1" style="letter-spacing:0.12em;">Правильный ответ</div>
+                                    <div class="fw-bold" style="color:var(--text-main); font-size:0.96rem;">${bluffTruth}</div>
+                                </div>
+                            ` : ''}
                             <div class="small text-muted mb-3" style="line-height:1.35;">
                                 За выбор <span class="fw-bold" style="color:var(--text-main);">правды</span> игрок получает +100 себе.
                                 За выбор <span class="fw-bold" style="color:var(--text-main);">чужой лжи</span> +100 получает автор этой лжи.
@@ -1026,7 +1024,7 @@ window.PartyBattleUI = {
                         : '',
                     statusMarkup: !isHost
                         ? `<div class="p-2 w-100 text-center rounded-4 opacity-75 mb-2" style="background: #f3f4f8; border: 1px solid rgba(90, 103, 255, 0.08);">
-                            <span class="small fw-bold text-muted" style="font-size:0.78rem;">Хост скоро запустит новый раунд...</span>
+                            <span class="small fw-bold text-muted" style="font-size:0.78rem;">Хост скоро продолжит игру...</span>
                         </div>`
                         : ''
                 })}
@@ -1039,9 +1037,17 @@ window.PartyBattleUI = {
     renderGameResults: function (gameState) {
         const gameArea = document.getElementById('game-area');
         if (!gameArea) return;
+        const isHost = (window.APP_STATE?.room?.is_host) || false;
         const scores = gameState.scores || {};
         const sortedIds = Object.keys(scores).sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
         const myId = String(pb_getMyId());
+        const myRank = sortedIds.findIndex(uid => String(uid) === myId);
+        const myScore = myRank >= 0 ? (scores[sortedIds[myRank]] || 0) : 0;
+        const hasScores = sortedIds.length > 0;
+        const safeName = (player) => window.safeHTML ? window.safeHTML(player?.display_name || player?.custom_name || player?.first_name || 'Игрок') : (player?.display_name || player?.custom_name || player?.first_name || 'Игрок');
+        const postGameSummary = window.GameSummaryProvider
+            ? window.GameSummaryProvider.remember('partybattle', gameState, { players: window.APP_STATE?.room?.players || [] })
+            : null;
 
         let html = `
             <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
@@ -1050,10 +1056,17 @@ window.PartyBattleUI = {
                     <i class="bi bi-trophy-fill display-4 mb-2 animate__animated animate__bounceIn" style="color: var(--primary-color);"></i>
                     <h2 class="fw-bold mb-2" style="color:var(--text-main);">Итоги игры</h2>
                     <div class="text-muted fw-semibold">Финальный рейтинг после всех раундов.</div>
+                    ${myRank >= 0 ? `
+                        <div class="d-inline-flex align-items-center gap-2 rounded-pill px-3 py-2 mt-3" style="background: rgba(90, 103, 255, 0.08); border: 1px solid rgba(90, 103, 255, 0.1);">
+                            <span class="small fw-bold text-muted text-uppercase" style="letter-spacing:0.12em; font-size:0.66rem;">Ваш результат</span>
+                            <span class="fw-bold" style="color:var(--text-main); font-size:0.88rem;">#${myRank + 1}</span>
+                            <span class="small fw-bold" style="color:#4e5bf4;">${myScore} XP</span>
+                        </div>
+                    ` : ''}
                 </div>
                 
                 <div class="flex-grow-1 overflow-auto px-3 mb-4">
-                    ${sortedIds.map((uid, index) => {
+                    ${hasScores ? sortedIds.map((uid, index) => {
             const score = scores[uid];
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
             const isWinner = index === 0;
@@ -1065,7 +1078,7 @@ window.PartyBattleUI = {
                                     <div class="fw-bold flex-shrink-0" style="color:${isWinner ? 'white' : 'var(--text-main)'}; width: 28px;">#${index + 1}</div>
                                     <div class="flex-shrink-0" style="width:38px; height:38px;">${pb_renderAvatar(player, 'sm')}</div>
                                     <div class="d-flex flex-column min-w-0">
-                                        <div class="fw-bold text-truncate" style="color:${isWinner ? 'white' : 'var(--text-main)'}; max-width: 170px;">${player ? (player.display_name || player.first_name) : 'Игрок'}</div>
+                                        <div class="fw-bold text-truncate" style="color:${isWinner ? 'white' : 'var(--text-main)'}; max-width: 170px;">${safeName(player)}</div>
                                         ${isWinner ? `<div class="small opacity-75">Победитель матча</div>` : ''}
                                     </div>
                                 </div>
@@ -1074,10 +1087,20 @@ window.PartyBattleUI = {
                                     <span class="badge ${isWinner ? 'bg-white text-primary' : 'bg-primary text-white'} rounded-pill px-3 py-2" style="font-size:0.78rem;">${score} XP</span>
                                 </div>
                             </div>`;
-        }).join('')}
+        }).join('') : `
+                        <div class="rounded-4 p-4 text-center shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
+                            <i class="bi bi-bar-chart-line text-primary opacity-50 d-block mb-3" style="font-size: 2rem;"></i>
+                            <div class="fw-bold mb-2" style="color:var(--text-main);">Рейтинг пока пуст</div>
+                            <div class="small text-muted">Очки появятся после завершения хотя бы одного раунда.</div>
+                        </div>
+                    `}
+
+                    ${postGameSummary ? window.GameSummaryProvider.render(postGameSummary, {
+            playAgainLabel: isHost ? 'Играть еще раз' : 'В комнату'
+        }) : ''}
                 </div>
 
-                <div class="px-3 pb-3" style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important;">
+                ${!postGameSummary ? `<div class="px-3 pb-3" style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important;">
                     <div class="rounded-4 p-2 shadow-sm" style="background: #ffffff; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 6px 16px rgba(31, 38, 135, 0.03);">
                         ${isHost ? `
                             <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.92rem;" onclick="window.sendGameAction('back_to_lobby')">
@@ -1089,7 +1112,7 @@ window.PartyBattleUI = {
                             </button>
                         `}
                     </div>
-                </div>
+                </div>` : ''}
             </div>
         `;
         gameArea.innerHTML = html;
@@ -1123,7 +1146,7 @@ window.PartyBattleUI = {
         if (!container) return;
         if (!query || query.length < 2) return;
 
-        container.innerHTML = `<div class="text-center mt-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>`;
+        container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3" style="background:#f6f7fb; border:1px solid rgba(90, 103, 255, 0.08);"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div class="small fw-semibold text-muted">Ищем подходящие GIF...</div></div>`;
         try {
             const res = await window.apiRequest({ action: 'game_action', type: 'search_gifs', query: query });
             if (res.status === 'ok' && res.results && res.results.length > 0) {
@@ -1140,10 +1163,10 @@ window.PartyBattleUI = {
                 }).join('')}
                 </div>`;
             } else {
-                container.innerHTML = `<div class="text-center text-muted small mt-3 py-2"><i class="bi bi-emoji-frown me-1"></i>Ничего не найдено</div>`;
+                container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3" style="background:#f6f7fb; border:1px solid rgba(90, 103, 255, 0.08);"><i class="bi bi-search text-primary opacity-50 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Ничего не найдено</div><div class="small text-muted mt-1">Попробуй другой запрос или обнови формулировку.</div></div>`;
             }
         } catch (e) {
-            container.innerHTML = `<div class="text-center text-muted small mt-3">Ошибка поиска</div>`;
+            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3" style="background:#fff7f8; border:1px solid rgba(220, 53, 69, 0.12);"><i class="bi bi-wifi-off text-danger opacity-75 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Поиск временно недоступен</div><div class="small text-muted mt-1">Повтори попытку через несколько секунд.</div></div>`;
         }
     }
 };
@@ -1192,12 +1215,12 @@ function pb_getPromptDisplay(prompt, legacySituation = null) {
 function pb_renderPromptImage(url, className = '', style = '') {
     const safeUrl = String(url || '');
     if (!safeUrl) {
-        return `<div class="d-flex align-items-center justify-content-center rounded-4 text-muted small" style="min-height:200px; background: var(--bg-main);">Изображение недоступно</div>`;
+        return `<div class="d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3" style="min-height:200px; background:#f6f7fb; border:1px solid rgba(90, 103, 255, 0.08);"><i class="bi bi-image-alt mb-2" style="font-size:1.4rem;"></i><span>Изображение недоступно</span></div>`;
     }
 
     const fallbackUrl = pb_getPromptImageFallbackUrl(safeUrl);
     const fallbackAttr = fallbackUrl ? ` data-fallback-src="${fallbackUrl}"` : '';
-    return `<img src="${safeUrl}" class="${className}" style="${style}" loading="lazy"${fallbackAttr} onerror="if(!this.dataset.fallbackApplied && this.dataset.fallbackSrc){this.dataset.fallbackApplied='1';this.src=this.dataset.fallbackSrc;return;}this.outerHTML='<div class=&quot;d-flex align-items-center justify-content-center rounded-4 text-muted small&quot; style=&quot;min-height:200px;background: var(--bg-main);${style || ''}&quot;>Изображение недоступно</div>';">`;
+    return `<img src="${safeUrl}" class="${className}" style="${style}" loading="lazy"${fallbackAttr} onerror="if(!this.dataset.fallbackApplied && this.dataset.fallbackSrc){this.dataset.fallbackApplied='1';this.src=this.dataset.fallbackSrc;return;}this.outerHTML='<div class=&quot;d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3&quot; style=&quot;min-height:200px;background:#f6f7fb;border:1px solid rgba(90, 103, 255, 0.08);${style || ''}&quot;><i class=&quot;bi bi-image-alt mb-2&quot; style=&quot;font-size:1.4rem;&quot;></i><span>Изображение недоступно</span></div>';">`;
 }
 
 function pb_getPromptImageFallbackUrl(url) {
@@ -1277,4 +1300,89 @@ function pb_getSituationText(situation) {
     if (!situation) return '';
     if (typeof situation === 'object') return situation.text || situation.question || JSON.stringify(situation);
     return String(situation);
+}
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('partybattle', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || window.APP_STATE?.room?.players || [];
+            const scores = gameState?.scores || {};
+            const sortedIds = Object.keys(scores).sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
+            const getPlayer = (id) => players.find(p => String(p.id) === String(id));
+            const getName = (id) => {
+                const player = getPlayer(id);
+                return player ? (player.display_name || player.custom_name || player.first_name || 'Игрок') : 'Игрок';
+            };
+            const participants = players.map(player => ({
+                id: player.id,
+                name: player.display_name || player.custom_name || player.first_name || 'Игрок'
+            }));
+
+            const topId = sortedIds[0] || null;
+            const topScore = topId ? (scores[topId] || 0) : 0;
+            const rounds = parseInt(gameState?.total_rounds, 10) || parseInt(gameState?.round_number, 10) || sortedIds.length || 0;
+            const awards = [];
+
+            if (topId) {
+                awards.push({
+                    icon: '🏆',
+                    title: 'Вечерний победитель',
+                    player: `${getName(topId)} · ${topScore} XP`
+                });
+            }
+            if (sortedIds[1]) {
+                awards.push({
+                    icon: '⚔️',
+                    title: 'Главный соперник',
+                    player: `${getName(sortedIds[1])} · ${scores[sortedIds[1]] || 0} XP`
+                });
+            }
+            if (sortedIds[2]) {
+                awards.push({
+                    icon: '🎭',
+                    title: 'Темная лошадка',
+                    player: `${getName(sortedIds[2])} · ${scores[sortedIds[2]] || 0} XP`
+                });
+            }
+
+            if (awards.length === 1 && participants.length > 1) {
+                const rival = participants.find(p => String(p.id) !== String(topId));
+                if (rival) {
+                    awards.push({
+                        icon: '🔥',
+                        title: 'Следующий вызов',
+                        player: rival.name
+                    });
+                }
+            }
+
+            const gameTitle = 'Party Battle';
+            const winnerName = topId ? getName(topId) : '';
+            const outcome = topId
+                ? `${winnerName} забрал матч после ${rounds || 'нескольких'} раундов.`
+                : 'Матч закончился без явного победителя, но с поводом для реванша.';
+
+            return {
+                gameId: 'partybattle',
+                gameTitle,
+                participants,
+                winner: topId ? { id: topId, name: winnerName, score: topScore } : null,
+                outcome,
+                awards,
+                inviteLink: context.inviteLink,
+                shareText: [
+                    `${gameTitle}: ${outcome}`,
+                    topId ? `Победитель: ${winnerName} (${topScore} XP)` : '',
+                    ...awards.map(award => `${award.icon} ${award.title}: ${award.player}`),
+                    '',
+                    'Залетай в следующий раунд:'
+                ].filter(Boolean).join('\n')
+            };
+        },
+        playAgain: function () {
+            if (typeof window.sendGameAction === 'function') {
+                window.sendGameAction('back_to_lobby');
+            }
+        }
+    });
 }

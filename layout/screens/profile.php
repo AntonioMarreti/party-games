@@ -28,7 +28,7 @@
         </div>
     </button>
 
-    <div class="content-wrapper">
+    <div class="content-wrapper" style="padding-bottom: calc(110px + env(safe-area-inset-bottom));">
 
         <!-- Menu Actions (Grouped Glass Style) -->
         <div class="settings-group mb-3">

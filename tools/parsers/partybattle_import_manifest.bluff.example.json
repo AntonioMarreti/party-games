@@ -1,0 +1,34 @@
+{
+  "imports": [
+    {
+      "source_path": "data/import/bluff_weird_facts.json",
+      "mode": "bluff",
+      "theme": "weird_facts",
+      "format": "json_array",
+      "field": "__raw",
+      "rebuild": true,
+      "kind": "fact",
+      "output": "server/games/packs/partybattle/bluff/weird_facts.json"
+    },
+    {
+      "source_path": "data/import/bluff_history_facts.json",
+      "mode": "bluff",
+      "theme": "history",
+      "format": "json_array",
+      "field": "__raw",
+      "rebuild": true,
+      "kind": "fact",
+      "output": "server/games/packs/partybattle/bluff/history.json"
+    },
+    {
+      "source_path": "data/import/bluff_body_facts.json",
+      "mode": "bluff",
+      "theme": "body",
+      "format": "json_array",
+      "field": "__raw",
+      "rebuild": true,
+      "kind": "fact",
+      "output": "server/games/packs/partybattle/bluff/body.json"
+    }
+  ]
+}

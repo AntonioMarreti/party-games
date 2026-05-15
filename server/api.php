@@ -1,19 +1,6 @@
 <?php
 header('Content-Type: application/json');
 
-$deployLockPath = __DIR__ . '/deploy.lock';
-if (file_exists($deployLockPath)) {
-    http_response_code(503);
-    header('Retry-After: 5');
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'server_updating',
-        'code' => 'server_updating',
-        'retry_after' => 5,
-    ]);
-    exit;
-}
-
 require_once 'config.php';
 require_once 'auth.php';
 require_once 'lib/TelegramLogger.php';
@@ -231,7 +218,7 @@ if (!$currentUser) {
 }
 
 // Lazy cleanup of expired sessions (only on get_state to avoid overhead on every action)
-if ($action === 'get_state') {
+if ($action === 'get_state' && random_int(1, 100) === 1) {
     cleanupExpiredSessions($currentUser['id']);
 }
 

@@ -7,7 +7,6 @@ const API_URL = 'server/api.php';
 let authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_token').trim() : null;
 let serverTimeOffset = 0;
 let consecutiveGetStateTimeouts = 0;
-let lastDeployLockNoticeAt = 0;
 
 function getApiTimeoutMs(action) {
     switch (String(action || '')) {
@@ -17,6 +16,12 @@ function getApiTimeoutMs(action) {
             return 20000;
         case 'get_state':
             return 15000;
+        case 'get_public_rooms':
+        case 'get_local_rooms':
+        case 'get_stats':
+        case 'get_leaderboard':
+        case 'get_history':
+            return 30000;
         default:
             return 10000;
     }
@@ -67,25 +72,6 @@ async function apiRequest(data) {
             consecutiveGetStateTimeouts = 0;
         }
 
-        if (res?.code === 'server_updating' || res?.message === 'server_updating') {
-            const humanMessage = 'Сервер сейчас обновляется. Попробуй ещё раз через несколько секунд.';
-            const isSilent = data?.action === 'get_state' || data?.action === 'update_session_info';
-            const now = Date.now();
-
-            if (!isSilent && now - lastDeployLockNoticeAt > 8000) {
-                lastDeployLockNoticeAt = now;
-                if (window.showAlert) {
-                    window.showAlert('Идёт обновление', humanMessage, 'info');
-                }
-            }
-
-            return {
-                ...res,
-                message: humanMessage,
-                is_server_updating: true,
-            };
-        }
-
         // Handle token updates if server returns one
         if (res.token) {
             authToken = res.token;
@@ -118,6 +104,9 @@ async function apiRequest(data) {
             if (data.action.includes('get_state')) isSilent = true;
             if (data.action === 'game_action') isSilent = true;
             if (data.action === 'update_session_info') isSilent = true;
+            if (data.action === 'get_public_rooms') isSilent = true;
+            if (data.action === 'get_local_rooms') isSilent = true;
+            if (data.action === 'get_stats') isSilent = true;
         }
 
         if (!isSilent) {

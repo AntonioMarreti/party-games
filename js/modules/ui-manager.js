@@ -103,7 +103,7 @@ function showScreen(screenId) {
     // Update Tab Bar visibility
     const tabBar = document.querySelector('.bottom-nav');
     if (tabBar) {
-        const navScreens = ['screen-lobby', 'screen-leaderboard', 'screen-friends', 'screen-games', 'screen-profile'];
+        const navScreens = ['screen-lobby', 'screen-history', 'screen-leaderboard', 'screen-friends', 'screen-games', 'screen-profile'];
         if (navScreens.includes(finalId)) {
             tabBar.style.display = 'flex';
         } else {
@@ -198,7 +198,7 @@ const TAB_SCREEN_MAP = {
     'home': 'screen-lobby',
     'games': 'screen-lobby',
     'profile': 'screen-lobby',
-    'leaderboard': 'screen-leaderboard'
+    'history': 'screen-history'
 };
 
 const ROUTE_ACTIONS = {
@@ -245,6 +245,10 @@ function switchTab(tabId) {
     // 2. Determine target screen
     const screenId = TAB_SCREEN_MAP[tabId] || ('screen-' + tabId);
     showScreen(screenId);
+
+    if (tabId === 'history' && typeof window.loadGameHistory === 'function') {
+        window.loadGameHistory();
+    }
 
     // 3. Toggle internal tab content if inside screen-lobby
     if (screenId === 'screen-lobby') {

@@ -212,11 +212,54 @@ async function leaveRoom() {
 // === PUBLIC ROOMS ===
 
 async function loadPublicRooms() {
-    const container = document.getElementById('public-rooms-list');
-    if (!container) return; // Not in view
-    container.innerHTML = '<p class="text-center text-muted small py-4">Обновление...</p>';
+    const containers = Array.from(document.querySelectorAll('[data-public-rooms-list]'));
+    const legacyContainer = document.getElementById('public-rooms-list');
+    if (legacyContainer && !containers.includes(legacyContainer)) containers.push(legacyContainer);
+    if (containers.length === 0) return; // Not in view
+    const homeContainers = containers.filter(container => container.dataset.publicRoomsList === 'home');
+    const roomListContainers = containers.filter(container => container.dataset.publicRoomsList !== 'home');
+
+    const renderAllPublicRoomContainers = (html) => {
+        containers.forEach(container => {
+            container.innerHTML = html;
+        });
+    };
+
+    const renderRoomListContainers = (html) => {
+        roomListContainers.forEach(container => {
+            container.innerHTML = html;
+        });
+    };
+
+    containers.forEach(container => {
+        container.innerHTML = '<p class="text-center text-muted small py-4">Обновление...</p>';
+    });
 
     const res = await window.apiRequest({ action: 'get_public_rooms' });
+    if (!res || res.status !== 'ok') {
+        homeContainers.forEach(container => {
+            container.innerHTML = '';
+        });
+        renderRoomListContainers(`
+            <div class="public-rooms-header d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <div class="fw-bold" style="color:var(--text-main);">Публичные комнаты</div>
+                    <div class="small text-muted">Список временно недоступен</div>
+                </div>
+                <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                        style="width: 36px; height: 36px;">
+                    <i class="bi bi-arrow-clockwise" style="font-size: 18px;"></i>
+                </button>
+            </div>
+            <div class="public-room-card public-room-empty text-center py-4">
+                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-wifi-off" style="font-size: 40px;"></i></div>
+                 <div class="fw-bold" style="color: var(--text-main)">Не удалось обновить</div>
+                 <div class="text-muted small mb-3">Комнату всё равно можно создать или открыть по ссылке.</div>
+                 <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать</button>
+            </div>
+        `);
+        return;
+    }
     if (res.status === 'ok') {
         const refreshBtn = `
             <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
@@ -234,25 +277,41 @@ async function loadPublicRooms() {
         </div>`;
 
         if (res.rooms.length === 0) {
-            container.innerHTML = `
+            homeContainers.forEach(container => {
+                container.innerHTML = '';
+            });
+            renderRoomListContainers(`
                 ${headerHtml}
                 <div class="public-room-card public-room-empty text-center py-4">
-                     <div class="mb-2 text-primary opacity-50"><i class="bi bi-telescope" style="font-size: 40px;"></i></div>
-                     <div class="fw-bold" style="color: var(--text-main)">Пусто</div>
-                     <div class="text-muted small mb-3">Никто не играет в открытую</div>
+                     <div class="mb-2 text-primary opacity-50"><i class="bi bi-people" style="font-size: 40px;"></i></div>
+                     <div class="fw-bold" style="color: var(--text-main)">Пока открытых комнат нет</div>
+                     <div class="text-muted small mb-3">Создайте первую открытую комнату — другие смогут присоединиться.</div>
                      <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать</button>
                 </div>
-            `;
+            `);
             return;
         }
 
-        container.innerHTML = headerHtml;
+        renderAllPublicRoomContainers(headerHtml);
+        homeContainers.forEach(container => {
+            container.innerHTML = `
+                <div class="home-public-rooms-card">
+                    <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                        <div>
+                            <div class="home-public-title">Сейчас ждут игроков</div>
+                            <div class="home-public-subtitle">Открытые комнаты</div>
+                        </div>
+                        <button onclick="switchTab('games')" class="btn btn-light text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 34px; height: 34px;">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                    <div class="home-public-list"></div>
+                </div>
+            `;
+        });
 
-        res.rooms.forEach(r => {
-            const div = document.createElement('div');
-            div.className = 'public-room-card shadow-sm';
-            div.onclick = () => handlePublicRoomJoin(r);
-            div.style.cursor = 'pointer';
+        res.rooms.forEach((r, index) => {
             const gameMeta = getPublicRoomGameMeta(r.game_type);
             const safeTitle = window.safeHTML(r.title) || ('Комната ' + window.safeHTML(r.host_name));
             const safeDescription = window.safeHTML(r.description) || 'Присоединяйтесь!';
@@ -262,7 +321,7 @@ async function loadPublicRooms() {
                 ? `<span class="public-room-badge"><i class="bi bi-lock-fill me-1"></i>Пароль</span>`
                 : `<span class="public-room-badge"><i class="bi bi-unlock me-1"></i>Открытая</span>`;
 
-            div.innerHTML = `
+            const roomHtml = `
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div class="d-flex align-items-start gap-3 flex-grow-1 min-w-0">
                         <div class="public-room-game-icon" style="background:${gameMeta.bgColor}; color:${gameMeta.color};">
@@ -284,7 +343,28 @@ async function loadPublicRooms() {
                     </div>
                 </div>
             `;
-            container.appendChild(div);
+            containers.forEach(container => {
+                const isHomeContainer = container.dataset.publicRoomsList === 'home';
+                if (isHomeContainer && index > 1) return;
+                const div = document.createElement('div');
+                div.className = isHomeContainer ? 'home-public-room-row' : 'public-room-card shadow-sm';
+                div.onclick = () => handlePublicRoomJoin(r);
+                div.style.cursor = 'pointer';
+                if (isHomeContainer) {
+                    div.innerHTML = `
+                        <div class="min-w-0">
+                            <div class="fw-bold text-truncate">${safeTitle}</div>
+                            <div class="home-public-meta">${gameName} · ${r.players_count || 1} ждут · waiting</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="event.stopPropagation(); handleRoomJoinByData('${r.room_code}', ${Number(r.has_password) === 1 ? 1 : 0}, '${String(safeTitle).replace(/'/g, "\\'")}')">Войти</button>
+                    `;
+                    const list = container.querySelector('.home-public-list') || container;
+                    list.appendChild(div);
+                } else {
+                    div.innerHTML = roomHtml;
+                    container.appendChild(div);
+                }
+            });
         });
     }
 }

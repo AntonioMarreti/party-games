@@ -983,6 +983,10 @@ window.switchFriendsTab = switchFriendsTab;
 
 // === GAME HISTORY (NEW) ===
 async function openGameHistory() {
+    if (window.switchTab) {
+        window.switchTab('history');
+        return;
+    }
     if (window.showScreen) window.showScreen('history');
     await loadGameHistory();
 }
@@ -1003,7 +1007,7 @@ async function loadGameHistory() {
         loader.style.display = 'none';
 
         if (res.status === 'ok') {
-            const history = res.history || [];
+            const history = (res.history || []).filter(item => item.game_type !== 'lobby');
             if (history.length === 0) {
                 emptyState.style.display = 'block';
             } else {
@@ -1046,52 +1050,138 @@ function renderHistoryList(history, container) {
         'minesweeper_br': 'bi-patch-exclamation-fill text-secondary'
     };
 
-    const filteredHistory = history.filter(item => item.game_type !== 'lobby');
+    const formatHistoryDate = (value) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
 
-    filteredHistory.forEach(item => {
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        const sameDay = (a, b) => a.getFullYear() === b.getFullYear()
+            && a.getMonth() === b.getMonth()
+            && a.getDate() === b.getDate();
+
+        const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (sameDay(date, today)) return `Сегодня · ${time}`;
+        if (sameDay(date, yesterday)) return `Вчера · ${time}`;
+        return `${date.toLocaleDateString()} · ${time}`;
+    };
+
+    const escapeHistoryHtml = (value) => {
+        const stringValue = String(value ?? '');
+        return typeof window.safeHTML === 'function'
+            ? window.safeHTML(stringValue)
+            : stringValue.replace(/[&<>"']/g, (match) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[match]));
+    };
+
+    const escapeJsString = (value) => String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'");
+
+    window.currentHistoryItems = history;
+
+    history.forEach((item, index) => {
         const div = document.createElement('div');
-        div.className = 'history-card p-3 rounded-4 bg-white shadow-sm d-flex align-items-center mb-2 clickable';
+        div.className = 'history-game-card clickable';
         div.style.cursor = 'pointer';
         div.onclick = () => showGameDetailsModal(item, gameNames, gameIcons);
 
-        const dateObj = new Date(item.created_at);
-        const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateStr = formatHistoryDate(item.created_at);
 
         const gname = gameNames[item.game_type] || item.game_type;
-        const gicon = gameIcons[item.game_type] || 'bi-controller text-secondary';
+        const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
+            ? window.AVAILABLE_GAMES.find(game => game.id === item.game_type)
+            : null;
+        const iconClass = gameConfig?.icon || (gameIcons[item.game_type] || 'bi-controller').split(' ')[0];
+        const iconBg = gameConfig?.color || 'var(--primary-color)';
 
-        const score = item.final_score || 0;
-        const pos = item.final_position || '-';
+        const score = Number(item.final_score || 0);
+        const posValue = Number(item.final_position);
+        const pos = Number.isFinite(posValue) && item.final_position !== null ? posValue : '-';
+        const duration = Number(item.duration_seconds || 0);
+        const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
+        const playersText = item.players_count ? `${item.players_count} игроков` : '';
+        const winnerName = item.winner_name ? String(item.winner_name) : '';
+        const canReplay = Boolean(item.game_type)
+            && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
 
-        let posClass = 'text-muted';
         let rankBonus = 0;
-        if (pos === 1) { posClass = 'text-warning fw-bold'; rankBonus = 100; }
-        else if (pos === 2) { posClass = 'text-secondary fw-bold'; rankBonus = 50; }
-        else if (pos === 3) { posClass = 'text-danger fw-bold'; rankBonus = 20; }
+        if (pos === 1) { rankBonus = 100; }
+        else if (pos === 2) { rankBonus = 50; }
+        else if (pos === 3) { rankBonus = 20; }
 
         const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
         const xp = 20 + rankBonus + scoreBonus;
+        const resultIconHtml = pos === 1 ? '<i class="bi bi-trophy-fill history-result-inline-icon" aria-hidden="true"></i>' : '';
+        const resultText = pos === '-' ? `Счёт: ${score}` : `${pos} место · счёт: ${score}`;
+        const summaryText = winnerName
+            ? `${resultText} · победитель: ${winnerName}`
+            : resultText;
+        const dateMeta = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
 
         div.innerHTML = `
-            <div class="icon-wrap me-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: rgba(0,0,0,0.04);">
-                <i class="bi ${gicon} fs-4"></i>
+            <div class="history-game-main">
+                <div class="history-game-icon" style="background:${iconBg};">
+                    <i class="bi ${iconClass}"></i>
+                </div>
+                <div class="history-game-body">
+                    <div class="history-game-topline">
+                        <div class="history-game-title">${escapeHistoryHtml(gname)}</div>
+                        <div class="history-game-xp">+${xp} XP</div>
+                    </div>
+                    <div class="history-game-result">${resultIconHtml}${escapeHistoryHtml(summaryText)}</div>
+                    <div class="history-game-date">${escapeHistoryHtml(dateMeta)}</div>
+                </div>
             </div>
-            <div class="flex-grow-1">
-                <div class="fw-bold fs-6 mb-0">${gname}</div>
-                <div class="text-muted small" style="font-size: 11px;">${dateStr}</div>
-            </div>
-            <div class="text-end">
-                <div class="${posClass}" style="font-size: 14px;">Место: ${pos}</div>
-                <div class="small fw-bold text-success">+${xp} XP <span class="text-muted" style="font-size: 10px;">(счет: ${score})</span></div>
+            <div class="history-game-actions">
+                ${canReplay ? `<button type="button" class="btn-unstyled history-replay-btn" onclick="event.stopPropagation(); replayHistoryGame('${escapeJsString(item.game_type)}')">Сыграть ещё</button>` : ''}
+                <button type="button" class="btn-unstyled history-details-btn" onclick="event.stopPropagation(); showGameDetailsModalById('${index}')">
+                    Итоги <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
             </div>
         `;
+        div.dataset.historyIndex = String(index);
         container.appendChild(div);
     });
 }
 
+function replayHistoryGame(gameType) {
+    if (!gameType) return;
+    if (Array.isArray(window.AVAILABLE_GAMES) && !window.AVAILABLE_GAMES.some(game => game.id === gameType)) return;
+
+    window.selectedGameId = gameType;
+    const publicCheckbox = document.getElementById('create-room-public');
+    if (publicCheckbox) publicCheckbox.checked = false;
+
+    if (window.switchTab) window.switchTab('home');
+
+    const createTrigger = document.querySelector('[data-bs-target="#createModal"]');
+    if (createTrigger) {
+        createTrigger.click();
+    } else if (window.showModal) {
+        window.showModal('createModal');
+    }
+}
+
+function showGameDetailsModalById(historyId) {
+    const index = Number(historyId);
+    if (!Number.isInteger(index) || index < 0 || !window.currentHistoryItems) return;
+    showGameDetailsModal(window.currentHistoryItems[index]);
+}
+
 function showGameDetailsModal(item) {
-    const score = item.final_score || 0;
-    const pos = item.final_position || '-';
+    if (!item) return;
+
+    const score = Number(item.final_score || 0);
+    const posValue = Number(item.final_position);
+    const pos = Number.isFinite(posValue) && item.final_position !== null ? posValue : '-';
 
     let rankBonus = 0;
     if (pos === 1) rankBonus = 100;
@@ -1128,26 +1218,81 @@ function showGameDetailsModal(item) {
     };
 
     const gname = gameNames[item.game_type] || item.game_type;
-    const gicon = gameIcons[item.game_type] || 'bi-controller text-primary';
+    const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
+        ? window.AVAILABLE_GAMES.find(game => game.id === item.game_type)
+        : null;
+    const gicon = gameConfig?.icon || (gameIcons[item.game_type] || 'bi-controller').split(' ')[0];
+    const iconBg = gameConfig?.color || 'var(--primary-color)';
     const dateObj = new Date(item.created_at);
     const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const playersText = item.players_count ? `${item.players_count} игроков` : '';
+    const duration = Number(item.duration_seconds || 0);
+    const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
+    const metaText = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
+    const resultText = pos === '-' ? `Итог партии · счёт: ${score}` : `${pos} место · ${score} очков`;
+    const winnerName = item.winner_name ? String(item.winner_name) : '';
+    const outcomeText = winnerName
+        ? `Победитель: ${winnerName}`
+        : (pos === '-' ? 'Итоги партии' : `Ваш результат: ${pos} место`);
+    const resultBadge = pos === 1 ? 'Победа' : (pos === '-' ? 'Итог' : `${pos} место`);
+    const canReplay = Boolean(item.game_type)
+        && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
 
     if (window.safeText) {
-        window.safeText('xp-details-game', gname);
-        window.safeText('xp-details-date', dateStr);
-        window.safeText('xp-details-pos', pos);
-        window.safeText('xp-details-rank-bonus', '+' + rankBonus + ' XP');
-        window.safeText('xp-details-score-bonus', '+' + scoreBonus + ' XP');
-        window.safeText('xp-details-total', '+' + xp + ' XP');
-        window.safeText('xp-details-score-raw', '(' + score + ')');
+        window.safeText('history-details-title', gname);
+        window.safeText('history-details-meta', metaText);
+        window.safeText('history-details-result', resultText);
+        window.safeText('history-details-outcome', outcomeText);
+        window.safeText('history-details-badge', resultBadge);
+        window.safeText('history-details-xp', '+' + xp + ' XP');
+        window.safeText('history-details-rank-label', pos === '-' ? 'За место' : `За ${pos} место`);
+        window.safeText('history-details-rank-bonus', '+' + rankBonus + ' XP');
+        window.safeText('history-details-score-bonus', '+' + scoreBonus + ' XP');
     }
 
-    const iconEl = document.getElementById('xp-details-icon');
+    const iconWrap = document.getElementById('history-details-icon');
+    const iconEl = iconWrap?.querySelector('i');
+    if (iconWrap) iconWrap.style.background = iconBg;
     if (iconEl) {
-        iconEl.className = 'bi fs-1 ' + gicon; // Keep the color class defined in gameIcons
+        iconEl.className = 'bi ' + gicon;
     }
 
-    if (window.showModal) window.showModal('modal-xp-details');
+    const resultIconEl = document.getElementById('history-details-result-icon');
+    if (resultIconEl) {
+        resultIconEl.className = `bi ${pos === 1 ? 'bi-trophy-fill' : 'bi-flag-fill'} history-details-result-icon`;
+    }
+
+    const replayBtn = document.getElementById('history-details-replay');
+    const actionsEl = replayBtn?.closest('.history-details-actions');
+    if (replayBtn) {
+        replayBtn.style.display = canReplay ? '' : 'none';
+        replayBtn.dataset.gameType = item.game_type || '';
+    }
+    if (actionsEl) actionsEl.classList.toggle('single', !canReplay);
+
+    const sheet = document.getElementById('history-details-sheet');
+    if (sheet) {
+        document.body.classList.add('history-details-open');
+        sheet.classList.add('active');
+        sheet.setAttribute('aria-hidden', 'false');
+    }
+}
+
+function closeHistoryDetails() {
+    const sheet = document.getElementById('history-details-sheet');
+    if (sheet) {
+        sheet.classList.remove('active');
+        sheet.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('history-details-open');
+}
+
+function replayHistoryGameFromSheet(event) {
+    if (event) event.stopPropagation();
+    const replayBtn = document.getElementById('history-details-replay');
+    const gameType = replayBtn?.dataset.gameType;
+    closeHistoryDetails();
+    replayHistoryGame(gameType);
 }
 
 // Profile Aliases
@@ -1162,3 +1307,7 @@ window.selectEmoji = selectEmoji;
 window.selectColor = selectColor;
 window.openGameHistory = openGameHistory;
 window.loadGameHistory = loadGameHistory;
+window.replayHistoryGame = replayHistoryGame;
+window.showGameDetailsModalById = showGameDetailsModalById;
+window.closeHistoryDetails = closeHistoryDetails;
+window.replayHistoryGameFromSheet = replayHistoryGameFromSheet;

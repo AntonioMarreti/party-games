@@ -247,6 +247,12 @@ function action_db_doctor($pdo, $user, $data)
     $indices_stats = $pdo->query("SHOW INDEX FROM user_statistics")->fetchAll(PDO::FETCH_COLUMN, 2);
     if (!in_array('user_id', $indices_stats))
         $report['indices'][] = 'Missing index on user_statistics(user_id)';
+    if (!in_array('total_points_earned', $indices_stats))
+        $report['indices'][] = 'Missing index on user_statistics(total_points_earned, user_id)';
+
+    $indices_users = $pdo->query("SHOW INDEX FROM users")->fetchAll(PDO::FETCH_COLUMN, 2);
+    if (!in_array('is_hidden_in_leaderboard', $indices_users))
+        $report['indices'][] = 'Missing index on users(is_hidden_in_leaderboard, id)';
 
     // 5. Achievement Stats
     $report['achievements']['total_unlocked'] = $pdo->query("SELECT COUNT(*) FROM user_achievements")->fetchColumn();
@@ -323,6 +329,18 @@ function perform_db_repair($pdo)
         try {
             $pdo->exec("CREATE INDEX idx_stats_user ON user_statistics(user_id)");
             $fixes[] = "Added index idx_stats_user";
+        } catch (Exception $e) {
+        }
+
+        try {
+            $pdo->exec("CREATE INDEX idx_stats_points_user ON user_statistics(total_points_earned, user_id)");
+            $fixes[] = "Added index idx_stats_points_user";
+        } catch (Exception $e) {
+        }
+
+        try {
+            $pdo->exec("CREATE INDEX idx_users_hidden_id ON users(is_hidden_in_leaderboard, id)");
+            $fixes[] = "Added index idx_users_hidden_id";
         } catch (Exception $e) {
         }
 

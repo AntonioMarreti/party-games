@@ -1,0 +1,49 @@
+{
+  "imports": [
+    {
+      "source_path": "data/import/clean_comedy_ru.csv",
+      "mode": "joke",
+      "theme": "base",
+      "format": "csv",
+      "field": "text",
+      "profile": "joke_setup",
+      "preview_limit": 20,
+      "max_entries": 900,
+      "rebuild": false,
+      "output": "server/games/packs/partybattle/joke/base.json"
+    },
+    {
+      "source_path": "data/import/russian_jokes.txt",
+      "mode": "joke",
+      "theme": "base",
+      "format": "lines",
+      "profile": "joke_setup",
+      "preview_limit": 20,
+      "max_entries": 900,
+      "rebuild": false,
+      "output": "server/games/packs/partybattle/joke/base.json"
+    },
+    {
+      "source_path": "data/import/russian_jokes.txt",
+      "mode": "advice",
+      "theme": "base",
+      "format": "lines",
+      "profile": "advice_prompt",
+      "preview_limit": 20,
+      "max_entries": 180,
+      "rebuild": false,
+      "output": "server/games/packs/partybattle/advice/base.json"
+    },
+    {
+      "source_path": "data/import/russian_jokes.txt",
+      "mode": "meme",
+      "theme": "base",
+      "format": "lines",
+      "profile": "meme_prompt",
+      "preview_limit": 20,
+      "max_entries": 80,
+      "rebuild": false,
+      "output": "server/games/packs/partybattle/meme/base.json"
+    }
+  ]
+}

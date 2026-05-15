@@ -1,8 +1,10 @@
 class AudioManager {
     constructor() {
+        // Temporarily hard-disable in-app sounds until the sound pack is replaced.
+        this.forceDisabled = true;
         // Default to true if not explicitly set to false
         const stored = localStorage.getItem('audio_enabled');
-        this.enabled = stored === null ? true : stored === 'true';
+        this.enabled = this.forceDisabled ? false : (stored === null ? true : stored === 'true');
         this.sounds = {};
         this.basePath = 'sounds/';
         this.unlocked = false;
@@ -51,10 +53,14 @@ class AudioManager {
             'ambient_glass': 'glass_004.ogg'
         };
 
-        this.preload();
+        if (!this.forceDisabled) {
+            this.preload();
+        }
     }
 
     preload() {
+        if (this.forceDisabled) return;
+
         for (const [key, file] of Object.entries(this.library)) {
             const audio = new Audio(this.basePath + file);
             audio.preload = 'auto'; // Force browser to start downloading
@@ -67,6 +73,7 @@ class AudioManager {
 
     // Modern browsers require a user gesture to start audio
     async unlock() {
+        if (this.forceDisabled) return;
         if (this.unlocked) return;
 
         // Play a silent buffer to unlock
@@ -81,6 +88,7 @@ class AudioManager {
     }
 
     async play(key) {
+        if (this.forceDisabled) return;
         if (!this.enabled) return;
 
         const sound = this.sounds[key];
@@ -99,6 +107,12 @@ class AudioManager {
     }
 
     toggle(state) {
+        if (this.forceDisabled) {
+            this.enabled = false;
+            localStorage.setItem('audio_enabled', 'false');
+            return false;
+        }
+
         if (typeof state === 'boolean') {
             this.enabled = state;
         } else {

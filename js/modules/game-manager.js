@@ -591,58 +591,139 @@ function renderLibrary() {
     });
 }
 
-const HOME_GAMES_LIMIT = 5;
+const HOME_GAME_RECOMMENDATIONS = {
+    company: ['bunker', 'partybattle', 'brainbattle', 'spyfall'],
+    duo: ['tictactoe_ultimate', 'tictactoe', 'blokus', 'wordclash', 'backgammon_game'],
+    solo: ['brainbattle', 'minesweeper_br', 'wordclash']
+};
+
+const HOME_GAME_COPY = {
+    bunker: {
+        description: 'Роли, споры и выживание',
+        players: '4-8 игроков',
+        time: '25-40 мин'
+    },
+    partybattle: {
+        description: 'Голосования и смешные вопросы',
+        players: '3-8 игроков',
+        time: '10-15 мин'
+    },
+    brainbattle: {
+        description: 'Быстрые вопросы на эрудицию',
+        players: '1-6 игроков',
+        time: '5-10 мин'
+    },
+    tictactoe_ultimate: {
+        description: 'Стратегическая дуэль на поле 9x9',
+        players: '2 игрока',
+        time: '5-15 мин'
+    },
+    tictactoe: {
+        description: 'Классическая быстрая дуэль',
+        players: '2 игрока',
+        time: '1-3 мин'
+    },
+    blokus: {
+        description: 'Настольная стратегия на двоих',
+        players: '2-4 игрока',
+        time: '10-20 мин'
+    },
+    wordclash: {
+        description: 'Словесная дуэль на скорость',
+        players: '2 игрока',
+        time: '5-10 мин'
+    },
+    backgammon_game: {
+        description: 'Классическая партия на двоих',
+        players: '2 игрока',
+        time: '10-20 мин'
+    },
+    minesweeper_br: {
+        description: 'Быстрый режим на внимательность',
+        players: '1 игрок',
+        time: '3-8 мин'
+    },
+    spyfall: {
+        description: 'Найди шпиона среди своих',
+        players: '3-10 игроков',
+        time: '8-15 мин'
+    }
+};
+
+let homeGameFilter = 'company';
+
+function getHomeRecommendedGames() {
+    if (!window.AVAILABLE_GAMES) return [];
+
+    const ids = HOME_GAME_RECOMMENDATIONS[homeGameFilter] || HOME_GAME_RECOMMENDATIONS.company;
+    const selected = ids
+        .map(id => window.AVAILABLE_GAMES.find(game => game.id === id))
+        .filter(Boolean);
+
+    if (selected.length > 0) return selected;
+    return window.AVAILABLE_GAMES.slice(0, 4);
+}
+
+function bindHomeGameFilters() {
+    const filters = document.querySelectorAll('[data-home-game-filter]');
+    filters.forEach(btn => {
+        if (btn.dataset.bound === 'true') return;
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', () => {
+            homeGameFilter = btn.getAttribute('data-home-game-filter') || 'company';
+            filters.forEach(item => item.classList.toggle('active', item === btn));
+            renderPopularGames();
+            if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection', 'light');
+        });
+    });
+}
 
 function renderPopularGames() {
     const list = document.getElementById('popular-games-list');
     if (!list) return;
 
     list.innerHTML = '';
+    bindHomeGameFilters();
+
     if (!window.AVAILABLE_GAMES) {
         console.warn('renderPopularGames: No games available');
         return;
     }
 
-    // Show first N games on home grid
-    const gamesToShow = window.AVAILABLE_GAMES.slice(0, HOME_GAMES_LIMIT);
+    const gamesToShow = getHomeRecommendedGames().slice(0, 2);
 
     gamesToShow.forEach(game => {
-        const card = document.createElement('div');
-        card.className = 'mini-game-card clickable';
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'btn-unstyled recommended-game-card clickable';
         card.onclick = () => openGameShowcase(game.id);
 
         const iconColor = game.color || '#6c757d';
-        const gradient = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
-
-        // Favorites Check
-        const isLiked = window.userFavorites && window.userFavorites.includes(game.id);
-        const heartClass = isLiked ? 'bi-heart-fill text-danger' : 'bi-heart';
+        const safeName = window.safeHTML ? window.safeHTML(game.name) : game.name;
+        const display = HOME_GAME_COPY[game.id] || {};
+        const safeDescription = window.safeHTML
+            ? window.safeHTML(display.description || game.description || '')
+            : (display.description || game.description || '');
+        const players = display.players || (game.stats && game.stats.players ? game.stats.players : '2+');
+        const time = display.time || (game.stats && game.stats.time ? game.stats.time : '10-20 мин');
 
         card.innerHTML = `
-            <div class="mini-icon-box" style="background-color: ${iconColor};">
+            <div class="recommended-game-icon" style="background-color: ${iconColor};">
                 <i class="bi ${game.icon || 'bi-controller'}"></i>
             </div>
-            <div class="mini-game-title">${game.name}</div>
-            <!-- Like Button (Floating) -->
-            <div class="position-absolute top-0 end-0 p-1" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)" data-like-game-id="${game.id}">
-                <i class="bi ${heartClass}" style="font-size:12px; color: ${isLiked ? '#dc3545' : 'rgba(0,0,0,0.2)'}"></i>
+            <div class="recommended-game-body">
+                <div class="recommended-game-name">${safeName}</div>
+                <div class="recommended-game-desc">${safeDescription}</div>
+                <div class="recommended-game-meta">
+                    <span><i class="bi bi-people-fill"></i>${players}</span>
+                    <span><i class="bi bi-clock-fill"></i>${time}</span>
+                </div>
             </div>
+            <i class="bi bi-chevron-right text-muted flex-shrink-0"></i>
         `;
         list.appendChild(card);
     });
 
-    // 6th cell: "All Games" button
-    const allBtn = document.createElement('button');
-    allBtn.className = 'show-all-games-btn';
-    allBtn.onclick = () => openGameCatalog();
-    const gradient = 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%)';
-    allBtn.innerHTML = `
-        <div style="width: 34px; height: 34px; background: var(--primary-color); background-image: ${gradient}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; pointer-events: none; color: white;">
-            <i class="bi bi-grid-3x3-gap" style="font-size: 16px;"></i>
-        </div>
-        <div style="font-size: 10px; font-weight: 600; color: var(--text-main); pointer-events: none;">Все игры</div>
-    `;
-    list.appendChild(allBtn);
 }
 
 function renderAllGames(category = 'all') {

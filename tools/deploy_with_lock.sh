@@ -4,9 +4,9 @@ set -euo pipefail
 # Safe live deploy for the current SFTP-based workflow.
 # What it does:
 # 1. Optionally bumps asset/app version.
-# 2. Creates server/deploy.lock on remote.
-# 3. Syncs local project to remote via rsync.
-# 4. Removes deploy.lock even if sync fails.
+# 2. Runs a small local preflight.
+# 3. Syncs local project to remote via rsync with web-readable permissions.
+# 4. Verifies critical remote files exist and are readable.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SFTP_CONFIG="$ROOT_DIR/.vscode/sftp.json"
@@ -15,7 +15,8 @@ BUMP_VERSION=0
 usage() {
   cat <<'EOF'
 Usage:
-  tools/deploy_with_lock.sh [--bump]
+  tools/deploy.sh [--bump]
+  tools/deploy_with_lock.sh [--bump]  # compatibility alias; no lock is used
 
 Options:
   --bump    Run tools/bump-version.js before deploy
@@ -65,6 +66,18 @@ if [[ "$BUMP_VERSION" -eq 1 ]]; then
   node "$ROOT_DIR/tools/bump-version.js"
 fi
 
+echo "Running local preflight"
+php -l "$ROOT_DIR/index.php" >/dev/null
+php -l "$ROOT_DIR/server/api.php" >/dev/null
+php -l "$ROOT_DIR/layout/head.php" >/dev/null
+php -l "$ROOT_DIR/layout/scripts.php" >/dev/null
+node --check "$ROOT_DIR/js/app.js" >/dev/null
+node --check "$ROOT_DIR/js/modules/api-manager.js" >/dev/null
+node --check "$ROOT_DIR/js/modules/room-manager.js" >/dev/null
+if [[ -f "$ROOT_DIR/js/modules/game-summary-provider.js" ]]; then
+  node --check "$ROOT_DIR/js/modules/game-summary-provider.js" >/dev/null
+fi
+
 CONFIG_OUTPUT="$(
   node -e "
     const fs = require('fs');
@@ -99,17 +112,12 @@ if [[ -z "$HOST" || -z "$USERNAME" || -z "$PRIVATE_KEY_PATH" || -z "$REMOTE_PATH
 fi
 
 SSH_TARGET="$USERNAME@$HOST"
-REMOTE_LOCK_PATH="${REMOTE_PATH%/}/server/deploy.lock"
 SSH_OPTS=(-i "$PRIVATE_KEY_PATH" -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 EXCLUDES_FILE="$(mktemp)"
-LOCK_CREATED=0
 
 cleanup() {
   rm -f "$EXCLUDES_FILE"
-  if [[ "$LOCK_CREATED" -eq 1 ]]; then
-    ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "rm -f '$REMOTE_LOCK_PATH'" >/dev/null 2>&1 || true
-  fi
 }
 trap cleanup EXIT
 
@@ -117,19 +125,54 @@ for pattern in "${IGNORE_PATTERNS[@]}"; do
   [[ -n "$pattern" ]] && printf '%s\n' "$pattern" >> "$EXCLUDES_FILE"
 done
 
-echo "Creating deploy lock: $REMOTE_LOCK_PATH"
-ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "mkdir -p '$(dirname "$REMOTE_LOCK_PATH")' && : > '$REMOTE_LOCK_PATH'"
-LOCK_CREATED=1
+# VS Code SFTP glob syntax is not the same as rsync exclude syntax.
+# Keep explicit rsync-safe excludes here so deploy never publishes repo/dev metadata.
+cat >> "$EXCLUDES_FILE" <<'EOF'
+.git/
+.git/**
+.vscode/
+.vscode/**
+.agents/
+.agents/**
+.DS_Store
+node_modules/
+node_modules/**
+venv/
+venv/**
+.venv/
+.venv/**
+logs/
+logs/**
+EOF
 
 echo "Syncing project to $SSH_TARGET:$REMOTE_PATH"
 rsync -az \
-  --update \
+  --checksum \
+  --human-readable \
+  --itemize-changes \
+  --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
   --exclude-from="$EXCLUDES_FILE" \
   -e "$RSYNC_RSH" \
   "$ROOT_DIR/" "$SSH_TARGET:$REMOTE_PATH/"
 
-echo "Removing deploy lock"
-ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "rm -f '$REMOTE_LOCK_PATH'"
-LOCK_CREATED=0
+echo "Fixing remote file permissions"
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "find '$REMOTE_PATH' -type d -exec chmod 755 {} + && find '$REMOTE_PATH' -type f -exec chmod 644 {} +"
+
+echo "Verifying critical remote files"
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "
+  set -e
+  test -r '${REMOTE_PATH%/}/index.php'
+  test -r '${REMOTE_PATH%/}/server/api.php'
+  test -r '${REMOTE_PATH%/}/js/app.js'
+  test -r '${REMOTE_PATH%/}/js/modules/api-manager.js'
+  test -r '${REMOTE_PATH%/}/libs/bootstrap.part1.min.css'
+  test -r '${REMOTE_PATH%/}/libs/bootstrap.part2.min.css'
+  test -r '${REMOTE_PATH%/}/libs/bootstrap-icons.css'
+  test -r '${REMOTE_PATH%/}/libs/fonts/bootstrap-icons.woff2'
+  test -r '${REMOTE_PATH%/}/libs/fonts/bootstrap-icons.woff'
+  test -r '${REMOTE_PATH%/}/favicon.png'
+  test ! -e '${REMOTE_PATH%/}/.git'
+  rm -f '${REMOTE_PATH%/}/server/deploy.lock'
+"
 
 echo "Deploy sync complete"

@@ -1337,7 +1337,7 @@ function pb_searchGifResults($query, $count = 12)
     $normalized = pb_normalizeGifQuery($query);
     try {
         $data = $gifProvider->search($normalized, $count);
-        return $data['results'] ?? [];
+        return pb_filterUsableGifResults($data['results'] ?? []);
     } catch (Exception $e) {
         pb_logDebug('partybattle_gif_provider_fail', [
             'query' => $query,
@@ -1367,6 +1367,37 @@ function pb_searchFallbackGifs()
         }
     }
     return $pool;
+}
+
+function pb_filterUsableGifResults($results)
+{
+    $filtered = [];
+    foreach ((array) $results as $gif) {
+        if (!is_array($gif)) {
+            continue;
+        }
+
+        $gifUrl = trim((string) ($gif['media_formats']['gif']['url'] ?? $gif['url'] ?? ''));
+        $previewUrl = trim((string) ($gif['media_formats']['tinygif']['url'] ?? $gif['preview'] ?? $gifUrl));
+        if ($gifUrl === '' || $previewUrl === '') {
+            continue;
+        }
+
+        if (!preg_match('#^https?://#i', $gifUrl) || !preg_match('#^https?://#i', $previewUrl)) {
+            continue;
+        }
+
+        $gif['url'] = $gifUrl;
+        $gif['preview'] = $previewUrl;
+        if (!isset($gif['media_formats']) || !is_array($gif['media_formats'])) {
+            $gif['media_formats'] = [];
+        }
+        $gif['media_formats']['gif']['url'] = $gifUrl;
+        $gif['media_formats']['tinygif']['url'] = $previewUrl;
+        $filtered[] = $gif;
+    }
+
+    return $filtered;
 }
 
 function pb_mergeGifPools($base, $extra)
@@ -1488,6 +1519,9 @@ function pb_getPartyBattlePackRegistry()
         'advice' => [
             'base' => [$root . '/partybattle/advice/base.json'],
             '18plus' => [$root . '/partybattle/advice/18plus.json'],
+            'office' => [$root . '/partybattle/advice/office.json'],
+            'party' => [$root . '/partybattle/advice/party.json'],
+            'relationships' => [$root . '/partybattle/advice/relationships.json'],
         ],
         'acronym' => [
             'base' => [$root . '/partybattle/acronym/base.json'],
@@ -1499,6 +1533,9 @@ function pb_getPartyBattlePackRegistry()
         'bluff' => [
             'base' => [$root . '/partybattle/bluff/base.json'],
             '18plus' => [$root . '/partybattle/bluff/18plus.json'],
+            'body' => [$root . '/partybattle/bluff/body.json'],
+            'history' => [$root . '/partybattle/bluff/history.json'],
+            'weird_facts' => [$root . '/partybattle/bluff/weird_facts.json'],
         ],
         'whoami' => [
             'base' => [$root . '/partybattle/whoami/base.json'],

@@ -47,20 +47,51 @@ class GiphyProvider implements GifProviderInterface
         // Transform to Klipy-compatible format
         $results = [];
         foreach ($data['data'] ?? [] as $gif) {
+            $originalUrl = $this->normalizeGiphyAssetUrl(
+                $gif['images']['original']['url']
+                ?? $gif['images']['downsized_large']['url']
+                ?? ''
+            );
+            $previewUrl = $this->normalizeGiphyAssetUrl(
+                $gif['images']['fixed_height_small']['url']
+                ?? $gif['images']['preview_gif']['url']
+                ?? $gif['images']['fixed_height']['url']
+                ?? ''
+            );
+
             $results[] = [
                 'id' => $gif['id'],
-                'url' => $gif['images']['original']['url'],
-                'preview' => $gif['images']['preview_gif']['url'] ?? $gif['images']['fixed_height']['url'],
+                'url' => $originalUrl,
+                'preview' => $previewUrl ?: $originalUrl,
                 'title' => $gif['title'] ?? '',
                 'source' => 'giphy',
                 'media_formats' => [
-                    'tinygif' => ['url' => $gif['images']['fixed_height_small']['url'] ?? $gif['images']['preview_gif']['url']],
-                    'gif' => ['url' => $gif['images']['original']['url']]
+                    'tinygif' => ['url' => $previewUrl],
+                    'gif' => ['url' => $originalUrl]
                 ]
             ];
         }
 
         return ['results' => $results];
+    }
+
+    private function normalizeGiphyAssetUrl($url)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('#https?://(?:media\d*|media)\.giphy\.com/media/([^/]+)/#i', $url, $matches)) {
+            $path = parse_url($url, PHP_URL_PATH) ?: '';
+            $filename = basename($path);
+            if ($filename !== '') {
+                return 'https://i.giphy.com/media/' . $matches[1] . '/' . $filename;
+            }
+            return 'https://i.giphy.com/media/' . $matches[1] . '/giphy.gif';
+        }
+
+        return $url;
     }
 }
 

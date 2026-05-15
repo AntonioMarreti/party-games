@@ -171,10 +171,13 @@ function action_get_leaderboard($pdo, $user, $data)
                 FROM user_statistics s
                 JOIN users u ON u.id = s.user_id
                 WHERE u.is_hidden_in_leaderboard = 0
-                ORDER BY s.total_points_earned DESC
-                LIMIT $limit
+                ORDER BY s.total_points_earned DESC, s.user_id ASC
+                LIMIT ?
             ";
-            $board = $pdo->query($sql)->fetchAll();
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $board = $stmt->fetchAll();
             foreach ($board as &$entry) {
                 $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0); // Note: verify if total_points_earned is selected
             }
@@ -198,11 +201,15 @@ function action_get_leaderboard($pdo, $user, $data)
                 FROM user_statistics s
                 JOIN users u ON u.id = s.user_id
                 WHERE s.user_id IN ($placeholders)
-                ORDER BY s.total_points_earned DESC
-                LIMIT $limit
+                ORDER BY s.total_points_earned DESC, s.user_id ASC
+                LIMIT ?
             ";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($fids);
+            foreach ($fids as $index => $fid) {
+                $stmt->bindValue($index + 1, (int) $fid, PDO::PARAM_INT);
+            }
+            $stmt->bindValue(count($fids) + 1, $limit, PDO::PARAM_INT);
+            $stmt->execute();
             $board = $stmt->fetchAll();
             foreach ($board as &$entry) {
                 $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0);
@@ -263,8 +270,15 @@ function action_get_history($pdo, $user, $data)
 
     try {
         $stmt = $pdo->prepare("
-            SELECT gh.id, gh.game_type, gh.duration_seconds, gh.created_at, 
-                   ghp.final_position, ghp.final_score
+            SELECT gh.id, gh.game_type, gh.duration_seconds, gh.created_at, gh.players_count,
+                   ghp.final_position, ghp.final_score,
+                   (
+                       SELECT GROUP_CONCAT(COALESCE(NULLIF(u.custom_name, ''), u.first_name) SEPARATOR ', ')
+                       FROM game_history_players winners
+                       JOIN users u ON u.id = winners.user_id
+                       WHERE winners.game_history_id = gh.id
+                         AND winners.final_position = 1
+                   ) AS winner_name
             FROM game_history_players ghp
             JOIN game_history gh ON gh.id = ghp.game_history_id
             WHERE ghp.user_id = ?

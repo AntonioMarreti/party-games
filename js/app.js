@@ -53,7 +53,8 @@ function closeSettingsScreen() {
 
 // === INITIALIZATION ===
 document.addEventListener('DOMContentLoaded', async () => {
-    // Splash Screen Failsafe: if nothing happens for 7s, force transition
+    // Splash Screen Failsafe: starts after DOMContentLoaded, so give slow networks time
+    // to finish parsing before forcing a fallback screen.
     const splashTimeout = setTimeout(() => {
         const splash = document.getElementById('screen-splash');
         if (splash && splash.classList.contains('active-screen')) {
@@ -64,12 +65,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tg_data_len: window.Telegram?.WebApp?.initData?.length || 0,
                     scripts: Array.from(document.scripts).map(s => s.src || 'inline').filter(s => s.includes('telegram') || s.includes('api-manager') || s.includes('auth-manager'))
                 };
-                window.logClientError("Splash Timeout (7s)", "App failed to load initial state within 7 seconds.", diag);
+                window.logClientError("Splash Timeout (20s)", "App failed to load initial state within 20 seconds after DOMContentLoaded.", diag);
             }
             if (window.showScreen) window.showScreen('login');
             if (window.showAlert) window.showAlert("Медленное соединение", "Приложение загружается дольше обычного. Попробуйте войти вручную.", "warning");
         }
-    }, 7000);
+    }, 20000);
 
     const AVAILABLE_GAMES = window.AVAILABLE_GAMES;
     if (AVAILABLE_GAMES && AVAILABLE_GAMES.length > 0) {
@@ -223,6 +224,7 @@ window.addEventListener('tabChanged', (e) => {
         if (typeof loadLeaderboardList === 'function') loadLeaderboardList('global');
     } else if (tabId === 'games') {
         if (window.renderLibrary) window.renderLibrary();
+        if (window.loadPublicRooms) window.loadPublicRooms();
     }
 
     // Per user request, keep applying color to ensure header updates correctly.

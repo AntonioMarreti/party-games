@@ -9,10 +9,12 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Party Games</title>
+    <link rel="icon" type="image/png" href="favicon.png?v=<?php echo $v; ?>">
 
     <!-- Libs -->
-    <link rel="stylesheet" href="libs/bootstrap.min.css?v=<?php echo $v; ?>">
-    <link rel="stylesheet" href="libs/bootstrap-icons.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="libs/bootstrap.part1.min.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="libs/bootstrap.part2.min.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="libs/animate.min.css?v=<?php echo $v; ?>">
 
     <!-- Custom CSS -->

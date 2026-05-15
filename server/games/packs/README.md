@@ -64,6 +64,10 @@ Useful importer flags:
 - `--preview-limit=N`: show top accepted candidates by score
 - `--rebuild`: rebuild the target pack from the filtered source instead of only merging new rows into existing entries
 
+JSON note:
+
+- if the source contains full structured rows (for example `bluff` facts with `text + truth`), use `field=__raw` so importer receives the whole object instead of just one field.
+
 Parquet note:
 
 - `format=parquet` uses the local project virtualenv at `.venv/bin/python` when available;
@@ -82,7 +86,7 @@ Coverage snapshot:
 
 - `advice`
   Themes: `base`, `18plus`, `office`, `relationships`, `party`
-  Gaps: baseline thematic coverage is good
+  Gaps: themes are present; next step is extending themed depth and building a stronger importer path for awkward бытовые вопросы
 
 - `acronym`
   Themes: `base`, `18plus`
@@ -94,7 +98,7 @@ Coverage snapshot:
 
 - `bluff`
   Themes: `base`, `18plus`, `weird_facts`, `history`, `body`
-  Gaps: baseline thematic coverage is good
+  Gaps: themes are present; next step is expanding fact count and curating for consistency
 
 - `whoami`
   Themes: `base`, `18plus`, `cinema`, `friendship`, `office`, `party`, `provocative`

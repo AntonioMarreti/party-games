@@ -255,8 +255,17 @@ function pb_loadJsonl(string $sourcePath, string $field): array
     $items = [];
     foreach (pb_loadLines($sourcePath) as $line) {
         $row = json_decode((string) $line, true);
-        if (is_array($row) && isset($row[$field])) {
+        if (!is_array($row)) {
+            continue;
+        }
+        if ($field === '__raw') {
+            $items[] = $row;
+            continue;
+        }
+        if (isset($row[$field])) {
             $items[] = $row[$field];
+        } else {
+            $items[] = $row;
         }
     }
     return $items;
@@ -275,8 +284,17 @@ function pb_loadJsonArray(string $sourcePath, string $field): array
             $items[] = $row;
             continue;
         }
-        if (is_array($row) && isset($row[$field])) {
+        if (!is_array($row)) {
+            continue;
+        }
+        if ($field === '__raw') {
+            $items[] = $row;
+            continue;
+        }
+        if (isset($row[$field])) {
             $items[] = $row[$field];
+        } else {
+            $items[] = $row;
         }
     }
     return $items;
@@ -456,6 +474,7 @@ function pb_normalizeImportedItem(string $mode, string $theme, $item, bool $trus
         } elseif (is_array($item)) {
             $url = trim((string) ($item['media_url'] ?? ''));
         }
+        $url = pb_normalizeImportCaptionUrl($url);
         if ($url === '') {
             return null;
         }
@@ -512,6 +531,25 @@ function pb_normalizeImportedItem(string $mode, string $theme, $item, bool $trus
         'text' => $text,
         'tags' => pb_normalizeTags($tags),
     ];
+}
+
+function pb_normalizeImportCaptionUrl(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+
+    if (preg_match('#https?://(?:media\d*|media)\.giphy\.com/media/([^/]+)/#i', $url, $matches)) {
+        $path = parse_url($url, PHP_URL_PATH) ?: '';
+        $filename = basename($path);
+        if ($filename !== '') {
+            return 'https://i.giphy.com/media/' . $matches[1] . '/' . $filename;
+        }
+        return 'https://i.giphy.com/media/' . $matches[1] . '/giphy.gif';
+    }
+
+    return $url;
 }
 
 function pb_passesTextFilters(string $mode, string $text, string $profile): bool

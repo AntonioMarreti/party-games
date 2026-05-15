@@ -1,0 +1,16 @@
+{
+  "imports": [
+    {
+      "source_path": "data/import/advice_ru_qna_candidates.json",
+      "mode": "advice",
+      "theme": "base",
+      "format": "json_array",
+      "field": "__raw",
+      "profile": "advice_question",
+      "preview_limit": 24,
+      "max_entries": 260,
+      "rebuild": false,
+      "output": "server/games/packs/partybattle/advice/base.json"
+    }
+  ]
+}

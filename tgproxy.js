@@ -8,40 +8,60 @@ export default {
       return new Response("Missing Worker secrets", { status: 500 });
     }
 
-    const url = new URL(request.url);
-    const path = url.pathname.replace(/^\//, "");
+    try {
+      const url = new URL(request.url);
+      const path = url.pathname.replace(/^\//, "");
 
-    if (path === webhookSecret) {
-      if (request.method !== "POST") {
-        return new Response("Method Not Allowed", { status: 405 });
+      // Webhook route
+      if (path === webhookSecret) {
+        if (request.method !== "POST") {
+          return new Response("Method Not Allowed", { status: 405 });
+        }
+
+        const body = await request.arrayBuffer();
+        const headers = new Headers(request.headers);
+        headers.delete("host");
+        headers.set("Host", new URL(targetUrl).hostname);
+
+        return fetch(targetUrl, {
+          method: "POST",
+          headers,
+          body,
+          timeout: 30000
+        });
       }
 
-      const body = await request.arrayBuffer();
-      const headers = new Headers(request.headers);
-      headers.set("Host", new URL(targetUrl).hostname);
+      // Telegram API proxy
+      if (url.pathname.startsWith("/bot")) {
+        url.hostname = "api.telegram.org";
+        
+        const headers = new Headers(request.headers);
+        headers.delete("host");
+        headers.set("Host", "api.telegram.org");
+        headers.set("User-Agent", "TelegramBot");
+        
+        const body = request.method !== "GET" && request.method !== "HEAD" 
+          ? await request.arrayBuffer() 
+          : null;
 
-      return fetch(targetUrl, {
-        method: "POST",
-        headers,
-        body
-      });
+        const proxiedRequest = new Request(url.toString(), {
+          method: request.method,
+          headers,
+          body,
+          redirect: "follow",
+          cf: {
+            mirage: false,
+            minify: { javascript: false, css: false, html: false }
+          }
+        });
+
+        return fetch(proxiedRequest);
+      }
+
+      return new Response("Not Found", { status: 404 });
+
+    } catch (error) {
+      return new Response(`Error: ${error.message}`, { status: 500 });
     }
-
-    if (url.pathname.startsWith("/bot")) {
-      url.hostname = "api.telegram.org";
-      const upstreamPath = url.pathname.replace("/bot" + botToken, "");
-      url.pathname = "/bot" + botToken + upstreamPath;
-
-      const proxiedRequest = new Request(url.toString(), {
-        method: request.method,
-        headers: request.headers,
-        body: request.method !== "GET" && request.method !== "HEAD" ? await request.arrayBuffer() : null,
-        redirect: "follow"
-      });
-
-      return fetch(proxiedRequest);
-    }
-
-    return new Response("Not Found", { status: 404 });
   }
 };
