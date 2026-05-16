@@ -1023,6 +1023,26 @@ async function loadGameHistory() {
     }
 }
 
+function buildHistoryResultText(item, pos, score) {
+    const isWin = pos === 1;
+    const scoreText = `${score} очков`;
+    const placeText = pos === '-' ? 'Итог партии' : (isWin ? 'Победа' : `${pos} место`);
+    const labels = {
+        partybattle: isWin ? 'Лучший в Party Battle' : 'Party Battle',
+        brainbattle: isWin ? 'Чемпион турнира' : 'Мозговая Битва',
+        wordclash: isWin ? 'Победа в словесной дуэли' : 'Битва слов',
+        bunker: isWin ? 'Выжил в бункере' : 'Итог выживания',
+        spyfall: isWin ? 'Победа в Шпионе' : 'Раунд Шпиона',
+        tictactoe: isWin ? 'Победа в дуэли' : 'Крестики-нолики',
+        tictactoe_ultimate: isWin ? 'Победа в большой дуэли' : 'Ultimate-дуэль',
+        blokus: isWin ? 'Лучший контроль поля' : 'Стратегия на поле',
+        minesweeper_br: isWin ? 'Последний сапёр' : 'Сапёрский забег',
+        backgammon_game: isWin ? 'Победа в нардах' : 'Партия в нарды'
+    };
+    const label = labels[item?.game_type] || placeText;
+    return `${label} · ${scoreText}`;
+}
+
 function renderHistoryList(history, container) {
     const gameNames = {
         'bunker': 'Бункер',
@@ -1108,7 +1128,6 @@ function renderHistoryList(history, container) {
         const duration = Number(item.duration_seconds || 0);
         const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
         const playersText = item.players_count ? `${item.players_count} игроков` : '';
-        const winnerName = item.winner_name ? String(item.winner_name) : '';
         const canReplay = Boolean(item.game_type)
             && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
 
@@ -1119,11 +1138,7 @@ function renderHistoryList(history, container) {
 
         const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
         const xp = 20 + rankBonus + scoreBonus;
-        const resultIconHtml = pos === 1 ? '<i class="bi bi-trophy-fill history-result-inline-icon" aria-hidden="true"></i>' : '';
-        const resultText = pos === '-' ? `Счёт: ${score}` : `${pos} место · счёт: ${score}`;
-        const summaryText = winnerName
-            ? `${resultText} · победитель: ${winnerName}`
-            : resultText;
+        const resultText = buildHistoryResultText(item, pos, score);
         const dateMeta = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
 
         div.innerHTML = `
@@ -1136,7 +1151,7 @@ function renderHistoryList(history, container) {
                         <div class="history-game-title">${escapeHistoryHtml(gname)}</div>
                         <div class="history-game-xp">+${xp} XP</div>
                     </div>
-                    <div class="history-game-result">${resultIconHtml}${escapeHistoryHtml(summaryText)}</div>
+                    <div class="history-game-result">${escapeHistoryHtml(resultText)}</div>
                     <div class="history-game-date">${escapeHistoryHtml(dateMeta)}</div>
                 </div>
             </div>
@@ -1156,9 +1171,18 @@ function replayHistoryGame(gameType) {
     if (!gameType) return;
     if (Array.isArray(window.AVAILABLE_GAMES) && !window.AVAILABLE_GAMES.some(game => game.id === gameType)) return;
 
+    window.pendingReplayFlow = {
+        sourceTab: 'history',
+        gameType,
+        completed: false
+    };
+
     window.selectedGameId = gameType;
     const publicCheckbox = document.getElementById('create-room-public');
     if (publicCheckbox) publicCheckbox.checked = false;
+
+    const titleEl = document.getElementById('create-modal-title');
+    if (titleEl) titleEl.innerText = 'Сыграть ещё';
 
     if (window.switchTab) window.switchTab('home');
 
@@ -1242,7 +1266,7 @@ function showGameDetailsModal(item) {
     const duration = Number(item.duration_seconds || 0);
     const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
     const metaText = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
-    const resultText = pos === '-' ? `Итог партии · счёт: ${score}` : `${pos} место · ${score} очков`;
+    const resultText = buildHistoryResultText(item, pos, score);
     const winnerName = item.winner_name ? String(item.winner_name) : '';
     const outcomeText = winnerName
         ? `Победитель: ${winnerName}`
@@ -1258,7 +1282,7 @@ function showGameDetailsModal(item) {
         window.safeText('history-details-outcome', outcomeText);
         window.safeText('history-details-badge', resultBadge);
         window.safeText('history-details-xp', '+' + xp + ' XP');
-        window.safeText('history-details-rank-label', pos === '-' ? 'За место' : `За ${pos} место`);
+        window.safeText('history-details-rank-label', pos === '-' ? 'За результат' : (pos === 1 ? 'За победу' : `За ${pos} место`));
         window.safeText('history-details-rank-bonus', '+' + rankBonus + ' XP');
         window.safeText('history-details-score-bonus', '+' + scoreBonus + ' XP');
     }

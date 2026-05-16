@@ -1,9 +1,21 @@
 /**
  * Shared post-game summary and Telegram sharing helpers.
  *
- * Each game can register a provider with:
- * - buildSummary(gameState, context)
- * - playAgain(gameState, context)
+ * Game modules can register a provider:
+ * GameSummaryProvider.register('game_id', {
+ *   buildSummary(gameState, context) {
+ *     return {
+ *       gameId: 'game_id',
+ *       gameTitle: 'Game title',
+ *       participants: [{ id, name }],
+ *       winner: { id, name, score },
+ *       outcome: 'Short human result',
+ *       awards: [{ iconClass: 'bi bi-trophy-fill', title, player }],
+ *       shareText: 'Optional custom Telegram text'
+ *     };
+ *   },
+ *   playAgain(gameState, context) {}
+ * });
  */
 (function () {
     const providers = new Map();
@@ -29,16 +41,68 @@
         return window.APP_STATE?.room?.players || [];
     }
 
+    function normalizeParticipant(participant) {
+        if (participant && typeof participant === 'object') {
+            return {
+                id: participant.id ?? participant.user_id ?? null,
+                name: participant.name
+                    || participant.display_name
+                    || participant.custom_name
+                    || participant.first_name
+                    || 'Игрок'
+            };
+        }
+        return { id: null, name: String(participant || 'Игрок') };
+    }
+
+    function normalizeWinner(winner) {
+        if (!winner) return null;
+        if (typeof winner === 'object') {
+            return {
+                id: winner.id ?? winner.user_id ?? null,
+                name: winner.name
+                    || winner.display_name
+                    || winner.custom_name
+                    || winner.first_name
+                    || 'Победитель',
+                score: winner.score ?? winner.points ?? null
+            };
+        }
+        return { id: null, name: String(winner), score: null };
+    }
+
+    function normalizeAward(award) {
+        const safeAward = award || {};
+        return {
+            iconClass: safeAward.iconClass || safeAward.icon_class || 'bi bi-award-fill',
+            title: safeAward.title || 'Титул вечера',
+            player: safeAward.player || safeAward.name || safeAward.text || '',
+            text: safeAward.text || safeAward.player || safeAward.name || ''
+        };
+    }
+
+    function getGameTitle(gameId) {
+        const config = Array.isArray(window.AVAILABLE_GAMES)
+            ? window.AVAILABLE_GAMES.find(game => game.id === gameId)
+            : null;
+        return config?.name || gameId || 'Party Games';
+    }
+
     function normalizeSummary(summary) {
         const safeSummary = summary || {};
-        const awards = Array.isArray(safeSummary.awards) ? safeSummary.awards.slice(0, 3) : [];
-        const participants = Array.isArray(safeSummary.participants) ? safeSummary.participants.slice(0, 8) : [];
+        const gameId = safeSummary.gameId || safeSummary.game_id || window.selectedGameId || 'game';
+        const awards = Array.isArray(safeSummary.awards)
+            ? safeSummary.awards.slice(0, 3).map(normalizeAward)
+            : [];
+        const participants = Array.isArray(safeSummary.participants)
+            ? safeSummary.participants.slice(0, 8).map(normalizeParticipant)
+            : getRoomPlayers().slice(0, 8).map(normalizeParticipant);
 
         return {
-            gameId: safeSummary.gameId || window.selectedGameId || 'game',
-            gameTitle: safeSummary.gameTitle || 'Party Games',
+            gameId,
+            gameTitle: safeSummary.gameTitle || safeSummary.game_title || getGameTitle(gameId),
             participants,
-            winner: safeSummary.winner || null,
+            winner: normalizeWinner(safeSummary.winner),
             outcome: safeSummary.outcome || '',
             awards,
             shareText: safeSummary.shareText || '',
@@ -51,13 +115,30 @@
     }
 
     function register(gameId, provider) {
-        if (!gameId || !provider || typeof provider.buildSummary !== 'function') return;
-        providers.set(gameId, provider);
+        if (!gameId || !provider) return false;
+        const buildSummary = provider.buildSummary || provider.getSummary;
+        if (typeof buildSummary !== 'function') return false;
+        providers.set(gameId, {
+            ...provider,
+            buildSummary
+        });
+        return true;
     }
 
     function build(gameId, gameState, context = {}) {
         const provider = getProvider(gameId);
-        if (!provider) return null;
+        if (!provider) {
+            return normalizeSummary({
+                gameId,
+                gameTitle: getGameTitle(gameId),
+                outcome: 'Матч завершён. Можно сразу собрать реванш.',
+                participants: context.players || getRoomPlayers(),
+                awards: []
+            });
+        }
+
+        provider.lastState = gameState || {};
+        provider.lastContext = context || {};
         return normalizeSummary(provider.buildSummary(gameState, {
             players: getRoomPlayers(),
             inviteLink: getInviteLink(),
@@ -70,7 +151,7 @@
         const awards = data.awards.length > 0
             ? data.awards.map((award) => `
                 <div class="game-summary-award">
-                    <span>${escapeHtml(award.icon || '🏅')}</span>
+                    <span><i class="${escapeHtml(award.iconClass)}" aria-hidden="true"></i></span>
                     <div>
                         <div class="game-summary-award-title">${escapeHtml(award.title || 'Титул вечера')}</div>
                         <div class="game-summary-award-name">${escapeHtml(award.player || award.text || '')}</div>
@@ -86,18 +167,23 @@
         const winnerName = data.winner?.name || data.winner || '';
         const playAgainLabel = options.playAgainLabel || 'Играть еще раз';
         const playAgainAction = options.playAgainAction || 'play-again';
+        const shareLabel = options.shareLabel || 'Поделиться в Telegram';
 
         return `
             <section class="game-summary-card" data-game-summary="${escapeHtml(data.gameId)}">
-                <div class="game-summary-kicker">Итог для чата</div>
-                <div class="game-summary-title">${escapeHtml(data.gameTitle)}</div>
-                ${winnerName ? `<div class="game-summary-winner">${escapeHtml(winnerName)}</div>` : ''}
+                <div class="game-summary-head">
+                    <div>
+                        <div class="game-summary-kicker">Итог для чата</div>
+                        <div class="game-summary-title">${escapeHtml(data.gameTitle)}</div>
+                    </div>
+                    ${winnerName ? `<div class="game-summary-winner"><i class="bi bi-trophy-fill" aria-hidden="true"></i>${escapeHtml(winnerName)}</div>` : ''}
+                </div>
                 ${data.outcome ? `<div class="game-summary-outcome">${escapeHtml(data.outcome)}</div>` : ''}
-                <div class="game-summary-participants">${participantNames}</div>
+                <div class="game-summary-participants"><i class="bi bi-people-fill" aria-hidden="true"></i>${participantNames}</div>
                 <div class="game-summary-awards">${awards}</div>
                 <div class="game-summary-actions">
                     <button class="btn btn-primary game-summary-btn" type="button" data-game-summary-action="share" data-game-id="${escapeHtml(data.gameId)}">
-                        <i class="bi bi-telegram me-2"></i> Поделиться в Telegram
+                        <i class="bi bi-telegram me-2"></i> ${escapeHtml(shareLabel)}
                     </button>
                     <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(playAgainAction)}" data-game-id="${escapeHtml(data.gameId)}">
                         <i class="bi bi-arrow-repeat me-2"></i> ${escapeHtml(playAgainLabel)}
@@ -113,7 +199,7 @@
             `${data.gameTitle}: итог игры`,
             data.winner?.name ? `Победитель: ${data.winner.name}` : '',
             data.outcome,
-            ...data.awards.map(a => `${a.icon || '🏅'} ${a.title || 'Титул'}: ${a.player || a.text || ''}`),
+            ...data.awards.map(a => `${a.title || 'Титул'}: ${a.player || a.text || ''}`),
             '',
             'Заходи в следующий раунд:'
         ].filter(line => line !== null && line !== undefined);
@@ -147,10 +233,15 @@
 
     function remember(gameId, gameState, context = {}) {
         const provider = getProvider(gameId);
-        if (!provider) return null;
-        provider.lastState = gameState || {};
-        provider.lastContext = context || {};
         return build(gameId, gameState, context);
+    }
+
+    function mount(target, gameId, gameState, context = {}, options = {}) {
+        const node = typeof target === 'string' ? document.querySelector(target) : target;
+        if (!node) return null;
+        const summary = remember(gameId, gameState, context);
+        node.innerHTML = render(summary, options);
+        return summary;
     }
 
     document.addEventListener('click', (event) => {
@@ -166,6 +257,12 @@
         } else if (action === 'play-again') {
             event.preventDefault();
             playAgain(gameId);
+        } else {
+            const provider = getProvider(gameId);
+            if (provider && typeof provider[action] === 'function') {
+                event.preventDefault();
+                provider[action](provider.lastState || {}, provider.lastContext || {});
+            }
         }
     });
 
@@ -173,6 +270,7 @@
         register,
         build,
         remember,
+        mount,
         render,
         share,
         playAgain,

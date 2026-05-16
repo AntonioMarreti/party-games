@@ -1744,6 +1744,9 @@
         wrapper.style.pointerEvents = 'auto';
         wrapper.style.opacity = '1';
         const viewModel = buildBrainBattleFinalViewModel(state, res);
+        const postGameSummary = window.GameSummaryProvider
+            ? window.GameSummaryProvider.remember('brainbattle', state, { players: res.players || [] })
+            : null;
 
         let html = `
         <div class="d-flex flex-column align-items-center pt-5 pb-5 px-3">
@@ -1801,6 +1804,9 @@
                 </div>
                 <div id="bb-ai-summary" class="bb-ai-summary"></div>
             </div>
+            ${postGameSummary ? `<div class="w-100 mb-4">${window.GameSummaryProvider.render(postGameSummary, {
+                playAgainLabel: viewModel.isHost ? 'Играть ещё раз' : 'В комнату'
+            })}</div>` : ''}
             <div class="bb-final-spacer"></div></div>`;
 
         wrapper.innerHTML = html;
@@ -1860,7 +1866,7 @@
 
     async function finishBrainBattle() {
         // 1. Собираем результаты для рейтинга
-        if (window.lastBBState) {
+        if (window.lastBBState && !window.lastBBState.stats_recorded) {
             const scores = window.lastBBState.scores || {};
             const playersData = (window.currentGamePlayers || []).map(player => ({
                 user_id: parseInt(player.id),
@@ -1962,6 +1968,78 @@
         await apiRequest({ action: 'stop_game' });
         checkState();
     };
+
+    if (window.GameSummaryProvider) {
+        window.GameSummaryProvider.register('brainbattle', {
+            buildSummary: function (gameState, context = {}) {
+                const players = context.players || [];
+                const scores = gameState?.scores || {};
+                const sortedIds = Object.keys(scores).sort((a, b) => Number(scores[b] || 0) - Number(scores[a] || 0));
+                const getPlayer = (id) => players.find(player => String(player.id) === String(id));
+                const getName = (id) => {
+                    const player = getPlayer(id);
+                    return player ? (player.display_name || player.custom_name || player.first_name || 'Игрок') : 'Игрок';
+                };
+                const topId = sortedIds[0] || null;
+                const topScore = topId ? Number(scores[topId] || 0) : 0;
+                const rounds = Number(gameState?.total_rounds || gameState?.current_round || 0);
+                const secondId = sortedIds[1] || null;
+                const fastest = bbBuildPlayerMatchStats(gameState, players, topId || '')?.global?.fastest;
+                const awards = [];
+
+                if (topId) {
+                    awards.push({
+                        iconClass: 'bi bi-trophy-fill',
+                        title: 'Чемпион турнира',
+                        player: `${getName(topId)} · ${topScore} очков`
+                    });
+                }
+                if (fastest?.name) {
+                    awards.push({
+                        iconClass: 'bi bi-stopwatch-fill',
+                        title: 'Самый быстрый ответ',
+                        player: `${fastest.name} · ${Math.round(fastest.time)} мс`
+                    });
+                }
+                if (secondId) {
+                    awards.push({
+                        iconClass: 'bi bi-lightning-charge-fill',
+                        title: 'Главный соперник',
+                        player: `${getName(secondId)} · ${Number(scores[secondId] || 0)} очков`
+                    });
+                }
+
+                const winnerName = topId ? getName(topId) : '';
+                const outcome = topId
+                    ? `${winnerName} забрал турнир${rounds ? ` за ${rounds} раундов` : ''}.`
+                    : 'Турнир закончился без явного лидера, но реванш уже просится.';
+
+                return {
+                    gameId: 'brainbattle',
+                    gameTitle: 'Мозговая Битва',
+                    participants: players.map(player => ({
+                        id: player.id,
+                        name: player.display_name || player.custom_name || player.first_name || 'Игрок'
+                    })),
+                    winner: topId ? { id: topId, name: winnerName, score: topScore } : null,
+                    outcome,
+                    awards,
+                    shareText: [
+                        `Мозговая Битва: ${outcome}`,
+                        topId ? `Победитель: ${winnerName} (${topScore} очков)` : '',
+                        ...awards.map(award => `${award.title}: ${award.player}`),
+                        '',
+                        'Залетай в следующий раунд:'
+                    ].filter(Boolean).join('\n')
+                };
+            },
+            playAgain: function () {
+                if (typeof window.sendGameAction === 'function') {
+                    window.sendGameAction('force_reset');
+                }
+            }
+        });
+    }
 
     window.render_brainbattle = render_brainbattle;
 }

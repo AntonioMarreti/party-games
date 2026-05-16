@@ -21,6 +21,7 @@ window.PartyBattleModes = {
     renderVoting: function (gameState, entries, hasVoted, myId) {
         if (gameState.activeMode === 'meme') return this.renderMemeVoting(entries, hasVoted, myId);
         if (gameState.roundFamily === 'creative_vote') return this.renderJokeVoting(entries, hasVoted, myId);
+        if (gameState.roundFamily === 'bluff') return this.renderBluffVoting(entries, hasVoted, myId);
         if (gameState.roundFamily === 'direct_vote') return this.renderWhoAmIVoting(gameState, hasVoted, myId);
         return '';
     },

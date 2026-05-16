@@ -21,6 +21,8 @@ function getInitialState()
         'submissions' => [],
         'votes' => [],
         'last_round_data' => null,
+        'started_at' => null,
+        'stats_recorded' => false,
         'round' => null,
     ];
 }
@@ -105,6 +107,8 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state['ai_mode'] = $aiMode;
         $state['scores'] = [];
         $state['recent_cards'] = $recentCards;
+        $state['started_at'] = time();
+        $state['stats_recorded'] = false;
 
         $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
         foreach ($allIds as $id) {
@@ -242,11 +246,16 @@ function handleGameAction($pdo, $room, $user, $postData)
         ];
         $state['round'] = $round;
 
-        $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
-        if (count(pb_getHumanSubmissionEntries($round)) >= count($allIds)) {
-            pb_closeSubmissionStep($state);
-        } else {
-            pb_syncLegacyState($state);
+        processGameBots($pdo, $room, $state);
+
+        $round = $state['round'] ?? $round;
+        if (is_array($round) && ($round['step'] ?? null) === 'submit') {
+            $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
+            if (count(pb_getHumanSubmissionEntries($round)) >= count($allIds)) {
+                pb_closeSubmissionStep($state);
+            } else {
+                pb_syncLegacyState($state);
+            }
         }
 
         updateGameState($room['id'], $state);
@@ -278,11 +287,16 @@ function handleGameAction($pdo, $room, $user, $postData)
         $round['voting']['votes'][$userId] = $targetId;
         $state['round'] = $round;
 
-        $playerCount = count(pb_getRoomPlayerIds($pdo, $room['id']));
-        if (count($round['voting']['votes']) >= $playerCount) {
-            pb_closeVotingStep($state);
-        } else {
-            pb_syncLegacyState($state);
+        processGameBots($pdo, $room, $state);
+
+        $round = $state['round'] ?? $round;
+        if (is_array($round) && ($round['step'] ?? null) === 'vote') {
+            $playerCount = count(pb_getRoomPlayerIds($pdo, $room['id']));
+            if (count($round['voting']['votes']) >= $playerCount) {
+                pb_closeVotingStep($state);
+            } else {
+                pb_syncLegacyState($state);
+            }
         }
 
         updateGameState($room['id'], $state);
@@ -307,6 +321,9 @@ function handleGameAction($pdo, $room, $user, $postData)
 
     if ($type === 'back_to_lobby') {
         if ($room['is_host']) {
+            if (($state['phase'] ?? null) === 'results') {
+                pb_recordFinalStatsIfNeeded($pdo, $room, $state);
+            }
             $persistedState = pb_buildPersistentLobbyState($state);
             $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = ? WHERE id = ?")
                 ->execute([json_encode($persistedState), $room['id']]);
@@ -548,6 +565,7 @@ function pb_startNextRound($pdo, $room, &$state)
         $state['current_situation'] = null;
         $state['submissions'] = [];
         $state['votes'] = [];
+        pb_recordFinalStatsIfNeeded($pdo, $room, $state);
         return;
     }
 
@@ -560,6 +578,7 @@ function pb_startNextRound($pdo, $room, &$state)
         $state['current_situation'] = null;
         $state['submissions'] = [];
         $state['votes'] = [];
+        pb_recordFinalStatsIfNeeded($pdo, $room, $state);
         return;
     }
     $config = pb_getModeConfig($card['mode']);
@@ -603,6 +622,41 @@ function pb_startNextRound($pdo, $room, &$state)
     }
 
     pb_syncLegacyState($state);
+}
+
+function pb_recordFinalStatsIfNeeded($pdo, $room, &$state)
+{
+    if (!empty($state['stats_recorded'])) {
+        return;
+    }
+
+    $scores = $state['scores'] ?? [];
+    if (!is_array($scores) || empty($scores)) {
+        return;
+    }
+
+    arsort($scores);
+    $playersData = [];
+    $rank = 1;
+    foreach ($scores as $playerId => $score) {
+        $playersData[] = [
+            'user_id' => (int) $playerId,
+            'rank' => $rank,
+            'score' => (int) $score,
+        ];
+        $rank++;
+    }
+
+    if (empty($playersData)) {
+        return;
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }
 
 function pb_advanceRoundFromIntro($pdo, $room, &$state)

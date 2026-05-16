@@ -27,7 +27,7 @@ window.exitToLobby = async function () {
     const state = window.lastWCState;
 
     // Автоматически сохраняем результаты, если хост выходит во время активной игры (не в фазе настройки)
-    if (res && res.is_host && state && state.phase !== 'setup' && state.scores) {
+    if (!window.__wcFinishing && res && res.is_host && state && state.phase !== 'setup' && state.scores) {
         await window.finishWordClash();
         return; // finishWordClash сам перезагрузит страницу
     }
@@ -37,6 +37,7 @@ window.exitToLobby = async function () {
 window.finishWordClash = async function () {
     const res = window.lastWCRes;
     const state = window.lastWCState;
+    window.__wcFinishing = true;
 
     if (!res || !state || !state.scores) {
         window.exitToLobby();
@@ -58,8 +59,8 @@ window.finishWordClash = async function () {
         p.rank = idx + 1;
     });
 
-    // Отправляем на сервер (сабмит стат/MMR)
-    if (window.submitGameResults) {
+    // Старые партии могли не иметь server-side записи. Новые финалы сохраняются сервером.
+    if (window.submitGameResults && !state.stats_recorded) {
         await window.submitGameResults(playersData);
     }
 
@@ -237,6 +238,9 @@ function renderWordClash(res) {
 
             let title = isGameOver ? (isMe ? 'ТЫ ЧЕМПИОН! 🏆' : 'ИГРА ОКОНЧЕНА 💀') : 'РАУНД ЗАВЕРШЕН! 🎉';
             let roundSubtitle = state.round_count ? `Раунд ${state.current_round} из ${state.round_count}` : `Завершено раундов: ${state.current_round}`;
+            const postGameSummary = isGameOver && window.GameSummaryProvider
+                ? window.GameSummaryProvider.remember('wordclash', state, { players: res.players || [] })
+                : null;
 
             modal.innerHTML = `
                 <div class="wc-victory-card">
@@ -257,6 +261,10 @@ function renderWordClash(res) {
                         <div class="wc-secret-word-label">Загаданное слово</div>
                         <div class="wc-secret-word">${state.secret_word}</div>
                     </div>
+
+                    ${postGameSummary ? `<div class="mt-3 text-start">${window.GameSummaryProvider.render(postGameSummary, {
+                        playAgainLabel: res.is_host ? 'Играть ещё раз' : 'В комнату'
+                    })}</div>` : ''}
 
                     <div class="d-flex flex-column gap-2 mt-2">
                         ${res.is_host ? `
@@ -758,5 +766,71 @@ window.startGameWithSettings = function () {
         start: true  // Signal to start the game
     });
 };
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('wordclash', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const scores = gameState?.scores || {};
+            const sorted = [...players].sort((a, b) => Number(scores[b.id] || 0) - Number(scores[a.id] || 0));
+            const winner = sorted[0] || null;
+            const winnerScore = winner ? Number(scores[winner.id] || 0) : 0;
+            const winnerName = winner ? (winner.display_name || winner.custom_name || winner.first_name || winner.username || 'Игрок') : '';
+            const secretWord = String(gameState?.secret_word || '').toUpperCase();
+            const awards = [];
+
+            if (winner) {
+                awards.push({
+                    iconClass: 'bi bi-trophy-fill',
+                    title: 'Словесный чемпион',
+                    player: `${winnerName} · ${winnerScore} очков`
+                });
+            }
+            if (secretWord) {
+                awards.push({
+                    iconClass: 'bi bi-key-fill',
+                    title: 'Финальное слово',
+                    player: secretWord
+                });
+            }
+            if (sorted[1]) {
+                const rivalName = sorted[1].display_name || sorted[1].custom_name || sorted[1].first_name || sorted[1].username || 'Игрок';
+                awards.push({
+                    iconClass: 'bi bi-lightning-charge-fill',
+                    title: 'Ближайший преследователь',
+                    player: `${rivalName} · ${Number(scores[sorted[1].id] || 0)} очков`
+                });
+            }
+
+            const outcome = winner
+                ? `${winnerName} быстрее всех раскусил слова и забрал матч.`
+                : 'Слова закончились, но реванш напрашивается.';
+
+            return {
+                gameId: 'wordclash',
+                gameTitle: 'Битва Слов',
+                participants: players.map(player => ({
+                    id: player.id,
+                    name: player.display_name || player.custom_name || player.first_name || player.username || 'Игрок'
+                })),
+                winner: winner ? { id: winner.id, name: winnerName, score: winnerScore } : null,
+                outcome,
+                awards,
+                shareText: [
+                    `Битва Слов: ${outcome}`,
+                    winner ? `Победитель: ${winnerName} (${winnerScore} очков)` : '',
+                    secretWord ? `Финальное слово: ${secretWord}` : '',
+                    '',
+                    'Заходи в следующий раунд:'
+                ].filter(Boolean).join('\n')
+            };
+        },
+        playAgain: function () {
+            if (typeof window.sendGameAction === 'function') {
+                window.sendGameAction('restart', {});
+            }
+        }
+    });
+}
 
 window.renderWordClash = renderWordClash;

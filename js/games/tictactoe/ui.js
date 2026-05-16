@@ -41,6 +41,10 @@ window.renderTicTacToe = function (wrapper, state, res) {
         }
     }
 
+    const postGameSummary = state.phase === 'finished' && window.GameSummaryProvider
+        ? window.GameSummaryProvider.remember('tictactoe', state, { players })
+        : null;
+
     wrapper.innerHTML = `
         <div class="tictactoe-container animate__animated animate__fadeIn">
             <div class="tictactoe-info">
@@ -84,6 +88,8 @@ window.renderTicTacToe = function (wrapper, state, res) {
                 ` : ''}
             </div>
 
+            ${postGameSummary ? `<div class="mt-4 w-100" style="max-width: 420px; margin-left:auto; margin-right:auto;">${window.GameSummaryProvider.render(postGameSummary)}</div>` : ''}
+
             <div class="mt-5">
                 <button class="btn btn-link text-muted text-decoration-none small" onclick="window.leaveRoom()">
                     <i class="bi bi-box-arrow-left me-1"></i> Выйти из игры
@@ -114,25 +120,72 @@ window.makeTicTacToeMove = async function (index) {
             type: 'make_move',
             index: index
         });
-        if (res.game_over && res.players_data) {
-            window.handleTicTacToeGameOver(res.players_data);
-        }
         if (window.checkState) window.checkState();
     } catch (e) {
         console.error("Move Error:", e);
     }
 };
 
-window.handleTicTacToeGameOver = function (playersData) {
-    // Only host submits results to stats
-    if (window.isHost) {
-        window.apiRequest({
-            action: 'game_finished',
-            players_data: JSON.stringify(playersData),
-            duration: 0 // Could track duration if needed
-        });
-    }
-};
+window.handleTicTacToeGameOver = function () {};
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('tictactoe', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const symbols = {};
+            if (players[0]) symbols[String(players[0].id)] = 'X';
+            if (players[1]) symbols[String(players[1].id)] = 'O';
+            const winnerSymbol = gameState?.winner;
+            const winner = winnerSymbol && winnerSymbol !== 'draw'
+                ? players.find(player => symbols[String(player.id)] === winnerSymbol)
+                : null;
+            const winnerName = winner ? (winner.display_name || winner.custom_name || winner.first_name || 'Игрок') : '';
+            const moves = Array.isArray(gameState?.board)
+                ? gameState.board.filter(Boolean).length
+                : 0;
+            const outcome = winner
+                ? `${winnerName} закрыл партию за ${moves} ходов.`
+                : 'Ничья: поле закончилось, спор остался.';
+            const awards = [];
+
+            if (winner) {
+                awards.push({
+                    iconClass: 'bi bi-trophy-fill',
+                    title: 'Победитель дуэли',
+                    player: `${winnerName} · ${winnerSymbol}`
+                });
+            } else {
+                awards.push({
+                    iconClass: 'bi bi-slash-circle',
+                    title: 'Идеальная ничья',
+                    player: `${moves} ходов без победителя`
+                });
+            }
+            awards.push({
+                iconClass: 'bi bi-grid-3x3',
+                title: 'Финальное поле',
+                player: `${moves} ходов`
+            });
+
+            return {
+                gameId: 'tictactoe',
+                gameTitle: 'Крестики-нолики',
+                participants: players.map(player => ({
+                    id: player.id,
+                    name: player.display_name || player.custom_name || player.first_name || 'Игрок'
+                })),
+                winner: winner ? { id: winner.id, name: winnerName, score: moves } : null,
+                outcome,
+                awards
+            };
+        },
+        playAgain: function () {
+            if (typeof window.restartTicTacToe === 'function') {
+                window.restartTicTacToe();
+            }
+        }
+    });
+}
 
 window.restartTicTacToe = async function () {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'medium');

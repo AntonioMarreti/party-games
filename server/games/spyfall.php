@@ -34,7 +34,9 @@ function getInitialState()
         'round_queue' => [], // array of user_ids to manage turns
         'votes' => [], // user_id => voted_for_user_id
         'winner' => null, // 'spy' or 'locals'
-        'scores' => [] // user_id => score
+        'scores' => [], // user_id => score
+        'started_at' => null,
+        'stats_recorded' => false
     ];
 }
 
@@ -123,6 +125,8 @@ function handleGameAction($pdo, $room, $user, $postData)
         // Start Timer
         $state['phase'] = 'playing';
         $state['start_time'] = time();
+        $state['started_at'] = time();
+        $state['stats_recorded'] = false;
         $state['end_time'] = time() + ($state['time_limit'] * 60);
         $state['votes'] = [];
         $state['winner'] = null;
@@ -185,6 +189,7 @@ function handleGameAction($pdo, $room, $user, $postData)
                 } else {
                     $state['winner'] = 'spy'; // Wrong person caught
                 }
+                spyfallRecordFinalStatsIfNeeded($pdo, $room, $state);
             }
 
             updateGameState($room['id'], $state);
@@ -206,6 +211,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         } else {
             $state['winner'] = 'locals';
         }
+        spyfallRecordFinalStatsIfNeeded($pdo, $room, $state);
 
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
@@ -216,6 +222,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         // If time runs out, the spy wins (because locals failed to identify the spy)
         $state['phase'] = 'results';
         $state['winner'] = 'spy';
+        spyfallRecordFinalStatsIfNeeded($pdo, $room, $state);
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
@@ -229,4 +236,37 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     return ['status' => 'ignored'];
+}
+
+function spyfallRecordFinalStatsIfNeeded($pdo, $room, &$state)
+{
+    if (!empty($state['stats_recorded']) || ($state['phase'] ?? null) !== 'results') {
+        return;
+    }
+
+    $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? ORDER BY id ASC");
+    $stmt->execute([$room['id']]);
+    $playerIds = array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    if (empty($playerIds)) {
+        return;
+    }
+
+    $spyId = (string) ($state['spy_id'] ?? '');
+    $spyWon = ($state['winner'] ?? '') === 'spy';
+    $playersData = [];
+    foreach ($playerIds as $playerId) {
+        $isWinner = $spyWon ? ($playerId === $spyId) : ($playerId !== $spyId);
+        $playersData[] = [
+            'user_id' => (int) $playerId,
+            'rank' => $isWinner ? 1 : 2,
+            'score' => $isWinner ? 100 : 0,
+        ];
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? $state['start_time'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }

@@ -726,6 +726,58 @@ function renderPopularGames() {
 
 }
 
+function getCatalogGameMeta(game) {
+    const players = game?.stats?.players || '2+';
+    const time = game?.stats?.time || '10-20 мин';
+    const difficulty = game?.stats?.difficulty || '';
+    return { players, time, difficulty };
+}
+
+function getCatalogCategoryLabel(game) {
+    const labels = {
+        party: 'Для компании',
+        logic: 'Логика',
+        strategy: 'Стратегия'
+    };
+    return labels[game?.category] || 'Игра';
+}
+
+function getCatalogMinPlayers(game) {
+    const raw = String(game?.stats?.players || '');
+    const match = raw.match(/\d+/);
+    return match ? Number(match[0]) : 2;
+}
+
+function getCatalogMaxPlayers(game) {
+    const raw = String(game?.stats?.players || '');
+    const matches = raw.match(/\d+/g);
+    if (!matches || matches.length === 0) return 2;
+    return Number(matches[matches.length - 1]);
+}
+
+function getCatalogMinTime(game) {
+    const raw = String(game?.stats?.time || '');
+    const match = raw.match(/\d+/);
+    return match ? Number(match[0]) : 999;
+}
+
+function filterCatalogGames(games, category) {
+    switch (category) {
+        case 'company':
+            return games.filter(game => game.category === 'party' || getCatalogMaxPlayers(game) >= 3);
+        case 'duo':
+            return games.filter(game => getCatalogMinPlayers(game) <= 2 && getCatalogMaxPlayers(game) >= 2);
+        case 'solo':
+            return games.filter(game => getCatalogMinPlayers(game) <= 1);
+        case 'party':
+        case 'logic':
+        case 'strategy':
+            return games.filter(game => game.category === category);
+        default:
+            return games;
+    }
+}
+
 function renderAllGames(category = 'all') {
     const list = document.getElementById('all-games-list');
     if (!list) return;
@@ -733,13 +785,24 @@ function renderAllGames(category = 'all') {
     list.innerHTML = '';
     if (!window.AVAILABLE_GAMES) return;
 
-    let filteredGames = window.AVAILABLE_GAMES;
-    if (category !== 'all') {
-        filteredGames = filteredGames.filter(g => g.category === category);
+    const filteredGames = filterCatalogGames(window.AVAILABLE_GAMES, category);
+    const count = document.getElementById('game-catalog-count');
+    if (count) count.innerText = String(filteredGames.length);
+
+    if (filteredGames.length === 0) {
+        list.innerHTML = `
+            <div class="catalog-empty-state">
+                <i class="bi bi-controller" aria-hidden="true"></i>
+                <div class="catalog-empty-title">Игр не найдено</div>
+                <div class="catalog-empty-text">Попробуйте другой формат игры.</div>
+            </div>
+        `;
+        return;
     }
 
     filteredGames.forEach(game => {
-        const card = document.createElement('div');
+        const card = document.createElement('button');
+        card.type = 'button';
         card.className = 'catalog-game-card';
         card.onclick = () => openGameShowcase(game.id);
 
@@ -747,16 +810,31 @@ function renderAllGames(category = 'all') {
         const isLiked = window.userFavorites && window.userFavorites.includes(game.id);
         const heartIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
         const heartColor = isLiked ? '#dc3545' : 'var(--text-muted)';
+        const safeName = window.safeHTML ? window.safeHTML(game.name) : game.name;
+        const safeDescription = window.safeHTML ? window.safeHTML(game.description || '') : (game.description || '');
+        const meta = getCatalogGameMeta(game);
+        const safePlayers = window.safeHTML ? window.safeHTML(meta.players) : meta.players;
+        const safeTime = window.safeHTML ? window.safeHTML(meta.time) : meta.time;
+        const safeDifficulty = window.safeHTML ? window.safeHTML(meta.difficulty) : meta.difficulty;
+        const safeLabel = window.safeHTML ? window.safeHTML(getCatalogCategoryLabel(game)) : getCatalogCategoryLabel(game);
 
         card.innerHTML = `
             <div class="catalog-game-icon" style="background-color: ${iconColor};">
                 <i class="bi ${game.icon || 'bi-controller'}"></i>
             </div>
             <div class="catalog-game-info">
-                <div class="catalog-game-name">${game.name}</div>
-                <div class="catalog-game-desc">${game.description || ''}</div>
+                <div class="catalog-game-topline">
+                    <div class="catalog-game-name">${safeName}</div>
+                    <div class="catalog-game-category">${safeLabel}</div>
+                </div>
+                <div class="catalog-game-desc">${safeDescription}</div>
+                <div class="catalog-game-meta">
+                    <span><i class="bi bi-people-fill" aria-hidden="true"></i>${safePlayers}</span>
+                    <span><i class="bi bi-clock-fill" aria-hidden="true"></i>${safeTime}</span>
+                    ${safeDifficulty ? `<span><i class="bi bi-bar-chart-fill" aria-hidden="true"></i>${safeDifficulty}</span>` : ''}
+                </div>
             </div>
-            <div class="catalog-game-like" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)" data-like-game-id="${game.id}">
+            <div class="catalog-game-like" onclick="event.stopPropagation(); toggleGameLike('${game.id}', this)" data-like-game-id="${game.id}" role="button" aria-label="В избранное">
                 <i class="bi ${heartIcon}" style="color: ${heartColor}"></i>
             </div>
         `;
@@ -765,18 +843,21 @@ function renderAllGames(category = 'all') {
 }
 
 function openGameCatalog() {
-    renderAllGames();
+    document.querySelectorAll('#game-cat-filters-catalog .catalog-filter-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-cat') === 'all');
+    });
+    renderAllGames('all');
     showScreen('game-catalog');
 
     // Bind Filter Tabs for Catalog
-    const catalogFilters = document.querySelectorAll('#game-cat-filters-catalog .filter-tab');
+    const catalogFilters = document.querySelectorAll('#game-cat-filters-catalog .catalog-filter-pill');
     catalogFilters.forEach(btn => {
         // Remove old listeners to prevent duplicates
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
 
         newBtn.addEventListener('click', (e) => {
-            const act = document.querySelector('#game-cat-filters-catalog .filter-tab.active');
+            const act = document.querySelector('#game-cat-filters-catalog .catalog-filter-pill.active');
             if (act) act.classList.remove('active');
             newBtn.classList.add('active');
 

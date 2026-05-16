@@ -10,7 +10,9 @@ function getInitialState()
         'winner' => null, // 'X', 'O', or 'draw'
         'winning_line' => null, // [a, b, c]
         'history' => [],
-        'scores' => [] // {userId: score}
+        'scores' => [], // {userId: score}
+        'started_at' => null,
+        'stats_recorded' => false
     ];
 }
 
@@ -56,6 +58,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state = getInitialState();
         $state['current_turn'] = $players[0]; // X starts
         $state['phase'] = 'playing';
+        $state['started_at'] = time();
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
@@ -91,30 +94,15 @@ function handleGameAction($pdo, $room, $user, $postData)
             $state['current_turn'] = ($userId === $players[0]) ? ($players[1] ?? $players[0]) : $players[0];
         }
 
-        updateGameState($room['id'], $state);
-
         // If finished, return results for the client to submit to stats
         if ($state['phase'] === 'finished') {
-            $results = [];
-            foreach ($players as $pid) {
-                $sym = $symbols[$pid] ?? null;
-                $rank = 2; // Default
-                $score = 0;
-                if ($state['winner'] === 'draw') {
-                    $rank = 2;
-                    $score = 1; // Marker for draw
-                } else if ($state['winner'] === $sym) {
-                    $rank = 1;
-                }
-                $results[] = [
-                    'user_id' => $pid,
-                    'rank' => $rank,
-                    'score' => $score
-                ];
-            }
+            $results = tttBuildPlayersData($players, $symbols, $state['winner']);
+            tttRecordFinalStatsIfNeeded($pdo, $room, $state, $results);
+            updateGameState($room['id'], $state);
             return ['status' => 'ok', 'game_over' => true, 'players_data' => $results];
         }
 
+        updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
 
@@ -128,6 +116,42 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     return ['status' => 'ok'];
+}
+
+function tttBuildPlayersData($players, $symbols, $winner)
+{
+    $results = [];
+    foreach ($players as $pid) {
+        $sym = $symbols[$pid] ?? null;
+        $rank = 2;
+        $score = 0;
+        if ($winner === 'draw') {
+            $rank = 2;
+            $score = 1;
+        } elseif ($winner === $sym) {
+            $rank = 1;
+        }
+        $results[] = [
+            'user_id' => $pid,
+            'rank' => $rank,
+            'score' => $score
+        ];
+    }
+    return $results;
+}
+
+function tttRecordFinalStatsIfNeeded($pdo, $room, &$state, $playersData)
+{
+    if (!empty($state['stats_recorded']) || empty($playersData)) {
+        return;
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }
 
 function checkWinner($board)

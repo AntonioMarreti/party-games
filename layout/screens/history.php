@@ -45,7 +45,7 @@
 
             <div class="history-result-card">
                 <div class="history-result-copy">
-                    <div class="history-details-summary-label">Итог игры</div>
+                    <div class="history-details-summary-label">Итог матча</div>
                     <div class="history-details-result">
                         <i id="history-details-result-icon" class="bi bi-trophy-fill history-details-result-icon"
                             aria-hidden="true"></i>
@@ -60,9 +60,9 @@
             </div>
 
             <div class="history-details-breakdown">
-                <div class="history-details-breakdown-title">Расчёт XP</div>
+                <div class="history-details-breakdown-title">Опыт за игру</div>
                 <div class="history-details-row">
-                    <span>Базовый опыт</span>
+                    <span>Участие</span>
                     <strong>+20 XP</strong>
                 </div>
                 <div class="history-details-row">
@@ -70,7 +70,7 @@
                     <strong id="history-details-rank-bonus">+0 XP</strong>
                 </div>
                 <div class="history-details-row">
-                    <span>За игровой счёт</span>
+                    <span>Очки в игре</span>
                     <strong id="history-details-score-bonus">+0 XP</strong>
                 </div>
             </div>

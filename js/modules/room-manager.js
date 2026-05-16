@@ -35,6 +35,10 @@ async function createRoom() {
     try {
         const res = await window.apiRequest({ action: 'create_room', password: passInput ? passInput.value : '' });
         if (res.status === 'ok') {
+            if (window.pendingReplayFlow) {
+                window.pendingReplayFlow.completed = true;
+            }
+
             // Safe Modal Closing
             const modalEl = document.getElementById('createModal');
             if (modalEl && window.bootstrap) {
@@ -63,6 +67,43 @@ async function createRoom() {
         setPollingSuspended(false);
         isCreateRoomPending = false;
     }
+}
+
+function handleCreateRoomModalClosed() {
+    const replayFlow = window.pendingReplayFlow;
+    window.pendingReplayFlow = null;
+
+    const titleEl = document.getElementById('create-modal-title');
+    if (titleEl) titleEl.innerText = 'Новая комната';
+
+    if (!replayFlow || replayFlow.completed) return;
+    if (replayFlow.sourceTab && typeof window.switchTab === 'function') {
+        window.switchTab(replayFlow.sourceTab);
+    }
+}
+
+function closeCreateRoomModal(event) {
+    if (event) event.stopPropagation();
+
+    const modalEl = document.getElementById('createModal');
+    if (modalEl && window.bootstrap) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.hide();
+        return;
+    }
+
+    if (window.closeModal) {
+        window.closeModal('createModal');
+    }
+    handleCreateRoomModalClosed();
+}
+
+function setupCreateRoomModalFlow() {
+    const modalEl = document.getElementById('createModal');
+    if (!modalEl || modalEl.dataset.replayFlowBound === 'true') return;
+
+    modalEl.dataset.replayFlowBound = 'true';
+    modalEl.addEventListener('hidden.bs.modal', handleCreateRoomModalClosed);
 }
 
 function getPublicRoomGameName(gameType) {
@@ -1011,6 +1052,7 @@ window.RoomManager = {
 
 // Global aliases for backward compatibility
 window.createRoom = createRoom;
+window.closeCreateRoomModal = closeCreateRoomModal;
 window.joinRoom = joinRoom;
 window.leaveRoom = leaveRoom;
 window.loadPublicRooms = loadPublicRooms;
@@ -1036,6 +1078,12 @@ window.removeBot = removeBot;
 window.kickPlayer = kickPlayer;
 window.backToLobby = backToLobby;
 window.sendToTelegram = sendToTelegram;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupCreateRoomModalFlow);
+} else {
+    setupCreateRoomModalFlow();
+}
 
 
 // === GAME SELECTOR UI (Refactored to List View with Favorites) ===

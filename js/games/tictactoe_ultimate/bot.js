@@ -54,9 +54,6 @@ window.TicTacToeUltimateBot = {
                             board_index: bIdx,
                             cell_index: cIdx
                         });
-                        if (res.game_over && res.players_data && window.isHost) {
-                            window.apiRequest({ action: 'game_finished', players_data: JSON.stringify(res.players_data), duration: 0 });
-                        }
                         if (window.checkState) window.checkState();
                     } catch (e) {
                         console.error('Bot ultimate move failed', e);

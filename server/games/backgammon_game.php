@@ -21,7 +21,9 @@ function getInitialState()
         'version' => 0,
         'startingRolls' => ['white' => null, 'black' => null],
         'readyToStart' => ['white' => false, 'black' => false],
-        'lastMove' => null
+        'lastMove' => null,
+        'started_at' => null,
+        'stats_recorded' => false
     ];
 }
 
@@ -255,6 +257,9 @@ function handleGameAction($pdo, $room, $user, $data)
 
     if ($action === 'back_to_lobby') {
         if ($room['is_host']) {
+            if (($state['status'] ?? '') === 'finished') {
+                bgRecordFinalStatsIfNeeded($pdo, $room, $state);
+            }
             $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")
                 ->execute([$room['id']]);
         }
@@ -316,6 +321,8 @@ function handleGameAction($pdo, $room, $user, $data)
             $state['dice'] = [];
             $state['movesLeft'] = [];
             $state['headMoved'] = 0;
+            $state['started_at'] = time();
+            $state['stats_recorded'] = false;
             $state['turn'] = (int) $state['startingRolls']['white'] > (int) $state['startingRolls']['black'] ? 'white' : 'black';
         }
 
@@ -358,6 +365,9 @@ function handleGameAction($pdo, $room, $user, $data)
         }
 
         bgApplyMove($state, $playerColor, $fromIndex, $targetIndex);
+        if (($state['status'] ?? '') === 'finished') {
+            bgRecordFinalStatsIfNeeded($pdo, $room, $state);
+        }
         return ['status' => 'ok', 'state' => $state];
     }
 
@@ -380,4 +390,36 @@ function handleGameAction($pdo, $room, $user, $data)
     }
 
     return ['status' => 'error', 'message' => 'Unknown action'];
+}
+
+function bgRecordFinalStatsIfNeeded($pdo, $room, &$state)
+{
+    if (!empty($state['stats_recorded']) || ($state['status'] ?? '') !== 'finished') {
+        return;
+    }
+
+    $players = bgGetPlayers($pdo, $room['id']);
+    if (empty($players)) {
+        return;
+    }
+
+    $winner = $state['winner'] ?? null;
+    $playersData = [];
+    foreach ($players as $index => $player) {
+        $color = $index === 0 ? 'white' : 'black';
+        $isWinner = $winner === $color;
+        $offCount = $color === 'white' ? (int) ($state['whiteOff'] ?? 0) : (int) ($state['blackOff'] ?? 0);
+        $playersData[] = [
+            'user_id' => (int) $player['user_id'],
+            'rank' => $isWinner ? 1 : 2,
+            'score' => $offCount,
+        ];
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }

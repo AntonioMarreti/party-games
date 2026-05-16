@@ -46,11 +46,6 @@ window.TicTacToeBot = {
                             type: 'make_move',
                             index: index
                         });
-                        if (res.game_over && res.players_data) {
-                            if (window.handleTicTacToeGameOver) {
-                                window.handleTicTacToeGameOver(res.players_data);
-                            }
-                        }
                         if (window.checkState) window.checkState();
                     } catch (e) {
                         console.error('Bot move failed:', e);

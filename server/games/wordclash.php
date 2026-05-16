@@ -45,7 +45,9 @@ function getInitialState()
         'history' => [],
         'scores' => [],
         'winner_id' => null,
-        'game_over' => false
+        'game_over' => false,
+        'started_at' => null,
+        'stats_recorded' => false
     ];
 }
 
@@ -96,6 +98,8 @@ function handleGameAction($pdo, $room, $user, $postData)
             $state['phase'] = 'playing';
             $state['history'] = [];
             $state['scores'] = [];
+            $state['started_at'] = time();
+            $state['stats_recorded'] = false;
         }
 
         updateGameState($room['id'], $state);
@@ -243,6 +247,7 @@ function handleGameAction($pdo, $room, $user, $postData)
             if ($isFinal) {
                 $state['phase'] = 'game_over';
                 $state['game_over'] = true;
+                wcRecordFinalStatsIfNeeded($pdo, $room, $state);
             } else {
                 $state['phase'] = 'intermission';
                 $state['game_over'] = false; // Still active game, just round over
@@ -388,6 +393,12 @@ function processBots($pdo, $roomId, &$state)
             if ($isFinal) {
                 $state['phase'] = 'game_over';
                 $state['game_over'] = true;
+                $roomStmt = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
+                $roomStmt->execute([$roomId]);
+                $roomInfo = $roomStmt->fetch(PDO::FETCH_ASSOC);
+                if ($roomInfo) {
+                    wcRecordFinalStatsIfNeeded($pdo, $roomInfo, $state);
+                }
             } else {
                 $state['phase'] = 'intermission';
                 $state['game_over'] = false;
@@ -407,6 +418,41 @@ function processBots($pdo, $roomId, &$state)
                 ->execute([$roomId, $chatData['bot_id'], $payload]);
         }
     }
+}
+
+function wcRecordFinalStatsIfNeeded($pdo, $room, &$state)
+{
+    if (!empty($state['stats_recorded'])) {
+        return;
+    }
+
+    $scores = is_array($state['scores'] ?? null) ? $state['scores'] : [];
+    if (empty($scores)) {
+        return;
+    }
+
+    arsort($scores);
+    $playersData = [];
+    $rank = 1;
+    foreach ($scores as $playerId => $score) {
+        $playersData[] = [
+            'user_id' => (int) $playerId,
+            'rank' => $rank,
+            'score' => (int) $score,
+        ];
+        $rank++;
+    }
+
+    if (empty($playersData)) {
+        return;
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }
 
 // Helper for splitting multibyte string

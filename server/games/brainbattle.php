@@ -26,7 +26,9 @@ function getInitialState()
         'round_history' => [],
         'selected_categories' => ['logic', 'attention', 'motor', 'memory', 'erudition'],
         'previous_game_type' => null,
-        'round_chat_sent' => false
+        'round_chat_sent' => false,
+        'started_at' => null,
+        'stats_recorded' => false
     ];
 }
 
@@ -383,6 +385,9 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state['selected_categories'] = json_decode($postData['categories'] ?? '[]', true) ?: [];
         $state['selected_games'] = json_decode($postData['selected_games'] ?? '[]', true) ?: [];
         $state['scores'] = [];
+        $state['round_history'] = [];
+        $state['started_at'] = time();
+        $state['stats_recorded'] = false;
         unset($state['ai_summary']);
         bbEnsureScoreRows($state, bbGetPlayerIds($pdo, $room['id']));
         $state['current_round'] = 0;
@@ -469,10 +474,46 @@ function handleGameAction($pdo, $room, $user, $postData)
         } else {
             $state['phase'] = 'game_over';
             bbStoreRoundHistoryEntry($state);
+            bbRecordFinalStatsIfNeeded($pdo, $room, $state);
         }
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
+}
+
+function bbRecordFinalStatsIfNeeded($pdo, $room, &$state)
+{
+    if (!empty($state['stats_recorded'])) {
+        return;
+    }
+
+    $scores = is_array($state['scores'] ?? null) ? $state['scores'] : [];
+    if (empty($scores)) {
+        return;
+    }
+
+    arsort($scores);
+    $playersData = [];
+    $rank = 1;
+    foreach ($scores as $playerId => $score) {
+        $playersData[] = [
+            'user_id' => (int) $playerId,
+            'rank' => $rank,
+            'score' => (int) $score,
+        ];
+        $rank++;
+    }
+
+    if (empty($playersData)) {
+        return;
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }
 
 function startNextRound(&$state)

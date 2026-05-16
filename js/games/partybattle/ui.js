@@ -1325,21 +1325,21 @@ if (window.GameSummaryProvider) {
 
             if (topId) {
                 awards.push({
-                    icon: '🏆',
+                    iconClass: 'bi bi-trophy-fill',
                     title: 'Вечерний победитель',
                     player: `${getName(topId)} · ${topScore} XP`
                 });
             }
             if (sortedIds[1]) {
                 awards.push({
-                    icon: '⚔️',
+                    iconClass: 'bi bi-lightning-charge-fill',
                     title: 'Главный соперник',
                     player: `${getName(sortedIds[1])} · ${scores[sortedIds[1]] || 0} XP`
                 });
             }
             if (sortedIds[2]) {
                 awards.push({
-                    icon: '🎭',
+                    iconClass: 'bi bi-incognito',
                     title: 'Темная лошадка',
                     player: `${getName(sortedIds[2])} · ${scores[sortedIds[2]] || 0} XP`
                 });
@@ -1349,7 +1349,7 @@ if (window.GameSummaryProvider) {
                 const rival = participants.find(p => String(p.id) !== String(topId));
                 if (rival) {
                     awards.push({
-                        icon: '🔥',
+                        iconClass: 'bi bi-arrow-repeat',
                         title: 'Следующий вызов',
                         player: rival.name
                     });
@@ -1373,7 +1373,7 @@ if (window.GameSummaryProvider) {
                 shareText: [
                     `${gameTitle}: ${outcome}`,
                     topId ? `Победитель: ${winnerName} (${topScore} XP)` : '',
-                    ...awards.map(award => `${award.icon} ${award.title}: ${award.player}`),
+                    ...awards.map(award => `${award.title}: ${award.player}`),
                     '',
                     'Залетай в следующий раунд:'
                 ].filter(Boolean).join('\n')

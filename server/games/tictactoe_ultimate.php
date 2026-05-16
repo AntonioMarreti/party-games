@@ -11,7 +11,9 @@ function getInitialState()
         'current_turn' => null,
         'winner' => null,
         'winning_line' => null,
-        'history' => []
+        'history' => [],
+        'started_at' => null,
+        'stats_recorded' => false
     ];
 }
 
@@ -52,6 +54,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state = getInitialState();
         $state['current_turn'] = $players[0];
         $state['phase'] = 'playing';
+        $state['started_at'] = time();
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
@@ -120,21 +123,15 @@ function handleGameAction($pdo, $room, $user, $postData)
             $state['current_turn'] = ($userId === $players[0]) ? ($players[1] ?? $players[0]) : $players[0];
         }
 
-        updateGameState($room['id'], $state);
-
         // Result Reporting
         if ($state['phase'] === 'finished') {
-            $results = [];
-            foreach ($players as $pid) {
-                $results[] = [
-                    'user_id' => $pid,
-                    'rank' => ($state['winner'] === $symbols[$pid]) ? 1 : 2,
-                    'score' => ($state['winner'] === 'draw') ? 1 : 0
-                ];
-            }
+            $results = tttuBuildPlayersData($players, $symbols, $state['winner']);
+            tttuRecordFinalStatsIfNeeded($pdo, $room, $state, $results);
+            updateGameState($room['id'], $state);
             return ['status' => 'ok', 'game_over' => true, 'players_data' => $results];
         }
 
+        updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
 
@@ -149,6 +146,33 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     return ['status' => 'ok'];
+}
+
+function tttuBuildPlayersData($players, $symbols, $winner)
+{
+    $results = [];
+    foreach ($players as $pid) {
+        $results[] = [
+            'user_id' => $pid,
+            'rank' => ($winner === ($symbols[$pid] ?? null)) ? 1 : 2,
+            'score' => ($winner === 'draw') ? 1 : 0
+        ];
+    }
+    return $results;
+}
+
+function tttuRecordFinalStatsIfNeeded($pdo, $room, &$state, $playersData)
+{
+    if (!empty($state['stats_recorded']) || empty($playersData)) {
+        return;
+    }
+
+    require_once __DIR__ . '/../actions/stats.php';
+
+    $startedAt = (int) ($state['started_at'] ?? 0);
+    $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+    recordGameStats($pdo, $room, $playersData, $duration);
+    $state['stats_recorded'] = true;
 }
 
 function checkUltimateWinner($board)

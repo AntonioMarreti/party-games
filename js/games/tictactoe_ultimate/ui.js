@@ -38,6 +38,10 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
         badgeClass = state.winner === 'draw' ? 'bg-warning' : 'bg-success';
     }
 
+    const postGameSummary = state.phase === 'finished' && window.GameSummaryProvider
+        ? window.GameSummaryProvider.remember('tictactoe_ultimate', state, { players })
+        : null;
+
     wrapper.innerHTML = `
         <div class="ttt-u-container animate__animated animate__fadeIn">
             <div class="ttt-u-info text-center mb-3">
@@ -84,6 +88,8 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
                     <button class="btn btn-link text-muted small" onclick="window.leaveRoom()">Выйти</button>
                 </div>
             </div>
+
+            ${postGameSummary ? `<div class="mt-4 w-100" style="max-width: 420px; margin-left:auto; margin-right:auto;">${window.GameSummaryProvider.render(postGameSummary)}</div>` : ''}
         </div>
     `;
 };
@@ -106,11 +112,68 @@ window.makeUltimateMove = async function (bIdx, cIdx) {
             board_index: bIdx,
             cell_index: cIdx
         });
-        if (res.game_over && res.players_data && window.isHost) {
-            window.apiRequest({ action: 'game_finished', players_data: JSON.stringify(res.players_data), duration: 0 });
-        }
         if (window.checkState) window.checkState();
     } catch (e) {
         console.error(e);
     }
 };
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('tictactoe_ultimate', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const symbols = {};
+            if (players[0]) symbols[String(players[0].id)] = 'X';
+            if (players[1]) symbols[String(players[1].id)] = 'O';
+            const winnerSymbol = gameState?.winner;
+            const winner = winnerSymbol && winnerSymbol !== 'draw'
+                ? players.find(player => symbols[String(player.id)] === winnerSymbol)
+                : null;
+            const winnerName = winner ? (winner.display_name || winner.custom_name || winner.first_name || 'Игрок') : '';
+            const wonBoards = Array.isArray(gameState?.mini_wins)
+                ? gameState.mini_wins.filter(value => value && value !== 'draw').length
+                : 0;
+            const outcome = winner
+                ? `${winnerName} собрал большую линию и забрал Ultimate-дуэль.`
+                : 'Большая сетка не сдалась никому.';
+            const awards = [];
+
+            if (winner) {
+                awards.push({
+                    iconClass: 'bi bi-trophy-fill',
+                    title: 'Победитель большой сетки',
+                    player: `${winnerName} · ${winnerSymbol}`
+                });
+            }
+            awards.push({
+                iconClass: 'bi bi-grid-3x3-gap-fill',
+                title: 'Захвачено мини-полей',
+                player: `${wonBoards} из 9`
+            });
+            if (!winner) {
+                awards.push({
+                    iconClass: 'bi bi-slash-circle',
+                    title: 'Жёсткая ничья',
+                    player: 'Никто не собрал линию'
+                });
+            }
+
+            return {
+                gameId: 'tictactoe_ultimate',
+                gameTitle: 'Крестики-нолики Ultimate',
+                participants: players.map(player => ({
+                    id: player.id,
+                    name: player.display_name || player.custom_name || player.first_name || 'Игрок'
+                })),
+                winner: winner ? { id: winner.id, name: winnerName, score: wonBoards } : null,
+                outcome,
+                awards
+            };
+        },
+        playAgain: function () {
+            if (typeof window.startUltimateGame === 'function') {
+                window.startUltimateGame();
+            }
+        }
+    });
+}

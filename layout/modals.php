@@ -188,8 +188,9 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold ps-2">Новая комната</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title fw-bold ps-2" id="create-modal-title">Новая комната</h5>
+                <button type="button" class="btn-close" onclick="closeCreateRoomModal(event)"
+                    aria-label="Закрыть"></button>
             </div>
             <div class="modal-body pt-2">
                 <form onsubmit="createRoom(); return false;">
