@@ -761,6 +761,11 @@ function getCatalogMinTime(game) {
     return match ? Number(match[0]) : 999;
 }
 
+const gameCatalogState = {
+    category: 'all',
+    query: ''
+};
+
 function filterCatalogGames(games, category) {
     switch (category) {
         case 'company':
@@ -778,14 +783,36 @@ function filterCatalogGames(games, category) {
     }
 }
 
-function renderAllGames(category = 'all') {
+function filterCatalogGamesByQuery(games, query) {
+    const needle = String(query || '').trim().toLowerCase();
+    if (!needle) return games;
+
+    return games.filter(game => {
+        const haystack = [
+            game.name,
+            game.description,
+            game.category,
+            game.stats?.players,
+            game.stats?.time,
+            game.stats?.difficulty
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        return haystack.includes(needle);
+    });
+}
+
+function renderAllGames(category = gameCatalogState.category, query = gameCatalogState.query) {
     const list = document.getElementById('all-games-list');
     if (!list) return;
 
     list.innerHTML = '';
     if (!window.AVAILABLE_GAMES) return;
 
-    const filteredGames = filterCatalogGames(window.AVAILABLE_GAMES, category);
+    gameCatalogState.category = category || 'all';
+    gameCatalogState.query = query || '';
+
+    const filteredByCategory = filterCatalogGames(window.AVAILABLE_GAMES, gameCatalogState.category);
+    const filteredGames = filterCatalogGamesByQuery(filteredByCategory, gameCatalogState.query);
     const count = document.getElementById('game-catalog-count');
     if (count) count.innerText = String(filteredGames.length);
 
@@ -794,7 +821,7 @@ function renderAllGames(category = 'all') {
             <div class="catalog-empty-state">
                 <i class="bi bi-controller" aria-hidden="true"></i>
                 <div class="catalog-empty-title">Игр не найдено</div>
-                <div class="catalog-empty-text">Попробуйте другой формат игры.</div>
+                <div class="catalog-empty-text">Попробуйте другой формат или измените поиск.</div>
             </div>
         `;
         return;
@@ -842,30 +869,46 @@ function renderAllGames(category = 'all') {
     });
 }
 
-function openGameCatalog() {
-    document.querySelectorAll('#game-cat-filters-catalog .catalog-filter-pill').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-cat') === 'all');
-    });
-    renderAllGames('all');
-    showScreen('game-catalog');
+function bindGameCatalogControls() {
+    const searchInput = document.getElementById('game-catalog-search-input');
+    if (searchInput && searchInput.dataset.bound !== 'true') {
+        searchInput.dataset.bound = 'true';
+        searchInput.addEventListener('input', () => {
+            renderAllGames(gameCatalogState.category, searchInput.value);
+        });
+    }
 
     // Bind Filter Tabs for Catalog
     const catalogFilters = document.querySelectorAll('#game-cat-filters-catalog .catalog-filter-pill');
     catalogFilters.forEach(btn => {
-        // Remove old listeners to prevent duplicates
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
+        if (btn.dataset.bound === 'true') return;
+        btn.dataset.bound = 'true';
 
-        newBtn.addEventListener('click', (e) => {
-            const act = document.querySelector('#game-cat-filters-catalog .catalog-filter-pill.active');
-            if (act) act.classList.remove('active');
-            newBtn.classList.add('active');
+        btn.addEventListener('click', () => {
+            catalogFilters.forEach(item => item.classList.toggle('active', item === btn));
 
-            const cat = newBtn.getAttribute('data-cat');
-            renderAllGames(cat);
+            const cat = btn.getAttribute('data-cat') || 'all';
+            const query = document.getElementById('game-catalog-search-input')?.value || '';
+            renderAllGames(cat, query);
             if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection', 'light');
         });
     });
+}
+
+function openGameCatalog(initialCategory = 'all') {
+    gameCatalogState.category = initialCategory || 'all';
+    gameCatalogState.query = '';
+
+    document.querySelectorAll('#game-cat-filters-catalog .catalog-filter-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-cat') === gameCatalogState.category);
+    });
+
+    const searchInput = document.getElementById('game-catalog-search-input');
+    if (searchInput) searchInput.value = '';
+
+    bindGameCatalogControls();
+    renderAllGames(gameCatalogState.category, gameCatalogState.query);
+    showScreen('game-catalog');
 
     if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'light');
 }

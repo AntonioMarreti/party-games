@@ -1,6 +1,10 @@
 <?php
 // server/actions/ai.php
 
+if (!defined('BRAINBATTLE_SUMMARY_VERSION')) {
+    define('BRAINBATTLE_SUMMARY_VERSION', 2);
+}
+
 function action_generate_content($pdo, $currentUser, $params)
 {
     if (!isset($currentUser['id'])) {
@@ -212,7 +216,7 @@ function action_generate_content($pdo, $currentUser, $params)
                     return;
                 }
 
-                if (isset($state['ai_summary'])) {
+                if (isset($state['ai_summary']) && (int) ($state['ai_summary_version'] ?? 0) >= BRAINBATTLE_SUMMARY_VERSION) {
                     echo json_encode(['status' => 'ok', 'data' => $state['ai_summary'], 'cached' => true]);
                     return;
                 }
@@ -230,7 +234,7 @@ function action_generate_content($pdo, $currentUser, $params)
                 $freshStmt = $pdo->prepare("SELECT game_state FROM rooms WHERE id = ?");
                 $freshStmt->execute([$room['id']]);
                 $freshState = json_decode($freshStmt->fetchColumn() ?: '', true);
-                if (isset($freshState['ai_summary'])) {
+                if (isset($freshState['ai_summary']) && (int) ($freshState['ai_summary_version'] ?? 0) >= BRAINBATTLE_SUMMARY_VERSION) {
                     $releaseStmt = $pdo->prepare("SELECT RELEASE_LOCK(?)");
                     $releaseStmt->execute([$summaryLockName]);
                     $summaryLockAcquired = false;
@@ -245,8 +249,8 @@ function action_generate_content($pdo, $currentUser, $params)
                 $players = $playersStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 $payload = bbBuildMatchSummaryPayload($freshState ?: $state, $players);
-                $system = "Ты ведущий короткого пост-матч разбора BrainBattle. Напиши 2-4 живых предложения без Markdown и без списков. Не выдумывай факты вне данных. Тон: энергичный, но не крикливый.";
-                $prompt = "Сделай краткий разбор матча на русском языке. Упомяни победителя, один-два поворотных момента и общий рисунок игры. Держи текст в пределах 450 символов.\n\nДанные матча:\n" . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $system = "Ты ведущий короткого пост-матч разбора BrainBattle. Напиши 1-2 живых предложения без Markdown, списков и эмодзи. Не выдумывай факты вне данных. Следи за русскими окончаниями: используй нейтральные формулировки, если пол игрока неизвестен.";
+                $prompt = "Сделай краткий разбор матча на русском языке. Упомяни победителя и один заметный факт. Не перечисляй все данные. Держи текст в пределах 260 символов.\n\nДанные матча:\n" . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 break;
 
             default:
@@ -281,6 +285,9 @@ function action_generate_content($pdo, $currentUser, $params)
                     $state = json_decode($room['game_state'], true);
                 }
                 $state['ai_summary'] = $content;
+                if ($type === 'brainbattle_summary') {
+                    $state['ai_summary_version'] = BRAINBATTLE_SUMMARY_VERSION;
+                }
                 if (function_exists('updateGameState')) {
                     updateGameState($room['id'], $state);
                 }

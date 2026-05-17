@@ -189,6 +189,71 @@ function action_create_scheduled_game($pdo, $user, $data)
     }
 }
 
+function action_update_scheduled_game($pdo, $user, $data)
+{
+    scheduled_cleanup_expired($pdo);
+
+    try {
+        $pdo->beginTransaction();
+        $game = scheduled_find_for_update($pdo, $data['scheduled_game_id'] ?? 0);
+        if ((int) $game['host_user_id'] !== (int) $user['id']) {
+            throw new RuntimeException('Изменить игру может только хост');
+        }
+        if ($game['status'] !== 'scheduled') {
+            throw new RuntimeException('Изменить можно только запланированную игру');
+        }
+
+        $startsAt = scheduled_parse_datetime($data['starts_at'] ?? '');
+        $opensAt = scheduled_opens_at($startsAt);
+        $expiresAt = scheduled_expires_at($startsAt);
+        $title = scheduled_text($data['title'] ?? '', 'Открытая игра', 120);
+        $description = scheduled_text($data['description'] ?? '', '', 500);
+        $minPlayers = scheduled_clamp_int($data['min_players'] ?? $game['min_players'], 1, 16, (int) $game['min_players']);
+        $maxPlayers = scheduled_clamp_int($data['max_players'] ?? $game['max_players'], 2, 16, (int) $game['max_players']);
+        if ($minPlayers > $maxPlayers) $minPlayers = $maxPlayers;
+
+        $stmt = $pdo->prepare("
+            UPDATE scheduled_games
+            SET title = ?,
+                description = ?,
+                starts_at = ?,
+                opens_at = ?,
+                expires_at = ?,
+                min_players = ?,
+                max_players = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $title,
+            $description,
+            $startsAt,
+            $opensAt,
+            $expiresAt,
+            $minPlayers,
+            $maxPlayers,
+            (int) $game['id']
+        ]);
+
+        $notifyAt = max(time(), strtotime($opensAt));
+        $pdo->prepare("
+            UPDATE room_subscriptions
+            SET notify_at = ?, notified_at = NULL
+            WHERE scheduled_game_id = ? AND status = 'subscribed'
+        ")->execute([date('Y-m-d H:i:s', $notifyAt), (int) $game['id']]);
+
+        $pdo->commit();
+        scheduled_send_ok(['scheduled_game_id' => (int) $game['id']]);
+    } catch (RuntimeException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        sendError($e->getMessage());
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        TelegramLogger::logError('scheduled_games', ['message' => $e->getMessage(), 'action' => 'update']);
+        sendError('Scheduled update error');
+    }
+}
+
 function action_get_scheduled_games($pdo, $user, $data)
 {
     scheduled_cleanup_expired($pdo);

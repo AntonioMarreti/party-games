@@ -209,6 +209,10 @@
         const playAgainAction = options.playAgainAction || 'play-again';
         const shareLabel = options.shareLabel || 'Поделиться в Telegram';
         const canShareStory = Boolean(window.Telegram?.WebApp?.shareToStory);
+        const previewTitle = winnerName ? `Победитель: ${winnerName}` : (data.outcome || 'Итог партии');
+        const previewMeta = data.awards.length > 0
+            ? `${data.awards.length} титула · ${data.participants.length || 0} игроков`
+            : `${data.participants.length || 0} игроков · реванш в один тап`;
 
         return `
             <section class="game-summary-card" data-game-summary="${escapeHtml(data.gameId)}">
@@ -222,6 +226,16 @@
                 ${data.outcome ? `<div class="game-summary-outcome">${escapeHtml(data.outcome)}</div>` : ''}
                 <div class="game-summary-participants"><i class="bi bi-people-fill" aria-hidden="true"></i>${participantNames}</div>
                 <div class="game-summary-awards">${awards}</div>
+                <div class="game-summary-share-preview" aria-label="Превью результата для Telegram">
+                    <div class="game-summary-share-preview-icon">
+                        <i class="bi bi-image-fill" aria-hidden="true"></i>
+                    </div>
+                    <div class="game-summary-share-preview-copy">
+                        <div class="game-summary-share-preview-label">Карточка для Telegram</div>
+                        <div class="game-summary-share-preview-title">${escapeHtml(previewTitle)}</div>
+                        <div class="game-summary-share-preview-meta">${escapeHtml(previewMeta)}</div>
+                    </div>
+                </div>
                 <div class="game-summary-actions">
                     <button class="btn btn-primary game-summary-btn" type="button" data-game-summary-action="share" data-game-id="${escapeHtml(data.gameId)}">
                         <i class="bi bi-telegram me-2"></i> ${escapeHtml(shareLabel)}

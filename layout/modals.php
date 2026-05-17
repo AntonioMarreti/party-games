@@ -230,11 +230,12 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold ps-2">Запланировать игру</h5>
+                <h5 class="modal-title fw-bold ps-2" id="scheduled-game-modal-title">Запланировать игру</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
             <div class="modal-body pt-2">
                 <form onsubmit="createScheduledGame(); return false;">
+                    <input type="hidden" id="scheduled-game-edit-id" value="">
                     <select id="scheduled-game-type" class="form-select mb-3 fw-bold" style="border-radius: 16px;"></select>
                     <input type="text" id="scheduled-game-title" class="form-control mb-3 fw-bold"
                         placeholder="Название игры" style="border-radius: 16px;">
@@ -243,19 +244,23 @@
                         style="border-radius: 16px;">
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-min-players">Минимум игроков</label>
+                            <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-min-players">Старт от</label>
                             <input type="number" min="1" max="16" id="scheduled-game-min-players"
-                                class="form-control" value="2" placeholder="Мин." style="border-radius: 16px;">
+                                class="form-control" value="2" placeholder="2 игрока" inputmode="numeric"
+                                aria-describedby="scheduled-game-min-help" style="border-radius: 16px;">
+                            <div id="scheduled-game-min-help" class="form-text small">Минимум для старта</div>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-max-players">Максимум игроков</label>
+                            <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-max-players">Мест всего</label>
                             <input type="number" min="2" max="16" id="scheduled-game-max-players"
-                                class="form-control" value="8" placeholder="Макс." style="border-radius: 16px;">
+                                class="form-control" value="8" placeholder="8 игроков" inputmode="numeric"
+                                aria-describedby="scheduled-game-max-help" style="border-radius: 16px;">
+                            <div id="scheduled-game-max-help" class="form-text small">Лимит комнаты</div>
                         </div>
                     </div>
                     <textarea id="scheduled-game-description" class="form-control mb-3" rows="2"
                         placeholder="Описание (необязательно)" style="border-radius: 16px;"></textarea>
-                    <button type="submit" class="btn btn-primary w-100 btn-lg"
+                    <button type="submit" id="scheduled-game-submit" class="btn btn-primary w-100 btn-lg"
                         style="border-radius: 16px;">Запланировать</button>
                 </form>
             </div>

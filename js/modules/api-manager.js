@@ -26,6 +26,7 @@ function getApiTimeoutMs(action) {
         case 'get_history':
             return 30000;
         case 'create_scheduled_game':
+        case 'update_scheduled_game':
         case 'open_scheduled_game':
         case 'join_scheduled_game':
         case 'subscribe_scheduled_game':

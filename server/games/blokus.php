@@ -66,7 +66,9 @@ function getInitialState() {
         'greenOwnerIndex' => 0, // For 3player mode: index of player who controls Green this round
         'consecutivePasses' => 0,
         'lastMoveTime' => time(),
-        'history' => [] // Log of moves
+        'history' => [], // Log of moves
+        'started_at' => 0,
+        'stats_recorded' => false
     ];
 }
 
@@ -111,6 +113,8 @@ function handleGameAction($pdo, $room, $user, $data) {
             }
 
             $state['status'] = 'playing';
+            $state['started_at'] = time();
+            $state['stats_recorded'] = false;
             
             // Check player count to auto-adjust? 
             // For now rely on Host selection.
@@ -427,6 +431,10 @@ function validateMove($state, $color, $pieceId, $shape, $startX, $startY) {
 }
 
 function finalizeGame($pdo, $roomId, &$state) {
+    if (!empty($state['stats_recorded'])) {
+        return;
+    }
+
     // 1. Calculate Raw Scores for each Color
     $rawScores = [];
     $definitions = getPieceDefinitions();
@@ -533,7 +541,10 @@ function finalizeGame($pdo, $roomId, &$state) {
              $roomStmt->execute([$roomId]);
              $roomInfo = $roomStmt->fetch(PDO::FETCH_ASSOC);
              if ($roomInfo) {
-                 recordGameStats($pdo, $roomInfo, $playersData, 0);
+                 $startedAt = (int) ($state['started_at'] ?? 0);
+                 $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+                 recordGameStats($pdo, $roomInfo, $playersData, $duration);
+                 $state['stats_recorded'] = true;
              }
         }
     }

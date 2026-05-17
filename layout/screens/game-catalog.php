@@ -14,6 +14,12 @@
             <div id="game-catalog-count" class="game-catalog-count">0</div>
         </div>
 
+        <label class="game-catalog-search" for="game-catalog-search-input">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input id="game-catalog-search-input" type="search" inputmode="search" autocomplete="off"
+                placeholder="Найти игру">
+        </label>
+
         <div class="game-catalog-filters no-scrollbar" id="game-cat-filters-catalog">
             <button class="catalog-filter-pill active" data-cat="all">
                 <i class="bi bi-grid-fill" aria-hidden="true"></i><span>Все</span>

@@ -16,7 +16,6 @@ function setPollingSuspended(value) {
 
 function resetCreateRoomModalTitle() {
     const titleEl = document.getElementById('create-modal-title');
-    // TODO: keep this fallback while older modal markup without #create-modal-title may be cached.
     if (titleEl) titleEl.innerText = 'Новая комната';
 }
 
@@ -350,13 +349,9 @@ async function loadPublicRooms() {
         });
         renderRoomListContainers(`
             <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
-                <div>
-                    <div class="fw-bold" style="color:var(--text-main);">Публичные комнаты</div>
-                    <div class="small text-muted">Список временно недоступен</div>
-                </div>
-                <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                        style="width: 36px; height: 36px;">
-                    <i class="bi bi-arrow-clockwise" style="font-size: 18px;"></i>
+                <div class="rooms-list-title">Сейчас ждут игроков</div>
+                <button onclick="loadPublicRooms()" class="btn-unstyled rooms-list-action-icon" aria-label="Обновить комнаты">
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                 </button>
             </div>
             <div class="public-room-card public-room-empty text-center py-4">
@@ -369,19 +364,11 @@ async function loadPublicRooms() {
         return;
     }
     if (res.status === 'ok') {
-        const refreshBtn = `
-            <button onclick="loadPublicRooms()" class="btn btn-light text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                    style="width: 36px; height: 36px;">
-                <i class="bi bi-arrow-clockwise" style="font-size: 18px;"></i>
-            </button>
-        `;
-
         const headerHtml = `<div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
-            <div>
-                <div class="fw-bold" style="color:var(--text-main);">Публичные комнаты</div>
-                <div class="small text-muted">Живые комнаты</div>
-            </div>
-            ${refreshBtn}
+            <div class="rooms-list-title">Сейчас ждут игроков</div>
+            <button onclick="loadPublicRooms()" class="btn-unstyled rooms-list-action-icon" aria-label="Обновить комнаты">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+            </button>
         </div>`;
 
         if (res.rooms.length === 0) {
@@ -389,12 +376,14 @@ async function loadPublicRooms() {
                 container.innerHTML = '';
             });
             renderRoomListContainers(`
-                ${headerHtml}
                 <div class="public-room-card public-room-empty text-center py-4">
                      <div class="mb-2 text-primary opacity-50"><i class="bi bi-people" style="font-size: 40px;"></i></div>
-                     <div class="fw-bold" style="color: var(--text-main)">Пока открытых комнат нет</div>
-                     <div class="text-muted small mb-3">Создайте первую открытую комнату — другие смогут присоединиться.</div>
-                     <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать</button>
+                     <div class="fw-bold" style="color: var(--text-main)">Сейчас никто не ждёт игроков</div>
+                     <div class="text-muted small mb-3">Создайте открытую игру или посмотрите расписание.</div>
+                     <div class="d-flex justify-content-center flex-wrap gap-2">
+                        <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать игру</button>
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('scheduled')">Расписание</button>
+                     </div>
                 </div>
             `);
             return;
@@ -549,6 +538,7 @@ async function loadLocalRooms() {
 // === SCHEDULED OPEN GAMES ===
 let currentRoomsMode = 'live';
 let isScheduledGamesLoading = false;
+let currentScheduledGamesById = new Map();
 
 function roomSafeHtml(value) {
     return typeof window.safeHTML === 'function'
@@ -601,6 +591,17 @@ function getScheduledGameStatusText(status) {
     return 'Запланировано';
 }
 
+function getScheduledGamesCountText(count) {
+    const value = Math.max(0, Number(count || 0));
+    if (value === 0) return 'Сегодня и позже';
+    const lastTwo = value % 100;
+    const last = value % 10;
+    const noun = last === 1 && lastTwo !== 11
+        ? 'игра'
+        : (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'игры' : 'игр');
+    return `${value} ${noun} по расписанию`;
+}
+
 function getWaitingPlayersText(count) {
     const value = Math.max(0, Number(count || 0));
     const lastTwo = value % 100;
@@ -609,7 +610,28 @@ function getWaitingPlayersText(count) {
     return `${value} ${verb}`;
 }
 
+function getScheduledInputDateValue(value) {
+    if (!value) return '';
+    const date = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (part) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function resetScheduledGameModalMode() {
+    const editIdInput = document.getElementById('scheduled-game-edit-id');
+    const titleEl = document.getElementById('scheduled-game-modal-title');
+    const submitBtn = document.getElementById('scheduled-game-submit');
+    const select = document.getElementById('scheduled-game-type');
+    if (editIdInput) editIdInput.value = '';
+    if (titleEl) titleEl.innerText = 'Запланировать игру';
+    if (submitBtn) submitBtn.innerText = 'Запланировать';
+    if (select) select.disabled = false;
+}
+
 function populateScheduledGameForm(defaultGameType = null) {
+    resetScheduledGameModalMode();
+
     const select = document.getElementById('scheduled-game-type');
     if (select && Array.isArray(window.AVAILABLE_GAMES)) {
         select.innerHTML = window.AVAILABLE_GAMES
@@ -619,12 +641,17 @@ function populateScheduledGameForm(defaultGameType = null) {
     }
 
     const titleInput = document.getElementById('scheduled-game-title');
-    if (titleInput && !titleInput.value) titleInput.value = 'Открытая игра';
+    if (titleInput) titleInput.value = 'Открытая игра';
 
     const startsInput = document.getElementById('scheduled-game-starts');
-    if (startsInput && !startsInput.value) {
-        startsInput.value = getDefaultScheduledStartValue();
-    }
+    if (startsInput) startsInput.value = getDefaultScheduledStartValue();
+
+    const minInput = document.getElementById('scheduled-game-min-players');
+    const maxInput = document.getElementById('scheduled-game-max-players');
+    const descriptionInput = document.getElementById('scheduled-game-description');
+    if (minInput) minInput.value = 2;
+    if (maxInput) maxInput.value = 8;
+    if (descriptionInput) descriptionInput.value = '';
 }
 
 function openScheduledGameModal(gameType = null) {
@@ -637,7 +664,52 @@ function openScheduledGameModal(gameType = null) {
     }
 }
 
+function editScheduledGame(id) {
+    const game = currentScheduledGamesById.get(Number(id));
+    if (!game) {
+        if (window.showToast) window.showToast('Не удалось открыть редактирование', 'error');
+        return;
+    }
+    if (game.status !== 'scheduled') {
+        if (window.showToast) window.showToast('Эту игру уже нельзя изменить', 'warning');
+        return;
+    }
+
+    populateScheduledGameForm(game.game_type);
+
+    const editIdInput = document.getElementById('scheduled-game-edit-id');
+    const titleEl = document.getElementById('scheduled-game-modal-title');
+    const submitBtn = document.getElementById('scheduled-game-submit');
+    const select = document.getElementById('scheduled-game-type');
+    const titleInput = document.getElementById('scheduled-game-title');
+    const startsInput = document.getElementById('scheduled-game-starts');
+    const minInput = document.getElementById('scheduled-game-min-players');
+    const maxInput = document.getElementById('scheduled-game-max-players');
+    const descriptionInput = document.getElementById('scheduled-game-description');
+
+    if (editIdInput) editIdInput.value = String(game.id || id);
+    if (titleEl) titleEl.innerText = 'Изменить игру';
+    if (submitBtn) submitBtn.innerText = 'Сохранить';
+    if (select) {
+        select.value = game.game_type || select.value;
+        select.disabled = true;
+    }
+    if (titleInput) titleInput.value = game.title || '';
+    if (startsInput) startsInput.value = getScheduledInputDateValue(game.starts_at) || getDefaultScheduledStartValue();
+    if (minInput) minInput.value = game.min_players || 2;
+    if (maxInput) maxInput.value = game.max_players || 8;
+    if (descriptionInput) descriptionInput.value = game.description || '';
+
+    const modalEl = document.getElementById('scheduledGameModal');
+    if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    } else if (window.showModal) {
+        window.showModal('scheduledGameModal');
+    }
+}
+
 async function createScheduledGame() {
+    const editId = document.getElementById('scheduled-game-edit-id')?.value || '';
     const gameType = document.getElementById('scheduled-game-type')?.value || window.selectedGameId || '';
     const title = document.getElementById('scheduled-game-title')?.value || '';
     const startsAt = document.getElementById('scheduled-game-starts')?.value || '';
@@ -645,15 +717,18 @@ async function createScheduledGame() {
     const maxPlayers = document.getElementById('scheduled-game-max-players')?.value || 8;
     const description = document.getElementById('scheduled-game-description')?.value || '';
 
-    const res = await window.apiRequest({
-        action: 'create_scheduled_game',
+    const payload = {
+        action: editId ? 'update_scheduled_game' : 'create_scheduled_game',
         game_type: gameType,
         title,
         starts_at: startsAt,
         min_players: minPlayers,
         max_players: maxPlayers,
         description
-    });
+    };
+    if (editId) payload.scheduled_game_id = editId;
+
+    const res = await window.apiRequest(payload);
 
     if (res?.status !== 'ok') return;
 
@@ -664,7 +739,8 @@ async function createScheduledGame() {
         window.closeModal('scheduledGameModal');
     }
 
-    if (window.showToast) window.showToast('Игра запланирована', 'success');
+    resetScheduledGameModalMode();
+    if (window.showToast) window.showToast(editId ? 'Игра обновлена' : 'Игра запланирована', 'success');
     switchRoomsMode('scheduled');
 }
 
@@ -723,22 +799,18 @@ async function loadScheduledGames() {
     const res = await window.apiRequest({ action: 'get_scheduled_games' });
     isScheduledGamesLoading = false;
 
-    const headerHtml = `
+    const getScheduledHeaderHtml = (count = null) => `
         <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
-            <div>
-                <div class="fw-bold" style="color:var(--text-main);">Запланированные игры</div>
-                <div class="small text-muted">Открытые партии с временем старта</div>
-            </div>
-            <button onclick="openScheduledGameModal()" class="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                    style="width: 38px; height: 38px;">
-                <i class="bi bi-plus-lg" style="font-size: 18px;"></i>
+            <div class="rooms-list-title">${count === null ? 'Игры с временем старта' : roomSafeHtml(getScheduledGamesCountText(count))}</div>
+            <button onclick="openScheduledGameModal()" class="btn-unstyled rooms-list-action-pill">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Создать</span>
             </button>
         </div>
     `;
 
     if (!res || res.status !== 'ok') {
         container.innerHTML = `
-            ${headerHtml}
+            ${getScheduledHeaderHtml(null)}
             <div class="scheduled-game-card text-center py-4">
                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-x" style="font-size: 40px;"></i></div>
                 <div class="fw-bold" style="color: var(--text-main)">Расписание временно недоступно</div>
@@ -751,7 +823,7 @@ async function loadScheduledGames() {
 
     if (!Array.isArray(res.games) || res.games.length === 0) {
         container.innerHTML = `
-            ${headerHtml}
+            ${getScheduledHeaderHtml(0)}
             <div class="scheduled-game-card text-center py-4">
                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-plus" style="font-size: 42px;"></i></div>
                 <div class="fw-bold" style="color: var(--text-main)">Пока ничего не запланировано</div>
@@ -762,8 +834,10 @@ async function loadScheduledGames() {
         return;
     }
 
-    container.innerHTML = headerHtml;
+    currentScheduledGamesById = new Map();
+    container.innerHTML = getScheduledHeaderHtml(res.games.length);
     res.games.forEach(game => {
+        currentScheduledGamesById.set(Number(game.id), game);
         const meta = getPublicRoomGameMeta(game.game_type);
         const title = roomSafeHtml(game.title || meta.name);
         const description = roomSafeHtml(game.description || 'Открытая игра для всех желающих');
@@ -780,8 +854,11 @@ async function loadScheduledGames() {
             : (isHost
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)}, '${roomSafeHtml(game.game_type)}')">Открыть</button>`
                 : `<button type="button" class="btn btn-sm ${isSubscribed ? 'btn-outline-secondary' : 'btn-primary'} rounded-pill px-3" onclick="${isSubscribed ? 'unsubscribeScheduledGame' : 'subscribeScheduledGame'}(${Number(game.id)})">${isSubscribed ? 'Не напоминать' : 'Напомнить'}</button>`);
+        const editAction = isHost && game.status === 'scheduled'
+            ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Изменить</button>`
+            : '';
         const secondaryAction = isHost
-            ? `<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`
+            ? `${editAction}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`
             : '';
 
         const div = document.createElement('div');
@@ -801,7 +878,7 @@ async function loadScheduledGames() {
                         <span class="scheduled-game-badge"><i class="bi bi-people"></i>${subscribersText}</span>
                         <span class="scheduled-game-badge"><i class="bi bi-person-circle"></i>${hostName}</span>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex flex-wrap gap-2">
                         ${primaryAction}
                         ${secondaryAction}
                     </div>
@@ -1423,6 +1500,7 @@ window.RoomManager = {
     loadScheduledGames,
     switchRoomsMode,
     openScheduledGameModal,
+    editScheduledGame,
     createScheduledGame,
     createScheduledGameFromCreateModal,
     toggleCreateRoomScheduleMode,
@@ -1466,6 +1544,7 @@ window.loadPublicRooms = loadPublicRooms;
 window.loadScheduledGames = loadScheduledGames;
 window.switchRoomsMode = switchRoomsMode;
 window.openScheduledGameModal = openScheduledGameModal;
+window.editScheduledGame = editScheduledGame;
 window.createScheduledGame = createScheduledGame;
 window.createScheduledGameFromCreateModal = createScheduledGameFromCreateModal;
 window.toggleCreateRoomScheduleMode = toggleCreateRoomScheduleMode;

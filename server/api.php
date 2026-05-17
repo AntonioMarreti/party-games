@@ -278,6 +278,7 @@ $routes = [
     'create_scheduled_game' => 'actions/scheduled_games.php',
     'get_scheduled_games' => 'actions/scheduled_games.php',
     'get_my_scheduled_games' => 'actions/scheduled_games.php',
+    'update_scheduled_game' => 'actions/scheduled_games.php',
     'subscribe_scheduled_game' => 'actions/scheduled_games.php',
     'unsubscribe_scheduled_game' => 'actions/scheduled_games.php',
     'cancel_scheduled_game' => 'actions/scheduled_games.php',

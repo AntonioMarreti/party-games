@@ -859,8 +859,8 @@ body.history-details-open .bottom-nav {
 .game-catalog-header {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 0 0 18px;
+    gap: 10px;
+    padding: 0 0 14px;
     padding-top: calc(56px + env(safe-area-inset-top));
     position: sticky;
     top: 0;
@@ -927,23 +927,60 @@ body.history-details-open .bottom-nav {
     transform: scale(0.9);
 }
 
+.game-catalog-search {
+    height: 42px;
+    margin: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 14px;
+    border-radius: 18px;
+    background: #f4f5f9;
+    border: 1px solid rgba(218, 221, 232, 0.86);
+    color: var(--text-muted);
+    box-shadow: 0 8px 20px rgba(24, 29, 37, 0.045);
+}
+
+.game-catalog-search i {
+    flex-shrink: 0;
+    color: rgba(var(--primary-rgb), 0.72);
+    font-size: 15px;
+}
+
+.game-catalog-search input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.game-catalog-search input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.72;
+}
+
 .game-catalog-filters {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     overflow: visible;
-    padding: 0 20px 4px;
+    padding: 0 20px 2px;
 }
 
 .catalog-filter-pill {
-    min-height: 36px;
+    min-height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
     min-width: 0;
-    padding: 9px 5px;
+    padding: 8px 5px;
     border-radius: 999px;
     border: 1px solid rgba(var(--primary-rgb), 0.12);
     background: #f4f5f9;
@@ -978,7 +1015,7 @@ body.history-details-open .bottom-nav {
 }
 
 .game-catalog-content {
-    padding: 18px 20px calc(150px + env(safe-area-inset-bottom));
+    padding: 14px 20px calc(150px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1148,6 +1185,7 @@ body.history-details-open .bottom-nav {
 }
 
 .thermal-safe .game-catalog-header,
+.thermal-safe .game-catalog-search,
 .thermal-safe .catalog-game-card,
 .thermal-safe .catalog-filter-pill,
 .thermal-safe .catalog-game-like,
@@ -1162,6 +1200,15 @@ body.history-details-open .bottom-nav {
 .thermal-safe .catalog-filter-pill.active {
     background: var(--primary-color) !important;
     color: var(--text-on-accent) !important;
+}
+
+.thermal-safe .game-catalog-search input {
+    color: var(--text-main) !important;
+}
+
+.thermal-safe .game-catalog-search input::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.85 !important;
 }
 
 .mini-game-card {

@@ -388,7 +388,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state['round_history'] = [];
         $state['started_at'] = time();
         $state['stats_recorded'] = false;
-        unset($state['ai_summary']);
+        unset($state['ai_summary'], $state['ai_summary_version']);
         bbEnsureScoreRows($state, bbGetPlayerIds($pdo, $room['id']));
         $state['current_round'] = 0;
         $state['remaining_games'] = []; // СБРАСЫВАЕМ ОЧЕРЕДЬ ПРИ НОВОЙ НАСТРОЙКЕ

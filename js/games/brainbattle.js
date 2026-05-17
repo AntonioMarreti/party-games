@@ -8,6 +8,7 @@
     let brainBattleDelegatedClicksBound = false;
     let activeRoundSessionId = 0;
     let activeRoundId = '';
+    const BRAINBATTLE_SUMMARY_VERSION = 2;
     const brainBattleTimeouts = new Set();
     const brainBattleIntervals = new Set();
     const brainBattleAnimationFrames = new Set();
@@ -362,6 +363,7 @@
             state.total_rounds || 0,
             getBrainBattleScoresSignature(state.scores || {}),
             Array.isArray(state.round_history) ? state.round_history.length : 0,
+            Number(state.ai_summary_version || 0),
             String(state.ai_summary || '')
         ].join('|');
     }
@@ -518,8 +520,13 @@
         return [
             state.current_round || 0,
             state.total_rounds || 0,
-            JSON.stringify(state.scores || {})
+            JSON.stringify(state.scores || {}),
+            Number(state.ai_summary_version || 0)
         ].join('|');
+    }
+
+    function hasFreshBrainBattleSummary(state) {
+        return Boolean(state?.ai_summary) && Number(state.ai_summary_version || 0) >= BRAINBATTLE_SUMMARY_VERSION;
     }
 
     function bbBuildFinalLeaderboard(state, players) {
@@ -963,9 +970,9 @@
             brainBattleSummaryKey = summaryKey;
         }
 
-        const cachedSummary = state.ai_summary || brainBattleSummaryText;
+        const cachedSummary = hasFreshBrainBattleSummary(state) ? state.ai_summary : brainBattleSummaryText;
         if (cachedSummary) {
-            brainBattleSummaryText = String(cachedSummary);
+            brainBattleSummaryText = trimBrainBattleSummaryText(cachedSummary);
             container.innerHTML = `<p class="mb-0">${escapeHtml(brainBattleSummaryText)}</p>`;
             container.dataset.state = 'ready';
             return;
@@ -992,9 +999,10 @@
             }
 
             if (response.status === 'ok' && response.data) {
-                brainBattleSummaryText = typeof response.data === 'string'
+                const rawSummary = typeof response.data === 'string'
                     ? response.data
                     : (response.data.text || JSON.stringify(response.data));
+                brainBattleSummaryText = trimBrainBattleSummaryText(rawSummary);
                 container.innerHTML = `<p class="mb-0">${escapeHtml(brainBattleSummaryText)}</p>`;
                 container.dataset.state = 'ready';
                 return;
@@ -1009,6 +1017,21 @@
         } finally {
             brainBattleSummaryPending = null;
         }
+    }
+
+    function trimBrainBattleSummaryText(value) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (text.length <= 260) return text;
+        return text.slice(0, 257).trimEnd() + '...';
+    }
+
+    function getBrainBattleRoundNoun(count) {
+        const value = Math.abs(Number(count || 0));
+        const lastTwo = value % 100;
+        const last = value % 10;
+        if (last === 1 && lastTwo !== 11) return 'раунд';
+        if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return 'раунда';
+        return 'раундов';
     }
 
     function buildBrainBattleReviewViewModel(state, res) {
@@ -1602,6 +1625,8 @@
         const sorted = leaderboard.map((entry) => [entry.userId, entry.score]);
         const winnerId = sorted[0] ? sorted[0][0] : null;
         const myUserId = String(res.user.id);
+        const cachedSummary = hasFreshBrainBattleSummary(state) ? state.ai_summary : '';
+        const summaryText = cachedSummary || brainBattleSummaryText || '';
         return {
             leaderboard,
             sorted,
@@ -1609,11 +1634,11 @@
             isWinner: myUserId === String(winnerId),
             myRank: Math.max(1, leaderboard.findIndex((entry) => entry.userId === myUserId) + 1),
             stats: bbBuildPlayerMatchStats(state, res.players, res.user.id),
-            summaryState: state.ai_summary || brainBattleSummaryText ? 'ready' : 'loading',
+            summaryState: summaryText ? 'ready' : 'loading',
             totalRounds: state.total_rounds || 0,
             players: res.players,
             isHost: !!res.is_host,
-            summaryText: state.ai_summary || brainBattleSummaryText || ''
+            summaryText
         };
     }
 
@@ -1749,64 +1774,59 @@
             : null;
 
         let html = `
-        <div class="d-flex flex-column align-items-center pt-5 pb-5 px-3">
-            <div class="mb-4 animate__animated animate__bounceIn">
-                <div style="font-size: 80px; filter: drop-shadow(0 10px 20px rgba(255, 215, 0, 0.4));">🏆</div>
+        <div class="d-flex flex-column align-items-center pt-5 pb-5 px-3 bb-final-screen">
+            <div class="bb-final-icon animate__animated animate__bounceIn" aria-hidden="true">
+                <i class="bi bi-trophy-fill"></i>
             </div>
             
-            <h2 id="bb-final-title" class="display-6 fw-bold mb-2 text-center" style="color: var(--text-main);">Битва окончена!</h2>
+            <h2 id="bb-final-title" class="display-6 fw-bold mb-2 text-center" style="color: var(--text-main);">Битва окончена</h2>
             
             <div id="bb-final-winner-banner">
                 ${viewModel.isWinner
-                ? `<div class="bb-glass-card p-4 mb-5 w-100 text-center" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 255, 255, 0.6) 100%); border: 1px solid rgba(255, 215, 0, 0.3);">
-                    <h3 class="fw-bold mb-0 text-warning" style="text-shadow: 0 2px 5px rgba(0,0,0,0.1);">ТЫ ЧЕМПИОН! 🎉</h3>
+                ? `<div class="bb-final-winner-note">
+                    <i class="bi bi-stars" aria-hidden="true"></i><span>Вы выиграли турнир</span>
                    </div>`
-                : `<div class="mb-4"></div>`
+                : ``
             }
             </div>
             
-            <div id="bb-final-leaderboard" class="w-100 d-flex flex-column gap-2 mb-5"></div>
-            <div class="bb-glass-card w-100 p-4 mb-4">
-                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div id="bb-final-leaderboard" class="w-100 d-flex flex-column gap-2 mb-3"></div>
+            <div class="bb-final-personal w-100 mb-3">
+                <div class="bb-final-personal-head">
                     <div>
-                        <div class="small text-uppercase text-muted fw-bold mb-1">Ваш итог</div>
-                        <div class="fw-bold">Персональная статистика матча</div>
+                        <div class="bb-final-section-kicker">Личный итог</div>
+                        <div class="bb-final-personal-title">Ваш матч</div>
                     </div>
-                    <div id="bb-final-rounds-pill" class="bb-stat-pill"></div>
+                    <div id="bb-final-rounds-pill" class="bb-final-rounds-pill"></div>
                 </div>
-                <div class="w-100 bb-final-stats-grid">
-                    <div class="bb-glass-card bb-final-stat-card">
-                        <div class="bb-final-stat-label">Ваше место</div>
+                <div class="bb-final-stats-grid">
+                    <div class="bb-final-stat-card">
+                        <div class="bb-final-stat-label">Место</div>
                         <div id="bb-final-rank" class="bb-final-stat-value"></div>
                     </div>
-                    <div class="bb-glass-card bb-final-stat-card">
+                    <div class="bb-final-stat-card">
                         <div class="bb-final-stat-label">Точность</div>
                         <div id="bb-final-accuracy" class="bb-final-stat-value"></div>
                     </div>
-                    <div class="bb-glass-card bb-final-stat-card">
-                        <div class="bb-final-stat-label">Лучший раунд</div>
+                    <div class="bb-final-stat-card">
+                        <div class="bb-final-stat-label">Лучший</div>
                         <div id="bb-final-best-round" class="bb-final-stat-value"></div>
                     </div>
-                    <div class="bb-glass-card bb-final-stat-card">
-                        <div class="bb-final-stat-label">Самый быстрый</div>
+                    <div class="bb-final-stat-card">
+                        <div class="bb-final-stat-label">Скорость</div>
                         <div id="bb-final-fastest" class="bb-final-stat-value"></div>
                         <div id="bb-final-fastest-note" class="bb-final-stat-note"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="bb-glass-card w-100 p-4 mb-4">
-                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                    <div>
-                        <div class="small text-uppercase text-muted fw-bold mb-1">AI-разбор матча</div>
-                        <div class="fw-bold">Короткая сводка по динамике игры</div>
-                    </div>
-                </div>
-                <div id="bb-ai-summary" class="bb-ai-summary"></div>
-            </div>
             ${postGameSummary ? `<div class="w-100 mb-4">${window.GameSummaryProvider.render(postGameSummary, {
                 playAgainLabel: viewModel.isHost ? 'Играть ещё раз' : 'В комнату'
             })}</div>` : ''}
+            <div class="bb-ai-summary-card w-100 mb-4">
+                <div class="bb-final-section-kicker">Комментарий матча</div>
+                <div id="bb-ai-summary" class="bb-ai-summary"></div>
+            </div>
             <div class="bb-final-spacer"></div></div>`;
 
         wrapper.innerHTML = html;
@@ -1836,10 +1856,10 @@
             if (winnerBanner.dataset.bbStatsSignature !== statsSignature) {
                 winnerBanner.dataset.bbStatsSignature = statsSignature;
                 winnerBanner.innerHTML = viewModel.isWinner
-                    ? `<div class="bb-glass-card p-4 mb-5 w-100 text-center" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 255, 255, 0.6) 100%); border: 1px solid rgba(255, 215, 0, 0.3);">
-                        <h3 class="fw-bold mb-0 text-warning" style="text-shadow: 0 2px 5px rgba(0,0,0,0.1);">ТЫ ЧЕМПИОН! 🎉</h3>
+                    ? `<div class="bb-final-winner-note">
+                        <i class="bi bi-stars" aria-hidden="true"></i><span>Вы выиграли турнир</span>
                     </div>`
-                    : `<div class="mb-4"></div>`;
+                    : ``;
             }
         }
         if (leaderboardEl) {
@@ -1849,17 +1869,17 @@
                 leaderboardEl.innerHTML = buildBrainBattleFinalLeaderboardHtml(viewModel);
             }
         }
-        if (roundsPill) roundsPill.textContent = `Раундов: ${viewModel.totalRounds}`;
+        if (roundsPill) roundsPill.textContent = `${viewModel.totalRounds} раундов`;
         if (rankEl) rankEl.textContent = `#${viewModel.myRank}`;
         if (accuracyEl) accuracyEl.textContent = `${viewModel.stats.my.accuracy}%`;
         if (bestRoundEl) bestRoundEl.textContent = `+${viewModel.stats.my.bestRoundScore || 0}`;
         if (fastestEl) fastestEl.textContent = viewModel.stats.global.fastest ? `${Math.round(viewModel.stats.global.fastest.time)} мс` : '—';
-        if (fastestNoteEl) fastestNoteEl.textContent = viewModel.stats.global.fastest ? viewModel.stats.global.fastest.name : 'Нет данных';
+        if (fastestNoteEl) fastestNoteEl.textContent = viewModel.stats.global.fastest ? viewModel.stats.global.fastest.name : '';
         mountBrainBattleFinalActions(wrapper, buildBrainBattleFinalFooterHtml(viewModel));
         if (summaryEl) {
             summaryEl.dataset.state = viewModel.summaryState;
             summaryEl.innerHTML = viewModel.summaryState === 'ready'
-                ? `<p class="mb-0">${escapeHtml(viewModel.summaryText)}</p>`
+                ? `<p class="mb-0">${escapeHtml(trimBrainBattleSummaryText(viewModel.summaryText))}</p>`
                 : `<div class="bb-ai-summary-skeleton"></div><div class="bb-ai-summary-skeleton short"></div>`;
         }
     }
@@ -2010,8 +2030,9 @@
                 }
 
                 const winnerName = topId ? getName(topId) : '';
+                const roundsText = rounds ? `${rounds} ${getBrainBattleRoundNoun(rounds)}` : '';
                 const outcome = topId
-                    ? `${winnerName} забрал турнир${rounds ? ` за ${rounds} раундов` : ''}.`
+                    ? `${winnerName} выиграл турнир${roundsText ? `: ${roundsText}, ${topScore} очков` : ` с результатом ${topScore} очков`}.`
                     : 'Турнир закончился без явного лидера, но реванш уже просится.';
 
                 return {
@@ -2026,10 +2047,10 @@
                     awards,
                     shareText: [
                         `Мозговая Битва: ${outcome}`,
-                        topId ? `Победитель: ${winnerName} (${topScore} очков)` : '',
+                        topId ? `Победитель: ${winnerName}. Счёт: ${topScore}` : '',
                         ...awards.map(award => `${award.title}: ${award.player}`),
                         '',
-                        'Залетай в следующий раунд:'
+                        'Собираем реванш:'
                     ].filter(Boolean).join('\n')
                 };
             },

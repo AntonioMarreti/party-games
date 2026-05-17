@@ -52,6 +52,19 @@ function recordGameStats($pdo, $room, $playersData, $duration)
 {
     $duration = (int) $duration;
     $room['host_user_id'] = (int) $room['host_user_id'];
+    $playersData = statsNormalizePlayersData($playersData);
+
+    if (empty($playersData)) {
+        return;
+    }
+
+    $playerNames = statsLoadPlayerNames($pdo, array_column($playersData, 'user_id'));
+    $winnerData = statsFindWinnerData($playersData, $playerNames);
+    $historyPayload = statsBuildHistoryPayload($room, $playersData, $winnerData, $duration);
+    $replayPayload = [
+        'game_type' => $room['game_type'] ?? null,
+        'source_room_code' => $room['room_code'] ?? null,
+    ];
 
     // 2. Create Game History
     $stmt = $pdo->prepare("INSERT INTO game_history (room_code, game_type, host_user_id, players_count, duration_seconds) VALUES (?, ?, ?, ?, ?)");
@@ -64,15 +77,64 @@ function recordGameStats($pdo, $room, $playersData, $duration)
     ]);
     $gameHistoryId = $pdo->lastInsertId();
 
+    $historyUpdates = [];
+    $historyParams = [];
+    if (statsColumnExists($pdo, 'game_history', 'winner_user_id')) {
+        $historyUpdates[] = 'winner_user_id = ?';
+        $historyParams[] = $winnerData['user_id'];
+    }
+    if (statsColumnExists($pdo, 'game_history', 'winner_name')) {
+        $historyUpdates[] = 'winner_name = ?';
+        $historyParams[] = $winnerData['name'];
+    }
+    if (statsColumnExists($pdo, 'game_history', 'summary_text')) {
+        $historyUpdates[] = 'summary_text = ?';
+        $historyParams[] = $historyPayload['summary_text'];
+    }
+    if (statsColumnExists($pdo, 'game_history', 'result_payload')) {
+        $historyUpdates[] = 'result_payload = ?';
+        $historyParams[] = statsJsonEncode($historyPayload);
+    }
+    if (statsColumnExists($pdo, 'game_history', 'replay_payload')) {
+        $historyUpdates[] = 'replay_payload = ?';
+        $historyParams[] = statsJsonEncode($replayPayload);
+    }
+    if ($historyUpdates) {
+        $historyParams[] = $gameHistoryId;
+        $pdo->prepare("UPDATE game_history SET " . implode(', ', $historyUpdates) . " WHERE id = ?")
+            ->execute($historyParams);
+    }
+
     // 3. Process Each Player
     foreach ($playersData as $pData) {
         $pid = (int) $pData['user_id'];
         $rank = (int) $pData['rank']; // 1 = winner
         $dScore = (int) ($pData['score'] ?? 0);
+        $xpGained = calculateXP($rank, $dScore);
+        $playerPayload = statsBuildPlayerResultPayload($pData, $playerNames, $winnerData, count($playersData), $xpGained);
 
         // A. Record History Player
-        $pdo->prepare("INSERT INTO game_history_players (game_history_id, user_id, final_position, final_score) VALUES (?, ?, ?, ?)")
-            ->execute([$gameHistoryId, $pid, $rank, $dScore]);
+        $columns = ['game_history_id', 'user_id', 'final_position', 'final_score'];
+        $placeholders = ['?', '?', '?', '?'];
+        $params = [$gameHistoryId, $pid, $rank, $dScore];
+        if (statsColumnExists($pdo, 'game_history_players', 'xp_gained')) {
+            $columns[] = 'xp_gained';
+            $placeholders[] = '?';
+            $params[] = $xpGained;
+        }
+        if (statsColumnExists($pdo, 'game_history_players', 'result_label')) {
+            $columns[] = 'result_label';
+            $placeholders[] = '?';
+            $params[] = $playerPayload['result_label'];
+        }
+        if (statsColumnExists($pdo, 'game_history_players', 'result_payload')) {
+            $columns[] = 'result_payload';
+            $placeholders[] = '?';
+            $params[] = statsJsonEncode($playerPayload);
+        }
+
+        $pdo->prepare("INSERT INTO game_history_players (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")")
+            ->execute($params);
 
         // B. Update User Stats (Atomic Update)
         updateUserStats($pdo, $pid, $rank, $dScore, $gameHistoryId);
@@ -92,6 +154,144 @@ function recordGameStats($pdo, $room, $playersData, $duration)
             check_achievements($pdo, $pData['user_id'], $context);
         }
     }
+}
+
+function statsNormalizePlayersData($playersData)
+{
+    if (!is_array($playersData)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($playersData as $entry) {
+        if (!is_array($entry) || empty($entry['user_id'])) {
+            continue;
+        }
+
+        $rank = max(1, (int) ($entry['rank'] ?? $entry['final_position'] ?? 999));
+        $score = (int) ($entry['score'] ?? $entry['final_score'] ?? 0);
+        $normalized[] = [
+            'user_id' => (int) $entry['user_id'],
+            'rank' => $rank,
+            'score' => $score,
+        ];
+    }
+
+    usort($normalized, function ($a, $b) {
+        if ($a['rank'] === $b['rank']) {
+            return $b['score'] <=> $a['score'];
+        }
+        return $a['rank'] <=> $b['rank'];
+    });
+
+    return $normalized;
+}
+
+function statsColumnExists($pdo, $table, $column)
+{
+    static $cache = [];
+    $allowed = ['game_history', 'game_history_players'];
+    if (!in_array($table, $allowed, true)) {
+        return false;
+    }
+
+    $key = $table . '.' . $column;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    try {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
+        $stmt->execute([$column]);
+        $cache[$key] = (bool) $stmt->fetch();
+    } catch (Exception $e) {
+        $cache[$key] = false;
+    }
+
+    return $cache[$key];
+}
+
+function statsJsonEncode($value)
+{
+    return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+function statsLoadPlayerNames($pdo, $userIds)
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $userIds))));
+    if (empty($ids)) {
+        return [];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $pdo->prepare("
+        SELECT id, COALESCE(NULLIF(custom_name, ''), NULLIF(first_name, ''), username, CONCAT('Игрок ', id)) AS display_name
+        FROM users
+        WHERE id IN ($placeholders)
+    ");
+    $stmt->execute($ids);
+
+    $names = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $names[(int) $row['id']] = $row['display_name'];
+    }
+
+    return $names;
+}
+
+function statsFindWinnerData($playersData, $playerNames)
+{
+    $winner = $playersData[0] ?? null;
+    if (!$winner) {
+        return ['user_id' => null, 'name' => null, 'score' => 0];
+    }
+
+    $winnerId = (int) $winner['user_id'];
+    return [
+        'user_id' => $winnerId,
+        'name' => $playerNames[$winnerId] ?? null,
+        'score' => (int) ($winner['score'] ?? 0),
+    ];
+}
+
+function statsBuildHistoryPayload($room, $playersData, $winnerData, $duration)
+{
+    $topScore = (int) ($winnerData['score'] ?? 0);
+    $winnerName = $winnerData['name'] ?? null;
+
+    return [
+        'game_type' => $room['game_type'] ?? null,
+        'winner_user_id' => $winnerData['user_id'] ?? null,
+        'winner_name' => $winnerName,
+        'top_score' => $topScore,
+        'players_count' => count($playersData),
+        'duration_seconds' => (int) $duration,
+        'summary_text' => $winnerName
+            ? "Победитель: {$winnerName} · {$topScore} очков"
+            : "Итог партии · {$topScore} очков",
+    ];
+}
+
+function statsBuildPlayerResultPayload($playerData, $playerNames, $winnerData, $playersCount, $xpGained)
+{
+    $rank = (int) ($playerData['rank'] ?? 0);
+    $score = (int) ($playerData['score'] ?? 0);
+    $playerId = (int) ($playerData['user_id'] ?? 0);
+    $isWin = $rank === 1;
+    $resultLabel = $isWin ? "Победа · {$score} очков" : "{$rank} место · {$score} очков";
+
+    return [
+        'player_user_id' => $playerId,
+        'player_name' => $playerNames[$playerId] ?? null,
+        'place' => $rank,
+        'score' => $score,
+        'xp_gained' => (int) $xpGained,
+        'is_win' => $isWin,
+        'winner_user_id' => $winnerData['user_id'] ?? null,
+        'winner_name' => $winnerData['name'] ?? null,
+        'players_count' => (int) $playersCount,
+        'result_label' => $resultLabel,
+    ];
 }
 
 function updateUserStats($pdo, $userId, $rank, $score, $gameId)
@@ -269,16 +469,37 @@ function action_get_history($pdo, $user, $data)
         $limit = 100;
 
     try {
-        $stmt = $pdo->prepare("
-            SELECT gh.id, gh.game_type, gh.duration_seconds, gh.created_at, gh.players_count,
-                   ghp.final_position, ghp.final_score,
-                   (
+        $historyWinnerName = statsColumnExists($pdo, 'game_history', 'winner_name')
+            ? "COALESCE(NULLIF(gh.winner_name, ''), (
                        SELECT GROUP_CONCAT(COALESCE(NULLIF(u.custom_name, ''), u.first_name) SEPARATOR ', ')
                        FROM game_history_players winners
                        JOIN users u ON u.id = winners.user_id
                        WHERE winners.game_history_id = gh.id
                          AND winners.final_position = 1
-                   ) AS winner_name
+                   )) AS winner_name"
+            : "(
+                       SELECT GROUP_CONCAT(COALESCE(NULLIF(u.custom_name, ''), u.first_name) SEPARATOR ', ')
+                       FROM game_history_players winners
+                       JOIN users u ON u.id = winners.user_id
+                       WHERE winners.game_history_id = gh.id
+                         AND winners.final_position = 1
+                   ) AS winner_name";
+
+        $optionalHistoryFields = [
+            statsColumnExists($pdo, 'game_history', 'winner_user_id') ? 'gh.winner_user_id' : 'NULL AS winner_user_id',
+            statsColumnExists($pdo, 'game_history', 'summary_text') ? 'gh.summary_text' : 'NULL AS summary_text',
+            statsColumnExists($pdo, 'game_history', 'result_payload') ? 'gh.result_payload AS game_result_payload' : 'NULL AS game_result_payload',
+            statsColumnExists($pdo, 'game_history', 'replay_payload') ? 'gh.replay_payload' : 'NULL AS replay_payload',
+            statsColumnExists($pdo, 'game_history_players', 'xp_gained') ? 'ghp.xp_gained' : 'NULL AS xp_gained',
+            statsColumnExists($pdo, 'game_history_players', 'result_label') ? 'ghp.result_label' : 'NULL AS result_label',
+            statsColumnExists($pdo, 'game_history_players', 'result_payload') ? 'ghp.result_payload AS player_result_payload' : 'NULL AS player_result_payload',
+        ];
+
+        $stmt = $pdo->prepare("
+            SELECT gh.id, gh.game_type, gh.duration_seconds, gh.created_at, gh.players_count,
+                   ghp.final_position, ghp.final_score,
+                   $historyWinnerName,
+                   " . implode(",\n                   ", $optionalHistoryFields) . "
             FROM game_history_players ghp
             JOIN game_history gh ON gh.id = ghp.game_history_id
             WHERE ghp.user_id = ?
@@ -287,6 +508,15 @@ function action_get_history($pdo, $user, $data)
         ");
         $stmt->execute([$targetId]);
         $history = $stmt->fetchAll();
+
+        foreach ($history as &$item) {
+            foreach (['game_result_payload', 'player_result_payload', 'replay_payload'] as $field) {
+                if (!empty($item[$field]) && is_string($item[$field])) {
+                    $decoded = json_decode($item[$field], true);
+                    $item[$field] = is_array($decoded) ? $decoded : null;
+                }
+            }
+        }
 
         echo json_encode(['status' => 'ok', 'history' => $history]);
     } catch (Exception $e) {

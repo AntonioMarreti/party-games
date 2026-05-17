@@ -17,7 +17,9 @@ function getInitialState()
         'turnOrder' => [],
         'currentTurnIndex' => 0,
         'safeCellsRemaining' => 0,
-        'history' => []
+        'history' => [],
+        'started_at' => 0,
+        'stats_recorded' => false
     ];
 }
 
@@ -64,6 +66,8 @@ function handleGameAction($pdo, $room, $user, $data)
             $state['currentTurnIndex'] = 0;
             $state['scores'] = array_fill_keys($uids, 0);
             $state['stunned'] = array_fill_keys($uids, 0);
+            $state['started_at'] = time();
+            $state['stats_recorded'] = false;
 
             // Board settings based on difficulty
             $rows = 9;
@@ -430,6 +434,10 @@ function checkVictory($pdo, $roomId, &$state)
 
 function finalizeMinesweeper($pdo, $roomId, &$state)
 {
+    if (!empty($state['stats_recorded'])) {
+        return;
+    }
+
     $scores = $state['scores'];
     arsort($scores);
 
@@ -462,7 +470,10 @@ function finalizeMinesweeper($pdo, $roomId, &$state)
             $roomStmt->execute([$roomId]);
             $roomInfo = $roomStmt->fetch(PDO::FETCH_ASSOC);
             if ($roomInfo) {
-                recordGameStats($pdo, $roomInfo, $playersData, 0);
+                $startedAt = (int) ($state['started_at'] ?? 0);
+                $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+                recordGameStats($pdo, $roomInfo, $playersData, $duration);
+                $state['stats_recorded'] = true;
             }
         }
     }

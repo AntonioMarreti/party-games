@@ -1024,23 +1024,39 @@ async function loadGameHistory() {
 }
 
 function buildHistoryResultText(item, pos, score) {
+    if (item?.result_label) return String(item.result_label);
+    if (item?.player_result_payload?.result_label) return String(item.player_result_payload.result_label);
+
     const isWin = pos === 1;
     const scoreText = `${score} очков`;
     const placeText = pos === '-' ? 'Итог партии' : (isWin ? 'Победа' : `${pos} место`);
     const labels = {
-        partybattle: isWin ? 'Лучший в Party Battle' : 'Party Battle',
-        brainbattle: isWin ? 'Чемпион турнира' : 'Мозговая Битва',
-        wordclash: isWin ? 'Победа в словесной дуэли' : 'Битва слов',
-        bunker: isWin ? 'Выжил в бункере' : 'Итог выживания',
-        spyfall: isWin ? 'Победа в Шпионе' : 'Раунд Шпиона',
-        tictactoe: isWin ? 'Победа в дуэли' : 'Крестики-нолики',
-        tictactoe_ultimate: isWin ? 'Победа в большой дуэли' : 'Ultimate-дуэль',
-        blokus: isWin ? 'Лучший контроль поля' : 'Стратегия на поле',
-        minesweeper_br: isWin ? 'Последний сапёр' : 'Сапёрский забег',
-        backgammon_game: isWin ? 'Победа в нардах' : 'Партия в нарды'
+        partybattle: isWin ? 'Победа в Party Battle' : placeText,
+        brainbattle: isWin ? 'Победа в турнире' : placeText,
+        wordclash: isWin ? 'Победа в словесной дуэли' : placeText,
+        bunker: isWin ? 'Выжил в бункере' : placeText,
+        spyfall: isWin ? 'Победа в Шпионе' : placeText,
+        tictactoe: isWin ? 'Победа в дуэли' : placeText,
+        tictactoe_ultimate: isWin ? 'Победа в большой дуэли' : placeText,
+        blokus: isWin ? 'Лучший контроль поля' : placeText,
+        minesweeper_br: isWin ? 'Победа в забеге' : placeText,
+        backgammon_game: isWin ? 'Победа в нардах' : placeText
     };
     const label = labels[item?.game_type] || placeText;
     return `${label} · ${scoreText}`;
+}
+
+function calculateHistoryXp(item, pos, score) {
+    const storedXp = Number(item?.xp_gained ?? item?.player_result_payload?.xp_gained);
+    if (Number.isFinite(storedXp) && storedXp > 0) return storedXp;
+
+    let rankBonus = 0;
+    if (pos === 1) { rankBonus = 100; }
+    else if (pos === 2) { rankBonus = 50; }
+    else if (pos === 3) { rankBonus = 20; }
+
+    const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
+    return 20 + rankBonus + scoreBonus;
 }
 
 function renderHistoryList(history, container) {
@@ -1131,13 +1147,7 @@ function renderHistoryList(history, container) {
         const canReplay = Boolean(item.game_type)
             && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
 
-        let rankBonus = 0;
-        if (pos === 1) { rankBonus = 100; }
-        else if (pos === 2) { rankBonus = 50; }
-        else if (pos === 3) { rankBonus = 20; }
-
-        const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
-        const xp = 20 + rankBonus + scoreBonus;
+        const xp = calculateHistoryXp(item, pos, score);
         const resultText = buildHistoryResultText(item, pos, score);
         const dateMeta = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
 
@@ -1188,7 +1198,6 @@ function replayHistoryGame(gameType) {
     if (publicCheckbox) publicCheckbox.checked = false;
 
     const titleEl = document.getElementById('create-modal-title');
-    // TODO: keep this guard while older cached markup without #create-modal-title may exist.
     if (titleEl) titleEl.innerText = 'Сыграть ещё';
 
     const hintEl = document.getElementById('create-room-replay-hint');
@@ -1237,9 +1246,8 @@ function showGameDetailsModal(item) {
     if (pos === 1) rankBonus = 100;
     else if (pos === 2) rankBonus = 50;
     else if (pos === 3) rankBonus = 20;
-
     const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
-    const xp = 20 + rankBonus + scoreBonus;
+    const xp = calculateHistoryXp(item, pos, score);
 
     const gameNames = {
         'bunker': 'Бункер',
