@@ -135,9 +135,9 @@ body.thermal-safe {
     --bg-glass: var(--bg-secondary);
     --bg-glass-strong: var(--bg-secondary);
     --border-glass: var(--border-main);
-    --shadow-main: none;
-    --shadow-strong: none;
-    --shadow-glow: none;
+    --shadow-main: 0 8px 22px rgba(31, 38, 135, 0.08);
+    --shadow-strong: 0 14px 34px rgba(31, 38, 135, 0.12);
+    --shadow-glow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 body.dark-mode.thermal-safe {

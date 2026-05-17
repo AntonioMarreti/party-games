@@ -271,9 +271,18 @@ $routes = [
     'get_leaderboard' => 'actions/stats.php',
     'get_stats' => 'actions/stats.php',
     'get_history' => 'actions/stats.php',
+    'generate_share_card' => 'actions/share.php',
 
     'make_room_public' => 'actions/room.php',
     'get_public_rooms' => 'actions/room.php',
+    'create_scheduled_game' => 'actions/scheduled_games.php',
+    'get_scheduled_games' => 'actions/scheduled_games.php',
+    'get_my_scheduled_games' => 'actions/scheduled_games.php',
+    'subscribe_scheduled_game' => 'actions/scheduled_games.php',
+    'unsubscribe_scheduled_game' => 'actions/scheduled_games.php',
+    'cancel_scheduled_game' => 'actions/scheduled_games.php',
+    'open_scheduled_game' => 'actions/scheduled_games.php',
+    'join_scheduled_game' => 'actions/scheduled_games.php',
 
     'admin_stats' => 'actions/admin.php',
     'reset_leaderboard' => 'actions/admin.php',

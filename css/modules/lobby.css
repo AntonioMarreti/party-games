@@ -392,7 +392,7 @@
 .thermal-safe .home-public-rooms-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-main) !important;
 }
 
 .thermal-safe .home-secondary-action,
@@ -795,13 +795,13 @@ body.history-details-open .bottom-nav {
 .thermal-safe .history-game-card {
     background: var(--bg-secondary) !important;
     border-color: var(--border-main) !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-main) !important;
 }
 
 .thermal-safe .history-details-sheet {
     background: #fff !important;
     opacity: 1 !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-strong) !important;
     color: #252b2f !important;
 }
 
@@ -1154,7 +1154,7 @@ body.history-details-open .bottom-nav {
 .thermal-safe .catalog-game-meta span {
     background: var(--bg-secondary) !important;
     border-color: var(--border-main) !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-main) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
@@ -1215,8 +1215,35 @@ body.history-details-open .bottom-nav {
     margin-top: 15px;
 }
 
+.rooms-header {
+    padding-bottom: 46px;
+}
+
+.rooms-content-wrapper {
+    padding-top: 10px;
+}
+
+.rooms-content-wrapper .rooms-mode-switch {
+    margin-bottom: 12px !important;
+}
+
 .search-bar::placeholder {
     color: rgba(255, 255, 255, 0.6);
+}
+
+.thermal-safe .search-bar {
+    background: #fff !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    color: var(--text-main) !important;
+}
+
+.thermal-safe .search-bar::placeholder {
+    color: rgba(40, 45, 55, 0.52) !important;
+}
+
+.thermal-safe .header-bg .bi-search {
+    color: rgba(40, 45, 55, 0.48) !important;
+    opacity: 1 !important;
 }
 
 .game-list-card {

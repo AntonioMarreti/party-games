@@ -29,7 +29,7 @@
                 <span>Войти по коду</span>
             </button>
             <button type="button" class="btn-unstyled home-secondary-action"
-                onclick="document.getElementById('home-public-rooms-section')?.scrollIntoView({behavior:'smooth', block:'start'});">
+                onclick="switchTab('games'); if (window.switchRoomsMode) window.switchRoomsMode('live');">
                 <i class="bi bi-people" aria-hidden="true"></i>
                 <span>Открытые комнаты</span>
             </button>

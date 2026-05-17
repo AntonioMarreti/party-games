@@ -1171,9 +1171,15 @@ function replayHistoryGame(gameType) {
     if (!gameType) return;
     if (Array.isArray(window.AVAILABLE_GAMES) && !window.AVAILABLE_GAMES.some(game => game.id === gameType)) return;
 
+    const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
+        ? window.AVAILABLE_GAMES.find(game => game.id === gameType)
+        : null;
+    const gameName = gameConfig?.name || gameType;
+
     window.pendingReplayFlow = {
         sourceTab: 'history',
         gameType,
+        previousSelectedGameId: window.selectedGameId || null,
         completed: false
     };
 
@@ -1182,7 +1188,14 @@ function replayHistoryGame(gameType) {
     if (publicCheckbox) publicCheckbox.checked = false;
 
     const titleEl = document.getElementById('create-modal-title');
+    // TODO: keep this guard while older cached markup without #create-modal-title may exist.
     if (titleEl) titleEl.innerText = 'Сыграть ещё';
+
+    const hintEl = document.getElementById('create-room-replay-hint');
+    if (hintEl) {
+        hintEl.hidden = false;
+        hintEl.innerHTML = `<i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>${escapeHistoryHtml(gameName)}</span>`;
+    }
 
     if (window.switchTab) window.switchTab('home');
 

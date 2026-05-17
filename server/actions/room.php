@@ -1,5 +1,9 @@
 <?php
 
+// TODO(scheduled-games): keep this file focused on live rooms only.
+// Scheduled open games should live in actions/scheduled_games.php and create or
+// link a real room only when the event moves from scheduled -> open.
+
 function action_create_room($pdo, $user, $data)
 {
     global $currentUser; // Fallback if passed differently
@@ -467,13 +471,14 @@ function action_get_public_rooms($pdo, $user, $data)
 {
     $stmt = $pdo->query("
         SELECT pr.id, pr.room_id, pr.title, pr.description, pr.visibility,
-               r.game_type, r.room_code,
+               COALESCE(sg.game_type, r.game_type) as game_type, r.room_code,
                CASE WHEN r.password IS NULL OR r.password = '' THEN 0 ELSE 1 END as has_password,
                COUNT(rp_count.user_id) as players_count,
                u.photo_url as host_avatar, u.first_name as host_name,
                COALESCE(host_rp.last_active, r.created_at) as host_last_active
         FROM public_rooms pr
         JOIN rooms r ON r.id = pr.room_id
+        LEFT JOIN scheduled_games sg ON sg.room_id = r.id AND sg.status = 'open'
         JOIN room_players host_rp ON host_rp.room_id = r.id AND host_rp.user_id = r.host_user_id AND host_rp.is_host = 1
         LEFT JOIN room_players rp_count ON rp_count.room_id = r.id
         JOIN users u ON u.id = host_rp.user_id
@@ -482,7 +487,7 @@ function action_get_public_rooms($pdo, $user, $data)
         AND u.is_bot = 0
         AND COALESCE(host_rp.last_active, r.created_at) > (NOW() - INTERVAL 10 MINUTE)
         GROUP BY pr.id, pr.room_id, pr.title, pr.description, pr.visibility,
-                 r.game_type, r.room_code, r.password, u.photo_url, u.first_name,
+                 sg.game_type, r.game_type, r.room_code, r.password, u.photo_url, u.first_name,
                  host_rp.last_active, r.created_at
         ORDER BY players_count DESC, host_last_active DESC, pr.id DESC
         LIMIT 20

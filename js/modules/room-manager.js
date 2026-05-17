@@ -14,10 +14,65 @@ function setPollingSuspended(value) {
     window.__pgSuspendPolling = !!value;
 }
 
+function resetCreateRoomModalTitle() {
+    const titleEl = document.getElementById('create-modal-title');
+    // TODO: keep this fallback while older modal markup without #create-modal-title may be cached.
+    if (titleEl) titleEl.innerText = 'Новая комната';
+}
+
+function resetCreateRoomReplayHint() {
+    const hintEl = document.getElementById('create-room-replay-hint');
+    if (!hintEl) return;
+    hintEl.hidden = true;
+    hintEl.innerHTML = '';
+}
+
+function getDefaultScheduledStartValue() {
+    const date = new Date(Date.now() + 60 * 60 * 1000);
+    date.setMinutes(Math.ceil(date.getMinutes() / 5) * 5, 0, 0);
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function toggleCreateRoomScheduleMode() {
+    const toggle = document.getElementById('create-room-scheduled');
+    const fields = document.getElementById('create-room-scheduled-fields');
+    const startsInput = document.getElementById('create-room-scheduled-starts');
+    const submitBtn = document.getElementById('create-room-submit');
+    const isScheduled = !!toggle?.checked;
+
+    if (fields) fields.hidden = !isScheduled;
+    if (startsInput && isScheduled && !startsInput.value) {
+        startsInput.value = getDefaultScheduledStartValue();
+    }
+    if (submitBtn) submitBtn.innerText = isScheduled ? 'Запланировать' : 'Создать';
+}
+
+function resetCreateRoomScheduleMode() {
+    const toggle = document.getElementById('create-room-scheduled');
+    const fields = document.getElementById('create-room-scheduled-fields');
+    const submitBtn = document.getElementById('create-room-submit');
+    if (toggle) toggle.checked = false;
+    if (fields) fields.hidden = true;
+    if (submitBtn) submitBtn.innerText = 'Создать';
+}
+
+function markReplayFlowCompleted() {
+    if (window.pendingReplayFlow) {
+        window.pendingReplayFlow.completed = true;
+    }
+}
+
 // === ROOM ACTIONS ===
 
 async function createRoom() {
     if (isCreateRoomPending) return;
+
+    const scheduledToggle = document.getElementById('create-room-scheduled');
+    if (scheduledToggle?.checked) {
+        await createScheduledGameFromCreateModal();
+        return;
+    }
 
     const passInput = document.getElementById('create-room-pass');
     const titleInput = document.getElementById('create-room-title');
@@ -35,9 +90,7 @@ async function createRoom() {
     try {
         const res = await window.apiRequest({ action: 'create_room', password: passInput ? passInput.value : '' });
         if (res.status === 'ok') {
-            if (window.pendingReplayFlow) {
-                window.pendingReplayFlow.completed = true;
-            }
+            markReplayFlowCompleted();
 
             // Safe Modal Closing
             const modalEl = document.getElementById('createModal');
@@ -51,6 +104,14 @@ async function createRoom() {
                     document.body.classList.remove('modal-open');
                     document.body.style.overflow = '';
                 }, 300);
+                setTimeout(() => {
+                    if (window.pendingReplayFlow?.completed) {
+                        handleCreateRoomModalClosed();
+                    }
+                }, 500);
+            } else if (window.closeModal) {
+                window.closeModal('createModal');
+                handleCreateRoomModalClosed();
             }
 
             if (isPublic) {
@@ -73,10 +134,14 @@ function handleCreateRoomModalClosed() {
     const replayFlow = window.pendingReplayFlow;
     window.pendingReplayFlow = null;
 
-    const titleEl = document.getElementById('create-modal-title');
-    if (titleEl) titleEl.innerText = 'Новая комната';
+    resetCreateRoomModalTitle();
+    resetCreateRoomReplayHint();
+    resetCreateRoomScheduleMode();
 
     if (!replayFlow || replayFlow.completed) return;
+    if ('previousSelectedGameId' in replayFlow) {
+        window.selectedGameId = replayFlow.previousSelectedGameId;
+    }
     if (replayFlow.sourceTab && typeof window.switchTab === 'function') {
         window.switchTab(replayFlow.sourceTab);
     }
@@ -251,6 +316,8 @@ async function leaveRoom() {
 }
 
 // === PUBLIC ROOMS ===
+// Live waiting rooms and scheduled open games stay as separate client flows.
+// loadPublicRooms() renders only rooms that already exist in the current room lifecycle.
 
 async function loadPublicRooms() {
     const containers = Array.from(document.querySelectorAll('[data-public-rooms-list]'));
@@ -282,7 +349,7 @@ async function loadPublicRooms() {
             container.innerHTML = '';
         });
         renderRoomListContainers(`
-            <div class="public-rooms-header d-flex align-items-center justify-content-between mb-3">
+            <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
                 <div>
                     <div class="fw-bold" style="color:var(--text-main);">Публичные комнаты</div>
                     <div class="small text-muted">Список временно недоступен</div>
@@ -309,10 +376,10 @@ async function loadPublicRooms() {
             </button>
         `;
 
-        const headerHtml = `<div class="public-rooms-header d-flex align-items-center justify-content-between mb-3">
+        const headerHtml = `<div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
             <div>
                 <div class="fw-bold" style="color:var(--text-main);">Публичные комнаты</div>
-                <div class="small text-muted">Только живые waiting-комнаты</div>
+                <div class="small text-muted">Живые комнаты</div>
             </div>
             ${refreshBtn}
         </div>`;
@@ -358,29 +425,32 @@ async function loadPublicRooms() {
             const safeDescription = window.safeHTML(r.description) || 'Присоединяйтесь!';
             const hostName = window.safeHTML(r.host_name || 'Хост');
             const gameName = window.safeHTML(gameMeta.name);
+            const playersWaitingText = roomSafeHtml(getWaitingPlayersText(r.players_count || 1));
             const lockBadge = Number(r.has_password) === 1
                 ? `<span class="public-room-badge"><i class="bi bi-lock-fill me-1"></i>Пароль</span>`
                 : `<span class="public-room-badge"><i class="bi bi-unlock me-1"></i>Открытая</span>`;
 
             const roomHtml = `
-                <div class="d-flex justify-content-between align-items-start gap-3">
-                    <div class="d-flex align-items-start gap-3 flex-grow-1 min-w-0">
-                        <div class="public-room-game-icon" style="background:${gameMeta.bgColor}; color:${gameMeta.color};">
-                            <i class="bi ${gameMeta.icon}"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="fw-bold public-room-title">${safeTitle}</div>
-                            <div class="small text-muted public-room-description mb-2">${safeDescription}</div>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="public-room-badge"><i class="bi bi-controller me-1"></i>${gameName}</span>
-                                ${lockBadge}
-                                <span class="public-room-badge"><i class="bi bi-person-circle me-1"></i>${hostName}</span>
+                <div class="public-room-main">
+                    <div class="public-room-top">
+                        <div class="public-room-identity">
+                            <div class="public-room-game-icon" style="background:${gameMeta.bgColor}; color:${gameMeta.color};">
+                                <i class="bi ${gameMeta.icon}"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="fw-bold public-room-title">${safeTitle}</div>
+                                <div class="small text-muted public-room-description">${safeDescription}</div>
                             </div>
                         </div>
+                        <div class="public-room-side">
+                            <div class="public-room-count">${r.players_count} чел.</div>
+                            <div class="public-room-code">#${r.room_code}</div>
+                        </div>
                     </div>
-                    <div class="text-end flex-shrink-0">
-                         <div class="public-room-count">${r.players_count} чел.</div>
-                         <div class="small fw-bold text-primary mt-2">#${r.room_code}</div>
+                    <div class="public-room-meta-row">
+                        <span class="public-room-badge"><i class="bi bi-controller me-1"></i>${gameName}</span>
+                        ${lockBadge}
+                        <span class="public-room-badge"><i class="bi bi-person-circle me-1"></i>${hostName}</span>
                     </div>
                 </div>
             `;
@@ -395,7 +465,7 @@ async function loadPublicRooms() {
                     div.innerHTML = `
                         <div class="min-w-0">
                             <div class="fw-bold text-truncate">${safeTitle}</div>
-                            <div class="home-public-meta">${gameName} · ${r.players_count || 1} ждут · waiting</div>
+                            <div class="home-public-meta">${gameName} · ${playersWaitingText} · waiting</div>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="event.stopPropagation(); handleRoomJoinByData('${r.room_code}', ${Number(r.has_password) === 1 ? 1 : 0}, '${String(safeTitle).replace(/'/g, "\\'")}')">Войти</button>
                     `;
@@ -473,6 +543,332 @@ async function loadLocalRooms() {
             </div>`;
         });
         container.innerHTML = html;
+    }
+}
+
+// === SCHEDULED OPEN GAMES ===
+let currentRoomsMode = 'live';
+let isScheduledGamesLoading = false;
+
+function roomSafeHtml(value) {
+    return typeof window.safeHTML === 'function'
+        ? window.safeHTML(value)
+        : String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[ch]));
+}
+
+function switchRoomsMode(mode = 'live') {
+    currentRoomsMode = mode === 'scheduled' ? 'scheduled' : 'live';
+
+    document.querySelectorAll('[data-rooms-mode]').forEach(button => {
+        button.classList.toggle('active', button.dataset.roomsMode === currentRoomsMode);
+    });
+
+    document.querySelectorAll('[data-rooms-panel]').forEach(panel => {
+        panel.style.display = panel.dataset.roomsPanel === currentRoomsMode ? '' : 'none';
+    });
+
+    if (currentRoomsMode === 'scheduled') {
+        loadScheduledGames();
+    } else {
+        loadPublicRooms();
+    }
+}
+
+function getScheduledGameDateText(value) {
+    if (!value) return 'Время уточняется';
+    const date = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const isTomorrow = date.toDateString() === tomorrow.toDateString();
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `Сегодня · ${time}`;
+    if (isTomorrow) return `Завтра · ${time}`;
+    return `${date.toLocaleDateString()} · ${time}`;
+}
+
+function getScheduledGameStatusText(status) {
+    if (status === 'open') return 'Скоро старт';
+    return 'Запланировано';
+}
+
+function getWaitingPlayersText(count) {
+    const value = Math.max(0, Number(count || 0));
+    const lastTwo = value % 100;
+    const last = value % 10;
+    const verb = last === 1 && lastTwo !== 11 ? 'ждёт' : 'ждут';
+    return `${value} ${verb}`;
+}
+
+function populateScheduledGameForm(defaultGameType = null) {
+    const select = document.getElementById('scheduled-game-type');
+    if (select && Array.isArray(window.AVAILABLE_GAMES)) {
+        select.innerHTML = window.AVAILABLE_GAMES
+            .map(game => `<option value="${roomSafeHtml(game.id)}">${roomSafeHtml(game.name || game.id)}</option>`)
+            .join('');
+        select.value = defaultGameType || window.selectedGameId || window.AVAILABLE_GAMES[0]?.id || '';
+    }
+
+    const titleInput = document.getElementById('scheduled-game-title');
+    if (titleInput && !titleInput.value) titleInput.value = 'Открытая игра';
+
+    const startsInput = document.getElementById('scheduled-game-starts');
+    if (startsInput && !startsInput.value) {
+        startsInput.value = getDefaultScheduledStartValue();
+    }
+}
+
+function openScheduledGameModal(gameType = null) {
+    populateScheduledGameForm(gameType);
+    const modalEl = document.getElementById('scheduledGameModal');
+    if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    } else if (window.showModal) {
+        window.showModal('scheduledGameModal');
+    }
+}
+
+async function createScheduledGame() {
+    const gameType = document.getElementById('scheduled-game-type')?.value || window.selectedGameId || '';
+    const title = document.getElementById('scheduled-game-title')?.value || '';
+    const startsAt = document.getElementById('scheduled-game-starts')?.value || '';
+    const minPlayers = document.getElementById('scheduled-game-min-players')?.value || 2;
+    const maxPlayers = document.getElementById('scheduled-game-max-players')?.value || 8;
+    const description = document.getElementById('scheduled-game-description')?.value || '';
+
+    const res = await window.apiRequest({
+        action: 'create_scheduled_game',
+        game_type: gameType,
+        title,
+        starts_at: startsAt,
+        min_players: minPlayers,
+        max_players: maxPlayers,
+        description
+    });
+
+    if (res?.status !== 'ok') return;
+
+    const modalEl = document.getElementById('scheduledGameModal');
+    if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    } else if (window.closeModal) {
+        window.closeModal('scheduledGameModal');
+    }
+
+    if (window.showToast) window.showToast('Игра запланирована', 'success');
+    switchRoomsMode('scheduled');
+}
+
+async function createScheduledGameFromCreateModal() {
+    if (typeof window.apiRequest !== 'function') return;
+
+    const gameType = window.selectedGameId || (Array.isArray(window.AVAILABLE_GAMES) ? window.AVAILABLE_GAMES[0]?.id : '');
+    const meta = getPublicRoomGameMeta(gameType);
+    const titleInput = document.getElementById('create-room-title');
+    const startsInput = document.getElementById('create-room-scheduled-starts');
+    const title = titleInput?.value?.trim() || `Открытая игра ${meta.name}`;
+    const startsAt = startsInput?.value || '';
+
+    if (!startsAt) {
+        if (window.showToast) window.showToast('Выберите время старта', 'warning');
+        return;
+    }
+
+    isCreateRoomPending = true;
+    try {
+        const res = await window.apiRequest({
+            action: 'create_scheduled_game',
+            game_type: gameType,
+            title,
+            starts_at: startsAt,
+            min_players: 2,
+            max_players: 8,
+            description: ''
+        });
+
+        if (res?.status !== 'ok') return;
+
+        const modalEl = document.getElementById('createModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        } else if (window.closeModal) {
+            window.closeModal('createModal');
+            handleCreateRoomModalClosed();
+        }
+
+        if (window.showToast) window.showToast('Игра добавлена в расписание', 'success');
+        if (typeof window.switchTab === 'function') window.switchTab('games');
+        switchRoomsMode('scheduled');
+    } finally {
+        isCreateRoomPending = false;
+    }
+}
+
+async function loadScheduledGames() {
+    const container = document.getElementById('scheduled-games-list');
+    if (!container || isScheduledGamesLoading) return;
+
+    isScheduledGamesLoading = true;
+    container.innerHTML = '<p class="text-center text-muted small py-4">Загружаем расписание...</p>';
+
+    const res = await window.apiRequest({ action: 'get_scheduled_games' });
+    isScheduledGamesLoading = false;
+
+    const headerHtml = `
+        <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
+            <div>
+                <div class="fw-bold" style="color:var(--text-main);">Запланированные игры</div>
+                <div class="small text-muted">Открытые партии с временем старта</div>
+            </div>
+            <button onclick="openScheduledGameModal()" class="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                    style="width: 38px; height: 38px;">
+                <i class="bi bi-plus-lg" style="font-size: 18px;"></i>
+            </button>
+        </div>
+    `;
+
+    if (!res || res.status !== 'ok') {
+        container.innerHTML = `
+            ${headerHtml}
+            <div class="scheduled-game-card text-center py-4">
+                <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-x" style="font-size: 40px;"></i></div>
+                <div class="fw-bold" style="color: var(--text-main)">Расписание временно недоступно</div>
+                <div class="text-muted small mb-3">Можно создать обычную открытую комнату или попробовать позже.</div>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('live')">Комнаты сейчас</button>
+            </div>
+        `;
+        return;
+    }
+
+    if (!Array.isArray(res.games) || res.games.length === 0) {
+        container.innerHTML = `
+            ${headerHtml}
+            <div class="scheduled-game-card text-center py-4">
+                <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-plus" style="font-size: 42px;"></i></div>
+                <div class="fw-bold" style="color: var(--text-main)">Пока ничего не запланировано</div>
+                <div class="text-muted small mb-3">Создайте открытую игру на вечер — игроки смогут подписаться заранее.</div>
+                <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGameModal()">Запланировать</button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = headerHtml;
+    res.games.forEach(game => {
+        const meta = getPublicRoomGameMeta(game.game_type);
+        const title = roomSafeHtml(game.title || meta.name);
+        const description = roomSafeHtml(game.description || 'Открытая игра для всех желающих');
+        const hostName = roomSafeHtml(game.host_name || 'Хост');
+        const startText = roomSafeHtml(getScheduledGameDateText(game.starts_at));
+        const statusText = roomSafeHtml(getScheduledGameStatusText(game.status));
+        const subscribers = Number(game.subscribers_count || 0);
+        const subscribersText = roomSafeHtml(getWaitingPlayersText(subscribers));
+        const isSubscribed = Number(game.is_subscribed || 0) === 1;
+        const isHost = window.globalUser && Number(game.host_user_id) === Number(window.globalUser.id);
+        const isOpen = game.status === 'open' && Number(game.room_id || 0) > 0;
+        const primaryAction = isOpen
+            ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="joinScheduledGame(${Number(game.id)}, '${roomSafeHtml(game.game_type)}')">Войти</button>`
+            : (isHost
+                ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)}, '${roomSafeHtml(game.game_type)}')">Открыть</button>`
+                : `<button type="button" class="btn btn-sm ${isSubscribed ? 'btn-outline-secondary' : 'btn-primary'} rounded-pill px-3" onclick="${isSubscribed ? 'unsubscribeScheduledGame' : 'subscribeScheduledGame'}(${Number(game.id)})">${isSubscribed ? 'Не напоминать' : 'Напомнить'}</button>`);
+        const secondaryAction = isHost
+            ? `<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`
+            : '';
+
+        const div = document.createElement('div');
+        div.className = 'scheduled-game-card mb-3';
+        div.innerHTML = `
+            <div class="d-flex gap-3 align-items-start">
+                <div class="scheduled-game-icon" style="background:${meta.bgColor}; color:${meta.color};">
+                    <i class="bi ${meta.icon}"></i>
+                </div>
+                <div class="min-w-0 flex-grow-1">
+                    <div class="scheduled-game-title text-truncate mb-1">${title}</div>
+                    <div class="scheduled-game-desc mb-2">${description}</div>
+                    <div class="scheduled-game-badges mb-3">
+                        <span class="scheduled-game-badge scheduled-game-status">${statusText}</span>
+                        <span class="scheduled-game-badge"><i class="bi bi-calendar-event"></i>${startText}</span>
+                        <span class="scheduled-game-badge"><i class="bi bi-controller"></i>${roomSafeHtml(meta.name)}</span>
+                        <span class="scheduled-game-badge"><i class="bi bi-people"></i>${subscribersText}</span>
+                        <span class="scheduled-game-badge"><i class="bi bi-person-circle"></i>${hostName}</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        ${primaryAction}
+                        ${secondaryAction}
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+async function subscribeScheduledGame(id) {
+    const res = await window.apiRequest({ action: 'subscribe_scheduled_game', scheduled_game_id: id });
+    if (res?.status === 'ok') {
+        if (window.showToast) window.showToast('Напомним ближе к старту', 'success');
+        loadScheduledGames();
+    }
+}
+
+async function openScheduledGame(id, gameType = '') {
+    if (gameType) window.selectedGameId = gameType;
+    const res = await window.apiRequest({ action: 'open_scheduled_game', scheduled_game_id: id });
+    if (res?.status === 'ok') {
+        if (typeof window.checkState === 'function') await window.checkState();
+        return;
+    }
+    loadScheduledGames();
+}
+
+async function joinScheduledGame(id, gameType = '') {
+    if (gameType) window.selectedGameId = gameType;
+    const res = await window.apiRequest({ action: 'join_scheduled_game', scheduled_game_id: id });
+    if (res?.status === 'ok' && res.subscribed) {
+        if (window.showToast) window.showToast('Напомним, когда хост откроет комнату', 'success');
+        loadScheduledGames();
+        return;
+    }
+    if (res?.status === 'ok') {
+        if (typeof window.checkState === 'function') await window.checkState();
+        return;
+    }
+    loadScheduledGames();
+}
+
+async function unsubscribeScheduledGame(id) {
+    const res = await window.apiRequest({ action: 'unsubscribe_scheduled_game', scheduled_game_id: id });
+    if (res?.status === 'ok') {
+        if (window.showToast) window.showToast('Напоминание отключено', 'info');
+        loadScheduledGames();
+    }
+}
+
+async function cancelScheduledGame(id) {
+    const run = async () => {
+        const res = await window.apiRequest({ action: 'cancel_scheduled_game', scheduled_game_id: id });
+        if (res?.status === 'ok') {
+            if (window.showToast) window.showToast('Игра отменена', 'info');
+            loadScheduledGames();
+        }
+    };
+
+    if (typeof window.showConfirmation === 'function') {
+        window.showConfirmation('Отменить игру?', 'Игроки больше не увидят её в расписании.', run, {
+            confirmText: 'Отменить',
+            isDanger: true
+        });
+    } else {
+        await run();
     }
 }
 
@@ -1024,6 +1420,17 @@ window.RoomManager = {
     joinRoom,
     leaveRoom,
     loadPublicRooms,
+    loadScheduledGames,
+    switchRoomsMode,
+    openScheduledGameModal,
+    createScheduledGame,
+    createScheduledGameFromCreateModal,
+    toggleCreateRoomScheduleMode,
+    openScheduledGame,
+    joinScheduledGame,
+    subscribeScheduledGame,
+    unsubscribeScheduledGame,
+    cancelScheduledGame,
     startPolling,
     stopPolling,
     renderLobby,
@@ -1056,6 +1463,17 @@ window.closeCreateRoomModal = closeCreateRoomModal;
 window.joinRoom = joinRoom;
 window.leaveRoom = leaveRoom;
 window.loadPublicRooms = loadPublicRooms;
+window.loadScheduledGames = loadScheduledGames;
+window.switchRoomsMode = switchRoomsMode;
+window.openScheduledGameModal = openScheduledGameModal;
+window.createScheduledGame = createScheduledGame;
+window.createScheduledGameFromCreateModal = createScheduledGameFromCreateModal;
+window.toggleCreateRoomScheduleMode = toggleCreateRoomScheduleMode;
+window.openScheduledGame = openScheduledGame;
+window.joinScheduledGame = joinScheduledGame;
+window.subscribeScheduledGame = subscribeScheduledGame;
+window.unsubscribeScheduledGame = unsubscribeScheduledGame;
+window.cancelScheduledGame = cancelScheduledGame;
 window.startPolling = startPolling;
 window.stopPolling = stopPolling;
 window.renderLobby = renderLobby;

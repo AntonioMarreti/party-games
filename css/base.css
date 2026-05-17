@@ -131,16 +131,15 @@ body.thermal-safe {
 .thermal-safe .menu-card-premium,
 .thermal-safe .menu-btn-item,
 .thermal-safe .custom-modal-content,
-.thermal-safe .custom-modal-overlay,
 .thermal-safe .game-catalog-header,
 .thermal-safe .catalog-game-card {
-    /* Use solid backgrounds without blur to save power but maintain legibility */
+    /* Use solid surfaces without blur to save power, while keeping component layout and elevation. */
     background: var(--bg-secondary) !important;
     border: 1px solid var(--border-main) !important;
     color: var(--text-main) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-main) !important;
 }
 
 .thermal-safe .glass *,
@@ -171,7 +170,7 @@ body.thermal-safe {
 
 .thermal-safe .header-bg {
     background: var(--primary-color) !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-strong) !important;
 }
 
 .thermal-safe .login-bg-animated,

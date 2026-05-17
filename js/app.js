@@ -224,7 +224,12 @@ window.addEventListener('tabChanged', (e) => {
         if (typeof loadLeaderboardList === 'function') loadLeaderboardList('global');
     } else if (tabId === 'games') {
         if (window.renderLibrary) window.renderLibrary();
-        if (window.loadPublicRooms) window.loadPublicRooms();
+        const scheduledModeActive = document.querySelector('[data-rooms-mode="scheduled"]')?.classList.contains('active');
+        if (scheduledModeActive && window.loadScheduledGames) {
+            window.loadScheduledGames();
+        } else if (window.loadPublicRooms) {
+            window.loadPublicRooms();
+        }
     }
 
     // Per user request, keep applying color to ensure header updates correctly.

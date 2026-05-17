@@ -194,6 +194,7 @@
             </div>
             <div class="modal-body pt-2">
                 <form onsubmit="createRoom(); return false;">
+                    <div id="create-room-replay-hint" class="create-room-replay-hint mb-3" hidden></div>
                     <input type="text" id="create-room-title" class="form-control mb-3 fw-bold"
                         placeholder="Название комнаты" style="border-radius: 16px;">
                     <input type="password" id="create-room-pass" class="form-control mb-3"
@@ -203,8 +204,59 @@
                             style="transform: scale(1.3);">
                         <label class="form-check-label ms-2 fw-bold" for="create-room-public">Сделать публичной</label>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 btn-lg"
+                    <div class="create-room-schedule-box mb-3">
+                        <div class="form-check form-switch ps-5 mb-2">
+                            <input class="form-check-input" type="checkbox" id="create-room-scheduled"
+                                onchange="toggleCreateRoomScheduleMode()" style="transform: scale(1.3);">
+                            <label class="form-check-label ms-2 fw-bold" for="create-room-scheduled">Отложенная игра</label>
+                        </div>
+                        <div id="create-room-scheduled-fields" hidden>
+                            <label class="form-label small fw-bold text-muted mb-1" for="create-room-scheduled-starts">Когда начать</label>
+                            <input type="datetime-local" id="create-room-scheduled-starts" class="form-control"
+                                style="border-radius: 16px;">
+                            <div class="form-text small">Создаст запись в расписании вместо комнаты прямо сейчас.</div>
+                        </div>
+                    </div>
+                    <button type="submit" id="create-room-submit" class="btn btn-primary w-100 btn-lg"
                         style="border-radius: 16px;">Создать</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 8.1 Scheduled Game Modal -->
+<div class="modal fade" id="scheduledGameModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold ps-2">Запланировать игру</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <form onsubmit="createScheduledGame(); return false;">
+                    <select id="scheduled-game-type" class="form-select mb-3 fw-bold" style="border-radius: 16px;"></select>
+                    <input type="text" id="scheduled-game-title" class="form-control mb-3 fw-bold"
+                        placeholder="Название игры" style="border-radius: 16px;">
+                    <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-starts">Когда начать</label>
+                    <input type="datetime-local" id="scheduled-game-starts" class="form-control mb-3"
+                        style="border-radius: 16px;">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-min-players">Минимум игроков</label>
+                            <input type="number" min="1" max="16" id="scheduled-game-min-players"
+                                class="form-control" value="2" placeholder="Мин." style="border-radius: 16px;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1" for="scheduled-game-max-players">Максимум игроков</label>
+                            <input type="number" min="2" max="16" id="scheduled-game-max-players"
+                                class="form-control" value="8" placeholder="Макс." style="border-radius: 16px;">
+                        </div>
+                    </div>
+                    <textarea id="scheduled-game-description" class="form-control mb-3" rows="2"
+                        placeholder="Описание (необязательно)" style="border-radius: 16px;"></textarea>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg"
+                        style="border-radius: 16px;">Запланировать</button>
                 </form>
             </div>
         </div>
