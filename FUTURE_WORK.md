@@ -2,7 +2,7 @@
 
 ## Scheduled open games
 
-- Add Telegram bot reminders for `room_subscriptions`.
+- Add subscriptions and Telegram bot reminders for scheduled games.
 - Add scheduled game expiry/cancel cleanup job.
 - Decide final naming for the rooms mode labels after real usage data.
 

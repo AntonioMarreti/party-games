@@ -260,6 +260,7 @@
                     </div>
                     <textarea id="scheduled-game-description" class="form-control mb-3" rows="2"
                         placeholder="Описание (необязательно)" style="border-radius: 16px;"></textarea>
+                    <div class="form-text small mb-3">Записавшиеся увидят обновлённое время в расписании.</div>
                     <button type="submit" id="scheduled-game-submit" class="btn btn-primary w-100 btn-lg"
                         style="border-radius: 16px;">Запланировать</button>
                 </form>

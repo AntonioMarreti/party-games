@@ -288,12 +288,23 @@ window.checkState = async function () {
 
             const isMenuScreen = ['settings', 'profile-edit', 'game-detail', 'friends', 'history'].includes(window.location.hash.substring(1));
             const gameType = res.room.game_type; // Fix: Define gameType properly
+            const roomStatus = res.room.status;
+            const hasGameState = res.room.game_state !== null
+                && res.room.game_state !== undefined
+                && String(res.room.game_state).trim() !== '';
+            const shouldRenderGame = gameType
+                && gameType !== 'lobby'
+                && roomStatus !== 'waiting'
+                && (roomStatus === 'playing' || hasGameState);
+            if (gameType && gameType !== 'lobby') {
+                window.selectedGameId = gameType;
+            }
             const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
                 ? window.AVAILABLE_GAMES.find(g => g.id === gameType)
                 : null;
             const renderFnName = gameConfig?.renderFunction || `render_${gameType}`;
 
-            if (gameType === 'lobby') {
+            if (!shouldRenderGame) {
                 if (!isScreenActive('room') && !isMenuScreen) showScreen('room');
                 if (window.renderLobby) renderLobby(res);
             } else {

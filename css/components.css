@@ -436,13 +436,11 @@ body.dark-mode .badge-info {
 
 .public-room-card {
     margin-bottom: 12px;
-    padding: 14px;
-    border-radius: 18px;
+    padding: 14px 14px 13px;
+    border-radius: 22px;
     border: 1px solid var(--border-glass);
-    background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: var(--shadow-main);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 26px rgba(31, 38, 135, 0.07);
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
@@ -516,7 +514,7 @@ body.dark-mode .badge-info {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
 }
 
@@ -531,15 +529,15 @@ body.dark-mode .badge-info {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
 .public-room-meta-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 7px;
-    margin-top: 10px;
+    gap: 6px;
+    margin-top: 9px;
     padding-left: 56px;
 }
 
@@ -570,7 +568,7 @@ body.dark-mode .badge-info {
     color: var(--text-main);
     line-height: 1.2;
     margin-bottom: 3px;
-    font-size: 15px;
+    font-size: 15.5px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -591,10 +589,10 @@ body.dark-mode .badge-info {
     gap: 4px;
     max-width: 100%;
     min-width: 0;
-    padding: 4px 8px;
+    padding: 4px 7px;
     border-radius: 999px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-main);
+    background: rgba(40, 45, 55, 0.055);
+    border: 1px solid rgba(40, 45, 55, 0.055);
     color: var(--text-muted);
     font-size: 10px;
     font-weight: 700;
@@ -607,8 +605,8 @@ body.dark-mode .badge-info {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 58px;
-    padding: 5px 9px;
+    min-width: 54px;
+    padding: 5px 8px;
     border-radius: 999px;
     background: var(--primary-color);
     color: var(--text-on-accent);
@@ -617,10 +615,60 @@ body.dark-mode .badge-info {
 }
 
 .public-room-code {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 7px;
+    border-radius: 999px;
+    background: rgba(108, 92, 231, 0.08);
     color: var(--primary-color);
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.room-card-primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: var(--text-on-accent);
     font-size: 12px;
     font-weight: 900;
     line-height: 1;
+    box-shadow: 0 8px 18px rgba(108, 92, 231, 0.18);
+}
+
+@media (max-width: 420px) {
+    .public-room-card,
+    .scheduled-game-card {
+        padding: 13px;
+    }
+
+    .public-room-game-icon,
+    .scheduled-game-icon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 13px;
+    }
+
+    .public-room-identity,
+    .scheduled-game-main {
+        gap: 10px;
+    }
+
+    .public-room-meta-row {
+        padding-left: 52px;
+    }
+
+    .public-room-count {
+        min-width: 50px;
+        padding-inline: 7px;
+    }
 }
 
 /* === ANIMATIONS === */
@@ -1215,6 +1263,13 @@ body.dark-mode .game-summary-share-preview {
     box-shadow: 0 10px 26px rgba(31, 38, 135, 0.07);
 }
 
+.scheduled-game-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
 .scheduled-game-icon {
     display: flex;
     align-items: center;
@@ -1232,6 +1287,15 @@ body.dark-mode .game-summary-share-preview {
     line-height: 1.2;
 }
 
+.scheduled-game-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 3px;
+}
+
 .scheduled-game-meta,
 .scheduled-game-desc {
     color: var(--text-muted);
@@ -1243,11 +1307,67 @@ body.dark-mode .game-summary-share-preview {
     overflow: hidden;
 }
 
+.scheduled-game-meta-line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    min-width: 0;
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.scheduled-game-meta-line span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+}
+
+.scheduled-game-meta-line i {
+    flex-shrink: 0;
+    color: rgba(40, 45, 55, 0.42);
+}
+
+.scheduled-game-meta-secondary {
+    margin-top: 7px;
+    opacity: 0.92;
+}
+
+.scheduled-game-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.scheduled-game-disabled-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(40, 45, 55, 0.06);
+    color: rgba(40, 45, 55, 0.54);
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.scheduled-game-subscribed {
+    background: rgba(16, 185, 129, 0.10);
+    color: #059669;
+}
+
 .scheduled-game-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    max-width: 100%;
+    max-width: 118px;
     min-width: 0;
     padding: 4px 8px;
     border-radius: 999px;
@@ -1270,16 +1390,20 @@ body.dark-mode .game-summary-share-preview {
 }
 
 .scheduled-game-status {
+    flex-shrink: 0;
     color: var(--primary-color);
     background: rgba(108, 92, 231, 0.10);
 }
 
 .thermal-safe .rooms-mode-switch,
+.thermal-safe .public-room-card,
 .thermal-safe .scheduled-game-card,
 .thermal-safe .create-room-schedule-box {
     background: #fff !important;
     border: 1px solid rgba(0, 0, 0, 0.06) !important;
     box-shadow: var(--shadow-main) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .thermal-safe .rooms-list-header {
@@ -1309,4 +1433,23 @@ body.dark-mode .game-summary-share-preview {
 .thermal-safe .scheduled-game-badge {
     background: rgba(40, 45, 55, 0.08) !important;
     color: rgba(40, 45, 55, 0.72) !important;
+}
+
+.thermal-safe .public-room-badge,
+.thermal-safe .public-room-code,
+.thermal-safe .scheduled-game-disabled-action {
+    background: rgba(40, 45, 55, 0.08) !important;
+    border-color: rgba(40, 45, 55, 0.08) !important;
+    color: rgba(40, 45, 55, 0.72) !important;
+}
+
+.thermal-safe .scheduled-game-subscribed {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #047857 !important;
+}
+
+.thermal-safe .room-card-primary-btn {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    box-shadow: none !important;
 }

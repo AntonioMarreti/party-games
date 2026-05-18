@@ -20,17 +20,15 @@ function getApiTimeoutMs(action) {
         case 'get_public_rooms':
         case 'get_local_rooms':
         case 'get_scheduled_games':
-        case 'get_my_scheduled_games':
         case 'get_stats':
         case 'get_leaderboard':
         case 'get_history':
             return 30000;
         case 'create_scheduled_game':
         case 'update_scheduled_game':
-        case 'open_scheduled_game':
-        case 'join_scheduled_game':
         case 'subscribe_scheduled_game':
         case 'unsubscribe_scheduled_game':
+        case 'open_scheduled_game':
         case 'cancel_scheduled_game':
             return 15000;
         default:

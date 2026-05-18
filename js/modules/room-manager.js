@@ -9,6 +9,7 @@ let pollInterval = null;
 let lastPlayersJson = '';
 let isCreateRoomPending = false;
 let isJoinRoomPending = false;
+let isScheduledGameSubmitPending = false;
 
 function setPollingSuspended(value) {
     window.__pgSuspendPolling = !!value;
@@ -436,13 +437,14 @@ async function loadPublicRooms() {
                         </div>
                         <div class="public-room-side">
                             <div class="public-room-count">${r.players_count} чел.</div>
-                            <div class="public-room-code">#${r.room_code}</div>
+                            <button type="button" class="room-card-primary-btn">Войти</button>
                         </div>
                     </div>
                     <div class="public-room-meta-row">
                         <span class="public-room-badge"><i class="bi bi-controller me-1"></i>${gameName}</span>
                         ${lockBadge}
                         <span class="public-room-badge"><i class="bi bi-person-circle me-1"></i>${hostName}</span>
+                        <span class="public-room-code">#${r.room_code}</span>
                     </div>
                 </div>
             `;
@@ -589,9 +591,15 @@ function getScheduledGameDateText(value) {
     return `${date.toLocaleDateString()} · ${time}`;
 }
 
-function getScheduledGameStatusText(status) {
-    if (status === 'open') return 'Скоро старт';
-    return 'Запланировано';
+function getScheduledGameStatusText(status, startsAt = null) {
+    if (status === 'live') return 'Открыта';
+    if (status === 'scheduled' && startsAt) {
+        const start = new Date(String(startsAt).replace(' ', 'T')).getTime();
+        if (!Number.isNaN(start) && start - Date.now() <= 30 * 60 * 1000) {
+            return 'Скоро старт';
+        }
+    }
+    return 'Запланирована';
 }
 
 function getScheduledGamesCountText(count) {
@@ -611,6 +619,39 @@ function getWaitingPlayersText(count) {
     const last = value % 10;
     const verb = last === 1 && lastTwo !== 11 ? 'ждёт' : 'ждут';
     return `${value} ${verb}`;
+}
+
+function getScheduledSubscribersText(count) {
+    const value = Math.max(0, Number(count || 0));
+    const lastTwo = value % 100;
+    const last = value % 10;
+    const verb = last === 1 && lastTwo !== 11 ? 'записался' : 'записались';
+    return `${value} ${verb}`;
+}
+
+function getScheduledSignupText(count, maxPlayers) {
+    const value = Math.max(0, Number(count || 0));
+    const max = Number(maxPlayers || 0);
+    return max > 0 ? `${value}/${max} записались` : getScheduledSubscribersText(value);
+}
+
+function getScheduledReadinessText(count, minPlayers) {
+    const value = Math.max(0, Number(count || 0));
+    const min = Math.max(1, Number(minPlayers || 1));
+    if (value >= min) return 'Игра состоится';
+    const left = min - value;
+    const lastTwo = left % 100;
+    const last = left % 10;
+    const noun = last === 1 && lastTwo !== 11
+        ? 'игрок'
+        : (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'игрока' : 'игроков');
+    return `Нужно ещё ${left} ${noun}`;
+}
+
+function canOpenScheduledGame(startsAt) {
+    const start = new Date(String(startsAt || '').replace(' ', 'T')).getTime();
+    if (Number.isNaN(start)) return false;
+    return start - Date.now() <= 5 * 60 * 1000;
 }
 
 function getScheduledInputDateValue(value) {
@@ -691,7 +732,7 @@ function editScheduledGame(id) {
     const descriptionInput = document.getElementById('scheduled-game-description');
 
     if (editIdInput) editIdInput.value = String(game.id || id);
-    if (titleEl) titleEl.innerText = 'Изменить игру';
+    if (titleEl) titleEl.innerText = 'Редактировать игру';
     if (submitBtn) submitBtn.innerText = 'Сохранить';
     if (select) {
         select.value = game.game_type || select.value;
@@ -712,6 +753,8 @@ function editScheduledGame(id) {
 }
 
 async function createScheduledGame() {
+    if (isScheduledGameSubmitPending) return;
+
     const editId = document.getElementById('scheduled-game-edit-id')?.value || '';
     const gameType = document.getElementById('scheduled-game-type')?.value || window.selectedGameId || '';
     const title = document.getElementById('scheduled-game-title')?.value || '';
@@ -731,20 +774,44 @@ async function createScheduledGame() {
     };
     if (editId) payload.scheduled_game_id = editId;
 
-    const res = await window.apiRequest(payload);
-
-    if (res?.status !== 'ok') return;
-
-    const modalEl = document.getElementById('scheduledGameModal');
-    if (modalEl && window.bootstrap) {
-        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-    } else if (window.closeModal) {
-        window.closeModal('scheduledGameModal');
+    const submitBtn = document.getElementById('scheduled-game-submit');
+    const originalSubmitText = submitBtn?.innerText || (editId ? 'Сохранить' : 'Запланировать');
+    isScheduledGameSubmitPending = true;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = editId ? 'Сохраняем...' : 'Планируем...';
     }
 
-    resetScheduledGameModalMode();
-    if (window.showToast) window.showToast(editId ? 'Игра обновлена' : 'Игра запланирована', 'success');
-    switchRoomsMode('scheduled');
+    try {
+        const res = await window.apiRequest(payload);
+
+        if (res?.status !== 'ok') {
+            const message = res?.message || 'Не удалось сохранить игру';
+            if (window.showAlert) {
+                window.showAlert('Не получилось', message, 'warning');
+            } else if (window.showToast) {
+                window.showToast(message, 'warning');
+            }
+            return;
+        }
+
+        const modalEl = document.getElementById('scheduledGameModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        } else if (window.closeModal) {
+            window.closeModal('scheduledGameModal');
+        }
+
+        resetScheduledGameModalMode();
+        if (window.showToast) window.showToast(editId ? 'Игра обновлена' : 'Игра запланирована', 'success');
+        switchRoomsMode('scheduled');
+    } finally {
+        isScheduledGameSubmitPending = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = originalSubmitText;
+        }
+    }
 }
 
 async function createScheduledGameFromCreateModal() {
@@ -783,6 +850,10 @@ async function createScheduledGameFromCreateModal() {
             window.closeModal('createModal');
             handleCreateRoomModalClosed();
         }
+
+        resetCreateRoomScheduleMode();
+        resetCreateRoomModalTitle();
+        resetCreateRoomReplayHint();
 
         if (window.showToast) window.showToast('Игра добавлена в расписание', 'success');
         if (typeof window.switchTab === 'function') window.switchTab('games');
@@ -829,8 +900,8 @@ async function loadScheduledGames() {
             ${getScheduledHeaderHtml()}
             <div class="scheduled-game-card text-center py-4">
                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-plus" style="font-size: 42px;"></i></div>
-                <div class="fw-bold" style="color: var(--text-main)">Пока ничего не запланировано</div>
-                <div class="text-muted small mb-3">Создайте открытую игру на вечер — игроки смогут подписаться заранее.</div>
+                <div class="fw-bold" style="color: var(--text-main)">Пока игр по расписанию нет</div>
+                <div class="text-muted small mb-3">Создайте игру на вечер — другие смогут увидеть её здесь.</div>
                 <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGameModal()">Запланировать</button>
             </div>
         `;
@@ -839,49 +910,85 @@ async function loadScheduledGames() {
 
     currentScheduledGamesById = new Map();
     container.innerHTML = getScheduledHeaderHtml();
-    res.games.forEach(game => {
+    const sortedGames = [...res.games].sort((a, b) => {
+        const aLive = a.status === 'live' ? 1 : 0;
+        const bLive = b.status === 'live' ? 1 : 0;
+        if (aLive !== bLive) return bLive - aLive;
+
+        const aSubscribed = Number(a.is_subscribed || 0) === 1 ? 1 : 0;
+        const bSubscribed = Number(b.is_subscribed || 0) === 1 ? 1 : 0;
+        if (aSubscribed !== bSubscribed) return bSubscribed - aSubscribed;
+
+        return new Date(String(a.starts_at || '').replace(' ', 'T')).getTime()
+            - new Date(String(b.starts_at || '').replace(' ', 'T')).getTime();
+    });
+
+    sortedGames.forEach(game => {
         currentScheduledGamesById.set(Number(game.id), game);
         const meta = getPublicRoomGameMeta(game.game_type);
         const title = roomSafeHtml(game.title || meta.name);
         const description = roomSafeHtml(game.description || 'Открытая игра для всех желающих');
         const hostName = roomSafeHtml(game.host_name || 'Хост');
         const startText = roomSafeHtml(getScheduledGameDateText(game.starts_at));
-        const statusText = roomSafeHtml(getScheduledGameStatusText(game.status));
-        const subscribers = Number(game.subscribers_count || 0);
-        const subscribersText = roomSafeHtml(getWaitingPlayersText(subscribers));
+        const statusText = roomSafeHtml(getScheduledGameStatusText(game.status, game.starts_at));
+        const isHost = Number(game.is_host || 0) === 1
+            || (window.globalUser && Number(game.host_id) === Number(window.globalUser.id));
+        const subscribersCount = Number(game.subscribers_count || 0);
+        const maxPlayers = Number(game.max_players || 0);
+        const minPlayers = Number(game.min_players || 1);
+        const spotsLeft = Number(game.spots_left || 0);
         const isSubscribed = Number(game.is_subscribed || 0) === 1;
-        const isHost = window.globalUser && Number(game.host_user_id) === Number(window.globalUser.id);
-        const isOpen = game.status === 'open' && Number(game.room_id || 0) > 0;
-        const primaryAction = isOpen
-            ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="joinScheduledGame(${Number(game.id)}, '${roomSafeHtml(game.game_type)}')">Войти</button>`
-            : (isHost
-                ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)}, '${roomSafeHtml(game.game_type)}')">Открыть</button>`
-                : `<button type="button" class="btn btn-sm ${isSubscribed ? 'btn-outline-secondary' : 'btn-primary'} rounded-pill px-3" onclick="${isSubscribed ? 'unsubscribeScheduledGame' : 'subscribeScheduledGame'}(${Number(game.id)})">${isSubscribed ? 'Не напоминать' : 'Напомнить'}</button>`);
-        const editAction = isHost && game.status === 'scheduled'
-            ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Изменить</button>`
+        const signupText = roomSafeHtml(getScheduledSignupText(subscribersCount, maxPlayers));
+        const readinessText = roomSafeHtml(getScheduledReadinessText(subscribersCount, minPlayers));
+        const isLive = game.status === 'live' && game.room_code;
+        const canOpen = canOpenScheduledGame(game.starts_at);
+        const subscribedBadge = isSubscribed
+            ? '<span class="scheduled-game-badge scheduled-game-subscribed">Вы записаны</span>'
             : '';
-        const secondaryAction = isHost
-            ? `${editAction}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`
-            : '';
+        let primaryAction = '';
+        let secondaryAction = '';
+        if (isLive) {
+            primaryAction = `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="joinScheduledGameRoom('${roomSafeHtml(game.room_code)}')">Войти</button>`;
+        } else if (isHost) {
+            primaryAction = canOpen
+                ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)})">Открыть</button>`
+                : `<span class="scheduled-game-disabled-action">Открыть позже</span>`;
+            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Редактировать</button><button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`;
+        } else {
+            primaryAction = spotsLeft <= 0 && !isSubscribed
+                ? `<span class="scheduled-game-disabled-action">Мест нет</span>`
+                : (isSubscribed
+                    ? `<span class="scheduled-game-disabled-action scheduled-game-subscribed">Вы записаны</span>`
+                    : `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="subscribeScheduledGame(${Number(game.id)})">Записаться</button>`);
+            secondaryAction = isSubscribed
+                ? `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="unsubscribeScheduledGame(${Number(game.id)})">Отменить</button>`
+                : '';
+        }
 
         const div = document.createElement('div');
         div.className = 'scheduled-game-card mb-3';
         div.innerHTML = `
-            <div class="d-flex gap-3 align-items-start">
+            <div class="scheduled-game-main">
                 <div class="scheduled-game-icon" style="background:${meta.bgColor}; color:${meta.color};">
                     <i class="bi ${meta.icon}"></i>
                 </div>
                 <div class="min-w-0 flex-grow-1">
-                    <div class="scheduled-game-title text-truncate mb-1">${title}</div>
-                    <div class="scheduled-game-desc mb-2">${description}</div>
-                    <div class="scheduled-game-badges mb-3">
+                    <div class="scheduled-game-head">
+                        <div class="scheduled-game-title text-truncate">${title}</div>
+                        ${subscribedBadge}
                         <span class="scheduled-game-badge scheduled-game-status">${statusText}</span>
-                        <span class="scheduled-game-badge"><i class="bi bi-calendar-event"></i>${startText}</span>
-                        <span class="scheduled-game-badge"><i class="bi bi-controller"></i>${roomSafeHtml(meta.name)}</span>
-                        <span class="scheduled-game-badge"><i class="bi bi-people"></i>${subscribersText}</span>
-                        <span class="scheduled-game-badge"><i class="bi bi-person-circle"></i>${hostName}</span>
                     </div>
-                    <div class="d-flex flex-wrap gap-2">
+                    <div class="scheduled-game-desc">${description}</div>
+                    <div class="scheduled-game-meta-line">
+                        <span><i class="bi bi-calendar-event"></i>${startText}</span>
+                        <span><i class="bi bi-controller"></i>${roomSafeHtml(meta.name)}</span>
+                    </div>
+                    <div class="scheduled-game-meta-line scheduled-game-meta-secondary">
+                        <span><i class="bi bi-people"></i>${signupText}</span>
+                        <span><i class="bi bi-check-circle"></i>${readinessText}</span>
+                        <span><i class="bi bi-person-circle"></i>${hostName}</span>
+                    </div>
+                    <div class="scheduled-game-actions">
                         ${primaryAction}
                         ${secondaryAction}
                     </div>
@@ -895,42 +1002,51 @@ async function loadScheduledGames() {
 async function subscribeScheduledGame(id) {
     const res = await window.apiRequest({ action: 'subscribe_scheduled_game', scheduled_game_id: id });
     if (res?.status === 'ok') {
-        if (window.showToast) window.showToast('Напомним ближе к старту', 'success');
+        if (window.showToast) window.showToast('Вы записались на игру', 'success');
         loadScheduledGames();
     }
-}
-
-async function openScheduledGame(id, gameType = '') {
-    if (gameType) window.selectedGameId = gameType;
-    const res = await window.apiRequest({ action: 'open_scheduled_game', scheduled_game_id: id });
-    if (res?.status === 'ok') {
-        if (typeof window.checkState === 'function') await window.checkState();
-        return;
-    }
-    loadScheduledGames();
-}
-
-async function joinScheduledGame(id, gameType = '') {
-    if (gameType) window.selectedGameId = gameType;
-    const res = await window.apiRequest({ action: 'join_scheduled_game', scheduled_game_id: id });
-    if (res?.status === 'ok' && res.subscribed) {
-        if (window.showToast) window.showToast('Напомним, когда хост откроет игру', 'success');
-        loadScheduledGames();
-        return;
-    }
-    if (res?.status === 'ok') {
-        if (typeof window.checkState === 'function') await window.checkState();
-        return;
-    }
-    loadScheduledGames();
 }
 
 async function unsubscribeScheduledGame(id) {
     const res = await window.apiRequest({ action: 'unsubscribe_scheduled_game', scheduled_game_id: id });
     if (res?.status === 'ok') {
-        if (window.showToast) window.showToast('Напоминание отключено', 'info');
+        if (window.showToast) window.showToast('Запись отменена', 'info');
         loadScheduledGames();
     }
+}
+
+async function openScheduledGame(id) {
+    const game = currentScheduledGamesById.get(Number(id));
+    const run = async () => {
+        const res = await window.apiRequest({ action: 'open_scheduled_game', scheduled_game_id: id });
+        if (res?.status === 'ok') {
+            if (res.warning && window.showToast) window.showToast(res.warning, 'warning');
+            if (res.room_code && typeof window.checkState === 'function') {
+                await window.checkState();
+                return;
+            }
+            loadScheduledGames();
+        }
+    };
+
+    const subscribersCount = Number(game?.subscribers_count || 0);
+    const minPlayers = Number(game?.min_players || 1);
+    if (subscribersCount < minPlayers && typeof window.showConfirmation === 'function') {
+        window.showConfirmation(
+            'Открыть игру?',
+            'Минимум игроков ещё не набран. Игру всё равно можно открыть.',
+            run,
+            { confirmText: 'Открыть' }
+        );
+        return;
+    }
+
+    await run();
+}
+
+async function joinScheduledGameRoom(roomCode) {
+    if (!roomCode) return;
+    await joinRoom(roomCode, '');
 }
 
 async function cancelScheduledGame(id) {
@@ -1507,10 +1623,10 @@ window.RoomManager = {
     createScheduledGame,
     createScheduledGameFromCreateModal,
     toggleCreateRoomScheduleMode,
-    openScheduledGame,
-    joinScheduledGame,
     subscribeScheduledGame,
     unsubscribeScheduledGame,
+    openScheduledGame,
+    joinScheduledGameRoom,
     cancelScheduledGame,
     startPolling,
     stopPolling,
@@ -1551,10 +1667,10 @@ window.editScheduledGame = editScheduledGame;
 window.createScheduledGame = createScheduledGame;
 window.createScheduledGameFromCreateModal = createScheduledGameFromCreateModal;
 window.toggleCreateRoomScheduleMode = toggleCreateRoomScheduleMode;
-window.openScheduledGame = openScheduledGame;
-window.joinScheduledGame = joinScheduledGame;
 window.subscribeScheduledGame = subscribeScheduledGame;
 window.unsubscribeScheduledGame = unsubscribeScheduledGame;
+window.openScheduledGame = openScheduledGame;
+window.joinScheduledGameRoom = joinScheduledGameRoom;
 window.cancelScheduledGame = cancelScheduledGame;
 window.startPolling = startPolling;
 window.stopPolling = stopPolling;
