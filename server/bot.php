@@ -346,6 +346,12 @@ function reply($chatId, $text)
  */
 function sendTelegram($method, $data)
 {
+    foreach ($data as $key => $value) {
+        if (is_array($value) || is_object($value)) {
+            $data[$key] = json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     $url = "https://tgproxy.regucka1998.workers.dev/bot" . BOT_TOKEN . "/$method";
 
     $ch = curl_init();
