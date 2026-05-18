@@ -353,7 +353,7 @@ async function loadPublicRooms() {
         renderRoomListContainers(`
             <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
                 <div class="rooms-list-title">Сейчас ждут игроков</div>
-                <button onclick="loadPublicRooms()" class="btn-unstyled rooms-list-action-icon" aria-label="Обновить комнаты">
+                <button onclick="loadPublicRooms()" class="btn-unstyled rooms-list-action-icon" aria-label="Обновить игры">
                     <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                 </button>
             </div>
@@ -369,7 +369,7 @@ async function loadPublicRooms() {
     if (res.status === 'ok') {
         const headerHtml = `<div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
             <div class="rooms-list-title">Сейчас ждут игроков</div>
-            <button onclick="loadPublicRooms()" class="btn-unstyled rooms-list-action-icon" aria-label="Обновить комнаты">
+            <button onclick="loadPublicRooms()" class="btn-unstyled rooms-list-action-icon" aria-label="Обновить игры">
                 <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
             </button>
         </div>`;
@@ -399,7 +399,7 @@ async function loadPublicRooms() {
                     <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
                         <div>
                             <div class="home-public-title">Сейчас ждут игроков</div>
-                            <div class="home-public-subtitle">Открытые комнаты</div>
+                            <div class="home-public-subtitle">Открытые игры</div>
                         </div>
                         <button onclick="switchTab('games')" class="btn btn-light text-primary rounded-circle d-flex align-items-center justify-content-center"
                                 style="width: 34px; height: 34px;">
@@ -487,7 +487,7 @@ async function loadLocalRooms() {
         `;
 
         const title = `<div class="d-flex align-items-center justify-content-between mb-3">
-            <h6 class="text-start ms-2 mb-0 text-primary"><i class="bi bi-wifi me-2"></i>Комнаты рядом</h6>
+            <h6 class="text-start ms-2 mb-0 text-primary"><i class="bi bi-wifi me-2"></i>Игры рядом</h6>
             ${backBtn}
         </div>`;
 
@@ -497,7 +497,7 @@ async function loadLocalRooms() {
                 <div class="text-center py-4 rounded-4 shadow-sm position-relative" style="background: var(--bg-glass); backdrop-filter: blur(10px); border: 1px solid var(--border-glass);">
                      <div class="mb-2 text-primary opacity-50"><i class="bi bi-router" style="font-size: 40px;"></i></div>
                      <div class="fw-bold" style="color: var(--text-main)">Никого рядом</div>
-                     <div class="text-muted small mb-3">В вашей сети нет активных комнат</div>
+                     <div class="text-muted small mb-3">В вашей сети нет активных игр</div>
                      <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="loadPublicRooms()">Показать всё</button>
                 </div>
             `;
@@ -802,9 +802,9 @@ async function loadScheduledGames() {
     const res = await window.apiRequest({ action: 'get_scheduled_games' });
     isScheduledGamesLoading = false;
 
-    const getScheduledHeaderHtml = (count = null) => `
+    const getScheduledHeaderHtml = () => `
         <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
-            <div class="rooms-list-title">${count === null ? 'Игры с временем старта' : roomSafeHtml(getScheduledGamesCountText(count))}</div>
+            <div class="rooms-list-title">Сегодня и позже</div>
             <button onclick="openScheduledGameModal()" class="btn-unstyled rooms-list-action-pill">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Создать</span>
             </button>
@@ -813,12 +813,12 @@ async function loadScheduledGames() {
 
     if (!res || res.status !== 'ok') {
         container.innerHTML = `
-            ${getScheduledHeaderHtml(null)}
+            ${getScheduledHeaderHtml()}
             <div class="scheduled-game-card text-center py-4">
                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-x" style="font-size: 40px;"></i></div>
                 <div class="fw-bold" style="color: var(--text-main)">Расписание временно недоступно</div>
-                <div class="text-muted small mb-3">Можно создать обычную открытую комнату или попробовать позже.</div>
-                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('live')">Комнаты сейчас</button>
+                <div class="text-muted small mb-3">Можно создать открытую игру или попробовать позже.</div>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('live')">Сейчас</button>
             </div>
         `;
         return;
@@ -826,7 +826,7 @@ async function loadScheduledGames() {
 
     if (!Array.isArray(res.games) || res.games.length === 0) {
         container.innerHTML = `
-            ${getScheduledHeaderHtml(0)}
+            ${getScheduledHeaderHtml()}
             <div class="scheduled-game-card text-center py-4">
                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-plus" style="font-size: 42px;"></i></div>
                 <div class="fw-bold" style="color: var(--text-main)">Пока ничего не запланировано</div>
@@ -838,7 +838,7 @@ async function loadScheduledGames() {
     }
 
     currentScheduledGamesById = new Map();
-    container.innerHTML = getScheduledHeaderHtml(res.games.length);
+    container.innerHTML = getScheduledHeaderHtml();
     res.games.forEach(game => {
         currentScheduledGamesById.set(Number(game.id), game);
         const meta = getPublicRoomGameMeta(game.game_type);
@@ -914,7 +914,7 @@ async function joinScheduledGame(id, gameType = '') {
     if (gameType) window.selectedGameId = gameType;
     const res = await window.apiRequest({ action: 'join_scheduled_game', scheduled_game_id: id });
     if (res?.status === 'ok' && res.subscribed) {
-        if (window.showToast) window.showToast('Напомним, когда хост откроет комнату', 'success');
+        if (window.showToast) window.showToast('Напомним, когда хост откроет игру', 'success');
         loadScheduledGames();
         return;
     }
