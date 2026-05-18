@@ -51,7 +51,10 @@ function resetCreateRoomScheduleMode() {
     const toggle = document.getElementById('create-room-scheduled');
     const fields = document.getElementById('create-room-scheduled-fields');
     const submitBtn = document.getElementById('create-room-submit');
-    if (toggle) toggle.checked = false;
+    if (toggle) {
+        toggle.checked = false;
+        toggle.disabled = false;
+    }
     if (fields) fields.hidden = true;
     if (submitBtn) submitBtn.innerText = 'Создать';
 }

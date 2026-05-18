@@ -1196,6 +1196,14 @@ function replayHistoryGame(gameType) {
     window.selectedGameId = gameType;
     const publicCheckbox = document.getElementById('create-room-public');
     if (publicCheckbox) publicCheckbox.checked = false;
+    const scheduledToggle = document.getElementById('create-room-scheduled');
+    if (scheduledToggle) {
+        scheduledToggle.checked = false;
+        scheduledToggle.disabled = true;
+    }
+    if (typeof window.toggleCreateRoomScheduleMode === 'function') {
+        window.toggleCreateRoomScheduleMode();
+    }
 
     const titleEl = document.getElementById('create-modal-title');
     if (titleEl) titleEl.innerText = 'Сыграть ещё';
