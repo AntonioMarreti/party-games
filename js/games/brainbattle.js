@@ -1363,12 +1363,12 @@
                 </div>
             </div>
 
-            <div class="bb-glass-card mb-4" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+            <div class="bb-glass-card bb-setup-categories-card mb-4">
                 <label class="fw-bold small text-uppercase text-muted mb-2 d-block">Категории</label>
                 
-                <div id="bb-categories-list" class="d-flex flex-column gap-1 overflow-auto" style="min-height:0;"></div>
+                <div id="bb-categories-list" class="bb-setup-list d-flex flex-column gap-1"></div>
                 
-                <div id="bb-deep-settings" class="d-none flex-column gap-1 overflow-auto" style="min-height:0;">
+                <div id="bb-deep-settings" class="bb-setup-list d-none flex-column gap-1">
                     <!-- Will be filled via JS -->
                 </div>
 

@@ -13,6 +13,11 @@
 
 #bb-wrapper.bb-setup-mode {
     padding-top: calc(80px + env(safe-area-inset-top));
+    height: auto;
+    min-height: 100%;
+    overflow-y: visible;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
 }
 
 /* Glass Cards */
@@ -239,6 +244,16 @@
     transform: scale(0.96);
     box-shadow: var(--shadow-strong);
     border-color: var(--primary-color);
+}
+
+.bb-setup-categories-card {
+    flex: 0 0 auto;
+}
+
+.bb-setup-list {
+    min-height: 0;
+    overflow: visible;
+    touch-action: pan-y;
 }
 
 /* Category Toggles */
