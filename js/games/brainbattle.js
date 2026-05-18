@@ -1821,7 +1821,8 @@
             </div>
 
             ${postGameSummary ? `<div class="w-100 mb-4">${window.GameSummaryProvider.render(postGameSummary, {
-                playAgainLabel: viewModel.isHost ? 'Играть ещё раз' : 'В комнату'
+                playAgainLabel: viewModel.isHost ? 'Играть ещё раз' : 'В комнату',
+                playAgainAction: viewModel.isHost ? 'play-again' : 'return-to-room'
             })}</div>` : ''}
             <div class="bb-ai-summary-card w-100 mb-4">
                 <div class="bb-final-section-kicker">Комментарий матча</div>
@@ -2057,6 +2058,11 @@
             playAgain: function () {
                 if (typeof window.sendGameAction === 'function') {
                     window.sendGameAction('force_reset');
+                }
+            },
+            'return-to-room': function () {
+                if (typeof window.checkState === 'function') {
+                    window.checkState();
                 }
             }
         });

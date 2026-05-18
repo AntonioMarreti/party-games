@@ -89,7 +89,10 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
                 </div>
             </div>
 
-            ${postGameSummary ? `<div class="mt-4 w-100" style="max-width: 420px; margin-left:auto; margin-right:auto;">${window.GameSummaryProvider.render(postGameSummary)}</div>` : ''}
+            ${postGameSummary ? `<div class="mt-4 w-100" style="max-width: 420px; margin-left:auto; margin-right:auto;">${window.GameSummaryProvider.render(postGameSummary, {
+                playAgainLabel: isHost ? 'Играть ещё раз' : 'В комнату',
+                playAgainAction: isHost ? 'play-again' : 'return-to-room'
+            })}</div>` : ''}
         </div>
     `;
 };
@@ -173,6 +176,11 @@ if (window.GameSummaryProvider) {
         playAgain: function () {
             if (typeof window.startUltimateGame === 'function') {
                 window.startUltimateGame();
+            }
+        },
+        'return-to-room': function () {
+            if (typeof window.checkState === 'function') {
+                window.checkState();
             }
         }
     });

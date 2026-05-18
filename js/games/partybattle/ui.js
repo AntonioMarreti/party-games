@@ -1096,7 +1096,8 @@ window.PartyBattleUI = {
                     `}
 
                     ${postGameSummary ? window.GameSummaryProvider.render(postGameSummary, {
-            playAgainLabel: isHost ? 'Играть еще раз' : 'В комнату'
+            playAgainLabel: isHost ? 'Играть еще раз' : 'В комнату',
+            playAgainAction: isHost ? 'play-again' : 'return-to-room'
         }) : ''}
                 </div>
 
@@ -1382,6 +1383,11 @@ if (window.GameSummaryProvider) {
         playAgain: function () {
             if (typeof window.sendGameAction === 'function') {
                 window.sendGameAction('back_to_lobby');
+            }
+        },
+        'return-to-room': function () {
+            if (typeof window.checkState === 'function') {
+                window.checkState();
             }
         }
     });

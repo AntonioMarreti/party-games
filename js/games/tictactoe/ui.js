@@ -88,7 +88,10 @@ window.renderTicTacToe = function (wrapper, state, res) {
                 ` : ''}
             </div>
 
-            ${postGameSummary ? `<div class="mt-4 w-100" style="max-width: 420px; margin-left:auto; margin-right:auto;">${window.GameSummaryProvider.render(postGameSummary)}</div>` : ''}
+            ${postGameSummary ? `<div class="mt-4 w-100" style="max-width: 420px; margin-left:auto; margin-right:auto;">${window.GameSummaryProvider.render(postGameSummary, {
+                playAgainLabel: isHost ? 'Играть ещё раз' : 'В комнату',
+                playAgainAction: isHost ? 'play-again' : 'return-to-room'
+            })}</div>` : ''}
 
             <div class="mt-5">
                 <button class="btn btn-link text-muted text-decoration-none small" onclick="window.leaveRoom()">
@@ -182,6 +185,11 @@ if (window.GameSummaryProvider) {
         playAgain: function () {
             if (typeof window.restartTicTacToe === 'function') {
                 window.restartTicTacToe();
+            }
+        },
+        'return-to-room': function () {
+            if (typeof window.checkState === 'function') {
+                window.checkState();
             }
         }
     });
