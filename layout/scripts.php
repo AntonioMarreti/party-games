@@ -28,6 +28,7 @@ if (!defined('TG_CLIENT_ID')) {
 <script src="js/modules/auth-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/session-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/social-manager.js?v=<?php echo $v; ?>"></script>
+<script src="js/modules/history-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/game-summary-provider.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/game-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/room-manager.js?v=<?php echo $v; ?>"></script>
