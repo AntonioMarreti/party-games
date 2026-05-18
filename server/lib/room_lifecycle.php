@@ -51,6 +51,37 @@ function logRoomLifecycle($action, $data = [], $message = '')
     TelegramLogger::logEvent('room', $message !== '' ? $message : $action, $payload);
 }
 
+function expireScheduledLiveRoom($pdo, $roomId): void
+{
+    try {
+        $tableStmt = $pdo->prepare("SHOW TABLES LIKE ?");
+        $tableStmt->execute(['scheduled_games']);
+        if (!$tableStmt->fetchColumn()) {
+            return;
+        }
+
+        $columnStmt = $pdo->prepare("SHOW COLUMNS FROM scheduled_games LIKE ?");
+        $columnStmt->execute(['room_id']);
+        if (!$columnStmt->fetch()) {
+            return;
+        }
+
+        $pdo->prepare("
+            UPDATE scheduled_games
+            SET status = 'expired'
+            WHERE room_id = ?
+              AND status = 'live'
+        ")->execute([(int) $roomId]);
+    } catch (Throwable $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('scheduled_live_room_cleanup', [
+                'room_id' => (int) $roomId,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+}
+
 function clearUserRooms($pdo, $userId)
 {
     $stmt = $pdo->prepare("
@@ -98,6 +129,7 @@ function clearUserRooms($pdo, $userId)
             $pdo->prepare("DELETE FROM public_rooms WHERE room_id = ?")->execute([$roomId]);
             $pdo->prepare("DELETE FROM room_players WHERE room_id = ?")->execute([$roomId]);
             $pdo->prepare("DELETE FROM rooms WHERE id = ?")->execute([$roomId]);
+            expireScheduledLiveRoom($pdo, $roomId);
 
             logRoomLifecycle('room_cleanup', [
                 'room_id' => $roomId,
@@ -143,6 +175,7 @@ function clearUserRooms($pdo, $userId)
                 $pdo->prepare("DELETE FROM public_rooms WHERE room_id = ?")->execute([$roomId]);
                 $pdo->prepare("DELETE FROM room_players WHERE room_id = ?")->execute([$roomId]);
                 $pdo->prepare("DELETE FROM rooms WHERE id = ?")->execute([$roomId]);
+                expireScheduledLiveRoom($pdo, $roomId);
 
                 logRoomLifecycle('room_cleanup_no_active_host', [
                     'room_id' => $roomId,

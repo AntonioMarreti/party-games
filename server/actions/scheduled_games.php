@@ -70,6 +70,17 @@ function scheduled_cleanup_expired($pdo)
         WHERE status = 'scheduled'
           AND starts_at < (NOW() - INTERVAL 1 HOUR)
     ");
+
+    if (scheduled_table_has_column($pdo, 'scheduled_games', 'room_id')) {
+        $pdo->exec("
+            UPDATE scheduled_games sg
+            LEFT JOIN rooms r ON r.id = sg.room_id
+            SET sg.status = 'expired'
+            WHERE sg.status = 'live'
+              AND sg.room_id IS NOT NULL
+              AND r.id IS NULL
+        ");
+    }
 }
 
 function scheduled_find_for_update($pdo, $id)

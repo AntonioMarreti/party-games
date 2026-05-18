@@ -1046,7 +1046,31 @@ async function openScheduledGame(id) {
 
 async function joinScheduledGameRoom(roomCode) {
     if (!roomCode) return;
-    await joinRoom(roomCode, '');
+    const previousShowAlert = window.showAlert;
+    let handledClosedRoom = false;
+
+    if (typeof previousShowAlert === 'function') {
+        window.showAlert = function (title, message, type) {
+            if (String(message || '').includes('Комната не найдена')) {
+                handledClosedRoom = true;
+                previousShowAlert('Игра уже закрыта', 'Эта запланированная игра больше недоступна.', 'warning');
+                loadScheduledGames();
+                return;
+            }
+            return previousShowAlert(title, message, type);
+        };
+    }
+
+    try {
+        await joinRoom(roomCode, '');
+    } finally {
+        if (typeof previousShowAlert === 'function') {
+            window.showAlert = previousShowAlert;
+        }
+    }
+    if (handledClosedRoom) {
+        loadScheduledGames();
+    }
 }
 
 async function cancelScheduledGame(id) {
