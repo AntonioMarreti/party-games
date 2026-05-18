@@ -24,6 +24,24 @@ function getMinPlayersForGame(string $gameName): int
     return $minPlayers[$gameName] ?? 2;
 }
 
+function getPlayerNoun(int $count): string
+{
+    $mod100 = $count % 100;
+    if ($mod100 >= 11 && $mod100 <= 14) {
+        return 'игроков';
+    }
+
+    $mod10 = $count % 10;
+    if ($mod10 === 1) {
+        return 'игрок';
+    }
+    if ($mod10 >= 2 && $mod10 <= 4) {
+        return 'игрока';
+    }
+
+    return 'игроков';
+}
+
 function action_start_game($pdo, $user, $data)
 {
     $room = getRoom($user['id']);
@@ -57,7 +75,7 @@ function action_start_game($pdo, $user, $data)
     $counts = getRoomPlayerCounts($pdo, $room['id']);
     $minPlayers = getMinPlayersForGame($gameName);
     if ($counts['total_players'] < $minPlayers) {
-        failGameLifecycle("Нужно минимум {$minPlayers} игрока(ов)", [
+        failGameLifecycle("Для этой игры нужно минимум {$minPlayers} " . getPlayerNoun($minPlayers), [
             'actor_user_id' => (int) $user['id'],
             'room_id' => (int) $room['id'],
             'room_code' => $room['room_code'] ?? null,

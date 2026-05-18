@@ -1128,7 +1128,15 @@ async function startGame(gameName) {
     window.__pgSuspendPolling = true;
     try {
         const res = await window.apiRequest({ action: 'start_game', game_name: gameName });
-        if (window.checkState) await window.checkState();
+        if (res.status === 'ok') {
+            if (window.checkState) await window.checkState();
+            return res;
+        }
+
+        const message = res.message || 'Не удалось начать игру. Проверьте комнату и попробуйте ещё раз.';
+        if (window.showAlert) {
+            window.showAlert('Не получается начать', message, 'warning');
+        }
         return res;
     } finally {
         window.__pgSuspendPolling = false;
