@@ -125,12 +125,36 @@ function bunkerLogUseCardAttempt($room, $actorUserId, $cardType, $targetId, $rea
     ], $extra));
 }
 
+function bunkerLogEvent($message, $payload = [])
+{
+    if (!class_exists('TelegramLogger')) {
+        return;
+    }
+
+    TelegramLogger::logEvent('game', $message, $payload);
+}
+
 function handleGameAction($pdo, $room, $user, $postData)
 {
     global $ROUNDS_CONFIG, $SPECIAL_CARDS;
     $state = json_decode($room['game_state'] ?? '', true);
     if (!is_array($state)) {
-        $state = getInitialState();
+        $type = $postData['type'] ?? '';
+        $rawState = $room['game_state'] ?? '';
+        $canBootstrapInitialState = $type === 'init_bunker' && ($rawState === null || $rawState === '');
+        if ($canBootstrapInitialState) {
+            $state = getInitialState();
+        } else {
+            bunkerLogEvent('Bunker invalid state', [
+                'action' => 'bunker_invalid_state',
+                'room_id' => (int) ($room['id'] ?? 0),
+                'room_code' => $room['room_code'] ?? null,
+                'actor_user_id' => (int) ($user['id'] ?? 0),
+                'requested_action' => $type,
+                'raw_state_preview' => is_string($rawState) ? mb_substr($rawState, 0, 300) : null,
+            ]);
+            return ['status' => 'error', 'message' => 'Состояние игры повреждено'];
+        }
     }
     $type = $postData['type'] ?? '';
     $userId = (string) $user['id'];
@@ -927,7 +951,16 @@ function handleGameAction($pdo, $room, $user, $postData)
         return ['status' => 'ok'];
     }
 
-    return ['status' => 'ok'];
+    bunkerLogEvent('Bunker unknown action', [
+        'action' => 'bunker_unknown_action',
+        'room_id' => (int) ($room['id'] ?? 0),
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (int) ($user['id'] ?? 0),
+        'requested_action' => $type,
+        'phase' => $state['phase'] ?? null,
+        'turn_phase' => $state['turn_phase'] ?? null,
+    ]);
+    return ['status' => 'error', 'message' => 'Неизвестное действие'];
 }
 
 function startVotingPhase(&$state)
