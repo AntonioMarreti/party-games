@@ -9,8 +9,49 @@ document.addEventListener('click', (e) => {
 }, { once: false });
 
 window.onerror = function (msg, url, line, col, error) {
+    if (!window.logClientError) return false;
+
+    const activeScreen = document.querySelector('.screen.active-screen')?.id || null;
+    const hash = window.location.hash || '';
+    const message = error?.message || msg || 'Unknown JS Error';
+    const stack = error?.stack || `${url || 'unknown'}:${line || 0}:${col || 0}`;
+
+    window.logClientError('Global JS Error', stack, {
+        message: String(message),
+        href: window.location.href,
+        hash,
+        current_screen: activeScreen,
+        user_agent: navigator.userAgent,
+        room_code: window.currentRoomCode || null,
+        room_id: window.currentRoomId || null,
+        action: window.__lastApiAction || window.__lastUiAction || null,
+        source_url: url || null,
+        line: line || null,
+        column: col || null
+    });
     return false;
 };
+
+window.addEventListener('unhandledrejection', (event) => {
+    if (!window.logClientError) return;
+
+    const reason = event?.reason;
+    const activeScreen = document.querySelector('.screen.active-screen')?.id || null;
+    const hash = window.location.hash || '';
+    const message = reason?.message || String(reason || 'Unknown promise rejection');
+    const stack = reason?.stack || message;
+
+    window.logClientError('Unhandled Promise Rejection', stack, {
+        message,
+        href: window.location.href,
+        hash,
+        current_screen: activeScreen,
+        user_agent: navigator.userAgent,
+        room_code: window.currentRoomCode || null,
+        room_id: window.currentRoomId || null,
+        action: window.__lastApiAction || window.__lastUiAction || null
+    });
+});
 
 // === CONFIGURATION ===
 let loadedGames = {};
@@ -215,17 +256,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /* Main Application Logic
      */
-    window.addEventListener('error', (e) => {
-        if (window.logClientError) {
-            window.logClientError("Global JS Error", e.message, { filename: e.filename, lineno: e.lineno, colno: e.colno });
-        }
-    });
-    window.addEventListener('unhandledrejection', (e) => {
-        if (window.logClientError) {
-            window.logClientError("Unhandled Promise Rejection", e.reason?.message || String(e.reason));
-        }
-    });
-
     const hash = window.location.hash;
     if (hash.includes('auth_token=')) {
         const token = hash.split('auth_token=')[1].trim();

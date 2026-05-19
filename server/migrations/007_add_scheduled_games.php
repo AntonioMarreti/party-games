@@ -94,6 +94,17 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS scheduled_game_host_reminders (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            scheduled_game_id BIGINT NOT NULL,
+            reminder_sent_at DATETIME NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_scheduled_game_host_reminder (scheduled_game_id),
+            INDEX idx_scheduled_game_host_reminders_sent_at (reminder_sent_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
     try {
         $pdo->exec("
             UPDATE scheduled_games

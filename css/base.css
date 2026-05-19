@@ -131,6 +131,7 @@ body.thermal-safe {
 .thermal-safe .menu-card-premium,
 .thermal-safe .menu-btn-item,
 .thermal-safe .custom-modal-content,
+.thermal-safe .app-toast,
 .thermal-safe .game-catalog-header,
 .thermal-safe .catalog-game-card {
     /* Use solid surfaces without blur to save power, while keeping component layout and elevation. */

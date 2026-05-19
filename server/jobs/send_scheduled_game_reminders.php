@@ -23,17 +23,11 @@ $appUrl = defined('BOT_USERNAME') ? ('https://t.me/' . BOT_USERNAME . '/app') : 
 // TODO: Replace null with actual custom emoji id when available.
 const SCHEDULED_REMINDER_CUSTOM_EMOJI_ID = null;
 
-function scheduledReminderEnsureSchema(PDO $pdo)
+function scheduledReminderTableExists(PDO $pdo, string $table): bool
 {
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS scheduled_game_host_reminders (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            scheduled_game_id BIGINT NOT NULL,
-            reminder_sent_at DATETIME NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_scheduled_game_host_reminder (scheduled_game_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
+    $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
+    $stmt->execute([$table]);
+    return (bool) $stmt->fetchColumn();
 }
 
 function scheduledReminderGameName($gameType)
@@ -222,7 +216,10 @@ function scheduledReminderDeepLinkUrl(int $scheduledGameId, string $appUrl): str
 }
 
 try {
-    scheduledReminderEnsureSchema($pdo);
+    if (!scheduledReminderTableExists($pdo, 'scheduled_game_host_reminders')) {
+        echo "Scheduled reminders skipped: table scheduled_game_host_reminders does not exist. Run migration 007.\n";
+        exit(1);
+    }
 
     $lock = $pdo->query("SELECT GET_LOCK('scheduled_game_reminders', 5)")->fetchColumn();
     if ((int) $lock !== 1) {

@@ -372,6 +372,51 @@ function closeAlert(id) {
     }
 }
 
+function showToast(message, type = 'info', options = {}) {
+    if (!message) return;
+
+    const iconMap = {
+        info: 'bi-info-circle',
+        success: 'bi-check-circle',
+        error: 'bi-exclamation-octagon',
+        warning: 'bi-exclamation-triangle'
+    };
+    const duration = Math.max(1200, Number(options.duration || 2800));
+    let root = document.getElementById('app-toast-root');
+
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'app-toast-root';
+        root.className = 'app-toast-root';
+        document.body.appendChild(root);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast app-toast-${type}`;
+    toast.innerHTML = `
+        <div class="app-toast-icon"><i class="bi ${iconMap[type] || iconMap.info}"></i></div>
+        <div class="app-toast-message">${message}</div>
+    `;
+
+    root.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    if (window.ThemeManager) {
+        window.ThemeManager.triggerHaptic('notification', type === 'info' ? 'success' : type);
+    }
+
+    let removed = false;
+    const removeToast = () => {
+        if (removed) return;
+        removed = true;
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 180);
+    };
+
+    toast.addEventListener('click', removeToast);
+    setTimeout(removeToast, duration);
+}
+
 function showConfirmation(title, message, onConfirm, options = {}) {
     const confirmId = 'confirm-' + Date.now();
     const confirmText = options.confirmText || 'Подтвердить';
@@ -691,6 +736,7 @@ window.UIManager = {
     closeModal,
     setupModalClosing,
     showAlert,
+    showToast,
     showConfirmation,
     closeAlert,
     safeText,
@@ -713,7 +759,7 @@ window.isScreenActive = isScreenActive;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.showAlert = showAlert;
-window.showAlert = showAlert;
+window.showToast = showToast;
 window.showConfirmation = showConfirmation;
 window.showPrompt = showPrompt;
 window.showLoading = showLoading;

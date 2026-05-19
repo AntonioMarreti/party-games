@@ -37,6 +37,10 @@ function getApiTimeoutMs(action) {
 }
 
 async function apiRequest(data) {
+    if (data && typeof data.action === 'string') {
+        window.__lastApiAction = data.action;
+    }
+
     let body;
     if (data instanceof FormData) {
         body = data;

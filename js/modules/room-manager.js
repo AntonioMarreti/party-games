@@ -193,6 +193,15 @@ function getPublicRoomGameName(gameType) {
 }
 
 function getPublicRoomGameMeta(gameType) {
+    if (gameType === 'lobby') {
+        return {
+            name: 'Выбор игры',
+            icon: 'bi-grid-3x3-gap-fill',
+            bgColor: 'var(--bg-secondary)',
+            color: 'var(--primary-color)'
+        };
+    }
+
     if (Array.isArray(window.AVAILABLE_GAMES)) {
         const match = window.AVAILABLE_GAMES.find(g => g.id === gameType);
         if (match) {
@@ -424,14 +433,22 @@ async function loadPublicRooms() {
 
         res.rooms.forEach((r, index) => {
             const gameMeta = getPublicRoomGameMeta(r.game_type);
-            const safeTitle = window.safeHTML(r.title) || ('Комната ' + window.safeHTML(r.host_name));
-            const safeDescription = window.safeHTML(r.description) || 'Присоединяйтесь!';
+            const isLobbyRoom = r.game_type === 'lobby';
+            const safeTitle = isLobbyRoom
+                ? 'Открытая комната'
+                : (window.safeHTML(r.title) || gameMeta.name || ('Комната ' + window.safeHTML(r.host_name)));
+            const safeDescription = isLobbyRoom
+                ? 'Игра ещё не выбрана'
+                : 'Можно присоединиться';
             const hostName = window.safeHTML(r.host_name || 'Хост');
             const gameName = window.safeHTML(gameMeta.name);
             const playersWaitingText = roomSafeHtml(getWaitingPlayersText(r.players_count || 1));
             const lockBadge = Number(r.has_password) === 1
                 ? `<span class="public-room-badge"><i class="bi bi-lock-fill me-1"></i>Пароль</span>`
                 : `<span class="public-room-badge"><i class="bi bi-unlock me-1"></i>Открытая</span>`;
+            const gameBadge = isLobbyRoom
+                ? `<span class="public-room-badge"><i class="bi bi-grid-3x3-gap me-1"></i>Выбор игры</span>`
+                : `<span class="public-room-badge"><i class="bi bi-controller me-1"></i>${gameName}</span>`;
 
             const roomHtml = `
                 <div class="public-room-main">
@@ -446,15 +463,14 @@ async function loadPublicRooms() {
                             </div>
                         </div>
                         <div class="public-room-side">
-                            <div class="public-room-count">${r.players_count} чел.</div>
+                            <div class="public-room-count">${playersWaitingText}</div>
                             <button type="button" class="room-card-primary-btn">Войти</button>
                         </div>
                     </div>
                     <div class="public-room-meta-row">
-                        <span class="public-room-badge"><i class="bi bi-controller me-1"></i>${gameName}</span>
+                        ${gameBadge}
                         ${lockBadge}
-                        <span class="public-room-badge"><i class="bi bi-person-circle me-1"></i>${hostName}</span>
-                        <span class="public-room-code">#${r.room_code}</span>
+                        <span class="public-room-host">Хост: ${hostName}</span>
                     </div>
                 </div>
             `;
@@ -469,7 +485,7 @@ async function loadPublicRooms() {
                     div.innerHTML = `
                         <div class="min-w-0">
                             <div class="fw-bold text-truncate">${safeTitle}</div>
-                            <div class="home-public-meta">${gameName} · ${playersWaitingText} · waiting</div>
+                            <div class="home-public-meta">${isLobbyRoom ? 'Выбор игры' : gameName} · ${playersWaitingText}</div>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="event.stopPropagation(); handleRoomJoinByData('${r.room_code}', ${Number(r.has_password) === 1 ? 1 : 0}, '${String(safeTitle).replace(/'/g, "\\'")}')">Войти</button>
                     `;
@@ -660,8 +676,11 @@ function getWaitingPlayersText(count) {
     const value = Math.max(0, Number(count || 0));
     const lastTwo = value % 100;
     const last = value % 10;
+    const noun = last === 1 && lastTwo !== 11
+        ? 'игрок'
+        : (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'игрока' : 'игроков');
     const verb = last === 1 && lastTwo !== 11 ? 'ждёт' : 'ждут';
-    return `${value} ${verb}`;
+    return `${value} ${noun} ${verb}`;
 }
 
 function getScheduledSubscribersText(count) {
@@ -1117,30 +1136,34 @@ async function openScheduledGame(id) {
 
 async function joinScheduledGameRoom(roomCode) {
     if (!roomCode) return;
-    const previousShowAlert = window.showAlert;
-    let handledClosedRoom = false;
+    if (isJoinRoomPending) return;
 
-    if (typeof previousShowAlert === 'function') {
-        window.showAlert = function (title, message, type) {
-            if (String(message || '').includes('Комната не найдена')) {
-                handledClosedRoom = true;
-                previousShowAlert('Игра уже закрыта', 'Эта запланированная игра больше недоступна.', 'warning');
-                loadScheduledGames();
-                return;
-            }
-            return previousShowAlert(title, message, type);
-        };
-    }
-
+    isJoinRoomPending = true;
+    setPollingSuspended(true);
     try {
-        await joinRoom(roomCode, '');
-    } finally {
-        if (typeof previousShowAlert === 'function') {
-            window.showAlert = previousShowAlert;
+        const res = await window.apiRequest({ action: 'join_room', room_code: roomCode, password: '' });
+        if (res?.status === 'ok') {
+            if (typeof window.checkState === 'function') {
+                await window.checkState();
+            }
+            return;
         }
-    }
-    if (handledClosedRoom) {
-        loadScheduledGames();
+
+        const message = String(res?.message || '');
+        if (message.includes('Комната не найдена')) {
+            if (window.showAlert) {
+                window.showAlert('Игра уже закрыта', 'Эта запланированная игра больше недоступна.', 'warning');
+            }
+            loadScheduledGames();
+            return;
+        }
+
+        if (window.showAlert) {
+            window.showAlert('Ошибка', message || 'Не удалось войти в комнату', 'error');
+        }
+    } finally {
+        setPollingSuspended(false);
+        isJoinRoomPending = false;
     }
 }
 

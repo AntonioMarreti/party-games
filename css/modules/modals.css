@@ -282,6 +282,79 @@
     animation: alertBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+.app-toast-root {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(94px + env(safe-area-inset-bottom));
+    z-index: 100001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.app-toast {
+    width: min(100%, 360px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--text-main);
+    border: 1px solid rgba(40, 45, 55, 0.08);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+    transform: translateY(12px);
+    opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: auto;
+}
+
+.app-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.app-toast-icon {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.95rem;
+}
+
+.app-toast-message {
+    min-width: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.app-toast-info .app-toast-icon {
+    color: var(--primary-color);
+    background: rgba(108, 92, 231, 0.10);
+}
+
+.app-toast-success .app-toast-icon {
+    color: #0f9d78;
+    background: rgba(15, 157, 120, 0.11);
+}
+
+.app-toast-warning .app-toast-icon {
+    color: #d7871f;
+    background: rgba(215, 135, 31, 0.12);
+}
+
+.app-toast-error .app-toast-icon {
+    color: #e05151;
+    background: rgba(224, 81, 81, 0.12);
+}
+
 @keyframes alertBounceIn {
     from {
         opacity: 0;
