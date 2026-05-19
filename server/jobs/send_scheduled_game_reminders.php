@@ -127,6 +127,25 @@ function scheduledReminderSend($chatId, $text, $buttonText, $buttonUrl, $dryRun)
     return is_array($decoded) && !empty($decoded['ok']);
 }
 
+function scheduledReminderLogEvent($action, array $data, string $message): void
+{
+    if (class_exists('TelegramLogger')) {
+        TelegramLogger::logEvent('scheduled_game_reminders', $message, array_merge([
+            'action' => $action,
+        ], $data));
+    }
+}
+
+function scheduledReminderLogError($action, array $data, string $message): void
+{
+    if (class_exists('TelegramLogger')) {
+        TelegramLogger::logError('scheduled_game_reminders', array_merge([
+            'action' => $action,
+            'message' => $message,
+        ], $data));
+    }
+}
+
 function scheduledReminderPrintDryRunDiagnostics(PDO $pdo): void
 {
     $nowStmt = $pdo->query("SELECT NOW() as server_now, NOW() + INTERVAL 5 MINUTE as window_until");
@@ -197,6 +216,11 @@ function scheduledReminderPrintDryRunDiagnostics(PDO $pdo): void
     }
 }
 
+function scheduledReminderDeepLinkUrl(int $scheduledGameId, string $appUrl): string
+{
+    return $appUrl . '?startapp=scheduled_' . $scheduledGameId;
+}
+
 try {
     scheduledReminderEnsureSchema($pdo);
 
@@ -249,15 +273,22 @@ try {
         $hostReminderSentAt = $hostReminderStmt->fetchColumn();
 
         if (!$hostReminderSentAt && !empty($game['host_telegram_id'])) {
+            $buttonUrl = scheduledReminderDeepLinkUrl($gameId, $appUrl);
             $sent = scheduledReminderSend(
                 $game['host_telegram_id'],
                 scheduledReminderMessage($game, true),
                 'Открыть комнату',
-                $appUrl,
+                $buttonUrl,
                 $dryRun
             );
             if ($sent) {
                 $sentHosts++;
+                scheduledReminderLogEvent('reminder_sent', [
+                    'scheduled_game_id' => $gameId,
+                    'recipient_role' => 'host',
+                    'host_user_id' => (int) ($game['host_id'] ?? 0),
+                    'chat_id' => (int) $game['host_telegram_id'],
+                ], 'Scheduled reminder sent');
                 if (!$dryRun) {
                     $markHostStmt = $pdo->prepare("
                         INSERT INTO scheduled_game_host_reminders (scheduled_game_id, reminder_sent_at)
@@ -266,6 +297,13 @@ try {
                     ");
                     $markHostStmt->execute([$gameId]);
                 }
+            } else {
+                scheduledReminderLogError('reminder_failed', [
+                    'scheduled_game_id' => $gameId,
+                    'recipient_role' => 'host',
+                    'host_user_id' => (int) ($game['host_id'] ?? 0),
+                    'chat_id' => (int) ($game['host_telegram_id'] ?? 0),
+                ], 'Scheduled reminder failed');
             }
         }
 
@@ -284,15 +322,22 @@ try {
         $subscribers = $subscribersStmt->fetchAll();
 
         foreach ($subscribers as $subscriber) {
+            $buttonUrl = scheduledReminderDeepLinkUrl($gameId, $appUrl);
             $sent = scheduledReminderSend(
                 $subscriber['telegram_id'],
                 scheduledReminderMessage($game, false),
                 'Открыть игру',
-                $appUrl,
+                $buttonUrl,
                 $dryRun
             );
             if ($sent) {
                 $sentSubscribers++;
+                scheduledReminderLogEvent('reminder_sent', [
+                    'scheduled_game_id' => $gameId,
+                    'recipient_role' => 'subscriber',
+                    'subscription_id' => (int) ($subscriber['subscription_id'] ?? 0),
+                    'chat_id' => (int) $subscriber['telegram_id'],
+                ], 'Scheduled reminder sent');
                 if (!$dryRun) {
                     $markSubscriberStmt = $pdo->prepare("
                         UPDATE scheduled_game_subscriptions
@@ -302,6 +347,13 @@ try {
                     ");
                     $markSubscriberStmt->execute([(int) $subscriber['subscription_id']]);
                 }
+            } else {
+                scheduledReminderLogError('reminder_failed', [
+                    'scheduled_game_id' => $gameId,
+                    'recipient_role' => 'subscriber',
+                    'subscription_id' => (int) ($subscriber['subscription_id'] ?? 0),
+                    'chat_id' => (int) ($subscriber['telegram_id'] ?? 0),
+                ], 'Scheduled reminder failed');
             }
         }
     }

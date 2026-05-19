@@ -72,6 +72,14 @@ function expireScheduledLiveRoom($pdo, $roomId): void
             WHERE room_id = ?
               AND status = 'live'
         ")->execute([(int) $roomId]);
+        $affected = $pdo->query("SELECT ROW_COUNT()")->fetchColumn();
+        if ((int) $affected > 0 && class_exists('TelegramLogger')) {
+            TelegramLogger::logEvent('scheduled_games', 'Orphaned live scheduled game expired', [
+                'action' => 'scheduled_live_orphan_expired',
+                'room_id' => (int) $roomId,
+                'reason' => 'room_cleanup',
+            ]);
+        }
     } catch (Throwable $e) {
         if (class_exists('TelegramLogger')) {
             TelegramLogger::logError('scheduled_live_room_cleanup', [

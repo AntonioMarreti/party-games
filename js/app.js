@@ -15,6 +15,46 @@ window.onerror = function (msg, url, line, col, error) {
 // === CONFIGURATION ===
 let loadedGames = {};
 const APP_REPO = 'AntonioMarreti/party-games';
+window.pendingScheduledGameDeepLinkId = window.pendingScheduledGameDeepLinkId || null;
+window.pendingScheduledGameDeepLinkHandled = window.pendingScheduledGameDeepLinkHandled || false;
+
+function extractStartAppParam(tg) {
+    const telegramParam = tg?.initDataUnsafe?.start_param;
+    if (telegramParam) return String(telegramParam);
+
+    try {
+        const url = new URL(window.location.href);
+        const queryParam = url.searchParams.get('startapp') || url.searchParams.get('start_param');
+        if (queryParam) return queryParam;
+    } catch (e) {
+        // noop
+    }
+
+    return '';
+}
+
+function parseScheduledDeepLinkId(rawParam) {
+    const match = String(rawParam || '').match(/^scheduled_(\d+)$/);
+    return match ? Number(match[1]) : 0;
+}
+
+function routePendingScheduledDeepLink() {
+    const scheduledGameId = Number(window.pendingScheduledGameDeepLinkId || 0);
+    if (!scheduledGameId) return;
+
+    window.pendingScheduledGameDeepLinkHandled = true;
+
+    if (typeof window.switchTab === 'function') {
+        window.switchTab('games');
+    }
+    if (typeof window.switchRoomsMode === 'function') {
+        window.switchRoomsMode('scheduled');
+    } else if (typeof window.loadScheduledGames === 'function') {
+        window.loadScheduledGames();
+    }
+}
+
+window.routePendingScheduledDeepLink = routePendingScheduledDeepLink;
 
 function getAppVersionFromDOM() {
     try {
@@ -102,6 +142,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn("Telegram WebApp not found");
     }
 
+    const startAppParam = extractStartAppParam(tg);
+    const scheduledGameId = parseScheduledDeepLinkId(startAppParam);
+    if (scheduledGameId > 0) {
+        window.pendingScheduledGameDeepLinkId = scheduledGameId;
+        window.pendingScheduledGameDeepLinkHandled = false;
+    }
+
     fetchAppVersion();
 
     /* Main Application Logic
@@ -178,6 +225,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (logoutGroup) {
         const isTMA = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0;
         logoutGroup.style.display = isTMA ? 'none' : 'block';
+    }
+
+    if (window.pendingScheduledGameDeepLinkId && !window.pendingScheduledGameDeepLinkHandled) {
+        setTimeout(() => {
+            routePendingScheduledDeepLink();
+        }, 0);
     }
 
     // Success - Clear Splash Timeout

@@ -544,6 +544,7 @@ async function loadLocalRooms() {
 let currentRoomsMode = 'live';
 let isScheduledGamesLoading = false;
 let currentScheduledGamesById = new Map();
+let scheduledDeepLinkHighlightTimer = null;
 
 function roomSafeHtml(value) {
     return typeof window.safeHTML === 'function'
@@ -573,6 +574,38 @@ function switchRoomsMode(mode = 'live') {
     } else {
         loadPublicRooms();
     }
+}
+
+function consumePendingScheduledDeepLink(renderedGames = [], container = null) {
+    const scheduledGameId = Number(window.pendingScheduledGameDeepLinkId || 0);
+    if (!scheduledGameId) return;
+
+    const targetGame = renderedGames.find(game => Number(game.id) === scheduledGameId);
+    if (!targetGame) {
+        window.pendingScheduledGameDeepLinkId = null;
+        window.pendingScheduledGameDeepLinkHandled = false;
+        if (window.showToast) {
+            window.showToast('Эта игра уже закрыта или недоступна.', 'warning');
+        } else if (window.showAlert) {
+            window.showAlert('Игра недоступна', 'Эта игра уже закрыта или недоступна.', 'warning');
+        }
+        return;
+    }
+
+    const card = (container || document).querySelector(`[data-scheduled-game-id="${scheduledGameId}"]`);
+    window.pendingScheduledGameDeepLinkId = null;
+    window.pendingScheduledGameDeepLinkHandled = false;
+
+    if (!card) return;
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('scheduled-game-card-highlight');
+    if (scheduledDeepLinkHighlightTimer) {
+        clearTimeout(scheduledDeepLinkHighlightTimer);
+    }
+    scheduledDeepLinkHighlightTimer = setTimeout(() => {
+        card.classList.remove('scheduled-game-card-highlight');
+    }, 2600);
 }
 
 function getScheduledGameDateText(value) {
@@ -940,7 +973,7 @@ async function loadScheduledGames() {
         const isSubscribed = Number(game.is_subscribed || 0) === 1;
         const signupText = roomSafeHtml(getScheduledSignupText(subscribersCount, maxPlayers));
         const readinessText = roomSafeHtml(getScheduledReadinessText(subscribersCount, minPlayers));
-        const isLive = game.status === 'live' && game.room_code;
+        const isLive = game.status === 'live';
         const canOpen = canOpenScheduledGame(game.starts_at);
         const subscribedBadge = isSubscribed
             ? '<span class="scheduled-game-badge scheduled-game-subscribed">Вы записаны</span>'
@@ -948,7 +981,9 @@ async function loadScheduledGames() {
         let primaryAction = '';
         let secondaryAction = '';
         if (isLive) {
-            primaryAction = `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="joinScheduledGameRoom('${roomSafeHtml(game.room_code)}')">Войти</button>`;
+            primaryAction = game.room_code
+                ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="joinScheduledGameRoom('${roomSafeHtml(game.room_code)}')">Войти</button>`
+                : `<span class="scheduled-game-disabled-action">Игра открывается</span>`;
         } else if (isHost) {
             primaryAction = canOpen
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)})">Открыть</button>`
@@ -967,6 +1002,7 @@ async function loadScheduledGames() {
 
         const div = document.createElement('div');
         div.className = 'scheduled-game-card mb-3';
+        div.dataset.scheduledGameId = String(game.id);
         div.innerHTML = `
             <div class="scheduled-game-main">
                 <div class="scheduled-game-icon" style="background:${meta.bgColor}; color:${meta.color};">
@@ -997,6 +1033,8 @@ async function loadScheduledGames() {
         `;
         container.appendChild(div);
     });
+
+    consumePendingScheduledDeepLink(sortedGames, container);
 }
 
 async function subscribeScheduledGame(id) {

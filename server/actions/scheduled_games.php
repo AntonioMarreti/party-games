@@ -64,22 +64,55 @@ function scheduled_parse_datetime($value)
 function scheduled_cleanup_expired($pdo)
 {
     // TODO: add maintenance cleanup for expired/cancelled scheduled games older than 90 days.
-    $pdo->exec("
-        UPDATE scheduled_games
-        SET status = 'expired'
+    $expiredStmt = $pdo->query("
+        SELECT id
+        FROM scheduled_games
         WHERE status = 'scheduled'
           AND starts_at < (NOW() - INTERVAL 1 HOUR)
     ");
+    $expiredIds = array_map('intval', array_column($expiredStmt->fetchAll(), 'id'));
+    if ($expiredIds) {
+        $pdo->exec("
+            UPDATE scheduled_games
+            SET status = 'expired'
+            WHERE status = 'scheduled'
+              AND starts_at < (NOW() - INTERVAL 1 HOUR)
+        ");
+        foreach ($expiredIds as $scheduledGameId) {
+            scheduled_log_event('scheduled_expired', [
+                'scheduled_game_id' => $scheduledGameId,
+                'reason' => 'start_time_passed',
+            ], 'Scheduled game expired');
+        }
+    }
 
     if (scheduled_table_has_column($pdo, 'scheduled_games', 'room_id')) {
-        $pdo->exec("
-            UPDATE scheduled_games sg
+        $orphanedStmt = $pdo->query("
+            SELECT sg.id, sg.room_id
+            FROM scheduled_games sg
             LEFT JOIN rooms r ON r.id = sg.room_id
-            SET sg.status = 'expired'
             WHERE sg.status = 'live'
               AND sg.room_id IS NOT NULL
               AND r.id IS NULL
         ");
+        $orphanedGames = $orphanedStmt->fetchAll();
+        if ($orphanedGames) {
+            $pdo->exec("
+                UPDATE scheduled_games sg
+                LEFT JOIN rooms r ON r.id = sg.room_id
+                SET sg.status = 'expired'
+                WHERE sg.status = 'live'
+                  AND sg.room_id IS NOT NULL
+                  AND r.id IS NULL
+            ");
+            foreach ($orphanedGames as $game) {
+                scheduled_log_event('scheduled_live_orphan_expired', [
+                    'scheduled_game_id' => (int) ($game['id'] ?? 0),
+                    'room_id' => (int) ($game['room_id'] ?? 0),
+                    'reason' => 'linked_room_missing',
+                ], 'Orphaned live scheduled game expired');
+            }
+        }
     }
 }
 
@@ -125,6 +158,15 @@ function scheduled_log_warning($message, $data = [])
 {
     if (class_exists('TelegramLogger')) {
         TelegramLogger::logError('scheduled_games_warning', array_merge(['message' => $message], $data));
+    }
+}
+
+function scheduled_log_event($action, $data = [], $message = '')
+{
+    if (class_exists('TelegramLogger')) {
+        TelegramLogger::logEvent('scheduled_games', $message !== '' ? $message : $action, array_merge([
+            'action' => $action,
+        ], $data));
     }
 }
 
@@ -244,8 +286,17 @@ function action_create_scheduled_game($pdo, $user, $data)
         $columnSql = implode(', ', $columns);
         $stmt = $pdo->prepare("INSERT INTO scheduled_games ($columnSql) VALUES ($placeholders)");
         $stmt->execute($values);
+        $scheduledGameId = (int) $pdo->lastInsertId();
+        scheduled_log_event('create_scheduled_game', [
+            'scheduled_game_id' => $scheduledGameId,
+            'host_user_id' => (int) ($user['id'] ?? 0),
+            'game_type' => $gameType,
+            'starts_at' => $startsAt,
+            'min_players' => $minPlayers,
+            'max_players' => $maxPlayers,
+        ], 'Scheduled game created');
 
-        scheduled_send_ok(['scheduled_game_id' => (int) $pdo->lastInsertId()]);
+        scheduled_send_ok(['scheduled_game_id' => $scheduledGameId]);
     } catch (RuntimeException $e) {
         sendError($e->getMessage());
     } catch (Exception $e) {
@@ -388,6 +439,13 @@ function action_update_scheduled_game($pdo, $user, $data)
         ]);
 
         $pdo->commit();
+        scheduled_log_event('update_scheduled_game', [
+            'scheduled_game_id' => (int) $game['id'],
+            'host_user_id' => (int) ($user['id'] ?? 0),
+            'starts_at' => $startsAt,
+            'min_players' => $minPlayers,
+            'max_players' => $maxPlayers,
+        ], 'Scheduled game updated');
         scheduled_send_ok(['scheduled_game_id' => (int) $game['id']]);
     } catch (RuntimeException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -450,6 +508,11 @@ function action_subscribe_scheduled_game($pdo, $user, $data)
         $stmt->execute([(int) $game['id'], $user['id']]);
 
         $pdo->commit();
+        scheduled_log_event('subscribe_scheduled_game', [
+            'scheduled_game_id' => (int) $game['id'],
+            'user_id' => (int) ($user['id'] ?? 0),
+            'host_user_id' => (int) $hostId,
+        ], 'User subscribed to scheduled game');
         scheduled_send_ok();
     } catch (RuntimeException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -495,6 +558,11 @@ function action_unsubscribe_scheduled_game($pdo, $user, $data)
         $stmt->execute([(int) $game['id'], $user['id']]);
 
         $pdo->commit();
+        scheduled_log_event('unsubscribe_scheduled_game', [
+            'scheduled_game_id' => (int) $game['id'],
+            'user_id' => (int) ($user['id'] ?? 0),
+            'host_user_id' => (int) $hostId,
+        ], 'User unsubscribed from scheduled game');
         scheduled_send_ok();
     } catch (RuntimeException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -555,6 +623,13 @@ function action_open_scheduled_game($pdo, $user, $data)
         $stmt->execute($params);
 
         $pdo->commit();
+        scheduled_log_event('open_scheduled_game', [
+            'scheduled_game_id' => (int) $game['id'],
+            'host_user_id' => (int) $hostId,
+            'room_id' => (int) $room['room_id'],
+            'room_code' => $room['room_code'],
+            'warning' => $warning,
+        ], 'Scheduled game opened');
         scheduled_send_ok([
             'room_id' => $room['room_id'],
             'room_code' => $room['room_code'],
@@ -592,6 +667,10 @@ function action_cancel_scheduled_game($pdo, $user, $data)
         ")->execute([(int) $game['id']]);
 
         $pdo->commit();
+        scheduled_log_event('cancel_scheduled_game', [
+            'scheduled_game_id' => (int) $game['id'],
+            'host_user_id' => (int) ($user['id'] ?? 0),
+        ], 'Scheduled game cancelled');
         scheduled_send_ok();
     } catch (RuntimeException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
