@@ -377,11 +377,13 @@ async function loadPublicRooms() {
                     <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                 </button>
             </div>
-            <div class="public-room-card public-room-empty text-center py-4">
-                 <div class="mb-2 text-primary opacity-50"><i class="bi bi-wifi-off" style="font-size: 40px;"></i></div>
-                 <div class="fw-bold" style="color: var(--text-main)">Не удалось обновить</div>
-                 <div class="text-muted small mb-3">Комнату всё равно можно создать или открыть по ссылке.</div>
-                 <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать</button>
+            <div class="public-room-card public-room-empty rooms-empty-card text-center">
+                 <div class="rooms-empty-icon text-primary"><i class="bi bi-wifi-off"></i></div>
+                 <div class="rooms-empty-title">Не удалось обновить</div>
+                 <div class="rooms-empty-text">Комнату всё равно можно создать или открыть по ссылке.</div>
+                 <div class="rooms-empty-actions">
+                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать игру</button>
+                 </div>
             </div>
         `);
         return;
@@ -399,11 +401,11 @@ async function loadPublicRooms() {
                 container.innerHTML = '';
             });
             renderRoomListContainers(`
-                <div class="public-room-card public-room-empty text-center py-4">
-                     <div class="mb-2 text-primary opacity-50"><i class="bi bi-people" style="font-size: 40px;"></i></div>
-                     <div class="fw-bold" style="color: var(--text-main)">Сейчас никто не ждёт игроков</div>
-                     <div class="text-muted small mb-3">Создайте открытую игру или посмотрите расписание.</div>
-                     <div class="d-flex justify-content-center flex-wrap gap-2">
+                <div class="public-room-card public-room-empty rooms-empty-card text-center">
+                     <div class="rooms-empty-icon text-primary"><i class="bi bi-people"></i></div>
+                     <div class="rooms-empty-title">Сейчас никто не ждёт игроков</div>
+                     <div class="rooms-empty-text">Создайте открытую игру или посмотрите расписание.</div>
+                     <div class="rooms-empty-actions d-flex justify-content-center flex-wrap gap-2">
                         <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="document.querySelector('[data-bs-target=\\'#createModal\\']').click()">Создать игру</button>
                         <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('scheduled')">Расписание</button>
                      </div>
@@ -945,23 +947,25 @@ async function loadScheduledGames() {
     const res = await window.apiRequest({ action: 'get_scheduled_games' });
     isScheduledGamesLoading = false;
 
-    const getScheduledHeaderHtml = () => `
+    const getScheduledHeaderHtml = (withAction = true) => `
         <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
             <div class="rooms-list-title">Сегодня и позже</div>
-            <button onclick="openScheduledGameModal()" class="btn-unstyled rooms-list-action-pill">
+            ${withAction ? `<button onclick="openScheduledGameModal()" class="btn-unstyled rooms-list-action-pill">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Создать</span>
-            </button>
+            </button>` : ''}
         </div>
     `;
 
     if (!res || res.status !== 'ok') {
         container.innerHTML = `
-            ${getScheduledHeaderHtml()}
-            <div class="scheduled-game-card text-center py-4">
-                <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-x" style="font-size: 40px;"></i></div>
-                <div class="fw-bold" style="color: var(--text-main)">Расписание временно недоступно</div>
-                <div class="text-muted small mb-3">Можно создать открытую игру или попробовать позже.</div>
-                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('live')">Сейчас</button>
+            ${getScheduledHeaderHtml(false)}
+            <div class="scheduled-game-card rooms-empty-card text-center">
+                <div class="rooms-empty-icon text-primary"><i class="bi bi-calendar-x"></i></div>
+                <div class="rooms-empty-title">Расписание временно недоступно</div>
+                <div class="rooms-empty-text">Можно создать открытую игру или попробовать позже.</div>
+                <div class="rooms-empty-actions">
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="switchRoomsMode('live')">Сейчас</button>
+                </div>
             </div>
         `;
         return;
@@ -969,12 +973,14 @@ async function loadScheduledGames() {
 
     if (!Array.isArray(res.games) || res.games.length === 0) {
         container.innerHTML = `
-            ${getScheduledHeaderHtml()}
-            <div class="scheduled-game-card text-center py-4">
-                <div class="mb-2 text-primary opacity-50"><i class="bi bi-calendar-plus" style="font-size: 42px;"></i></div>
-                <div class="fw-bold" style="color: var(--text-main)">Пока игр по расписанию нет</div>
-                <div class="text-muted small mb-3">Создайте игру на вечер — другие смогут увидеть её здесь.</div>
-                <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGameModal()">Запланировать</button>
+            ${getScheduledHeaderHtml(false)}
+            <div class="scheduled-game-card rooms-empty-card text-center">
+                <div class="rooms-empty-icon text-primary"><i class="bi bi-calendar-plus"></i></div>
+                <div class="rooms-empty-title">Пока игр по расписанию нет</div>
+                <div class="rooms-empty-text">Создайте игру на вечер — другие смогут увидеть её здесь.</div>
+                <div class="rooms-empty-actions">
+                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGameModal()">Запланировать игру</button>
+                </div>
             </div>
         `;
         return;

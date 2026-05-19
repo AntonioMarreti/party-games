@@ -482,10 +482,10 @@ body.dark-mode .badge-info {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    border: 1px solid rgba(108, 92, 231, 0.12);
-    background: rgba(108, 92, 231, 0.08);
+    border: 1px solid rgba(108, 92, 231, 0.18);
+    background: rgba(255, 255, 255, 0.92);
     color: var(--primary-color);
-    box-shadow: none;
+    box-shadow: 0 6px 16px rgba(31, 38, 135, 0.06);
 }
 
 .rooms-list-action-icon {
@@ -550,7 +550,47 @@ body.dark-mode .badge-info {
 
 .public-room-empty {
     display: block;
-    padding: 28px 18px;
+    padding: 26px 18px;
+}
+
+.rooms-empty-card {
+    border-radius: 24px;
+}
+
+.rooms-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 12px;
+    border-radius: 18px;
+    background: rgba(108, 92, 231, 0.08);
+    font-size: 1.55rem;
+    opacity: 0.9;
+}
+
+.rooms-empty-title {
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.rooms-empty-text {
+    margin: 10px auto 0;
+    max-width: 290px;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.rooms-empty-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
 }
 
 .public-room-game-icon {
@@ -1253,7 +1293,9 @@ body.dark-mode .game-summary-share-preview {
     gap: 6px;
     padding: 5px;
     border-radius: 18px;
-    background: rgba(108, 92, 231, 0.12);
+    border: 1px solid rgba(108, 92, 231, 0.12);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 24px rgba(31, 38, 135, 0.08);
 }
 
 .rooms-mode-btn {
@@ -1261,15 +1303,15 @@ body.dark-mode .game-summary-share-preview {
     border: 0;
     border-radius: 14px;
     background: transparent;
-    color: var(--text-muted);
+    color: rgba(40, 45, 55, 0.68);
     font-size: 0.9rem;
     font-weight: 900;
 }
 
 .rooms-mode-btn.active {
-    background: #fff;
-    color: var(--primary-color);
-    box-shadow: 0 8px 24px rgba(31, 38, 135, 0.08);
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(108, 92, 231, 0.22);
 }
 
 .scheduled-game-card {
@@ -1479,20 +1521,25 @@ body.dark-mode .game-summary-share-preview {
 
 .thermal-safe .rooms-list-action-icon,
 .thermal-safe .rooms-list-action-pill {
-    background: rgba(108, 92, 231, 0.10) !important;
+    background: #fff !important;
     border-color: rgba(108, 92, 231, 0.16) !important;
     color: var(--primary-color) !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-main) !important;
 }
 
 .thermal-safe .rooms-mode-btn {
-    color: rgba(40, 45, 55, 0.58) !important;
+    color: rgba(40, 45, 55, 0.72) !important;
 }
 
 .thermal-safe .rooms-mode-btn.active {
     background: var(--primary-color) !important;
     color: #fff !important;
     box-shadow: none !important;
+}
+
+.thermal-safe .rooms-empty-icon {
+    background: rgba(108, 92, 231, 0.10) !important;
+    opacity: 1 !important;
 }
 
 .thermal-safe .scheduled-game-badge {
