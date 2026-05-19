@@ -396,6 +396,36 @@ function action_get_state($pdo, $user, $data)
             }
             $room['game_state'] = json_encode($state, JSON_UNESCAPED_UNICODE);
         }
+    } elseif ($gameType === 'bunker' && !empty($room['game_state'])) {
+        $state = json_decode($room['game_state'], true);
+        if (is_array($state) && !empty($state['players_cards']) && is_array($state['players_cards'])) {
+            $myId = (string) $user['id'];
+            foreach ($state['players_cards'] as $playerId => &$cards) {
+                $playerId = (string) $playerId;
+                if (!is_array($cards) || $playerId === $myId) {
+                    continue;
+                }
+
+                foreach ($cards as $cardKey => &$card) {
+                    if (!is_array($card)) {
+                        continue;
+                    }
+
+                    $isRevealed = !empty($card['revealed']);
+                    if ($isRevealed) {
+                        continue;
+                    }
+
+                    $cards[$cardKey] = [
+                        'revealed' => false,
+                        'used' => !empty($card['used']),
+                    ];
+                }
+                unset($card);
+            }
+            unset($cards);
+            $room['game_state'] = json_encode($state, JSON_UNESCAPED_UNICODE);
+        }
     }
 
     echo json_encode([

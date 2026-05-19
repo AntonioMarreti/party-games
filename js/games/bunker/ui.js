@@ -735,7 +735,23 @@ window.renderStories = function (players, state) {
         var isKicked = state.kicked_players.includes(String(p.id));
         var pCards = state.players_cards[String(p.id)];
         if (!pCards) return '';
-        var cond = pCards.condition.data;
+        var cond = pCards.condition?.data;
+        if (!cond) {
+            return `
+                <div class="card border-0 shadow-sm mb-3 ${isKicked ? 'opacity-50' : ''}" style="background:var(--bg-card); border-radius:16px;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="${window.getAvatarSrc(p.photo_url)}" class="rounded-circle me-3" style="width:36px; height:36px;">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color:var(--text-main);">${p.first_name}</div>
+                            </div>
+                            <span class="badge" style="background:${isKicked ? 'var(--status-error)' : 'var(--status-success)'}; color:var(--text-on-accent);">${isKicked ? 'Изгнан' : 'Выжил'}</span>
+                        </div>
+                        <div class="small fst-italic" style="color:var(--text-muted);">Личная история скрыта</div>
+                    </div>
+                </div>
+            `;
+        }
 
         return `
             <div class="card border-0 shadow-sm mb-3 ${isKicked ? 'opacity-50' : ''}" style="background:var(--bg-card); border-radius:16px;">

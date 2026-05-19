@@ -461,14 +461,15 @@ window.startBunkerGame = function () {
     });
 };
 
-// Safe finish/leave function
-window.bunkerFinish = function (e) {
-    if (e) e.preventDefault();
-    // Use App's global backToLobby handler which works for both Host (Stop Game) and Player (Leave)
-    if (window.backToLobby) {
-        window.backToLobby();
-    } else {
-        // Fallback if app.js not fully loaded
-        if (confirm('Выйти?')) location.reload();
-    }
-};
+// Keep handlers.js as the single source of truth for finish/history flow.
+// Fallback only if bunkerFinish was not registered for some reason.
+if (typeof window.bunkerFinish !== 'function') {
+    window.bunkerFinish = function (e) {
+        if (e) e.preventDefault();
+        if (window.backToLobby) {
+            window.backToLobby();
+        } else if (confirm('Выйти?')) {
+            location.reload();
+        }
+    };
+}
