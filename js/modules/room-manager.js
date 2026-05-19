@@ -978,6 +978,9 @@ async function loadScheduledGames() {
         const subscribedBadge = isSubscribed
             ? '<span class="scheduled-game-badge scheduled-game-subscribed">Вы записаны</span>'
             : '';
+        const liveBadge = isLive
+            ? `<span class="scheduled-game-badge scheduled-game-status">${statusText}</span>`
+            : '';
         let primaryAction = '';
         let secondaryAction = '';
         if (isLive) {
@@ -993,10 +996,10 @@ async function loadScheduledGames() {
             primaryAction = spotsLeft <= 0 && !isSubscribed
                 ? `<span class="scheduled-game-disabled-action">Мест нет</span>`
                 : (isSubscribed
-                    ? `<span class="scheduled-game-disabled-action scheduled-game-subscribed">Вы записаны</span>`
+                    ? ''
                     : `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="subscribeScheduledGame(${Number(game.id)})">Записаться</button>`);
             secondaryAction = isSubscribed
-                ? `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="unsubscribeScheduledGame(${Number(game.id)})">Отменить</button>`
+                ? `<button type="button" class="scheduled-game-text-action" onclick="unsubscribeScheduledGame(${Number(game.id)})">Отменить запись</button>`
                 : '';
         }
 
@@ -1010,19 +1013,25 @@ async function loadScheduledGames() {
                 </div>
                 <div class="min-w-0 flex-grow-1">
                     <div class="scheduled-game-head">
-                        <div class="scheduled-game-title text-truncate">${title}</div>
-                        ${subscribedBadge}
-                        <span class="scheduled-game-badge scheduled-game-status">${statusText}</span>
+                        <div class="scheduled-game-title">${title}</div>
+                        <div class="scheduled-game-head-badges">
+                            ${subscribedBadge}
+                            ${liveBadge}
+                        </div>
                     </div>
                     <div class="scheduled-game-desc">${description}</div>
-                    <div class="scheduled-game-meta-line">
-                        <span><i class="bi bi-calendar-event"></i>${startText}</span>
-                        <span><i class="bi bi-controller"></i>${roomSafeHtml(meta.name)}</span>
-                    </div>
-                    <div class="scheduled-game-meta-line scheduled-game-meta-secondary">
-                        <span><i class="bi bi-people"></i>${signupText}</span>
-                        <span><i class="bi bi-check-circle"></i>${readinessText}</span>
-                        <span><i class="bi bi-person-circle"></i>${hostName}</span>
+                    <div class="scheduled-game-meta-stack">
+                        <div class="scheduled-game-meta-line">
+                            <span><i class="bi bi-calendar-event"></i>${startText}</span>
+                            <span><i class="bi bi-controller"></i>${roomSafeHtml(meta.name)}</span>
+                        </div>
+                        <div class="scheduled-game-meta-line scheduled-game-meta-secondary">
+                            <span><i class="bi bi-people"></i>${signupText}</span>
+                            <span><i class="bi bi-check-circle"></i>${readinessText}</span>
+                        </div>
+                        <div class="scheduled-game-meta-line scheduled-game-meta-host">
+                            <span><i class="bi bi-person-circle"></i>Хост: ${hostName}</span>
+                        </div>
                     </div>
                     <div class="scheduled-game-actions">
                         ${primaryAction}

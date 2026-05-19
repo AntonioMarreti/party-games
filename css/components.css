@@ -1291,15 +1291,27 @@ body.dark-mode .game-summary-share-preview {
     font-size: 1rem;
     font-weight: 900;
     line-height: 1.2;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .scheduled-game-head {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
     min-width: 0;
     margin-bottom: 3px;
+    flex-wrap: wrap;
+}
+
+.scheduled-game-head-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .scheduled-game-meta,
@@ -1311,6 +1323,10 @@ body.dark-mode .game-summary-share-preview {
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.scheduled-game-meta-stack {
+    margin-top: 8px;
 }
 
 .scheduled-game-meta-line {
@@ -1339,8 +1355,22 @@ body.dark-mode .game-summary-share-preview {
 }
 
 .scheduled-game-meta-secondary {
-    margin-top: 7px;
+    margin-top: 6px;
     opacity: 0.92;
+}
+
+.scheduled-game-meta-host {
+    margin-top: 6px;
+    opacity: 0.72;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.scheduled-game-meta-host span {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .scheduled-game-actions {
@@ -1349,6 +1379,17 @@ body.dark-mode .game-summary-share-preview {
     align-items: center;
     gap: 8px;
     margin-top: 12px;
+}
+
+.scheduled-game-text-action {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-decoration: none;
 }
 
 .scheduled-game-disabled-action {
@@ -1373,7 +1414,7 @@ body.dark-mode .game-summary-share-preview {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    max-width: 118px;
+    max-width: 100%;
     min-width: 0;
     padding: 4px 8px;
     border-radius: 999px;
@@ -1381,7 +1422,8 @@ body.dark-mode .game-summary-share-preview {
     color: var(--text-muted);
     font-size: 0.7rem;
     font-weight: 800;
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.15;
 }
 
 .scheduled-game-badge i {
@@ -1452,6 +1494,10 @@ body.dark-mode .game-summary-share-preview {
     background: rgba(40, 45, 55, 0.08) !important;
     border-color: rgba(40, 45, 55, 0.08) !important;
     color: rgba(40, 45, 55, 0.72) !important;
+}
+
+.thermal-safe .scheduled-game-text-action {
+    color: rgba(40, 45, 55, 0.68) !important;
 }
 
 .thermal-safe .scheduled-game-subscribed {
