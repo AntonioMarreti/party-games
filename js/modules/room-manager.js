@@ -118,12 +118,22 @@ async function createRoom() {
             }
 
             if (isPublic) {
-                await window.apiRequest({
+                const publicRes = await window.apiRequest({
                     action: 'make_room_public',
                     title: roomTitle,
                     description: 'Все сюда!',
                     visibility: 'public'
                 });
+                if (!publicRes || publicRes.status !== 'ok') {
+                    const details = publicRes?.message || 'Вы можете пригласить друзей по коду или попробовать открыть комнату позже.';
+                    if (window.showAlert) {
+                        window.showAlert(
+                            'Комната создана, но не стала открытой',
+                            details,
+                            'warning'
+                        );
+                    }
+                }
             }
             if (typeof window.checkState === 'function') await window.checkState();
         }
@@ -687,6 +697,16 @@ function canOpenScheduledGame(startsAt) {
     return start - Date.now() <= 5 * 60 * 1000;
 }
 
+function showScheduledFeedback(title, message, type = 'info') {
+    if (window.showToast) {
+        window.showToast(message, type);
+        return;
+    }
+    if (window.showAlert) {
+        window.showAlert(title, message, type);
+    }
+}
+
 function getScheduledInputDateValue(value) {
     if (!value) return '';
     const date = new Date(String(value).replace(' ', 'T'));
@@ -975,6 +995,7 @@ async function loadScheduledGames() {
         const readinessText = roomSafeHtml(getScheduledReadinessText(subscribersCount, minPlayers));
         const isLive = game.status === 'live';
         const canOpen = canOpenScheduledGame(game.starts_at);
+        const hasRealSubscribers = Math.max(0, subscribersCount - 1) > 0;
         const subscribedBadge = isSubscribed
             ? '<span class="scheduled-game-badge scheduled-game-subscribed">Вы записаны</span>'
             : '';
@@ -987,11 +1008,14 @@ async function loadScheduledGames() {
             primaryAction = game.room_code
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="joinScheduledGameRoom('${roomSafeHtml(game.room_code)}')">Войти</button>`
                 : `<span class="scheduled-game-disabled-action">Игра открывается</span>`;
+            if (isHost && hasRealSubscribers) {
+                secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>`;
+            }
         } else if (isHost) {
             primaryAction = canOpen
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)})">Открыть</button>`
                 : `<span class="scheduled-game-disabled-action">Открыть позже</span>`;
-            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Редактировать</button><button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`;
+            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Редактировать</button>${hasRealSubscribers ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>` : ''}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`;
         } else {
             primaryAction = spotsLeft <= 0 && !isSubscribed
                 ? `<span class="scheduled-game-disabled-action">Мест нет</span>`
@@ -1137,6 +1161,22 @@ async function cancelScheduledGame(id) {
     } else {
         await run();
     }
+}
+
+async function sendScheduledGameManualReminder(id) {
+    const res = await window.apiRequest({ action: 'send_scheduled_game_manual_reminder', scheduled_game_id: id });
+    if (res?.status === 'ok') {
+        const sentCount = Number(res.sent_count || 0);
+        const skippedCount = Number(res.skipped_count || 0);
+        let message = res.message || `Напоминание отправлено: ${sentCount} игрокам`;
+        if (skippedCount > 0) {
+            message += `, пропущено: ${skippedCount}`;
+        }
+        showScheduledFeedback('Напоминание отправлено', message, 'success');
+        return;
+    }
+
+    showScheduledFeedback('Не получилось', res?.message || 'Не удалось отправить напоминание', 'warning');
 }
 
 // === POLLING ===
@@ -1699,6 +1739,7 @@ window.RoomManager = {
     openScheduledGame,
     joinScheduledGameRoom,
     cancelScheduledGame,
+    sendScheduledGameManualReminder,
     startPolling,
     stopPolling,
     renderLobby,
@@ -1743,6 +1784,7 @@ window.unsubscribeScheduledGame = unsubscribeScheduledGame;
 window.openScheduledGame = openScheduledGame;
 window.joinScheduledGameRoom = joinScheduledGameRoom;
 window.cancelScheduledGame = cancelScheduledGame;
+window.sendScheduledGameManualReminder = sendScheduledGameManualReminder;
 window.startPolling = startPolling;
 window.stopPolling = stopPolling;
 window.renderLobby = renderLobby;

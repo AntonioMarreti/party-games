@@ -200,6 +200,41 @@ function scheduled_get_subscribers_count($pdo, $scheduledGameId)
     return (int) $stmt->fetchColumn();
 }
 
+function scheduled_ensure_manual_reminders_schema($pdo)
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS scheduled_game_manual_reminders (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            scheduled_game_id BIGINT NOT NULL,
+            actor_user_id BIGINT NOT NULL,
+            sent_count INT NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_scheduled_game_created_at (scheduled_game_id, created_at),
+            KEY idx_actor_user_id (actor_user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+}
+
+function scheduled_deep_link_url($scheduledGameId)
+{
+    if (defined('BOT_USERNAME') && BOT_USERNAME) {
+        return 'https://t.me/' . BOT_USERNAME . '/app?startapp=scheduled_' . (int) $scheduledGameId;
+    }
+    return 'https://t.me/mpartygamebot/app?startapp=scheduled_' . (int) $scheduledGameId;
+}
+
+function scheduled_manual_reminder_message(array $game)
+{
+    $title = trim((string) ($game['title'] ?? ''));
+    $displayTitle = htmlspecialchars($title !== '' ? $title : 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    if (($game['status'] ?? '') === 'live') {
+        return "Игра «{$displayTitle}» уже открыта. Можно заходить.\n\nОткройте приложение, чтобы не пропустить старт.";
+    }
+
+    return "Хост напоминает: игра «{$displayTitle}» скоро начнётся.\n\nОткройте приложение, чтобы не пропустить старт.";
+}
+
 function scheduled_create_room($pdo, $user, $game, $hostId)
 {
     clearUserRooms($pdo, $hostId);
@@ -679,5 +714,162 @@ function action_cancel_scheduled_game($pdo, $user, $data)
         if ($pdo->inTransaction()) $pdo->rollBack();
         TelegramLogger::logError('scheduled_games', ['message' => $e->getMessage(), 'action' => 'cancel']);
         sendError('Scheduled cancel error');
+    }
+}
+
+function action_send_scheduled_game_manual_reminder($pdo, $user, $data)
+{
+    scheduled_cleanup_expired($pdo);
+
+    try {
+        if (!scheduled_table_exists($pdo, 'scheduled_game_subscriptions')) {
+            throw new RuntimeException('Запись на игры временно недоступна');
+        }
+
+        scheduled_ensure_manual_reminders_schema($pdo);
+
+        $pdo->beginTransaction();
+        $game = scheduled_find_for_update($pdo, $data['scheduled_game_id'] ?? 0);
+        $hostId = $game['host_id'] ?? ($game['host_user_id'] ?? null);
+
+        if ((int) $hostId !== (int) $user['id']) {
+            throw new RuntimeException('Напоминание может отправить только хост');
+        }
+        if (!in_array($game['status'], ['scheduled', 'live'], true)) {
+            throw new RuntimeException('Для этой игры напоминание уже недоступно');
+        }
+
+        $cooldownStmt = $pdo->prepare("
+            SELECT created_at
+            FROM scheduled_game_manual_reminders
+            WHERE scheduled_game_id = ?
+              AND created_at > (NOW() - INTERVAL 10 MINUTE)
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+        $cooldownStmt->execute([(int) $game['id']]);
+        $recentReminderAt = $cooldownStmt->fetchColumn();
+        if ($recentReminderAt) {
+            $pdo->rollBack();
+            scheduled_log_event('manual_reminder_rate_limited', [
+                'scheduled_game_id' => (int) $game['id'],
+                'actor_user_id' => (int) ($user['id'] ?? 0),
+                'recent_created_at' => $recentReminderAt,
+            ], 'Scheduled manual reminder rate limited');
+            sendError('Напоминание уже отправлялось недавно');
+        }
+
+        $subscribersTotalStmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM scheduled_game_subscriptions
+            WHERE scheduled_game_id = ?
+              AND status = 'subscribed'
+        ");
+        $subscribersTotalStmt->execute([(int) $game['id']]);
+        $subscribersTotal = (int) $subscribersTotalStmt->fetchColumn();
+        if ($subscribersTotal <= 0) {
+            throw new RuntimeException('Пока некому отправлять напоминание');
+        }
+
+        $recipientsStmt = $pdo->prepare("
+            SELECT s.id as subscription_id,
+                   s.user_id,
+                   u.telegram_id
+            FROM scheduled_game_subscriptions s
+            JOIN users u ON u.id = s.user_id
+            WHERE s.scheduled_game_id = ?
+              AND s.status = 'subscribed'
+              AND u.telegram_id IS NOT NULL
+              AND u.telegram_id != ''
+        ");
+        $recipientsStmt->execute([(int) $game['id']]);
+        $recipients = $recipientsStmt->fetchAll();
+        if (!$recipients) {
+            throw new RuntimeException('У записавшихся игроков нет доступного Telegram-контакта');
+        }
+
+        $insertReminderStmt = $pdo->prepare("
+            INSERT INTO scheduled_game_manual_reminders
+                (scheduled_game_id, actor_user_id, sent_count)
+            VALUES
+                (?, ?, 0)
+        ");
+        $insertReminderStmt->execute([(int) $game['id'], (int) $user['id']]);
+        $manualReminderId = (int) $pdo->lastInsertId();
+
+        $pdo->commit();
+
+        $message = scheduled_manual_reminder_message($game);
+        $buttonUrl = scheduled_deep_link_url((int) $game['id']);
+        $sentCount = 0;
+        $skippedCount = max(0, $subscribersTotal - count($recipients));
+
+        foreach ($recipients as $recipient) {
+            $result = TelegramLogger::sendRequest('sendMessage', [
+                'chat_id' => $recipient['telegram_id'],
+                'text' => $message,
+                'parse_mode' => 'HTML',
+                'disable_web_page_preview' => true,
+                'reply_markup' => [
+                    'inline_keyboard' => [[
+                        [
+                            'text' => 'Открыть игру',
+                            'url' => $buttonUrl,
+                        ]
+                    ]]
+                ],
+            ]);
+
+            $decoded = json_decode((string) $result, true);
+            if (is_array($decoded) && !empty($decoded['ok'])) {
+                $sentCount++;
+                continue;
+            }
+
+            $skippedCount++;
+            scheduled_log_event('manual_reminder_failed', [
+                'scheduled_game_id' => (int) $game['id'],
+                'manual_reminder_id' => $manualReminderId,
+                'actor_user_id' => (int) ($user['id'] ?? 0),
+                'recipient_user_id' => (int) ($recipient['user_id'] ?? 0),
+                'subscription_id' => (int) ($recipient['subscription_id'] ?? 0),
+                'chat_id' => (int) ($recipient['telegram_id'] ?? 0),
+                'telegram_error' => TelegramLogger::$lastError,
+            ], 'Scheduled manual reminder failed');
+        }
+
+        $updateReminderStmt = $pdo->prepare("
+            UPDATE scheduled_game_manual_reminders
+            SET sent_count = ?
+            WHERE id = ?
+        ");
+        $updateReminderStmt->execute([$sentCount, $manualReminderId]);
+
+        scheduled_log_event('manual_reminder_sent', [
+            'scheduled_game_id' => (int) $game['id'],
+            'manual_reminder_id' => $manualReminderId,
+            'actor_user_id' => (int) ($user['id'] ?? 0),
+            'status' => $game['status'],
+            'sent_count' => $sentCount,
+            'skipped_count' => $skippedCount,
+        ], 'Scheduled manual reminder sent');
+
+        scheduled_send_ok([
+            'sent_count' => $sentCount,
+            'skipped_count' => $skippedCount,
+            'message' => 'Напоминание отправлено: ' . $sentCount . ' игрокам',
+        ]);
+    } catch (RuntimeException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        sendError($e->getMessage());
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        scheduled_log_event('manual_reminder_failed', [
+            'scheduled_game_id' => (int) ($data['scheduled_game_id'] ?? 0),
+            'actor_user_id' => (int) ($user['id'] ?? 0),
+            'error' => $e->getMessage(),
+        ], 'Scheduled manual reminder failed');
+        TelegramLogger::logError('scheduled_games', ['message' => $e->getMessage(), 'action' => 'manual_reminder']);
+        sendError('Scheduled reminder error');
     }
 }

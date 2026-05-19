@@ -79,6 +79,68 @@ function calculateLevel(xp) {
 
 let isCheckingState = false;
 
+function renderGameModuleLoadError(res, gameType, reason, details = '') {
+    const gameArea = document.getElementById('game-area');
+    if (!gameArea) return;
+
+    window.__lastGameModuleLoadFailure = {
+        res,
+        gameType,
+        reason,
+        details
+    };
+
+    if (window.logClientError) {
+        window.logClientError(
+            'Game Module Load Failure',
+            details || reason,
+            {
+                game_type: gameType,
+                reason,
+                room_status: res?.room?.status || null,
+                room_id: res?.room?.id || null,
+                room_code: res?.room?.room_code || null
+            }
+        );
+    }
+
+    gameArea.innerHTML = `
+        <div class="p-4 d-flex flex-column align-items-center justify-content-center text-center h-100" style="padding-top: 24vh;">
+            <div class="mb-3 text-danger opacity-75"><i class="bi bi-exclamation-octagon" style="font-size: 46px;"></i></div>
+            <h3 class="mb-2" style="color: var(--text-main);">Не удалось загрузить игру</h3>
+            <p class="text-muted mb-4" style="max-width: 320px;">Попробуйте обновить приложение или вернуться в комнату.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="retryGameModuleLoad()">Повторить</button>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" onclick="returnToRoomFromGameError()">Вернуться в комнату</button>
+            </div>
+        </div>
+    `;
+}
+
+window.retryGameModuleLoad = async function () {
+    if (typeof window.checkState === 'function') {
+        await window.checkState();
+    }
+};
+
+window.returnToRoomFromGameError = async function () {
+    const failure = window.__lastGameModuleLoadFailure || {};
+    const res = failure.res;
+
+    if (window.showScreen) {
+        window.showScreen('room');
+    }
+
+    if (res?.room && typeof window.renderLobby === 'function') {
+        window.renderLobby(res);
+        return;
+    }
+
+    if (typeof window.leaveRoom === 'function') {
+        await window.leaveRoom();
+    }
+};
+
 function openSettingsScreen() {
     if (window.ThemeManager) window.ThemeManager.loadSettings();
     showScreen('settings');
@@ -372,6 +434,8 @@ window.checkState = async function () {
                         await window.GameManager.loadGameScript(gameType);
                     } catch (err) {
                         console.error("Failed to load game script:", err);
+                        renderGameModuleLoadError(res, gameType, 'load_script_failed', err?.stack || err?.message || String(err));
+                        return res;
                     }
                 }
 
@@ -393,6 +457,12 @@ window.checkState = async function () {
                     }
                 } else {
                     console.error(`Render function not found for ${gameType}: ${renderFnName}`);
+                    renderGameModuleLoadError(
+                        res,
+                        gameType,
+                        'render_function_missing',
+                        `Render function not found: ${renderFnName}`
+                    );
                 }
             }
 

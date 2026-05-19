@@ -282,6 +282,7 @@ $routes = [
     'unsubscribe_scheduled_game' => 'actions/scheduled_games.php',
     'open_scheduled_game' => 'actions/scheduled_games.php',
     'cancel_scheduled_game' => 'actions/scheduled_games.php',
+    'send_scheduled_game_manual_reminder' => 'actions/scheduled_games.php',
 
     'admin_stats' => 'actions/admin.php',
     'reset_leaderboard' => 'actions/admin.php',

@@ -57,6 +57,13 @@ async function initApp(tg) {
         }
 
         if (startParam) {
+            const isScheduledDeepLink = /^scheduled_\d+$/.test(String(startParam));
+            if (isScheduledDeepLink) {
+                startParam = null;
+            }
+        }
+
+        if (startParam) {
             const code = startParam.startsWith('room_') ? startParam.replace('room_', '') : startParam;
 
             if (res && res.status === 'in_room' && res.room.room_code !== code) {
