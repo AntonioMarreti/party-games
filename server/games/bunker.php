@@ -105,6 +105,26 @@ function bunkerValidVoteTargets($state, $aliveIds, $voterId)
     return array_values(array_diff(array_intersect($targets, $aliveIds), [$voterId]));
 }
 
+function bunkerLogUseCardAttempt($room, $actorUserId, $cardType, $targetId, $reason, $extra = [])
+{
+    if (!class_exists('TelegramLogger')) {
+        return;
+    }
+
+    TelegramLogger::logEvent('game', 'Bunker invalid use_card attempt', array_merge([
+        'action' => 'bunker_use_card_rejected',
+        'room_id' => (int) ($room['id'] ?? 0),
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (string) $actorUserId,
+        'card_type' => $cardType,
+        'target_id' => $targetId !== null ? (string) $targetId : null,
+        'reason' => $reason,
+        'phase' => $extra['phase'] ?? null,
+        'turn_phase' => $extra['turn_phase'] ?? null,
+        'current_player_id' => $extra['current_player_id'] ?? null,
+    ], $extra));
+}
+
 function handleGameAction($pdo, $room, $user, $postData)
 {
     global $ROUNDS_CONFIG, $SPECIAL_CARDS;
@@ -646,23 +666,99 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     if ($type === 'use_card') {
-        $cardType = $postData['card_type']; // 'luggage', 'condition', etc.
+        $cardType = (string) ($postData['card_type'] ?? ''); // 'luggage', 'condition', etc.
         $targetId = $postData['target_id'] ?? null;
+        $phase = (string) ($state['phase'] ?? '');
+        $turnPhase = (string) ($state['turn_phase'] ?? '');
+        $requiresTargetActions = ['heal', 'steal_luggage', 'swap_luggage', 'spy_card', 'force_reveal', 'copy_luggage'];
+
+        if ($phase !== 'round' || $turnPhase !== 'discussion') {
+            bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'invalid_phase', [
+                'phase' => $phase,
+                'turn_phase' => $turnPhase,
+            ]);
+            return ['status' => 'error', 'message' => 'Сейчас нельзя использовать способности'];
+        }
+
+        if (!in_array($userId, bunkerNormalizeIds($aliveIds), true)) {
+            bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'actor_not_alive', [
+                'phase' => $phase,
+                'turn_phase' => $turnPhase,
+            ]);
+            return ['status' => 'error', 'message' => 'Вы уже не участвуете в игре'];
+        }
+
+        if ((string) ($state['current_player_id'] ?? '') !== $userId) {
+            bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'not_current_player', [
+                'phase' => $phase,
+                'turn_phase' => $turnPhase,
+                'current_player_id' => (string) ($state['current_player_id'] ?? ''),
+            ]);
+            return ['status' => 'error', 'message' => 'Сейчас не ваш ход'];
+        }
+
+        if ($cardType === '' || !isset($state['players_cards'][$userId]) || !is_array($state['players_cards'][$userId])) {
+            bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'actor_cards_missing', [
+                'phase' => $phase,
+                'turn_phase' => $turnPhase,
+            ]);
+            return ['status' => 'error', 'message' => 'Не удалось найти ваши карты'];
+        }
 
         // 1. Validate
-        if (!isset($state['players_cards'][$userId][$cardType]))
+        if (!isset($state['players_cards'][$userId][$cardType])) {
+            bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'card_not_owned', [
+                'phase' => $phase,
+                'turn_phase' => $turnPhase,
+            ]);
             return ['status' => 'error', 'message' => 'Нет такой карты'];
+        }
         $card = &$state['players_cards'][$userId][$cardType];
 
         if (!$card['revealed'] && $cardType !== 'condition')
             return ['status' => 'error', 'message' => 'Карта должна быть раскрыта'];
         if (empty($card['action']) && empty($card['data']['action']))
             return ['status' => 'error', 'message' => 'Это не активная карта'];
-        if (!empty($card['used']))
+        if (!empty($card['used'])) {
+            bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'card_already_used', [
+                'phase' => $phase,
+                'turn_phase' => $turnPhase,
+            ]);
             return ['status' => 'error', 'message' => 'Карта уже использована'];
+        }
 
         $action = $card['action'] ?? $card['data']['action'];
         $targetName = '???';
+
+        if (in_array($action, $requiresTargetActions, true)) {
+            $targetId = $targetId !== null ? (string) $targetId : null;
+            if ($targetId === null || $targetId === '') {
+                bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'missing_target', [
+                    'phase' => $phase,
+                    'turn_phase' => $turnPhase,
+                    'card_action' => $action,
+                ]);
+                return ['status' => 'error', 'message' => 'Нужна цель'];
+            }
+
+            if (!in_array($targetId, bunkerNormalizeIds($aliveIds), true)) {
+                bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'target_not_alive', [
+                    'phase' => $phase,
+                    'turn_phase' => $turnPhase,
+                    'card_action' => $action,
+                ]);
+                return ['status' => 'error', 'message' => 'Эта цель уже недоступна'];
+            }
+
+            if (!isset($state['players_cards'][$targetId]) || !is_array($state['players_cards'][$targetId])) {
+                bunkerLogUseCardAttempt($room, $userId, $cardType, $targetId, 'target_missing_cards', [
+                    'phase' => $phase,
+                    'turn_phase' => $turnPhase,
+                    'card_action' => $action,
+                ]);
+                return ['status' => 'error', 'message' => 'Цель недоступна'];
+            }
+        }
 
         // 2. Execute
         if ($action === 'heal' || $action === 'heal_self') {
