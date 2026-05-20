@@ -134,6 +134,124 @@ function bunkerLogEvent($message, $payload = [])
     TelegramLogger::logEvent('game', $message, $payload);
 }
 
+function bunkerCountRevealedCards($cards)
+{
+    $count = 0;
+    foreach (($cards ?? []) as $card) {
+        if (is_array($card) && !empty($card['revealed'])) {
+            $count++;
+        }
+    }
+    return $count;
+}
+
+function bunkerLogInvalidFirstRevealAttempt($pdo, $room, $state, $userId, $cardType)
+{
+    $actorCards = $state['players_cards'][$userId] ?? null;
+    $isBot = null;
+    $stmtBot = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ? LIMIT 1");
+    $stmtBot->execute([$room['id'], $userId]);
+    $botFlag = $stmtBot->fetchColumn();
+    if ($botFlag !== false) {
+        $isBot = (int) $botFlag === 1;
+    }
+
+    bunkerLogEvent('Bunker invalid first reveal attempt', [
+        'action' => 'bunker_invalid_first_reveal_attempt',
+        'room_id' => (int) ($room['id'] ?? 0),
+        'room_code' => $room['room_code'] ?? null,
+        'actor_user_id' => (string) $userId,
+        'requested_card_type' => (string) $cardType,
+        'current_player_id' => (string) ($state['current_player_id'] ?? ''),
+        'phase' => (string) ($state['phase'] ?? ''),
+        'turn_phase' => (string) ($state['turn_phase'] ?? ''),
+        'professions_revealed_before' => !empty($actorCards['professions']['revealed']),
+        'revealed_cards_before' => bunkerCountRevealedCards($actorCards),
+        'players_cards_keys' => is_array($actorCards) ? array_values(array_keys($actorCards)) : [],
+        'actor_cards_exists' => is_array($actorCards),
+        'is_bot' => $isBot,
+        'reason' => 'profession_must_be_first',
+    ]);
+}
+
+function bunkerProcessRoundRevealCard($pdo, $room, &$state, $userId, $cardType, $aliveIds, $decision = 'player_request')
+{
+    $userId = (string) $userId;
+    $cardType = (string) $cardType;
+    $actorCards = $state['players_cards'][$userId] ?? null;
+    $revealedBefore = bunkerCountRevealedCards($actorCards);
+    $professionsRevealedBefore = !empty($actorCards['professions']['revealed']);
+
+    $logAttempt = function ($actualCardType, $reason) use ($room, $userId, $cardType, $professionsRevealedBefore, $revealedBefore, $actorCards, &$state, $decision) {
+        bunkerLogEvent('Bunker reveal attempt', [
+            'action' => 'bunker_reveal_attempt',
+            'room_id' => (int) ($room['id'] ?? 0),
+            'room_code' => $room['room_code'] ?? null,
+            'actor_user_id' => $userId,
+            'requested_card_type' => $cardType,
+            'actual_revealed_card_type' => $actualCardType,
+            'professions_revealed_before' => $professionsRevealedBefore,
+            'revealed_cards_before' => $revealedBefore,
+            'revealed_cards_after' => bunkerCountRevealedCards($state['players_cards'][$userId] ?? []),
+            'decision' => $decision,
+            'reason' => $reason,
+            'actor_cards_exists' => is_array($actorCards),
+        ]);
+    };
+
+    if ($state['phase'] !== 'round') {
+        return ['status' => 'error', 'message' => 'Не фаза раунда'];
+    }
+    if (($state['turn_phase'] ?? '') !== 'reveal') {
+        return ['status' => 'error', 'message' => 'Сейчас не этап раскрытия'];
+    }
+    if ($userId !== (string) ($state['current_player_id'] ?? '')) {
+        return ['status' => 'error', 'message' => 'Не ваш ход'];
+    }
+    if (!in_array($userId, bunkerNormalizeIds($aliveIds), true)) {
+        return ['status' => 'error', 'message' => 'Вы уже не участвуете'];
+    }
+    if (!is_array($actorCards)) {
+        $logAttempt(null, 'actor_cards_missing');
+        return ['status' => 'error', 'message' => 'Не удалось найти ваши карты'];
+    }
+    if ($cardType === '') {
+        $logAttempt(null, 'missing_card_type');
+        return ['status' => 'error', 'message' => 'Не выбрана характеристика'];
+    }
+    if (!isset($actorCards[$cardType])) {
+        $logAttempt(null, 'card_not_found');
+        return ['status' => 'error', 'message' => 'Нет такой карты'];
+    }
+    if (!$professionsRevealedBefore && $cardType !== 'professions') {
+        bunkerLogInvalidFirstRevealAttempt($pdo, $room, $state, $userId, $cardType);
+        $logAttempt(null, 'profession_must_be_first');
+        return ['status' => 'error', 'message' => 'Сначала нужно раскрыть профессию'];
+    }
+    if (!empty($actorCards[$cardType]['revealed'])) {
+        $logAttempt(null, 'card_already_revealed');
+        return ['status' => 'error', 'message' => 'Карта уже раскрыта'];
+    }
+
+    $state['players_cards'][$userId][$cardType]['revealed'] = true;
+    $state['turn_phase'] = 'discussion';
+    $state['timer_start'] = time();
+
+    $cardData = $state['players_cards'][$userId][$cardType];
+    $text = $cardData['text'] ?? ($cardData['data']['title'] ?? '...');
+
+    $state['history'][] = [
+        'type' => 'reveal',
+        'user_id' => $userId,
+        'card_type' => $cardType,
+        'text' => $text
+    ];
+
+    $logAttempt($cardType, 'revealed');
+
+    return ['status' => 'ok'];
+}
+
 function handleGameAction($pdo, $room, $user, $postData)
 {
     global $ROUNDS_CONFIG, $SPECIAL_CARDS;
@@ -384,23 +502,51 @@ function handleGameAction($pdo, $room, $user, $postData)
                 $elapsed = time() - (int) ($state['timer_start'] ?? 0);
                 if ($elapsed >= 2) {
                     $cards = $state['players_cards'][$currentPlayerId] ?? [];
-                    $candidates = [];
-                    foreach ($cards as $key => $c) {
-                        if (is_array($c) && isset($c['revealed']) && !$c['revealed'])
-                            $candidates[] = $key;
+                    $requestedCardType = '';
+                    if (!empty($cards['professions']) && empty($cards['professions']['revealed'])) {
+                        $requestedCardType = 'professions';
+                    } else {
+                        $candidates = [];
+                        foreach ($cards as $key => $c) {
+                            if (is_array($c) && isset($c['revealed']) && !$c['revealed']) {
+                                $candidates[] = $key;
+                            }
+                        }
+                        if (!empty($candidates)) {
+                            $requestedCardType = $candidates[array_rand($candidates)];
+                        }
                     }
-                    if (!empty($candidates)) {
-                        $toReveal = $candidates[array_rand($candidates)];
-                        $state['players_cards'][$currentPlayerId][$toReveal]['revealed'] = true;
-                        $state['history'][] = [
-                            'type' => 'reveal',
-                            'user_id' => $currentPlayerId,
-                            'card_type' => $toReveal,
-                            'text' => $state['players_cards'][$currentPlayerId][$toReveal]['text'] ?? '???'
-                        ];
+                    if ($requestedCardType !== '') {
+                        $revealResult = bunkerProcessRoundRevealCard(
+                            $pdo,
+                            $room,
+                            $state,
+                            $currentPlayerId,
+                            $requestedCardType,
+                            $aliveIds,
+                            'bot_tick'
+                        );
+                        if (($revealResult['status'] ?? 'error') !== 'ok') {
+                            return $revealResult;
+                        }
+                    } else {
+                        bunkerLogEvent('Bunker reveal attempt', [
+                            'action' => 'bunker_reveal_attempt',
+                            'room_id' => (int) ($room['id'] ?? 0),
+                            'room_code' => $room['room_code'] ?? null,
+                            'actor_user_id' => (string) $currentPlayerId,
+                            'requested_card_type' => null,
+                            'actual_revealed_card_type' => null,
+                            'professions_revealed_before' => !empty($cards['professions']['revealed']),
+                            'revealed_cards_before' => bunkerCountRevealedCards($cards),
+                            'revealed_cards_after' => bunkerCountRevealedCards($cards),
+                            'decision' => 'bot_tick',
+                            'reason' => 'no_hidden_cards',
+                            'actor_cards_exists' => is_array($cards),
+                        ]);
+                        $state['turn_phase'] = 'discussion';
+                        $state['timer_start'] = time();
                     }
-                    $state['turn_phase'] = 'discussion';
-                    $state['timer_start'] = time();
                     updateGameState($room['id'], $state);
                     return ['status' => 'ok', 'action' => 'bot_reveal'];
                 }
@@ -547,7 +693,11 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     if ($type === 'reveal_card') {
-        $cardType = $postData['card_type'] ?? '';
+        $nestedCardType = '';
+        if (isset($postData['data']) && is_array($postData['data'])) {
+            $nestedCardType = (string) ($postData['data']['card_type'] ?? '');
+        }
+        $cardType = (string) ($postData['card_type'] ?? $nestedCardType);
         if ($state['phase'] === 'tie_reveal') {
             if (!in_array($userId, bunkerNormalizeIds($state['tie_candidates'] ?? []), true))
                 return ['status' => 'error', 'message' => 'Не вы кандидат'];
@@ -564,62 +714,10 @@ function handleGameAction($pdo, $room, $user, $postData)
             updateGameState($room['id'], $state);
             return ['status' => 'ok'];
         }
-        if ($state['phase'] !== 'round')
-            return ['status' => 'error', 'message' => 'Не фаза раунда'];
-        if (($state['turn_phase'] ?? '') !== 'reveal')
-            return ['status' => 'error', 'message' => 'Сейчас не этап раскрытия'];
-        if ($userId !== $state['current_player_id'])
-            return ['status' => 'error', 'message' => 'Не ваш ход'];
-        if (!in_array($userId, $aliveIds, true))
-            return ['status' => 'error', 'message' => 'Вы уже не участвуете'];
-        if (!isset($state['players_cards'][$userId][$cardType]))
-            return ['status' => 'error', 'message' => 'Нет такой карты'];
-        if (!empty($state['players_cards'][$userId][$cardType]['revealed']))
-            return ['status' => 'error', 'message' => 'Карта уже раскрыта'];
-        if (empty($state['players_cards'][$userId]['professions']['revealed']) && $cardType !== 'professions') {
-            $revealedCardsBefore = 0;
-            foreach (($state['players_cards'][$userId] ?? []) as $actorCard) {
-                if (!empty($actorCard['revealed'])) {
-                    $revealedCardsBefore++;
-                }
-            }
-
-            $isBot = null;
-            $stmtBot = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ? LIMIT 1");
-            $stmtBot->execute([$room['id'], $user['id']]);
-            $botFlag = $stmtBot->fetchColumn();
-            if ($botFlag !== false) {
-                $isBot = (int) $botFlag === 1;
-            }
-
-            bunkerLogEvent('Bunker invalid first reveal attempt', [
-                'action' => 'bunker_invalid_first_reveal_attempt',
-                'room_id' => (int) ($room['id'] ?? 0),
-                'room_code' => $room['room_code'] ?? null,
-                'actor_user_id' => (string) $userId,
-                'requested_card_type' => (string) $cardType,
-                'current_player_id' => (string) ($state['current_player_id'] ?? ''),
-                'phase' => (string) ($state['phase'] ?? ''),
-                'turn_phase' => (string) ($state['turn_phase'] ?? ''),
-                'professions_revealed_before' => !empty($state['players_cards'][$userId]['professions']['revealed']),
-                'revealed_cards_before' => $revealedCardsBefore,
-                'players_cards_keys' => array_values(array_keys($state['players_cards'][$userId] ?? [])),
-                'actor_cards_exists' => isset($state['players_cards'][$userId]) && is_array($state['players_cards'][$userId]),
-                'is_bot' => $isBot,
-                'reason' => 'profession_must_be_first',
-            ]);
-            return ['status' => 'error', 'message' => 'Сначала нужно раскрыть профессию'];
+        $revealResult = bunkerProcessRoundRevealCard($pdo, $room, $state, $userId, $cardType, $aliveIds, 'player_request');
+        if (($revealResult['status'] ?? 'error') !== 'ok') {
+            return $revealResult;
         }
-
-        $state['players_cards'][$userId][$cardType]['revealed'] = true;
-        $state['turn_phase'] = 'discussion';
-        $state['timer_start'] = time();
-
-        // Fix for Condition cards which have data.title instead of text
-        $cardData = $state['players_cards'][$userId][$cardType];
-        $text = $cardData['text'] ?? ($cardData['data']['title'] ?? '...');
-
-        $state['history'][] = ['type' => 'reveal', 'user_id' => $userId, 'card_type' => $cardType, 'text' => $text];
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
