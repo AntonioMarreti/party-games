@@ -726,6 +726,15 @@ function toggleGameSelect(gameId, el) {
     if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
 }
 
+function openDailyTasksEntry() {
+    if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
+    if (typeof window.openDailyTasksModal === 'function') {
+        window.openDailyTasksModal();
+        return;
+    }
+    showToast('Ежедневные задания скоро будут здесь', 'info');
+}
+
 
 // Attach to window
 window.UIManager = {
@@ -745,6 +754,7 @@ window.UIManager = {
     safeSrc,
     toggleGameLike,
     toggleGameSelect,
+    openDailyTasksEntry,
     updateNotificationBadge,
     setupSwipeGestures,
     handleRouting,
@@ -775,3 +785,4 @@ window.setupSwipeGestures = setupSwipeGestures;
 window.handleRouting = handleRouting;
 window.showModal = openModal; // Alias for backward compatibility
 window.toggleGameLike = toggleGameLike; // Global export for inline events
+window.openDailyTasksEntry = openDailyTasksEntry;

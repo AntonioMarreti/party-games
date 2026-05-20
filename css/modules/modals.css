@@ -282,6 +282,204 @@
     animation: alertBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+.daily-tasks-modal {
+    padding: 18px;
+    max-height: min(82vh, 620px);
+    display: flex;
+    flex-direction: column;
+}
+
+.daily-tasks-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.daily-tasks-modal-title {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.daily-tasks-modal-subtitle {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.daily-tasks-modal-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 18px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-main);
+}
+
+.daily-tasks-summary-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.daily-tasks-summary-value {
+    margin-top: 2px;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.daily-tasks-summary-chip {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary-color), transparent 90%);
+    color: var(--primary-color);
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.daily-tasks-summary-bar {
+    height: 6px;
+    margin: 10px 2px 14px;
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    overflow: hidden;
+}
+
+.daily-tasks-summary-bar-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary-color);
+    transition: width 180ms ease;
+}
+
+.daily-tasks-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.daily-tasks-modal-state {
+    padding: 22px 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.daily-task-modal-row {
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 11px;
+    border-radius: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-main);
+}
+
+.daily-task-modal-row.is-claimable {
+    cursor: pointer;
+}
+
+.daily-task-modal-main {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.daily-task-modal-title {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.daily-task-modal-description,
+.daily-task-modal-meta {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.daily-task-modal-status {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.daily-task-modal-status-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.daily-task-modal-status-active {
+    border: 1px solid var(--border-main);
+    color: var(--text-muted);
+    background: var(--bg-card);
+}
+
+.daily-task-modal-status-claim {
+    background: color-mix(in srgb, var(--primary-color), white 86%) !important;
+    color: var(--primary-color) !important;
+}
+
+.daily-task-modal-status-claimed {
+    background: color-mix(in srgb, var(--primary-color), white 88%);
+    color: var(--primary-color);
+    opacity: 0.82;
+}
+
+.daily-task-modal-status.is-loading {
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.thermal-safe .daily-tasks-modal,
+.thermal-safe .daily-tasks-modal-summary,
+.thermal-safe .daily-task-modal-row {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .daily-tasks-summary-bar-fill {
+        transition: none !important;
+    }
+}
+
 .app-toast-root {
     position: fixed;
     left: 16px;

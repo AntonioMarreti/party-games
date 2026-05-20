@@ -5,6 +5,9 @@
 
 // === STATE ===
 let cachedUserStats = null;
+let cachedDailyTasks = [];
+let profileDailyExpanded = false;
+let dailyTaskClaimInFlight = null;
 
 // === USER PROFILES & STATS ===
 
@@ -28,11 +31,354 @@ async function loadMyProfileStats() {
         // Ensure Level is sync
         const xp = stats.total_points_earned || 0;
         const lvl = typeof window.calculateLevel === 'function' ? window.calculateLevel(xp) : 1;
+        const progress = getLevelProgress(xp, lvl);
         if (window.safeText) {
             window.safeText('profile-level-badge', lvl);
+            window.safeText('profile-level-text', 'Уровень ' + lvl);
             window.safeText('profile-xp-text', xp + ' XP');
         }
+        const profileProgress = document.getElementById('profile-xp-progress');
+        if (profileProgress) profileProgress.style.width = progress.percent + '%';
+
+        loadProfileDailyTasks();
     }
+}
+
+function getLevelProgress(xp, level) {
+    const safeXp = Math.max(0, Number(xp) || 0);
+    const safeLevel = Math.max(1, Number(level) || 1);
+    const prevThreshold = Math.pow(safeLevel - 1, 2) * 100;
+    const nextThreshold = Math.pow(safeLevel, 2) * 100;
+    const span = Math.max(1, nextThreshold - prevThreshold);
+    const percent = Math.min(100, Math.max(0, ((safeXp - prevThreshold) / span) * 100));
+    return { prevThreshold, nextThreshold, percent };
+}
+
+function escapeProfileHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
+}
+
+async function loadProfileDailyTasks() {
+    const card = document.getElementById('profile-daily-card');
+    const list = document.getElementById('profile-daily-list');
+    const summary = document.getElementById('profile-daily-summary');
+    if (!card || !list || typeof window.apiRequest !== 'function') return;
+
+    try {
+        card.style.display = 'block';
+        if (summary) summary.textContent = 'Загружаем...';
+
+        await fetchDailyTasks();
+        renderProfileDailyTasks();
+    } catch (err) {
+        console.warn('Daily Tasks Error:', err);
+        card.style.display = 'block';
+        card.classList.remove('expanded');
+        cachedDailyTasks = [];
+        if (summary) summary.textContent = 'Задания временно недоступны';
+        const chip = document.getElementById('profile-daily-reward-chip');
+        const toggle = document.getElementById('profile-daily-toggle');
+        const head = document.getElementById('profile-daily-head');
+        const expandedWrap = document.getElementById('profile-daily-expanded-wrap');
+        if (chip) chip.style.display = 'none';
+        if (toggle) toggle.style.display = 'none';
+        if (head) head.setAttribute('aria-expanded', 'false');
+        if (expandedWrap) expandedWrap.classList.remove('is-open');
+        list.innerHTML = '';
+    }
+}
+
+async function fetchDailyTasks() {
+    if (typeof window.apiRequest !== 'function') {
+        throw new Error('Daily tasks API unavailable');
+    }
+
+    const res = await window.apiRequest({ action: 'get_daily_tasks' });
+    if (res.status !== 'ok' || !Array.isArray(res.tasks)) {
+        throw new Error(res.message || 'Не удалось загрузить задания');
+    }
+
+    cachedDailyTasks = res.tasks;
+    return cachedDailyTasks;
+}
+
+function renderProfileDailyTasks() {
+    const card = document.getElementById('profile-daily-card');
+    const list = document.getElementById('profile-daily-list');
+    const summary = document.getElementById('profile-daily-summary');
+    const toggle = document.getElementById('profile-daily-toggle');
+    const head = document.getElementById('profile-daily-head');
+    const chip = document.getElementById('profile-daily-reward-chip');
+    const expandedWrap = document.getElementById('profile-daily-expanded-wrap');
+    if (!card || !list) return;
+
+    const tasks = Array.isArray(cachedDailyTasks) ? cachedDailyTasks : [];
+    if (!tasks.length) {
+        card.style.display = 'block';
+        card.classList.remove('expanded');
+        if (summary) summary.textContent = 'Заданий пока нет';
+        if (chip) chip.style.display = 'none';
+        list.innerHTML = '';
+        if (toggle) toggle.style.display = 'none';
+        if (head) head.setAttribute('aria-expanded', 'false');
+        if (expandedWrap) expandedWrap.classList.remove('is-open');
+        return;
+    }
+
+    const completed = tasks.filter(task => task.status === 'completed' || task.status === 'claimed').length;
+    const readyToClaim = tasks.filter(task => task.status === 'completed');
+    const readyXp = readyToClaim.reduce((sum, task) => sum + (Number(task.xp_reward) || 0), 0);
+    if (summary) summary.textContent = `${completed}/${tasks.length} выполнено`;
+    if (chip) {
+        chip.style.display = readyXp > 0 ? 'inline-flex' : 'none';
+        chip.textContent = readyXp > 0 ? `+${readyXp} XP` : '';
+    }
+
+    card.classList.toggle('expanded', profileDailyExpanded);
+    if (head) head.setAttribute('aria-expanded', profileDailyExpanded ? 'true' : 'false');
+    if (expandedWrap) expandedWrap.classList.toggle('is-open', profileDailyExpanded);
+
+    const visibleTasks = tasks.slice(0, 3);
+    list.innerHTML = visibleTasks.map(renderProfileDailyTaskRow).join('');
+
+    if (toggle) {
+        toggle.style.display = profileDailyExpanded ? 'block' : 'none';
+        toggle.textContent = tasks.length > 3 ? `Свернуть · показано 3 из ${tasks.length}` : 'Свернуть';
+    }
+}
+
+function renderProfileDailyTaskRow(task) {
+    const progress = Math.min(Number(task.progress) || 0, Number(task.target_count) || 1);
+    const target = Math.max(1, Number(task.target_count) || 1);
+    const reward = Number(task.xp_reward) || 0;
+    const title = escapeProfileHtml(task.title || 'Задание');
+    const code = escapeProfileHtml(task.code || '');
+    const taskId = Number(task.task_id || task.id || 0);
+    const isCompleted = task.status === 'completed';
+    const isClaimed = task.status === 'claimed';
+    const rowClass = isCompleted ? 'is-claimable' : (isClaimed ? 'is-claimed' : 'is-active');
+    const subtitle = isCompleted
+        ? `Выполнено · +${reward} XP`
+        : (isClaimed ? `Получено · +${reward} XP` : `${progress}/${target} · +${reward} XP`);
+    const clickAttr = isCompleted ? ` onclick="claimProfileDailyTask(${taskId}, '${code}')"` : '';
+    const checkIcon = `
+        <svg class="profile-daily-status-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 12.5l2 2 4.5-5"></path>
+            <circle cx="12" cy="12" r="8.5"></circle>
+        </svg>
+    `;
+    let statusHtml = `
+        <span class="profile-daily-status profile-daily-status-active" aria-label="${progress}/${target}">
+            ${progress}/${target}
+        </span>
+    `;
+
+    if (isCompleted) {
+        statusHtml = `
+            <button type="button" class="btn-unstyled profile-daily-status profile-daily-status-claim"
+                onclick="event.stopPropagation(); claimProfileDailyTask(${taskId}, '${code}')"
+                aria-label="Получить ${reward} XP">
+                ${checkIcon}
+            </button>
+        `;
+    } else if (isClaimed) {
+        statusHtml = `
+            <span class="profile-daily-status profile-daily-status-claimed" aria-label="Получено">
+                ${checkIcon}
+            </span>
+        `;
+    }
+
+    return `
+        <div class="profile-daily-row ${rowClass}"${clickAttr}>
+            <div class="profile-daily-row-main">
+                <div class="profile-daily-row-title">${title}</div>
+                <div class="profile-daily-row-meta">${subtitle}</div>
+            </div>
+            ${statusHtml}
+        </div>
+    `;
+}
+
+function toggleProfileDailyTasks() {
+    profileDailyExpanded = !profileDailyExpanded;
+    const card = document.getElementById('profile-daily-card');
+    const head = document.getElementById('profile-daily-head');
+    const expandedWrap = document.getElementById('profile-daily-expanded-wrap');
+    const toggle = document.getElementById('profile-daily-toggle');
+
+    if (card) card.classList.toggle('expanded', profileDailyExpanded);
+    if (head) head.setAttribute('aria-expanded', profileDailyExpanded ? 'true' : 'false');
+    if (expandedWrap) expandedWrap.classList.toggle('is-open', profileDailyExpanded);
+    if (toggle) toggle.style.display = profileDailyExpanded ? 'block' : 'none';
+
+    if (!card || !expandedWrap) {
+        renderProfileDailyTasks();
+    }
+}
+
+async function claimProfileDailyTask(taskId, code) {
+    return claimDailyTaskReward(taskId, code);
+}
+
+async function claimDailyTaskReward(taskId, code) {
+    if (typeof window.apiRequest !== 'function') return;
+    const sourceKey = taskId > 0 ? String(taskId) : String(code || '');
+    if (dailyTaskClaimInFlight === sourceKey) return;
+    dailyTaskClaimInFlight = sourceKey;
+    renderDailyTasksModal();
+
+    try {
+        const payload = { action: 'claim_daily_task' };
+        if (taskId > 0) payload.task_id = taskId;
+        else payload.code = code;
+
+        const res = await window.apiRequest(payload);
+        if (res.status !== 'ok') {
+            throw new Error(res.message || 'Не удалось получить XP');
+        }
+
+        if (window.showToast) window.showToast(res.already_claimed ? 'Награда уже получена' : 'XP получен', 'success');
+        await fetchDailyTasks();
+        renderProfileDailyTasks();
+        renderDailyTasksModal();
+        await loadMyProfileStats();
+    } catch (err) {
+        console.warn('Daily Task Claim Error:', err);
+        if (window.showToast) window.showToast(err.message || 'Не удалось получить награду', 'error');
+    } finally {
+        dailyTaskClaimInFlight = null;
+        renderDailyTasksModal();
+    }
+}
+
+async function openDailyTasksModal() {
+    if (typeof window.showModal === 'function') {
+        window.showModal('modal-daily-tasks');
+    }
+
+    if (cachedDailyTasks.length) {
+        renderDailyTasksModal();
+    } else {
+        renderDailyTasksModalState('Загружаем задания...');
+    }
+
+    try {
+        await fetchDailyTasks();
+        renderDailyTasksModal();
+    } catch (err) {
+        console.warn('Daily Tasks Modal Error:', err);
+        renderDailyTasksModalState('Не удалось загрузить задания', true);
+    }
+}
+
+function renderDailyTasksModalState(message, showRetry = false) {
+    const summary = document.getElementById('daily-modal-summary-text');
+    const chip = document.getElementById('daily-modal-reward-chip');
+    const bar = document.getElementById('daily-modal-progress-bar');
+    const list = document.getElementById('daily-modal-list');
+    if (summary) summary.textContent = message;
+    if (chip) chip.style.display = 'none';
+    if (bar) bar.style.width = '0%';
+    if (list) {
+        list.innerHTML = `
+            <div class="daily-tasks-modal-state">
+                ${escapeProfileHtml(message)}
+                ${showRetry ? '<br><button type="button" class="btn-unstyled profile-daily-toggle mt-2" onclick="openDailyTasksModal()">Повторить</button>' : ''}
+            </div>
+        `;
+    }
+}
+
+function renderDailyTasksModal() {
+    const summary = document.getElementById('daily-modal-summary-text');
+    const chip = document.getElementById('daily-modal-reward-chip');
+    const bar = document.getElementById('daily-modal-progress-bar');
+    const list = document.getElementById('daily-modal-list');
+    if (!summary || !list) return;
+
+    const tasks = Array.isArray(cachedDailyTasks) ? cachedDailyTasks : [];
+    if (!tasks.length) {
+        renderDailyTasksModalState('Сегодня заданий пока нет');
+        return;
+    }
+
+    const completed = tasks.filter(task => task.status === 'completed' || task.status === 'claimed').length;
+    const readyXp = tasks
+        .filter(task => task.status === 'completed')
+        .reduce((sum, task) => sum + (Number(task.xp_reward) || 0), 0);
+    summary.textContent = `${completed}/${tasks.length} выполнено`;
+    if (chip) {
+        chip.style.display = readyXp > 0 ? 'inline-flex' : 'none';
+        chip.textContent = readyXp > 0 ? `+${readyXp} XP доступно` : '';
+    }
+    if (bar) {
+        bar.style.width = Math.min(100, Math.max(0, (completed / Math.max(1, tasks.length)) * 100)) + '%';
+    }
+
+    list.innerHTML = tasks.map(renderDailyTaskModalRow).join('');
+}
+
+function renderDailyTaskModalRow(task) {
+    const progress = Math.min(Number(task.progress) || 0, Number(task.target_count) || 1);
+    const target = Math.max(1, Number(task.target_count) || 1);
+    const reward = Number(task.xp_reward) || 0;
+    const title = escapeProfileHtml(task.title || 'Задание');
+    const description = escapeProfileHtml(task.description || '');
+    const code = escapeProfileHtml(task.code || '');
+    const taskId = Number(task.task_id || task.id || 0);
+    const isCompleted = task.status === 'completed';
+    const isClaimed = task.status === 'claimed';
+    const rowClass = isCompleted ? 'is-claimable' : (isClaimed ? 'is-claimed' : 'is-active');
+    const subtitle = isCompleted
+        ? `Выполнено · +${reward} XP`
+        : (isClaimed ? `Получено · +${reward} XP` : `${progress}/${target} · +${reward} XP`);
+    const clickAttr = isCompleted ? ` onclick="claimDailyTaskReward(${taskId}, '${code}')"` : '';
+    const isLoading = dailyTaskClaimInFlight === (taskId > 0 ? String(taskId) : String(code || ''));
+    const checkIcon = `
+        <svg class="daily-task-modal-status-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 12.5l2 2 4.5-5"></path>
+            <circle cx="12" cy="12" r="8.5"></circle>
+        </svg>
+    `;
+    let statusHtml = `
+        <span class="daily-task-modal-status daily-task-modal-status-active" aria-label="${progress}/${target}">
+            ${progress}/${target}
+        </span>
+    `;
+
+    if (isCompleted) {
+        statusHtml = `
+            <button type="button" class="btn-unstyled daily-task-modal-status daily-task-modal-status-claim ${isLoading ? 'is-loading' : ''}"
+                onclick="event.stopPropagation(); claimDailyTaskReward(${taskId}, '${code}')"
+                aria-label="Получить ${reward} XP">
+                ${isLoading ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>' : checkIcon}
+            </button>
+        `;
+    } else if (isClaimed) {
+        statusHtml = `
+            <span class="daily-task-modal-status daily-task-modal-status-claimed" aria-label="Получено">
+                ${checkIcon}
+            </span>
+        `;
+    }
+
+    return `
+        <div class="daily-task-modal-row ${rowClass}"${clickAttr}>
+            <div class="daily-task-modal-main">
+                <div class="daily-task-modal-title">${title}</div>
+                ${description ? `<div class="daily-task-modal-description">${description}</div>` : ''}
+                <div class="daily-task-modal-meta">${subtitle}</div>
+            </div>
+            ${statusHtml}
+        </div>
+    `;
 }
 
 async function openDetailedStatsModal() {
@@ -537,7 +883,7 @@ function renderCurrentUser(user) {
     const bigAv = document.getElementById('profile-avatar-big');
     if (bigAv && window.renderAvatar) {
         // Preserve badge if it exists
-        const badge = bigAv.querySelector('.profile-badge');
+        const badge = bigAv.querySelector('.profile-level-badge-float');
         bigAv.innerHTML = window.renderAvatar(user, 'xxl');
         if (badge) bigAv.appendChild(badge);
     }
@@ -943,6 +1289,11 @@ window.SocialManager = {
     loadFriendRequests,
     loadFriendRequests,
     getCachedUserStats: () => cachedUserStats,
+    loadProfileDailyTasks,
+    toggleProfileDailyTasks,
+    claimProfileDailyTask,
+    openDailyTasksModal,
+    claimDailyTaskReward,
 
     // NEW PROFILE LOGIC
     renderCurrentUser,
@@ -962,6 +1313,11 @@ window.SocialManager = {
 
 // Global aliases
 window.loadMyProfileStats = loadMyProfileStats;
+window.loadProfileDailyTasks = loadProfileDailyTasks;
+window.toggleProfileDailyTasks = toggleProfileDailyTasks;
+window.claimProfileDailyTask = claimProfileDailyTask;
+window.openDailyTasksModal = openDailyTasksModal;
+window.claimDailyTaskReward = claimDailyTaskReward;
 window.openDetailedStatsModal = openDetailedStatsModal;
 window.fetchUserStats = fetchUserStats;
 window.openUserProfile = openUserProfile;
@@ -979,6 +1335,12 @@ window.closeFriendsScreen = closeFriendsScreen;
 window.loadFriendsList = loadFriendsList;
 window.loadFriendRequests = loadFriendRequests;
 window.switchFriendsTab = switchFriendsTab;
+
+window.addEventListener('tabChanged', (event) => {
+    if (event.detail && event.detail.tabId === 'profile') {
+        loadMyProfileStats();
+    }
+});
 
 
 // Profile Aliases

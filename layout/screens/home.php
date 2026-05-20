@@ -5,8 +5,11 @@
             <div>
                 <div class="header-title">Во что поиграем?</div>
             </div>
-            <div id="lobby-user-avatar" onclick="switchTab('profile')" style="cursor: pointer;">
-            </div>
+            <button type="button" id="home-daily-tasks-button" class="btn-unstyled home-daily-tasks-button"
+                onclick="openDailyTasksEntry()" aria-label="Ежедневные задания">
+                <i class="bi bi-calendar2-check" aria-hidden="true"></i>
+                <i class="bi bi-stars" aria-hidden="true"></i>
+            </button>
         </div>
         <p class="home-hero-text mb-0">
             Создайте комнату, позовите друзей и начните за минуту.

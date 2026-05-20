@@ -96,6 +96,35 @@
     </div>
 </div>
 
+<!-- Daily Tasks Modal -->
+<div id="modal-daily-tasks" class="custom-modal-overlay" style="display: none;">
+    <div class="custom-modal-content daily-tasks-modal">
+        <div class="daily-tasks-modal-header">
+            <div>
+                <h5 class="daily-tasks-modal-title">Задания дня</h5>
+                <p class="daily-tasks-modal-subtitle">Выполняйте задания и получайте XP</p>
+            </div>
+            <button type="button" class="btn-close" onclick="closeModal('modal-daily-tasks')"
+                aria-label="Закрыть"></button>
+        </div>
+
+        <div class="daily-tasks-modal-summary">
+            <div>
+                <div class="daily-tasks-summary-label">Сегодняшний прогресс</div>
+                <div class="daily-tasks-summary-value" id="daily-modal-summary-text">Загружаем...</div>
+            </div>
+            <span class="daily-tasks-summary-chip" id="daily-modal-reward-chip" style="display:none;"></span>
+        </div>
+        <div class="daily-tasks-summary-bar" aria-hidden="true">
+            <div class="daily-tasks-summary-bar-fill" id="daily-modal-progress-bar"></div>
+        </div>
+
+        <div class="daily-tasks-modal-list" id="daily-modal-list">
+            <div class="daily-tasks-modal-state">Загружаем задания...</div>
+        </div>
+    </div>
+</div>
+
 <!-- 4. Confirmation Modal -->
 <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 340px;">
