@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../lib/gamification.php';
+
 // TODO(scheduled-games): keep this file focused on live rooms only.
 // Scheduled open games live in actions/scheduled_games.php and must not affect
 // the existing room lifecycle until a later explicit open/start stage.
@@ -75,6 +77,10 @@ function action_create_room($pdo, $user, $data)
             'has_password' => $pass ? 1 : 0,
             'status' => 'waiting',
         ], 'Room created');
+        recordGamificationEvent($pdo, (int) $user['id'], 'room_created', 'room', $rid, [
+            'room_code' => $code,
+            'has_password' => $pass ? 1 : 0,
+        ]);
 
         echo json_encode(['status' => 'ok', 'room_code' => $code]);
     } catch (Exception $e) {

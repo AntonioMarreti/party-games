@@ -271,6 +271,8 @@ $routes = [
     'get_leaderboard' => 'actions/stats.php',
     'get_stats' => 'actions/stats.php',
     'get_history' => 'actions/stats.php',
+    'get_daily_tasks' => 'actions/gamification.php',
+    'claim_daily_task' => 'actions/gamification.php',
     'generate_share_card' => 'actions/share.php',
 
     'make_room_public' => 'actions/room.php',

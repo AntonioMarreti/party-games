@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../lib/gamification.php';
+
 function scheduled_send_ok($payload = [])
 {
     echo json_encode(array_merge(['status' => 'ok'], $payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -330,6 +332,10 @@ function action_create_scheduled_game($pdo, $user, $data)
             'min_players' => $minPlayers,
             'max_players' => $maxPlayers,
         ], 'Scheduled game created');
+        recordGamificationEvent($pdo, (int) $user['id'], 'scheduled_created', 'scheduled_game', $scheduledGameId, [
+            'game_type' => $gameType,
+            'starts_at' => $startsAt,
+        ]);
 
         scheduled_send_ok(['scheduled_game_id' => $scheduledGameId]);
     } catch (RuntimeException $e) {
@@ -548,6 +554,9 @@ function action_subscribe_scheduled_game($pdo, $user, $data)
             'user_id' => (int) ($user['id'] ?? 0),
             'host_user_id' => (int) $hostId,
         ], 'User subscribed to scheduled game');
+        recordGamificationEvent($pdo, (int) $user['id'], 'scheduled_subscribed', 'scheduled_game', (int) $game['id'], [
+            'host_user_id' => (int) $hostId,
+        ]);
         scheduled_send_ok();
     } catch (RuntimeException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

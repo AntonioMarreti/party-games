@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../lib/gamification.php';
+
 // === GAME HISTORY & STATS ===
 
 function action_game_finished($pdo, $user, $data)
@@ -168,6 +170,18 @@ function recordGameStats($pdo, $room, $playersData, $duration)
 
         // B. Update User Stats (Atomic Update)
         updateUserStats($pdo, $pid, $rank, $dScore, $gameHistoryId);
+
+        recordGamificationEvent($pdo, $pid, 'game_finished', 'game_history', $gameHistoryId, [
+            'game_type' => $room['game_type'] ?? null,
+            'rank' => $rank,
+            'score' => $dScore,
+        ]);
+        if ($rank === 1) {
+            recordGamificationEvent($pdo, $pid, 'win', 'game_history', $gameHistoryId, [
+                'game_type' => $room['game_type'] ?? null,
+                'score' => $dScore,
+            ]);
+        }
     }
 
     TelegramLogger::logEvent('game', "Game Finished", [
