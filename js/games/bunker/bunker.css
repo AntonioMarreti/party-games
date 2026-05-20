@@ -1,8 +1,8 @@
 /* === BUNKER LIGHT THEME (Neon-Frosted) === */
 :root {
     --bunker-bg: transparent;
-    --bunker-bg-alt: rgba(255, 255, 255, 0.45);
-    --bunker-card-bg: rgba(255, 255, 255, 0.45);
+    --bunker-bg-alt: rgba(255, 255, 255, 0.88);
+    --bunker-card-bg: rgba(255, 255, 255, 0.84);
     --bunker-accent: #6C5CE7;
     /* Indigo accent */
     --bunker-danger: #EF4444;
@@ -61,6 +61,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 /* Revert inactive tabs to dark clean style */
@@ -189,13 +190,15 @@
 /* Header */
 .bunker-header-card {
     background: var(--bunker-bg-alt);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
     padding: 18px;
     padding-top: calc(15px + env(safe-area-inset-top));
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
 }
 
 .bunker-round-badge {
@@ -221,11 +224,13 @@
 .catastrophe-section {
     display: flex;
     align-items: flex-start;
-    margin-top: 15px;
-    background: #F8FAFC;
+    margin-top: 14px;
+    background: rgba(248, 250, 252, 0.96);
     padding: 15px;
     border-radius: 16px;
     border: 1px solid var(--bunker-border);
+    position: relative;
+    z-index: 1;
 }
 
 .cata-icon {
@@ -336,13 +341,14 @@
 
 /* Feature Alert */
 .bunker-feature-alert {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
     padding: 10px 15px;
     display: flex;
     align-items: center;
     border: 1px solid rgba(0, 0, 0, 0.05);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
 }
 
 .feature-icon {
@@ -490,22 +496,26 @@
 
 /* Segmented Control Tabs */
 .bunker-segmented-control {
-    background: rgba(118, 118, 128, 0.12);
-    border-radius: 9px;
-    padding: 2px;
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 14px;
+    padding: 4px;
     display: flex;
     overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    position: relative;
+    z-index: 2;
 }
 
 .segment-btn {
     flex: 1;
     border: none;
     background: transparent;
-    padding: 8px;
+    padding: 10px 12px;
     font-size: 13px;
-    font-weight: 600;
-    border-radius: 7px;
-    color: var(--bunker-text);
+    font-weight: 700;
+    border-radius: 10px;
+    color: #475569;
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -513,9 +523,9 @@
 }
 
 .segment-btn.active {
-    background: white;
-    box-shadow: 0 3px 1px rgba(0, 0, 0, 0.04), 0 3px 8px rgba(0, 0, 0, 0.12);
-    color: black;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 4px 14px rgba(108, 92, 231, 0.18);
+    color: var(--bunker-accent);
 }
 
 
@@ -589,45 +599,47 @@
     bottom: 0;
     left: 0;
     width: 100%;
-    background: rgba(255, 255, 255, 0.85);
-    /* Glass Background */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     border-top: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 12px 24px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 10px 18px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
     z-index: 100;
     display: flex;
     justify-content: center;
-    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
 }
 
 .footer-actions-container {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Center everything */
     width: 100%;
-    max-width: 600px;
+    max-width: 520px;
+    min-height: 76px;
 }
 
 .action-group {
-    /* Wrapper for item + text */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 4px;
     width: 80px;
-    /* Fixed width for alignment */
+}
+
+.bunker-footer-bar.single-action .footer-actions-container {
+    justify-content: flex-start;
+    max-width: 120px;
+    min-height: 72px;
 }
 
 .action-divider {
     width: 1px;
     height: 32px;
     background: rgba(0, 0, 0, 0.1);
-    margin: 0 15px;
-    /* Spacing around divider */
+    margin: 10px 12px 0;
 }
 
 .action-btn-circle {
@@ -775,6 +787,35 @@
     /* Prevent body scroll */
 }
 
+.bunker-reveal-popup {
+    opacity: 0;
+    transition: opacity 0.24s ease;
+}
+
+.bunker-reveal-popup .bunker-reveal-header,
+.bunker-reveal-popup .reveal-card {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+    will-change: transform, opacity;
+}
+
+.bunker-reveal-popup.is-visible {
+    opacity: 1;
+}
+
+.bunker-reveal-popup.is-visible .bunker-reveal-header,
+.bunker-reveal-popup.is-visible .reveal-card {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.bunker-reveal-popup.is-closing .bunker-reveal-header,
+.bunker-reveal-popup.is-closing .reveal-card {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+}
+
 .reveal-content {
     max-width: 100%;
     max-height: 100%;
@@ -794,10 +835,8 @@
     background: white;
     border-radius: 24px;
     max-width: 100%;
-    /* Allow full width */
     width: 350px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    transform: perspective(1000px);
     margin: 0 auto;
 }
 
@@ -863,6 +902,32 @@ body.thermal-safe .turn-indicator-floating {
 body.thermal-safe .bunker-voting-screen {
     background: #f8fafc !important;
     color: #1e293b !important;
+}
+
+body.thermal-safe .bunker-header-card,
+body.thermal-safe .bunker-segmented-control,
+body.thermal-safe .bunker-footer-bar,
+body.thermal-safe .catastrophe-section,
+body.thermal-safe .bunker-feature-alert {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+}
+
+body.thermal-safe .segment-btn {
+    color: #475569 !important;
+}
+
+body.thermal-safe .segment-btn.active {
+    background: #eef2ff !important;
+    color: #6c5ce7 !important;
+}
+
+body.thermal-safe .bunker-reveal-popup,
+body.thermal-safe .bunker-reveal-popup .bunker-reveal-header,
+body.thermal-safe .bunker-reveal-popup .reveal-card {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
 }
 
 body.thermal-safe .bunker-voting-screen h1,

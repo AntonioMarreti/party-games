@@ -51,16 +51,16 @@ window.sendGameAction = async function (type, data = {}) {
 
 window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {
     var overlay = document.createElement('div');
-    overlay.className = 'bunker-reveal-overlay animate__animated animate__zoomIn';
+    overlay.className = 'bunker-reveal-overlay bunker-reveal-popup';
     overlay.innerHTML = `
         <div class="reveal-content text-center">
-            <div class="reveal-header mb-3">
+            <div class="reveal-header bunker-reveal-header mb-3">
                 <img src="${window.getAvatarSrc(photoUrl)}" class="reveal-avatar rounded-circle border border-4 border-white shadow-lg mb-3">
                 <h2 class="fw-bold mb-0" style="color:var(--text-light);">${playerName}</h2>
                 <div class="small text-uppercase letter-spacing-2" style="color:var(--text-light); opacity:0.6;">РАСКРЫВАЕТ КАРТУ</div>
             </div>
             
-            <div class="reveal-card glass-card p-4 mx-auto animate__animated animate__flipInX animate__delay-1s">
+            <div class="reveal-card p-4 mx-auto">
                 <div class="reveal-icon mb-2 display-1" style="color:var(--primary-color);">${window.BUNKER_ICONS[cardType]}</div>
                 <div class="reveal-type text-uppercase fw-bold small mb-2" style="color:var(--text-muted);">${window.BUNKER_ROUND_NAMES[cardType]}</div>
                 <div class="reveal-text h2 fw-bold mb-0" style="color:var(--text-main);">${cardText}</div>
@@ -69,14 +69,19 @@ window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {
     `;
 
     document.body.appendChild(overlay);
+    requestAnimationFrame(function () {
+        overlay.classList.add('is-visible');
+    });
 
     // Play sound? window.playSound('reveal');
 
-    setTimeout(function () {
-        overlay.classList.remove('animate__zoomIn');
-        overlay.classList.add('animate__fadeOut');
-        setTimeout(function () { overlay.remove(); }, 500);
-    }, 4000);
+    function closeRevealPopup() {
+        overlay.classList.remove('is-visible');
+        overlay.classList.add('is-closing');
+        setTimeout(function () { overlay.remove(); }, document.body.classList.contains('thermal-safe') ? 0 : 260);
+    }
+
+    setTimeout(closeRevealPopup, 4000);
 };
 
 /* --- Main Render Router --- */
@@ -147,14 +152,14 @@ window.renderBunkerHeader = function (state) {
     var catastrophe = state.catastrophe;
 
     return `
-        <div class="bunker-header-card" style="border-radius: 24px; margin-top: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); background: rgba(255,255,255,0.6);">
+        <div class="bunker-header-card" style="border-radius: 24px; margin-top: 10px; overflow: hidden;">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="bunker-round-badge">Раунд ${state.current_round}</div>
                 <div class="bunker-places-badge">Мест: ${state.bunker_places}</div>
             </div>
             
-            <div class="catastrophe-section glass-card">
+            <div class="catastrophe-section">
                 <div class="cata-icon"><i class="bi bi-radioactive" style="color:var(--status-error);"></i></div>
                 <div class="cata-info">
                     <div class="cata-title">${catastrophe.title}</div>
@@ -175,7 +180,7 @@ window.renderBunkerHeader = function (state) {
         const realIdx = state.revealed_features.length - 1 - i;
 
         return `
-                        <div class="bunker-feature-alert glass-card clickable mb-2" 
+                        <div class="bunker-feature-alert clickable mb-2" 
                              style="border-left: 4px solid ${isIncident ? (isFixed ? 'var(--status-success)' : 'var(--status-error)') : 'var(--primary-color)'};"
                              onclick="window.showBunkerFeatureDetails(${realIdx})">
                             <span class="feature-icon"><i class="bi ${icon}" style="color:${iconColor};"></i></span>
@@ -812,20 +817,22 @@ window.renderFooterActions = function (isHost, state, isMyTurn) {
 
     // -- 3. EXIT BUTTON (Handled in return) --
 
+    const footerStateClass = buttons ? 'has-secondary-action' : 'single-action';
+
     return `
-        <div class="bunker-footer-bar">
-            <div class="footer-actions-container d-flex justify-content-center align-items-start gap-4" style="height: 100px;">
+        <div class="bunker-footer-bar ${footerStateClass}">
+            <div class="footer-actions-container d-flex justify-content-center align-items-start gap-4">
                 <!-- Exit Container -->
-                <div class="action-group d-flex flex-column align-items-center" style="width: 80px;">
+                <div class="action-group d-flex flex-column align-items-center">
                     <button class="action-btn-circle secondary shadow-lg" onclick="window.bunkerFinish()">
                         <i class="bi bi-door-open-fill"></i>
                     </button>
                     <div class="action-label text-nowrap mt-2">Выход</div>
                 </div>
                 
-                ${buttons ? `<div class="action-divider mx-2" style="height: 50px; border-right: 1px solid rgba(255,255,255,0.1); margin-top: 10px;"></div>` : ''}
+                ${buttons ? `<div class="action-divider mx-2"></div>` : ''}
                 
-                ${buttons ? `<div class="action-group d-flex flex-column align-items-center" style="width: 80px;">${buttons}</div>` : ''}
+                ${buttons ? `<div class="action-group d-flex flex-column align-items-center">${buttons}</div>` : ''}
             </div>
         </div>
     `;
