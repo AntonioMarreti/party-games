@@ -109,16 +109,12 @@ window.BunkerBot = {
                 var playerCards = state.players_cards[player.id];
                 if (!playerCards) return null;
 
-                // Round 1 Logic: STRICTLY Profession
-                if (state.current_round === 1) {
-                    if (playerCards['professions'] && !playerCards['professions'].revealed) {
-                        return { type: 'reveal_card', data: { card_type: 'professions' } };
-                    }
-                    // Fallback: If profession somehow revealed, do nothing or random? 
-                    // Let's fallback to random to avoid getting stuck.
+                // First reveal must always be profession until it is revealed.
+                if (playerCards['professions'] && !playerCards['professions'].revealed) {
+                    return { type: 'reveal_card', data: { card_type: 'professions' } };
                 }
 
-                // Random reveal for other rounds
+                // Random reveal after profession is already open
                 var closedKeys = [];
                 // Standard keys
                 ['professions', 'biology', 'health', 'hobby', 'advantages', 'disadvantages', 'luggage', 'facts', 'condition'].forEach(function (k) {

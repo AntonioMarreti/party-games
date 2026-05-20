@@ -576,8 +576,19 @@ function handleGameAction($pdo, $room, $user, $postData)
             return ['status' => 'error', 'message' => 'Нет такой карты'];
         if (!empty($state['players_cards'][$userId][$cardType]['revealed']))
             return ['status' => 'error', 'message' => 'Карта уже раскрыта'];
-        if (empty($state['players_cards'][$userId]['professions']['revealed']) && $cardType !== 'professions')
+        if (empty($state['players_cards'][$userId]['professions']['revealed']) && $cardType !== 'professions') {
+            bunkerLogEvent('Bunker invalid reveal order', [
+                'action' => 'bunker_invalid_reveal_order',
+                'room_id' => (int) ($room['id'] ?? 0),
+                'room_code' => $room['room_code'] ?? null,
+                'actor_user_id' => (string) $userId,
+                'requested_card_type' => (string) $cardType,
+                'reason' => 'profession_must_be_first',
+                'phase' => (string) ($state['phase'] ?? ''),
+                'turn_phase' => (string) ($state['turn_phase'] ?? ''),
+            ]);
             return ['status' => 'error', 'message' => 'Сначала нужно раскрыть профессию'];
+        }
 
         $state['players_cards'][$userId][$cardType]['revealed'] = true;
         $state['turn_phase'] = 'discussion';
