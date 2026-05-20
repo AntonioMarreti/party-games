@@ -56,14 +56,32 @@ window.render_bunker = async function (res) {
             if (item.type === 'reveal') {
                 // Find player name
                 var p = res.players.find(function (pl) { return String(pl.id) === String(item.user_id); });
-                var pName = p ? p.first_name : 'Unknown';
+                var pName = p ? p.first_name : 'Игрок';
+                var pPhotoUrl = p?.photo_url || null;
 
                 if (String(item.user_id) === String(res.user.id)) {
                     window.bunkerState.pendingRevealCard = item.card_type;
                 }
 
+                if (!p) {
+                    console.warn('bunker_reveal_popup_missing_player', {
+                        player_id: item.user_id,
+                        card_type: item.card_type
+                    });
+                    if (window.logClientError) {
+                        window.logClientError(
+                            'bunker_reveal_popup_missing_player',
+                            'Player missing during bunker reveal popup rendering',
+                            {
+                                player_id: item.user_id,
+                                card_type: item.card_type
+                            }
+                        );
+                    }
+                }
+
                 // Show Popup
-                window.showRevealPopup(pName, item.card_type, item.text, p.photo_url);
+                window.showRevealPopup(pName, item.card_type, item.text, pPhotoUrl);
             }
         });
     }

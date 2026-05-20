@@ -33,20 +33,6 @@ window.BUNKER_ROUND_NAMES = {
     backstory: 'Судьба'
 };
 
-window.sendGameAction = async function (type, data = {}) {
-
-    try {
-        await window.apiRequest({
-            action: 'game_action',
-            type: type,
-            ...data
-        });
-    } catch (e) {
-        console.error("Game Action Error:", e);
-        window.showAlert("Ошибка", e.message, 'error');
-    }
-};
-
 /* --- Popups --- */
 
 window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {

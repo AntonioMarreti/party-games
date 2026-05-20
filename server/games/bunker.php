@@ -577,15 +577,36 @@ function handleGameAction($pdo, $room, $user, $postData)
         if (!empty($state['players_cards'][$userId][$cardType]['revealed']))
             return ['status' => 'error', 'message' => 'Карта уже раскрыта'];
         if (empty($state['players_cards'][$userId]['professions']['revealed']) && $cardType !== 'professions') {
-            bunkerLogEvent('Bunker invalid reveal order', [
-                'action' => 'bunker_invalid_reveal_order',
+            $revealedCardsBefore = 0;
+            foreach (($state['players_cards'][$userId] ?? []) as $actorCard) {
+                if (!empty($actorCard['revealed'])) {
+                    $revealedCardsBefore++;
+                }
+            }
+
+            $isBot = null;
+            $stmtBot = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ? LIMIT 1");
+            $stmtBot->execute([$room['id'], $user['id']]);
+            $botFlag = $stmtBot->fetchColumn();
+            if ($botFlag !== false) {
+                $isBot = (int) $botFlag === 1;
+            }
+
+            bunkerLogEvent('Bunker invalid first reveal attempt', [
+                'action' => 'bunker_invalid_first_reveal_attempt',
                 'room_id' => (int) ($room['id'] ?? 0),
                 'room_code' => $room['room_code'] ?? null,
                 'actor_user_id' => (string) $userId,
                 'requested_card_type' => (string) $cardType,
-                'reason' => 'profession_must_be_first',
+                'current_player_id' => (string) ($state['current_player_id'] ?? ''),
                 'phase' => (string) ($state['phase'] ?? ''),
                 'turn_phase' => (string) ($state['turn_phase'] ?? ''),
+                'professions_revealed_before' => !empty($state['players_cards'][$userId]['professions']['revealed']),
+                'revealed_cards_before' => $revealedCardsBefore,
+                'players_cards_keys' => array_values(array_keys($state['players_cards'][$userId] ?? [])),
+                'actor_cards_exists' => isset($state['players_cards'][$userId]) && is_array($state['players_cards'][$userId]),
+                'is_bot' => $isBot,
+                'reason' => 'profession_must_be_first',
             ]);
             return ['status' => 'error', 'message' => 'Сначала нужно раскрыть профессию'];
         }

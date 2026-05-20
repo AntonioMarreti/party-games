@@ -16,12 +16,6 @@ window.sendGameAction = async function (type, data = {}) {
         window.showAlert("Ошибка", e.message, 'error');
     }
 };
-window.BUNKER_ROUND_NAMES = {
-    professions: 'Профессия', biology: 'Биология', health: 'Здоровье',
-    hobby: 'Хобби', advantages: 'Сильная черта', disadvantages: 'Слабость',
-    luggage: 'Багаж', facts: 'Факт', condition: 'Особое условие',
-    backstory: 'Судьба'
-};
 
 window.switchBunkerTab = function (tab) {
     if (window.bunkerState) {
@@ -30,17 +24,6 @@ window.switchBunkerTab = function (tab) {
             window.bunkerState.lastStateHash = '';
             window.render_bunker(window.bunkerState.lastRes);
         }
-    }
-};
-
-window.startBunkerGame = async function () {
-    try {
-        var hardcore = document.getElementById('modeHardcore')?.checked;
-        await window.sendGameAction('init_bunker', {
-            mode: hardcore ? 'hardcore' : 'normal'
-        });
-    } catch (e) {
-        window.showAlert("Ошибка", e.message, 'error');
     }
 };
 
@@ -61,7 +44,8 @@ window.sendVoteKick = function (targetId) {
     }, { isDanger: true, confirmText: 'Голосовать' });
 };
 
-// Use window-scoped flag to survive re-loads safely
+// Use window-scoped flag to survive re-loads safely.
+// handlers.js is the source of truth for bunker finish/history flow.
 window.bunkerIsFinishing = false;
 
 window.bunkerFinish = async function (evt) {
