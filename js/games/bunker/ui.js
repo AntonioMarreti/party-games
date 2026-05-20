@@ -84,6 +84,42 @@ window.showRevealPopup = function (playerName, cardType, cardText, photoUrl) {
     setTimeout(closeRevealPopup, 4000);
 };
 
+window.getBunkerStatusText = function (state, isMyTurn) {
+    if (state.turn_phase === 'reveal') {
+        if (window.bunkerState.activeTab === 'others') {
+            return 'Здесь видно, кто остался в игре и что уже известно';
+        }
+        return isMyTurn ? 'Выберите характеристику для раскрытия' : 'Ожидаем хода игрока...';
+    }
+    return window.bunkerState.activeTab === 'others'
+        ? 'Следите, кто уже раскрыл данные и кто ещё в игре'
+        : 'Время обсуждения и споров...';
+};
+
+window.animateBunkerRevealedCard = function (cardType) {
+    if (!cardType) return;
+    var card = document.querySelector('.bunker-trait-card.just-revealed');
+    if (!card) return;
+
+    if (document.body.classList.contains('thermal-safe')) {
+        card.classList.add('is-revealed');
+        setTimeout(function () {
+            card.classList.remove('just-revealed', 'is-revealed');
+        }, 80);
+        return;
+    }
+
+    card.classList.add('reveal-ready');
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            card.classList.add('is-revealed');
+        });
+    });
+    setTimeout(function () {
+        card.classList.remove('just-revealed', 'reveal-ready', 'is-revealed');
+    }, 720);
+};
+
 /* --- Main Render Router --- */
 
 window.renderRoundPhase = function (wrapper, state, res) {
@@ -100,7 +136,7 @@ window.renderRoundPhase = function (wrapper, state, res) {
     var activeName = activePlayer ? activePlayer.first_name : (state.phase === 'voting' ? 'Голосование' : 'Ожидание...');
 
     wrapper.innerHTML = `
-        <div class="bunker-main-layout px-3">
+        <div class="bunker-main-layout bunker-round-screen px-3">
             ${window.renderBunkerHeader(state)}
             
             <!-- Floating Turn Indicator -->
@@ -120,7 +156,7 @@ window.renderRoundPhase = function (wrapper, state, res) {
             ` : ''}
 
             <!-- Segmented Control Tabs -->
-            <div class="bunker-segmented-control mb-3 mx-3">
+            <div class="bunker-segmented-control mb-3">
                 <button class="segment-btn ${window.bunkerState.activeTab === 'others' ? 'active' : ''}" onclick="window.switchBunkerTab('others')">
                     <i class="bi bi-people-fill me-2"></i>Выжившие
                 </button>
@@ -130,12 +166,10 @@ window.renderRoundPhase = function (wrapper, state, res) {
             </div>
 
             <div class="bunker-status-text text-center mb-2 small" style="color:var(--text-muted);">
-                 ${state.turn_phase === 'reveal'
-            ? (isMyTurn ? 'Выберите характеристику для раскрытия' : `Ожидаем хода игрока...`)
-            : 'Время обсуждения и споров...'}
+                 ${window.getBunkerStatusText(state, isMyTurn)}
             </div>
 
-            <div class="bunker-content">
+            <div class="bunker-content bunker-round-content">
                 ${window.bunkerState.activeTab === 'me'
             ? window.renderMyCards(myCards, state, isMyTurn)
             : window.renderOtherPlayers(res.players, state, myId, activePlayerId)}
@@ -152,11 +186,12 @@ window.renderBunkerHeader = function (state) {
     var catastrophe = state.catastrophe;
 
     return `
-        <div class="bunker-header-card" style="border-radius: 24px; margin-top: 10px; overflow: hidden;">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="bunker-round-badge">Раунд ${state.current_round}</div>
-                <div class="bunker-places-badge">Мест: ${state.bunker_places}</div>
+        <div class="bunker-header-stack">
+            <div class="bunker-status-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="bunker-round-badge">Раунд ${state.current_round}</div>
+                    <div class="bunker-places-badge">Мест: ${state.bunker_places}</div>
+                </div>
             </div>
             
             <div class="catastrophe-section">
@@ -171,7 +206,7 @@ window.renderBunkerHeader = function (state) {
             </div>
 
             ${state.revealed_features && state.revealed_features.length > 0 ? `
-                <div class="bunker-features-list mt-3">
+                <div class="bunker-features-list">
                     ${state.revealed_features.slice().reverse().map((f, i) => {
         const isIncident = f.type === 'incident';
         const isFixed = f.fixed;
@@ -230,6 +265,7 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
         var tags = cardData.tags || [];
         var action = cardData.action || (cardData.data && cardData.data.action);
         var isUsed = cardData.used;
+        var isJustRevealed = window.bunkerState.pendingRevealCard === key;
 
         // Logic for Locking
         var isLocked = false;
@@ -251,6 +287,7 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
         if (isRevealed) statusClass += ' revealed';
         else if (isLocked) statusClass += ' locked';
         else statusClass += ' active pulse-border';
+        if (isJustRevealed) statusClass += ' just-revealed';
 
         var tagsHtml = '';
         if (isRevealed && tags.length > 0) {
@@ -271,7 +308,7 @@ window.renderMyCards = function (myCards, state, isMyTurn) {
         }
 
         html += `
-            <div class="${statusClass}" onclick="${(!isRevealed && !isLocked) ? `window.triggerBunkerReveal('${key}')` : ''}">
+            <div class="${statusClass}" data-card-key="${key}" onclick="${(!isRevealed && !isLocked) ? `window.triggerBunkerReveal('${key}')` : ''}">
                 <div class="trait-header d-flex align-items-center mb-2">
                     <span class="trait-icon me-2">${window.BUNKER_ICONS[key]}</span>
                     <span class="trait-name">${window.BUNKER_ROUND_NAMES[key]}</span>

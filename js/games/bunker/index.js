@@ -58,6 +58,10 @@ window.render_bunker = async function (res) {
                 var p = res.players.find(function (pl) { return String(pl.id) === String(item.user_id); });
                 var pName = p ? p.first_name : 'Unknown';
 
+                if (String(item.user_id) === String(res.user.id)) {
+                    window.bunkerState.pendingRevealCard = item.card_type;
+                }
+
                 // Show Popup
                 window.showRevealPopup(pName, item.card_type, item.text, p.photo_url);
             }
@@ -96,6 +100,11 @@ window.render_bunker = async function (res) {
             case 'outro': window.renderOutro(wrapper, state, res); break;
             default:
                 wrapper.innerHTML = `<div class="alert alert-danger">Unknown phase: ${state.phase}</div>`;
+        }
+
+        if (state.phase === 'round' && window.bunkerState.pendingRevealCard && typeof window.animateBunkerRevealedCard === 'function') {
+            window.animateBunkerRevealedCard(window.bunkerState.pendingRevealCard);
+            window.bunkerState.pendingRevealCard = null;
         }
 
         // Bot Check
