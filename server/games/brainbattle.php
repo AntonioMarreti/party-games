@@ -1,6 +1,10 @@
 <?php
 // server/games/brainbattle.php
 
+if (!defined('BRAINBATTLE_ROUND_TIMEOUT_SECONDS')) {
+    define('BRAINBATTLE_ROUND_TIMEOUT_SECONDS', 30);
+}
+
 function getGameLibrary()
 {
     return [
@@ -28,6 +32,8 @@ function getInitialState()
         'previous_game_type' => null,
         'round_chat_sent' => false,
         'started_at' => null,
+        'round_started_at' => null,
+        'round_timeout_seconds' => BRAINBATTLE_ROUND_TIMEOUT_SECONDS,
         'stats_recorded' => false
     ];
 }
@@ -117,6 +123,89 @@ function bbCalculateScore($gameType, $timeMs, $isCorrect)
     return (int) bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect)['final_score'];
 }
 
+function bbGetRoundTimeoutSeconds($state)
+{
+    $timeout = (int) ($state['round_timeout_seconds'] ?? BRAINBATTLE_ROUND_TIMEOUT_SECONDS);
+    return max(1, min(300, $timeout));
+}
+
+function bbEnsureRoundTimer(&$state)
+{
+    if (($state['phase'] ?? '') !== 'playing') {
+        return;
+    }
+    if (empty($state['round_started_at'])) {
+        $state['round_started_at'] = time();
+    }
+    $state['round_timeout_seconds'] = bbGetRoundTimeoutSeconds($state);
+}
+
+function bbIsRoundTimedOut($state, $now = null)
+{
+    $startedAt = (int) ($state['round_started_at'] ?? 0);
+    if ($startedAt <= 0) {
+        return false;
+    }
+
+    $now = $now ?? time();
+    return ($now - $startedAt) >= bbGetRoundTimeoutSeconds($state);
+}
+
+function bbBuildTimeoutResult($state)
+{
+    $timeoutMs = bbGetRoundTimeoutSeconds($state) * 1000;
+    $gameType = (string) ($state['previous_game_type'] ?? '');
+
+    return [
+        'time' => $timeoutMs,
+        'response_time_ms' => null,
+        'correct' => false,
+        'success' => false,
+        'score' => 0,
+        'score_delta' => 0,
+        'answer' => null,
+        'timed_out' => true,
+        'score_breakdown' => bbBuildScoreBreakdown($gameType, $timeoutMs, false, [
+            'timed_out' => true
+        ])
+    ];
+}
+
+function bbTimeoutMissingHumanAnswers($pdo, $room, &$state)
+{
+    if (($state['phase'] ?? '') !== 'playing' || !bbIsRoundTimedOut($state)) {
+        return false;
+    }
+
+    $timedOutUserIds = [];
+    foreach (bbGetHumanIds($pdo, $room['id']) as $pid) {
+        $pid = (string) $pid;
+        if (isset($state['round_results'][$pid])) {
+            continue;
+        }
+
+        $state['round_results'][$pid] = bbBuildTimeoutResult($state);
+        $timedOutUserIds[] = $pid;
+    }
+
+    if (empty($timedOutUserIds)) {
+        return false;
+    }
+
+    if (class_exists('TelegramLogger')) {
+        TelegramLogger::logEvent('game', 'brainbattle_round_timeout', [
+            'room_id' => (int) ($room['id'] ?? 0),
+            'room_code' => $room['room_code'] ?? null,
+            'round' => (int) ($state['current_round'] ?? 0),
+            'round_id' => (string) ($state['round_id'] ?? ''),
+            'timed_out_user_ids' => $timedOutUserIds,
+            'timeout_seconds' => bbGetRoundTimeoutSeconds($state)
+        ]);
+    }
+
+    return true;
+}
+
 function bbNormalizeAnswerValue($value)
 {
     if (is_bool($value)) {
@@ -195,7 +284,7 @@ function bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect, $meta = [])
             'final_score' => 0,
             'minimum_applied' => false,
             'is_blind_timer' => $isBlindTimer,
-            'reason' => $tooFastRejected ? 'too_fast_rejected' : 'incorrect'
+            'reason' => !empty($meta['timed_out']) ? 'timed_out' : ($tooFastRejected ? 'too_fast_rejected' : 'incorrect')
         ];
     }
 
@@ -438,6 +527,7 @@ function handleGameAction($pdo, $room, $user, $postData)
     $state = bbNormalizeState(json_decode($room['game_state'] ?? '', true));
     $type = $postData['type'] ?? '';
     $userId = (string) $user['id'];
+    bbEnsureRoundTimer($state);
 
     if ($type === 'setup_game') {
         if (!$room['is_host'])
@@ -476,9 +566,30 @@ function handleGameAction($pdo, $room, $user, $postData)
         if (!empty($state['round_id']) && isset($postData['round_id']) && $postData['round_id'] !== $state['round_id']) {
             return ['status' => 'ok', 'ignored' => 'stale_round'];
         }
+        $timedOutBeforeAnswer = bbTimeoutMissingHumanAnswers($pdo, $room, $state);
         // Если игрок уже отвечал в этом раунде - игнорируем (защита от дабл-клика)
-        if (isset($state['round_results'][$userId]))
+        if (isset($state['round_results'][$userId])) {
+            if (!empty($state['round_results'][$userId]['timed_out'])) {
+                if (class_exists('TelegramLogger')) {
+                    $elapsedSeconds = time() - (int) ($state['round_started_at'] ?? time());
+                    TelegramLogger::logEvent('security', 'brainbattle_late_answer_rejected', [
+                        'room_id' => (int) ($room['id'] ?? 0),
+                        'room_code' => $room['room_code'] ?? null,
+                        'user_id' => (int) $user['id'],
+                        'round' => (int) ($state['current_round'] ?? 0),
+                        'round_id' => (string) ($state['round_id'] ?? ''),
+                        'answer' => is_scalar($postData['answer'] ?? null) || !isset($postData['answer']) ? ($postData['answer'] ?? null) : '[non-scalar]',
+                        'elapsed_seconds' => max(0, $elapsedSeconds)
+                    ]);
+                }
+                if ($timedOutBeforeAnswer) {
+                    bbStoreRoundHistoryEntry($state);
+                    updateGameState($room['id'], $state);
+                }
+                return ['status' => 'ok', 'ignored' => 'timed_out', 'message' => 'Время ответа истекло'];
+            }
             return ['status' => 'ok'];
+        }
 
         $gameType = $state['previous_game_type'] ?? '';
         $roundData = is_array($state['round_data'] ?? null) ? $state['round_data'] : [];
@@ -525,6 +636,7 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         // Process Bots!
         processBots($pdo, $room['id'], $state);
+        bbTimeoutMissingHumanAnswers($pdo, $room, $state);
         bbStoreRoundHistoryEntry($state);
 
         updateGameState($room['id'], $state);
@@ -536,6 +648,7 @@ function handleGameAction($pdo, $room, $user, $postData)
             return;
         if (($state['phase'] ?? '') === 'playing') {
             processBots($pdo, $room['id'], $state);
+            bbTimeoutMissingHumanAnswers($pdo, $room, $state);
         }
         if (($state['phase'] ?? '') === 'playing') {
             foreach (bbGetHumanIds($pdo, $room['id']) as $pid) {
@@ -543,6 +656,7 @@ function handleGameAction($pdo, $room, $user, $postData)
                     return ['status' => 'error', 'message' => 'Не все игроки ответили'];
                 }
             }
+            bbStoreRoundHistoryEntry($state);
         }
         if ($state['current_round'] < $state['total_rounds']) {
             startNextRound($state);
@@ -599,6 +713,8 @@ function startNextRound(&$state)
     $state['phase'] = 'playing';
     $state['round_results'] = [];
     $state['round_chat_sent'] = false;
+    $state['round_started_at'] = time();
+    $state['round_timeout_seconds'] = bbGetRoundTimeoutSeconds($state);
 
     // Определяем доступный пул игр
     $pool = [];
