@@ -381,6 +381,19 @@
     text-align: center;
 }
 
+.daily-tasks-modal-retry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary-color), white 88%);
+    color: var(--primary-color) !important;
+    font-size: 12px;
+    font-weight: 900;
+}
+
 .daily-task-modal-row {
     min-height: 62px;
     display: flex;

@@ -56,8 +56,7 @@
             <div class="profile-daily-expanded-wrap" id="profile-daily-expanded-wrap">
                 <div class="profile-daily-expanded-inner">
                     <div class="profile-daily-list" id="profile-daily-list"></div>
-                    <button type="button" id="profile-daily-toggle" class="btn-unstyled profile-daily-toggle"
-                        onclick="toggleProfileDailyTasks()" style="display:none;">Свернуть</button>
+                    <div id="profile-daily-toggle" class="profile-daily-toggle" style="display:none;"></div>
                 </div>
             </div>
         </section>

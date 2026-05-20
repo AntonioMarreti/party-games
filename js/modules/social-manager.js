@@ -7,6 +7,7 @@
 let cachedUserStats = null;
 let cachedDailyTasks = [];
 let profileDailyExpanded = false;
+let profileDailyShowAll = false;
 let dailyTaskClaimInFlight = null;
 
 // === USER PROFILES & STATS ===
@@ -15,9 +16,11 @@ async function loadMyProfileStats() {
     if (typeof window.apiRequest !== 'function') return;
     if (!window.globalUser) return;
 
-    // We need achievements count, so we must fetch full stats
-    const res = await window.apiRequest({ action: 'get_stats', user_id: window.globalUser.id });
-    if (res.status === 'ok') {
+    try {
+        // We need achievements count, so we must fetch full stats
+        const res = await window.apiRequest({ action: 'get_stats', user_id: window.globalUser.id });
+        if (res.status !== 'ok') return;
+
         const stats = res.stats || {};
         cachedUserStats = stats;
 
@@ -39,9 +42,11 @@ async function loadMyProfileStats() {
         }
         const profileProgress = document.getElementById('profile-xp-progress');
         if (profileProgress) profileProgress.style.width = progress.percent + '%';
-
-        loadProfileDailyTasks();
+    } catch (err) {
+        console.warn('Profile Stats Error:', err);
     }
+
+    loadProfileDailyTasks();
 }
 
 function getLevelProgress(xp, level) {
@@ -122,6 +127,7 @@ function renderProfileDailyTasks() {
     if (!tasks.length) {
         card.style.display = 'block';
         card.classList.remove('expanded');
+        profileDailyShowAll = false;
         if (summary) summary.textContent = 'Заданий пока нет';
         if (chip) chip.style.display = 'none';
         list.innerHTML = '';
@@ -144,12 +150,32 @@ function renderProfileDailyTasks() {
     if (head) head.setAttribute('aria-expanded', profileDailyExpanded ? 'true' : 'false');
     if (expandedWrap) expandedWrap.classList.toggle('is-open', profileDailyExpanded);
 
-    const visibleTasks = tasks.slice(0, 3);
+    const visibleTasks = profileDailyShowAll ? tasks : tasks.slice(0, 3);
     list.innerHTML = visibleTasks.map(renderProfileDailyTaskRow).join('');
 
     if (toggle) {
         toggle.style.display = profileDailyExpanded ? 'block' : 'none';
-        toggle.textContent = tasks.length > 3 ? `Свернуть · показано 3 из ${tasks.length}` : 'Свернуть';
+        if (tasks.length > 3 && !profileDailyShowAll) {
+            toggle.innerHTML = `
+                <div class="daily-profile-actions">
+                    <button type="button" class="btn-unstyled daily-profile-action-link" onclick="event.stopPropagation(); showAllProfileDailyTasks()">
+                        Показать все ${tasks.length}
+                    </button>
+                    <span class="daily-profile-actions-separator" aria-hidden="true">·</span>
+                    <button type="button" class="btn-unstyled daily-profile-action-link" onclick="event.stopPropagation(); collapseProfileDailyTasks()">
+                        Свернуть
+                    </button>
+                </div>
+            `;
+        } else {
+            toggle.innerHTML = `
+                <div class="daily-profile-actions">
+                    <button type="button" class="btn-unstyled daily-profile-action-link" onclick="event.stopPropagation(); collapseProfileDailyTasks()">
+                        Свернуть
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -208,19 +234,20 @@ function renderProfileDailyTaskRow(task) {
 
 function toggleProfileDailyTasks() {
     profileDailyExpanded = !profileDailyExpanded;
-    const card = document.getElementById('profile-daily-card');
-    const head = document.getElementById('profile-daily-head');
-    const expandedWrap = document.getElementById('profile-daily-expanded-wrap');
-    const toggle = document.getElementById('profile-daily-toggle');
+    if (!profileDailyExpanded) profileDailyShowAll = false;
+    renderProfileDailyTasks();
+}
 
-    if (card) card.classList.toggle('expanded', profileDailyExpanded);
-    if (head) head.setAttribute('aria-expanded', profileDailyExpanded ? 'true' : 'false');
-    if (expandedWrap) expandedWrap.classList.toggle('is-open', profileDailyExpanded);
-    if (toggle) toggle.style.display = profileDailyExpanded ? 'block' : 'none';
+function showAllProfileDailyTasks() {
+    profileDailyExpanded = true;
+    profileDailyShowAll = true;
+    renderProfileDailyTasks();
+}
 
-    if (!card || !expandedWrap) {
-        renderProfileDailyTasks();
-    }
+function collapseProfileDailyTasks() {
+    profileDailyExpanded = false;
+    profileDailyShowAll = false;
+    renderProfileDailyTasks();
 }
 
 async function claimProfileDailyTask(taskId, code) {
@@ -290,7 +317,7 @@ function renderDailyTasksModalState(message, showRetry = false) {
         list.innerHTML = `
             <div class="daily-tasks-modal-state">
                 ${escapeProfileHtml(message)}
-                ${showRetry ? '<br><button type="button" class="btn-unstyled profile-daily-toggle mt-2" onclick="openDailyTasksModal()">Повторить</button>' : ''}
+                ${showRetry ? '<br><button type="button" class="btn-unstyled daily-tasks-modal-retry mt-2" onclick="openDailyTasksModal()">Повторить</button>' : ''}
             </div>
         `;
     }
@@ -857,11 +884,7 @@ function renderCurrentUser(user) {
         avatar: user.custom_avatar
     });
 
-    if (userHash === lastUserUpdateHash) {
-        // Even if hash matches, ensure AuthManager has the latest ref
-        if (window.AuthManager) window.AuthManager.setGlobalUser(user);
-        return;
-    }
+    const userChanged = userHash !== lastUserUpdateHash;
     lastUserUpdateHash = userHash;
 
     // Update Global State
@@ -889,7 +912,9 @@ function renderCurrentUser(user) {
     }
 
     // Also update "My Stats" if needed
-    loadMyProfileStats();
+    if (userChanged || document.getElementById('profile-name-big')?.textContent === '...') {
+        loadMyProfileStats();
+    }
 }
 
 function renderAchievements(achievements) {
@@ -1291,6 +1316,8 @@ window.SocialManager = {
     getCachedUserStats: () => cachedUserStats,
     loadProfileDailyTasks,
     toggleProfileDailyTasks,
+    showAllProfileDailyTasks,
+    collapseProfileDailyTasks,
     claimProfileDailyTask,
     openDailyTasksModal,
     claimDailyTaskReward,
@@ -1315,6 +1342,8 @@ window.SocialManager = {
 window.loadMyProfileStats = loadMyProfileStats;
 window.loadProfileDailyTasks = loadProfileDailyTasks;
 window.toggleProfileDailyTasks = toggleProfileDailyTasks;
+window.showAllProfileDailyTasks = showAllProfileDailyTasks;
+window.collapseProfileDailyTasks = collapseProfileDailyTasks;
 window.claimProfileDailyTask = claimProfileDailyTask;
 window.openDailyTasksModal = openDailyTasksModal;
 window.claimDailyTaskReward = claimDailyTaskReward;
