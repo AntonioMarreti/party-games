@@ -851,6 +851,23 @@ body.dark-mode .profile-level-badge-float {
     -webkit-backdrop-filter: none !important;
 }
 
+.thermal-safe .profile-daily-card {
+    background: var(--thermal-surface-bg-strong) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
+}
+
+.thermal-safe .profile-daily-row {
+    background: var(--thermal-surface-muted) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: none !important;
+}
+
+.thermal-safe .profile-level-progress {
+    background: var(--thermal-surface-muted) !important;
+    border-color: var(--thermal-border) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .profile-daily-expanded-wrap,
     .profile-daily-row,

@@ -96,11 +96,8 @@ body {
 .thermal-safe *,
 .thermal-safe *::before,
 .thermal-safe *::after {
-    animation-duration: 0.1s !important;
-    animation-iteration-count: 1 !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    transition: none !important;
 }
 
 body.thermal-safe {
@@ -135,12 +132,11 @@ body.thermal-safe {
 .thermal-safe .game-catalog-header,
 .thermal-safe .catalog-game-card {
     /* Use solid surfaces without blur to save power, while keeping component layout and elevation. */
-    background: var(--bg-secondary) !important;
-    border: 1px solid var(--border-main) !important;
-    color: var(--text-main) !important;
+    background: var(--thermal-surface-bg) !important;
+    border: 1px solid var(--thermal-border) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: var(--shadow-main) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
 }
 
 .thermal-safe .glass *,
@@ -166,12 +162,12 @@ body.thermal-safe {
 
 .thermal-safe .fixed-bottom,
 .thermal-safe .fixed-top {
-    background-color: var(--bg-secondary);
+    background-color: var(--thermal-surface-bg);
 }
 
 .thermal-safe .header-bg {
     background: var(--primary-color) !important;
-    box-shadow: var(--shadow-strong) !important;
+    box-shadow: var(--thermal-shadow-card) !important;
 }
 
 .thermal-safe .login-bg-animated,
@@ -180,7 +176,25 @@ body.thermal-safe {
 }
 
 .thermal-safe .login-card {
-    background: var(--bg-secondary) !important;
+    background: var(--thermal-surface-bg-strong) !important;
     color: var(--text-main) !important;
     backdrop-filter: none !important;
+}
+
+.thermal-safe .modal-backdrop,
+.thermal-safe .custom-modal-overlay {
+    background: var(--thermal-overlay-bg) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
 }

@@ -138,6 +138,13 @@ body.thermal-safe {
     --shadow-main: 0 8px 22px rgba(31, 38, 135, 0.08);
     --shadow-strong: 0 14px 34px rgba(31, 38, 135, 0.12);
     --shadow-glow: 0 0 0 rgba(0, 0, 0, 0);
+    --thermal-surface-bg: #ffffff;
+    --thermal-surface-bg-strong: #ffffff;
+    --thermal-surface-muted: #f8f9fd;
+    --thermal-overlay-bg: rgba(17, 20, 36, 0.42);
+    --thermal-border: rgba(45, 52, 54, 0.08);
+    --thermal-shadow-soft: 0 8px 20px rgba(31, 38, 135, 0.07);
+    --thermal-shadow-card: 0 12px 28px rgba(31, 38, 135, 0.10);
 }
 
 body.dark-mode.thermal-safe {
@@ -150,6 +157,13 @@ body.dark-mode.thermal-safe {
     --text-muted: #cbd5e1;
     --border-main: rgba(255, 255, 255, 0.14);
     --border-glass: rgba(255, 255, 255, 0.14);
+    --thermal-surface-bg: #1e293b;
+    --thermal-surface-bg-strong: #243044;
+    --thermal-surface-muted: #162033;
+    --thermal-overlay-bg: rgba(2, 6, 23, 0.68);
+    --thermal-border: rgba(255, 255, 255, 0.14);
+    --thermal-shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.18);
+    --thermal-shadow-card: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 

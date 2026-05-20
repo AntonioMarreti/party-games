@@ -474,6 +474,31 @@
     -webkit-backdrop-filter: none !important;
 }
 
+.thermal-safe .daily-tasks-modal {
+    background: var(--thermal-surface-bg-strong) !important;
+    border: 1px solid var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-card) !important;
+}
+
+.thermal-safe .daily-tasks-modal-summary,
+.thermal-safe .daily-task-modal-row {
+    background: var(--thermal-surface-muted) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: none !important;
+}
+
+.thermal-safe .daily-task-modal-status-active {
+    background: var(--thermal-surface-bg-strong) !important;
+    border-color: var(--thermal-border) !important;
+    color: var(--text-muted) !important;
+}
+
+.thermal-safe .daily-task-modal-status-claim,
+.thermal-safe .daily-task-modal-status-claimed {
+    background: color-mix(in srgb, var(--primary-color), white 88%) !important;
+    color: var(--primary-color) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .daily-tasks-summary-bar-fill {
         transition: none !important;

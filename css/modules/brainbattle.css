@@ -864,3 +864,27 @@
         font-size: 16px;
     }
 }
+
+.thermal-safe .bb-glass-card,
+.thermal-safe .bb-game-badge,
+.thermal-safe .bb-question-card,
+.thermal-safe .bb-stage-card,
+.thermal-safe .bb-category-item,
+.thermal-safe .bb-result-card,
+.thermal-safe .bb-memory-card,
+.thermal-safe .bb-ai-summary-card,
+.thermal-safe .bb-round-context,
+.thermal-safe .bb-final-stat-card {
+    background: var(--thermal-surface-bg-strong) !important;
+    border: 1px solid var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.thermal-safe .bb-round-btn,
+.thermal-safe .bb-memory-option {
+    background: var(--thermal-surface-muted) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: none !important;
+}

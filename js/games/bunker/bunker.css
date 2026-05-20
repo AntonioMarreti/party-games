@@ -929,7 +929,6 @@ div:where(.swal2-popup) {
 /* === THERMAL SAFE MODE (Low Power / iOS) === */
 body.thermal-safe .bunker-theme-wrapper {
     background: #f0f2f5 !important;
-    transition: none !important;
     background-image: none !important;
 }
 
@@ -942,9 +941,7 @@ body.thermal-safe .bunker-intro-gradient {
 body.thermal-safe * {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: none !important;
     text-shadow: none !important;
-    transition: none !important;
 }
 
 /* Fallbacks */
@@ -957,6 +954,7 @@ body.thermal-safe .card,
 body.thermal-safe .game-setting-card {
     background: #ffffff !important;
     border: 1px solid #e0e0e0 !important;
+    box-shadow: var(--thermal-shadow-soft, 0 8px 20px rgba(31, 38, 135, 0.07)) !important;
 }
 
 body.thermal-safe .turn-indicator-floating {
@@ -992,7 +990,6 @@ body.thermal-safe .bunker-reveal-popup .bunker-reveal-header,
 body.thermal-safe .bunker-reveal-popup .reveal-card {
     opacity: 1 !important;
     transform: none !important;
-    transition: none !important;
 }
 
 body.thermal-safe .bunker-trait-card.just-revealed,
@@ -1000,8 +997,7 @@ body.thermal-safe .bunker-trait-card.just-revealed.reveal-ready,
 body.thermal-safe .bunker-trait-card.just-revealed.is-revealed {
     opacity: 1 !important;
     transform: none !important;
-    transition: none !important;
-    box-shadow: none !important;
+    box-shadow: var(--thermal-shadow-soft, 0 8px 20px rgba(31, 38, 135, 0.07)) !important;
 }
 
 body.thermal-safe .bunker-voting-screen h1,
