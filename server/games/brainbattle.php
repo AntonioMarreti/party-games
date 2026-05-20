@@ -117,6 +117,67 @@ function bbCalculateScore($gameType, $timeMs, $isCorrect)
     return (int) bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect)['final_score'];
 }
 
+function bbNormalizeAnswerValue($value)
+{
+    if (is_bool($value)) {
+        return $value ? '1' : '0';
+    }
+    if (is_int($value) || is_float($value)) {
+        return (string) (0 + $value);
+    }
+    if (is_string($value)) {
+        return trim($value);
+    }
+    return null;
+}
+
+function bbAnswersMatch($answer, $correctValue)
+{
+    $answerValue = bbNormalizeAnswerValue($answer);
+    $correctAnswerValue = bbNormalizeAnswerValue($correctValue);
+
+    if ($answerValue === null || $correctAnswerValue === null || $answerValue === '') {
+        return false;
+    }
+
+    if (is_numeric($answerValue) && is_numeric($correctAnswerValue)) {
+        return abs((float) $answerValue - (float) $correctAnswerValue) < 0.000001;
+    }
+
+    return hash_equals($correctAnswerValue, $answerValue);
+}
+
+function bbEvaluateSubmittedAnswer($gameType, $roundData, $answer, $timeMs)
+{
+    $gameType = (string) $gameType;
+
+    if ($gameType === 'reaction_test') {
+        return is_numeric($timeMs) && (float) $timeMs > 0 && (float) $timeMs < 9999;
+    }
+
+    if ($gameType === 'blind_timer') {
+        return is_numeric($timeMs) && (float) $timeMs >= 0 && (float) $timeMs <= 60000;
+    }
+
+    if ($gameType === 'timing_safe') {
+        if (!is_numeric($answer)) {
+            return false;
+        }
+        $position = (float) $answer;
+        return $position >= 40 && $position <= 60;
+    }
+
+    if ($gameType === 'defuse_numbers') {
+        return bbAnswersMatch($answer, 9);
+    }
+
+    if (!is_array($roundData) || !array_key_exists('correct_val', $roundData)) {
+        return false;
+    }
+
+    return bbAnswersMatch($answer, $roundData['correct_val']);
+}
+
 function bbBuildScoreBreakdown($gameType, $timeMs, $isCorrect, $meta = [])
 {
     $gameType = (string) $gameType;
@@ -419,9 +480,12 @@ function handleGameAction($pdo, $room, $user, $postData)
         if (isset($state['round_results'][$userId]))
             return ['status' => 'ok'];
 
-        $time = max(0, min(60000, (float) ($postData['time_ms'] ?? 0)));
-        $isCorrect = filter_var($postData['success'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $gameType = $state['previous_game_type'] ?? '';
+        $roundData = is_array($state['round_data'] ?? null) ? $state['round_data'] : [];
+        $answer = $postData['answer'] ?? null;
+        $time = max(0, min(60000, (float) ($postData['time_ms'] ?? 0)));
+        $clientMarkedCorrect = filter_var($postData['success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isCorrect = bbEvaluateSubmittedAnswer($gameType, $roundData, $answer, $time);
         $tooFastRejected = false;
 
         // Анти-чит: если ответ пришел быстрее 100мс - скорее всего это бот или баг
@@ -429,6 +493,17 @@ function handleGameAction($pdo, $room, $user, $postData)
         if ($time < 100 && $gameType !== 'blind_timer') {
             $isCorrect = false;
             $tooFastRejected = true;
+        }
+
+        if ($clientMarkedCorrect && !$isCorrect && class_exists('TelegramLogger')) {
+            TelegramLogger::logEvent('security', 'BrainBattle suspicious submit_result', [
+                'room_id' => (int) $room['id'],
+                'user_id' => (int) $user['id'],
+                'round_id' => (string) ($state['round_id'] ?? ''),
+                'game_type' => (string) $gameType,
+                'answer' => is_scalar($answer) || $answer === null ? $answer : '[non-scalar]',
+                'reason' => $tooFastRejected ? 'too_fast_rejected' : 'answer_mismatch',
+            ]);
         }
 
         $scoreBreakdown = bbBuildScoreBreakdown($gameType, $time, $isCorrect, [
@@ -440,7 +515,7 @@ function handleGameAction($pdo, $room, $user, $postData)
             'time' => $time,
             'correct' => $isCorrect,
             'score' => (int) $score,
-            'answer' => $postData['answer'] ?? null,
+            'answer' => $answer,
             'score_breakdown' => $scoreBreakdown
         ];
 

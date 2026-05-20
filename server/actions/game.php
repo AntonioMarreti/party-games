@@ -223,41 +223,66 @@ function action_finish_game_session($pdo, $user, $data)
 
 function action_game_action($pdo, $user, $data)
 {
-    $room = getRoom($user['id']);
-    if (!$room)
-        sendError('No room');
+    $gameName = null;
 
-    $gameName = $room['game_type'];
-    $gameFile = __DIR__ . "/../games/$gameName.php";
+    try {
+        $pdo->beginTransaction();
 
-    if (file_exists($gameFile)) {
+        // BrainBattle and other JSON-state games mutate rooms.game_state in handlers.
+        // Lock the room row before reading state so concurrent game_action requests
+        // serialize and cannot overwrite each other's fresh JSON state.
+        $stmt = $pdo->prepare("
+            SELECT r.*, rp.is_host
+            FROM room_players rp
+            JOIN rooms r ON r.id = rp.room_id
+            WHERE rp.user_id = ?
+            ORDER BY rp.id DESC
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->execute([$user['id']]);
+        $room = $stmt->fetch();
+
+        if (!$room) {
+            $pdo->rollBack();
+            sendError('No room');
+        }
+
+        $gameName = $room['game_type'];
+        $gameFile = __DIR__ . "/../games/$gameName.php";
+
+        if (!file_exists($gameFile)) {
+            $pdo->rollBack();
+            sendError('Game file not found');
+        }
+
         require_once $gameFile;
-        // Debug logging
         if (!function_exists('handleGameAction')) {
             TelegramLogger::log("API Error: handleGameAction not found after require", ['gameFile' => $gameFile]);
+            throw new Exception('Game action handler missing');
         }
-        try {
-            $pdo->beginTransaction();
-            // Assuming handleGameAction is defined in the game file
-            $result = handleGameAction($pdo, $room, $user, $data);
-            
-            // Persist the state if the game handler returned it
-            if (isset($result['state'])) {
-                $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
-                    ->execute([json_encode($result['state']), $room['id']]);
-            }
-            
-            $pdo->commit();
-            echo json_encode($result ?? ['status' => 'ok']);
-        } catch (Exception $e) {
-            if ($pdo->inTransaction())
-                $pdo->rollBack();
-            TelegramLogger::log("Game Action Error", ['error' => $e->getMessage(), 'game' => $gameName, 'data' => $data]);
-            // DEBUG: Expose error message to client
-            echo json_encode(['status' => 'error', 'message' => "Error: " . $e->getMessage()]);
+
+        $result = handleGameAction($pdo, $room, $user, $data);
+        if (($result['status'] ?? 'ok') === 'error') {
+            $pdo->rollBack();
+            echo json_encode($result);
+            return;
         }
-    } else {
-        sendError('Game file not found');
+
+        // Persist the state if the game handler returned it
+        if (isset($result['state'])) {
+            $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
+                ->execute([json_encode($result['state']), $room['id']]);
+        }
+
+        $pdo->commit();
+        echo json_encode($result ?? ['status' => 'ok']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction())
+            $pdo->rollBack();
+        TelegramLogger::log("Game Action Error", ['error' => $e->getMessage(), 'game' => $gameName, 'data' => $data]);
+        // DEBUG: Expose error message to client
+        echo json_encode(['status' => 'error', 'message' => "Error: " . $e->getMessage()]);
     }
 }
 

@@ -4,16 +4,8 @@
 
 function action_game_finished($pdo, $user, $data)
 {
-    // 1. Validation
-    $room = getRoom($user['id']);
-    if (!$room)
-        sendError('No room');
-
-    // Only Host can submit results to prevent cheating/spam
-    if (!$room['is_host'])
-        sendError('Only host can submit results');
-
-    $gameType = $room['game_type'];
+    $room = null;
+    $gameType = null;
     $playersData = $data['players_data'] ?? []; // Array of {user_id, rank, score, ...}
 
     // If sent as JSON string from client
@@ -21,16 +13,54 @@ function action_game_finished($pdo, $user, $data)
         $playersData = json_decode($playersData, true) ?? [];
     }
 
-    // Validate playersData is array
-    if (!is_array($playersData) || empty($playersData)) {
-        sendError('Invalid players data');
-    }
-
     try {
         $pdo->beginTransaction();
 
+        $stmt = $pdo->prepare("
+            SELECT r.*, rp.is_host
+            FROM room_players rp
+            JOIN rooms r ON r.id = rp.room_id
+            WHERE rp.user_id = ?
+            ORDER BY rp.id DESC
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->execute([$user['id']]);
+        $room = $stmt->fetch();
+
+        if (!$room) {
+            $pdo->rollBack();
+            sendError('No room');
+        }
+
+        // Only Host can submit results to prevent cheating/spam
+        if (!$room['is_host']) {
+            $pdo->rollBack();
+            sendError('Only host can submit results');
+        }
+
+        $gameType = $room['game_type'];
+        $state = json_decode($room['game_state'] ?? '', true);
+        if (is_array($state) && !empty($state['stats_recorded'])) {
+            $pdo->commit();
+            echo json_encode(['status' => 'ok', 'already_recorded' => true]);
+            return;
+        }
+
+        // Validate playersData is array
+        if (!is_array($playersData) || empty($playersData)) {
+            $pdo->rollBack();
+            sendError('Invalid players data');
+        }
+
         // Use Helper
         recordGameStats($pdo, $room, $playersData, (int) ($data['duration'] ?? 0));
+
+        if (is_array($state)) {
+            $state['stats_recorded'] = true;
+            $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
+                ->execute([json_encode($state), $room['id']]);
+        }
 
         // recordGameStats already handles the duration and history.
         // We REMOVE the automatic lobby jump here to allow users to see the results screen.
