@@ -281,8 +281,7 @@ function action_game_action($pdo, $user, $data)
         if ($pdo->inTransaction())
             $pdo->rollBack();
         TelegramLogger::log("Game Action Error", ['error' => $e->getMessage(), 'game' => $gameName, 'data' => $data]);
-        // DEBUG: Expose error message to client
-        echo json_encode(['status' => 'error', 'message' => "Error: " . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => 'Server Error']);
     }
 }
 
