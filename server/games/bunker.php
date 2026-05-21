@@ -629,9 +629,6 @@ function handleGameAction($pdo, $room, $user, $postData)
                         $voteTarget = $targets[array_rand($targets)];
                         $state['votes'][$pid] = $voteTarget;
                         $botsChanged = true;
-                        error_log("Bot Voted: Room {$room['id']}, Bot {$pidStr} -> Target {$voteTarget} (Phase: {$state['phase']})");
-                    } else {
-                        error_log("Bot No Targets: Room {$room['id']}, Bot {$pidStr} (Phase: {$state['phase']})");
                     }
                 }
             }
@@ -661,9 +658,6 @@ function handleGameAction($pdo, $room, $user, $postData)
                 $stmt->execute([$room['id'], $cidStr]);
                 if (!$stmt->fetchColumn())
                     continue;
-
-                // LOGGING
-                error_log("Bot Check Tie Reveal: Room {$room['id']}, Bot {$cidStr}");
 
                 if (in_array($cidStr, bunkerNormalizeIds($state['tie_revealed_players'] ?? []), true)) {
                     continue;
@@ -932,10 +926,6 @@ function handleGameAction($pdo, $room, $user, $postData)
                     $targetCards['health']['text'] .= ' (Вылечен)';
                     $healed = true;
                 }
-            }
-            // Also check condition
-            if (!$healed && isset($targetCards['condition'])) {
-                // Maybe cure condition? Complex. Let's stick to health card for now.
             }
 
             $stmt = $pdo->prepare("SELECT first_name FROM users WHERE id = ?");

@@ -287,7 +287,6 @@ function action_game_action($pdo, $user, $data)
 
 function action_send_reaction($pdo, $user, $data)
 {
-    global $room; // Potentially needed if used inside game context, but here we get room explicitly.
     $room = getRoom($user['id']);
     if (!$room)
         sendError('No room');

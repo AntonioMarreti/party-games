@@ -492,9 +492,6 @@ function action_get_stats($pdo, $user, $data)
         ];
     }
 
-    $stats['level'] = calculateLevel($stats['total_points_earned']);
-
-    // Add Level
     $stats['level'] = calculateLevel($stats['total_points_earned'] ?? 0);
 
     // Add Achievements
