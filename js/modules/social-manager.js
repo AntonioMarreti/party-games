@@ -890,6 +890,12 @@ function renderCurrentUser(user) {
     // Update Global State
     if (window.AuthManager) window.AuthManager.setGlobalUser(user);
     window.globalUser = user;
+    window.isTesterUser = user?.is_tester === true
+        || user?.is_tester === 1
+        || user?.is_tester === '1';
+    if (window.ScrollQA && typeof window.ScrollQA.refreshAccess === 'function') {
+        window.ScrollQA.refreshAccess(user);
+    }
 
     // Header Name
     if (window.safeText) window.safeText('user-name-display', user.custom_name || user.first_name);

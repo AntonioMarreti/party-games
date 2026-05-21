@@ -156,6 +156,24 @@
             </div>
         </div>
 
+        <!-- QA / TESTER TOOLS -->
+        <div class="settings-group mb-4 p-3" id="qa-tools-settings-group" style="display:none;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
+                        class="bi bi-tools me-2"></i>QA</h6>
+            </div>
+
+            <div class="settings-item border-0 pb-0 clickable" onclick="window.ScrollQA && window.ScrollQA.openTools()">
+                <div class="settings-label-wrap">
+                    <div class="fw-bold">QA tools</div>
+                    <div class="text-muted small">Scroll QA и debug info для тестеров</div>
+                </div>
+                <div class="menu-icon-wrap" style="background: var(--bg-glass); color: var(--primary-color);">
+                    <i class="bi bi-bug"></i>
+                </div>
+            </div>
+        </div>
+
 
         <div class="settings-group mb-4 p-3">
             <div class="d-flex align-items-center justify-content-between mb-2">

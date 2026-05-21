@@ -38,6 +38,17 @@
         return safeLocalStorageGet(STORAGE_KEY) === '1';
     }
 
+    function isTesterUser(user = window.globalUser) {
+        return user?.is_tester === true
+            || user?.is_tester === 1
+            || user?.is_tester === '1'
+            || window.isTesterUser === true;
+    }
+
+    function hasToolsAccess(user = window.globalUser) {
+        return isTesterUser(user) || isEnabled();
+    }
+
     function ensureStyles() {
         if (document.getElementById(STYLE_ID)) return;
         const style = document.createElement('style');
@@ -267,9 +278,23 @@
 
     function init() {
         syncFlagFromUrl();
+        refreshAccess();
         if (!isEnabled()) return;
         ensureStyles();
         ensureButton();
+    }
+
+    function refreshAccess(user = window.globalUser) {
+        const group = document.getElementById('qa-tools-settings-group');
+        if (group) {
+            group.style.display = hasToolsAccess(user) ? '' : 'none';
+        }
+        if (isEnabled()) {
+            ensureStyles();
+            ensureButton();
+        } else {
+            removeButton();
+        }
     }
 
     function ensureButton() {
@@ -282,8 +307,83 @@
         document.body.appendChild(button);
     }
 
-    function openPanel() {
+    function removeButton() {
+        document.getElementById(BUTTON_ID)?.remove();
+    }
+
+    function enableScrollQa() {
+        safeLocalStorageSet(STORAGE_KEY, '1');
         ensureStyles();
+        ensureButton();
+        refreshAccess();
+    }
+
+    function disableScrollQa() {
+        try {
+            if (window.localStorage) window.localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+            // noop
+        }
+        closePanel();
+        closeScenario();
+        removeButton();
+        refreshAccess();
+    }
+
+    function openTools() {
+        if (!hasToolsAccess()) return;
+        ensureStyles();
+        closeScenario();
+        let root = document.getElementById(ROOT_ID);
+        if (!root) {
+            root = document.createElement('div');
+            root.id = ROOT_ID;
+            document.body.appendChild(root);
+        }
+        const info = getDebugInfo();
+        root.className = 'is-open';
+        root.innerHTML = `
+            <div class="scroll-qa-shell" role="dialog" aria-modal="true" aria-label="QA tools">
+                <div class="scroll-qa-header">
+                    <div>
+                        <h2 class="scroll-qa-title">QA tools</h2>
+                        <div class="scroll-qa-subtitle">Видно только тестерам или при DEBUG_SCROLL_QA.</div>
+                    </div>
+                    <button class="scroll-qa-close" type="button" data-scroll-qa-close>×</button>
+                </div>
+                <div class="scroll-qa-body">
+                    <div class="scroll-qa-card">
+                        <strong>Android Scroll QA</strong>
+                        <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние: ${isEnabled() ? 'включено' : 'выключено'}</div>
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <button class="scroll-qa-action" type="button" data-scroll-qa-enable style="flex:1;">Открыть Scroll QA</button>
+                            <button class="scroll-qa-back" type="button" data-scroll-qa-disable style="min-width:96px;">Выключить</button>
+                        </div>
+                    </div>
+                    <div class="scroll-qa-card">
+                        <strong>Debug info</strong>
+                        <pre style="white-space:pre-wrap;word-break:break-word;margin:10px 0 0;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#334155;">${escapeHtml(JSON.stringify(info, null, 2))}</pre>
+                        <button class="scroll-qa-action" type="button" data-scroll-qa-copy style="margin-top:12px;">Скопировать debug info</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
+        root.querySelector('[data-scroll-qa-enable]')?.addEventListener('click', () => {
+            enableScrollQa();
+            openPanel();
+        });
+        root.querySelector('[data-scroll-qa-disable]')?.addEventListener('click', () => {
+            disableScrollQa();
+            openTools();
+        });
+        root.querySelector('[data-scroll-qa-copy]')?.addEventListener('click', () => copyDebugInfo(info));
+    }
+
+    function openPanel() {
+        if (!hasToolsAccess()) return;
+        ensureStyles();
+        enableScrollQa();
         closeScenario();
         let root = document.getElementById(ROOT_ID);
         if (!root) {
@@ -338,6 +438,89 @@
             root.innerHTML = '';
         }
         cleanupLeakedClasses();
+    }
+
+    function getAppBuildVersion() {
+        try {
+            const scripts = document.getElementsByTagName('script');
+            for (let i = 0; i < scripts.length; i++) {
+                const src = scripts[i].getAttribute('src') || '';
+                if (src.includes('js/app.js?v=')) {
+                    return src.split('v=')[1] || 'unknown';
+                }
+            }
+        } catch (e) {
+            // noop
+        }
+        return window.appVersion || 'unknown';
+    }
+
+    function getDebugInfo() {
+        const tg = window.Telegram?.WebApp;
+        const user = window.globalUser || null;
+        return {
+            user_id: user?.id || null,
+            telegram_id: user?.telegram_id || null,
+            is_tester: isTesterUser(user),
+            platform: tg?.platform || 'web',
+            app_version: getAppBuildVersion(),
+            debug_scroll_qa: isEnabled(),
+            debug_bb_touch: safeLocalStorageGet('DEBUG_BB_TOUCH') === '1',
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                visual_width: window.visualViewport ? Math.round(window.visualViewport.width) : null,
+                visual_height: window.visualViewport ? Math.round(window.visualViewport.height) : null
+            },
+            telegram: tg ? {
+                version: tg.version || null,
+                is_expanded: typeof tg.isExpanded === 'boolean' ? tg.isExpanded : null,
+                viewport_height: tg.viewportHeight || null,
+                viewport_stable_height: tg.viewportStableHeight || null
+            } : null,
+            url: window.location.href,
+            user_agent: navigator.userAgent
+        };
+    }
+
+    function copyDebugInfo(info = getDebugInfo()) {
+        const text = JSON.stringify(info, null, 2);
+        const done = () => {
+            if (window.showToast) window.showToast('Debug info скопирован');
+            else if (window.showAlert) window.showAlert('QA tools', 'Debug info скопирован', 'success');
+        };
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        } else {
+            fallbackCopy(text, done);
+        }
+    }
+
+    function fallbackCopy(text, done) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', 'readonly');
+        area.style.cssText = 'position:fixed;left:-9999px;top:0;';
+        document.body.appendChild(area);
+        area.select();
+        try {
+            document.execCommand('copy');
+            done();
+        } catch (e) {
+            if (window.showAlert) window.showAlert('QA tools', 'Не удалось скопировать debug info', 'error');
+        } finally {
+            area.remove();
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
     }
 
     function closeScenario() {
@@ -517,10 +700,17 @@
     }
 
     window.ScrollQA = {
+        openTools,
         open: openPanel,
         close: closePanel,
         closeScenario,
-        isEnabled
+        enable: enableScrollQa,
+        disable: disableScrollQa,
+        refreshAccess,
+        getDebugInfo,
+        copyDebugInfo,
+        isEnabled,
+        hasToolsAccess
     };
 
     if (document.readyState === 'loading') {
