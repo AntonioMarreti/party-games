@@ -5,6 +5,7 @@
     let brainBattleSummaryText = '';
     let brainBattleSummaryPending = null;
     let brainBattleSummaryKey = '';
+    let brainBattleFallbackSignature = '';
     let brainBattleDelegatedClicksBound = false;
     let activeRoundSessionId = 0;
     let activeRoundId = '';
@@ -54,8 +55,8 @@
     ];
 
     async function render_brainbattle(res) {
-
         const container = document.getElementById('game-area');
+        if (!container) return;
 
         // 1. ЗАГРУЗЧИК
         if (!window.BB_ENGINES_LOADED) {
@@ -85,7 +86,8 @@
                 window.BB_ENGINES_LOADED = true;
                 render_brainbattle(res);
             } catch (err) {
-                container.innerHTML = `<div class="alert alert-danger">Ошибка загрузки модулей: ${err.message}</div>`;
+                reportBrainBattleRenderError('engine_load_failed', err, res);
+                renderBrainBattleFallback(container, res);
             }
             return;
         }
@@ -96,15 +98,21 @@
             if (el) el.style.display = 'none';
         });
 
-        // CLEANUP OVERLAYS
-        const overlay = document.getElementById('bb-overlay-layer');
-        if (overlay && (!res.room.game_state || JSON.parse(res.room.game_state).phase !== 'playing')) {
-            overlay.remove();
-        }
-
         try {
-            if (!res.room.game_state) return;
-            const state = JSON.parse(res.room.game_state);
+            const state = parseBrainBattleState(res);
+            const validation = validateBrainBattleState(state, res);
+            if (!validation.valid) {
+                reportBrainBattleRenderError('invalid_state', new Error(validation.reason), res, state);
+                renderBrainBattleFallback(container, res);
+                return;
+            }
+
+            // CLEANUP OVERLAYS
+            const overlay = document.getElementById('bb-overlay-layer');
+            if (overlay && state.phase !== 'playing') {
+                overlay.remove();
+            }
+
             window.lastBBState = state; // Сохраняем стейт для финиша
             if (bbShouldIgnoreServerState(state)) return;
             const myId = String(res.user.id);
@@ -208,8 +216,112 @@
 
         } catch (e) {
             console.error("BB Render Error:", e);
+            reportBrainBattleRenderError('render_failed', e, res);
+            renderBrainBattleFallback(container, res);
         }
     }
+
+    function parseBrainBattleState(res) {
+        const rawState = res?.room?.game_state;
+        if (!rawState || String(rawState).trim() === '') {
+            throw new Error('BrainBattle game_state is empty');
+        }
+        if (typeof rawState === 'object') {
+            return rawState;
+        }
+        return JSON.parse(rawState);
+    }
+
+    function validateBrainBattleState(state, res = {}) {
+        if (!state || typeof state !== 'object' || Array.isArray(state)) {
+            return { valid: false, reason: 'game_state is not an object' };
+        }
+
+        const phase = String(state.phase || '');
+        if (!['setup', 'playing', 'game_over'].includes(phase)) {
+            return { valid: false, reason: 'missing or unknown phase' };
+        }
+
+        if (!Array.isArray(res.players)) {
+            return { valid: false, reason: 'players list is missing' };
+        }
+
+        if (!res.user || res.user.id === undefined || res.user.id === null) {
+            return { valid: false, reason: 'current user is missing' };
+        }
+
+        if (phase === 'playing') {
+            if (!Number.isFinite(Number(state.current_round)) || Number(state.current_round) < 1) {
+                return { valid: false, reason: 'current_round is missing for playing phase' };
+            }
+            if (!state.round_data || typeof state.round_data !== 'object' || Array.isArray(state.round_data)) {
+                return { valid: false, reason: 'round_data is missing for playing phase' };
+            }
+        }
+
+        if (phase === 'game_over' && (!state.scores || typeof state.scores !== 'object' || Array.isArray(state.scores))) {
+            return { valid: false, reason: 'scores are missing for game_over phase' };
+        }
+
+        return { valid: true };
+    }
+
+    function reportBrainBattleRenderError(reason, error, res = {}, state = null) {
+        const message = error?.message || String(error || reason);
+        console.error('BrainBattle fallback:', reason, error);
+        const signature = [
+            reason,
+            message,
+            res?.room?.id || '',
+            state?.phase || ''
+        ].join('|');
+        if (window.logClientError && brainBattleFallbackSignature !== signature) {
+            brainBattleFallbackSignature = signature;
+            window.logClientError('BrainBattle Render Fallback', error?.stack || message, {
+                reason,
+                room_id: res?.room?.id || null,
+                room_code: res?.room?.room_code || null,
+                phase: state?.phase || null
+            });
+        }
+    }
+
+    function renderBrainBattleFallback(container, res = {}) {
+        cleanupBrainBattleRound();
+        const overlay = document.getElementById('bb-overlay-layer');
+        if (overlay) overlay.remove();
+        brainBattleViewState.currentView = 'fallback';
+        brainBattleViewState.currentViewSignature = '';
+        window.__lastBrainBattleFallbackRes = res;
+
+        container.innerHTML = `
+            <div id="bb-wrapper" class="game-custom-wrapper px-3 d-flex flex-column align-items-center justify-content-center text-center" style="min-height: 100%; padding-top: calc(80px + env(safe-area-inset-top));">
+                <div class="bb-glass-card w-100" style="max-width: 420px;">
+                    <div class="mb-3 text-danger opacity-75"><i class="bi bi-exclamation-octagon" style="font-size: 42px;"></i></div>
+                    <h3 class="mb-2" style="color: var(--text-main);">Не удалось загрузить состояние игры</h3>
+                    <p class="text-muted mb-4">Попробуйте обновить игру или вернуться в комнату.</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <button type="button" class="btn btn-primary rounded-pill px-4" onclick="refreshBrainBattleFallback()">Обновить</button>
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" onclick="returnToRoomFromBrainBattleFallback()">Вернуться в комнату</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    window.refreshBrainBattleFallback = async function () {
+        if (typeof window.checkState === 'function') {
+            await window.checkState();
+        }
+    };
+
+    window.returnToRoomFromBrainBattleFallback = function () {
+        if (window.showScreen) window.showScreen('room');
+        const res = window.__lastBrainBattleFallbackRes;
+        if (res?.room && typeof window.renderLobby === 'function') {
+            window.renderLobby(res);
+        }
+    };
 
     function escapeHtml(value) {
         return String(value ?? '')
