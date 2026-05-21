@@ -31,6 +31,19 @@ register_shutdown_function(function () {
     ]);
 });
 
+// Reject forged webhook calls. When a secret token is configured, Telegram echoes
+// it back in this header on every webhook request; calls without the matching
+// token did not come from Telegram and must not be trusted.
+if (defined('BOT_WEBHOOK_SECRET') && BOT_WEBHOOK_SECRET !== '') {
+    $providedSecret = $_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] ?? '';
+    if (!hash_equals(BOT_WEBHOOK_SECRET, $providedSecret)) {
+        botWebhookLog('rejected_bad_secret', ['method' => $_SERVER['REQUEST_METHOD'] ?? '']);
+        http_response_code(403);
+        echo 'forbidden';
+        exit;
+    }
+}
+
 // Получаем данные от Telegram
 $rawInput = file_get_contents("php://input");
 $update = json_decode($rawInput, true);

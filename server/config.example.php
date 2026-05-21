@@ -14,6 +14,11 @@ define('BOT_TOKEN', '123456789:ABCDefGhIjKlMnOpQrStUvWxYz');
 define('LOG_CHANNEL_ID', '-100xxxxxxxxxx'); // Optional: Channel for logs
 define('BOT_USERNAME', 'your_bot_username');
 
+// Webhook secret token. Set this to a random string and pass the SAME value as
+// `secret_token` when registering the webhook (setWebhook). When set, bot.php
+// rejects any request whose X-Telegram-Bot-Api-Secret-Token header does not match.
+define('BOT_WEBHOOK_SECRET', '');
+
 // Telegram Login (OIDC) — from BotFather > Web Login
 define('TG_CLIENT_ID', 'your_bot_id');
 define('TG_CLIENT_SECRET', 'your_client_secret');
