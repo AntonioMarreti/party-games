@@ -1,0 +1,48 @@
+name: Gameplay bug
+description: Game flow, scoring, phase, bots, history or UX issue
+title: "[Gameplay]: "
+labels: ["bug", "gameplay", "needs-repro"]
+body:
+  - type: dropdown
+    id: game
+    attributes:
+      label: Game
+      options:
+        - BrainBattle
+        - Bunker
+        - PartyBattle
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: room-type
+    attributes:
+      label: Room type
+      placeholder: "public/private/scheduled"
+  - type: input
+    id: players
+    attributes:
+      label: Players / bots count
+      placeholder: "2 humans, 3 bots"
+  - type: input
+    id: phase
+    attributes:
+      label: Phase
+      placeholder: "setup, playing, voting, final..."
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: debug-info
+    attributes:
+      label: Logs / debug info
+      description: Paste copied QA tools debug info and any console/API notes.

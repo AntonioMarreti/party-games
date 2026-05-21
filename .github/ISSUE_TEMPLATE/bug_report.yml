@@ -1,0 +1,46 @@
+name: Bug report
+description: General app bug report
+title: "[Bug]: "
+labels: ["bug", "needs-repro"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Device / platform
+      placeholder: "iPhone 15 Pro, Android, desktop Chrome..."
+  - type: input
+    id: build
+    attributes:
+      label: App build
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots / video
+  - type: textarea
+    id: debug-info
+    attributes:
+      label: Debug info
+      description: Paste QA tools debug info or copied bug report footer.

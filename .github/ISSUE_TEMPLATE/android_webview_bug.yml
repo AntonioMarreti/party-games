@@ -1,0 +1,52 @@
+name: Android WebView bug
+description: Android Telegram WebView scroll/touch/layout issue
+title: "[Android WebView]: "
+labels: ["bug", "android", "telegram-webview", "scroll-touch", "needs-repro"]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Android device
+      placeholder: "Samsung A52, Pixel 7..."
+    validations:
+      required: true
+  - type: input
+    id: telegram-version
+    attributes:
+      label: Telegram version
+  - type: input
+    id: screen
+    attributes:
+      label: Screen / scenario
+      placeholder: "BrainBattle final, Bunker outro, Daily modal..."
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: Scroll / touch issue
+      description: What does not scroll or react correctly?
+    validations:
+      required: true
+  - type: textarea
+    id: swipe-start
+    attributes:
+      label: Where does the swipe start?
+      placeholder: "text, card, empty background, button area..."
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots / video
+  - type: textarea
+    id: debug-info
+    attributes:
+      label: Debug info
+      description: Paste copied QA tools debug info.

@@ -4,6 +4,7 @@
     const ROOT_ID = 'scroll-qa-root';
     const BUTTON_ID = 'scroll-qa-button';
     const STYLE_ID = 'scroll-qa-styles';
+    const TESTER_CHAT_URL = 'https://t.me/+w6d97lbezTlmYzky';
 
     const longParagraph = 'Проверьте свайп с этого текста, с карточек, с пустого фона и рядом с кнопками. Контент должен прокручиваться до самого низа без второго внутреннего скролла.';
 
@@ -353,6 +354,14 @@
                 </div>
                 <div class="scroll-qa-body">
                     <div class="scroll-qa-card">
+                        <strong>Тестирование</strong>
+                        <div class="scroll-qa-muted" style="margin-top:4px;">Чат, баг-репорт и быстрый доступ к Scroll QA.</div>
+                        <div style="display:grid;gap:8px;margin-top:12px;">
+                            <button class="scroll-qa-action" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
+                            <button class="scroll-qa-action" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
+                        </div>
+                    </div>
+                    <div class="scroll-qa-card">
                         <strong>Android Scroll QA</strong>
                         <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние: ${isEnabled() ? 'включено' : 'выключено'}</div>
                         <div style="display:flex;gap:8px;margin-top:12px;">
@@ -369,6 +378,8 @@
             </div>
         `;
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
+        root.querySelector('[data-scroll-qa-chat]')?.addEventListener('click', openTesterChat);
+        root.querySelector('[data-scroll-qa-bug-report]')?.addEventListener('click', () => copyBugReport(info));
         root.querySelector('[data-scroll-qa-enable]')?.addEventListener('click', () => {
             enableScrollQa();
             openPanel();
@@ -378,6 +389,23 @@
             openTools();
         });
         root.querySelector('[data-scroll-qa-copy]')?.addEventListener('click', () => copyDebugInfo(info));
+    }
+
+    function openTesterChat() {
+        try {
+            if (window.Telegram?.WebApp?.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(TESTER_CHAT_URL);
+                return;
+            }
+        } catch (e) {
+            // Fallback below.
+        }
+
+        try {
+            window.open(TESTER_CHAT_URL, '_blank', 'noopener');
+        } catch (e) {
+            window.location.href = TESTER_CHAT_URL;
+        }
     }
 
     function openPanel() {
@@ -488,6 +516,47 @@
         const done = () => {
             if (window.showToast) window.showToast('Debug info скопирован');
             else if (window.showAlert) window.showAlert('QA tools', 'Debug info скопирован', 'success');
+        };
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        } else {
+            fallbackCopy(text, done);
+        }
+    }
+
+    function buildBugReport(info = getDebugInfo()) {
+        const device = info.telegram?.platform || info.platform || 'unknown';
+        const viewport = `${info.viewport?.width || '?'}x${info.viewport?.height || '?'}`;
+        return [
+            'Что произошло:',
+            '',
+            'Что ожидал:',
+            '',
+            'Где в приложении:',
+            '',
+            'Шаги:',
+            '1.',
+            '2.',
+            '3.',
+            '',
+            `Устройство: ${device}, viewport ${viewport}`,
+            `OS / Telegram / Browser: ${info.user_agent || 'unknown'}`,
+            `App build: ${info.app_version || 'unknown'}`,
+            `User ID: ${info.user_id || 'unknown'}`,
+            `URL: ${info.url || window.location.href}`,
+            '',
+            'Скрин/видео:',
+            '',
+            'Debug info:',
+            JSON.stringify(info, null, 2)
+        ].join('\n');
+    }
+
+    function copyBugReport(info = getDebugInfo()) {
+        const text = buildBugReport(info);
+        const done = () => {
+            if (window.showToast) window.showToast('Шаблон баг-репорта скопирован');
+            else if (window.showAlert) window.showAlert('QA tools', 'Шаблон баг-репорта скопирован', 'success');
         };
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
@@ -709,6 +778,8 @@
         refreshAccess,
         getDebugInfo,
         copyDebugInfo,
+        copyBugReport,
+        openTesterChat,
         isEnabled,
         hasToolsAccess
     };
