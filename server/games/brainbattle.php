@@ -559,6 +559,48 @@ function handleGameAction($pdo, $room, $user, $postData)
         return ['status' => 'ok'];
     }
 
+    if ($type === 'tick') {
+        // action_game_action only reaches this handler for active room_players.
+        // Tick materializes bots/timeouts under the existing room row lock, but
+        // never advances rounds or records final stats/history by itself.
+        if (($state['phase'] ?? '') !== 'playing') {
+            return ['status' => 'ok', 'changed' => false, 'noop' => 'not_playing'];
+        }
+
+        $beforeResults = json_encode($state['round_results'] ?? []);
+        $beforeScores = json_encode($state['scores'] ?? []);
+        $beforeRoundChatSent = !empty($state['round_chat_sent']);
+
+        processBots($pdo, $room['id'], $state);
+        bbTimeoutMissingHumanAnswers($pdo, $room, $state);
+
+        $afterResults = json_encode($state['round_results'] ?? []);
+        $afterScores = json_encode($state['scores'] ?? []);
+        $afterRoundChatSent = !empty($state['round_chat_sent']);
+        $changed = $beforeResults !== $afterResults
+            || $beforeScores !== $afterScores
+            || $beforeRoundChatSent !== $afterRoundChatSent;
+
+        if (!$changed) {
+            return ['status' => 'ok', 'changed' => false];
+        }
+
+        bbStoreRoundHistoryEntry($state);
+        updateGameState($room['id'], $state);
+
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logEvent('game', 'brainbattle_tick_changed', [
+                'room_id' => (int) ($room['id'] ?? 0),
+                'room_code' => $room['room_code'] ?? null,
+                'actor_user_id' => (int) ($user['id'] ?? 0),
+                'round' => (int) ($state['current_round'] ?? 0),
+                'round_id' => (string) ($state['round_id'] ?? ''),
+            ]);
+        }
+
+        return ['status' => 'ok', 'changed' => true];
+    }
+
     if ($type === 'submit_result') {
         if (($state['phase'] ?? '') !== 'playing') {
             return ['status' => 'error', 'message' => 'Раунд уже не активен'];
@@ -681,10 +723,41 @@ function bbRecordFinalStatsIfNeeded($pdo, $room, &$state)
         return;
     }
 
+    // BrainBattle progression uses active room_players; final stats must not
+    // reward users who already left the room during the match.
+    $activePlayerIds = bbGetPlayerIds($pdo, $room['id']);
+    $activePlayerLookup = array_fill_keys(array_map('strval', $activePlayerIds), true);
+    if (empty($activePlayerLookup)) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logEvent('game', 'brainbattle_final_stats_no_active_players', [
+                'room_id' => (int) ($room['id'] ?? 0),
+                'room_code' => $room['room_code'] ?? null,
+                'score_user_ids' => array_map('strval', array_keys($scores)),
+            ]);
+        }
+        return;
+    }
+
+    $scoreUserIds = array_map('strval', array_keys($scores));
+    $filteredOutUserIds = array_values(array_diff($scoreUserIds, array_keys($activePlayerLookup)));
+    if (!empty($filteredOutUserIds) && class_exists('TelegramLogger')) {
+        TelegramLogger::logEvent('game', 'brainbattle_final_stats_filtered_leavers', [
+            'room_id' => (int) ($room['id'] ?? 0),
+            'room_code' => $room['room_code'] ?? null,
+            'score_user_ids' => $scoreUserIds,
+            'active_player_ids' => array_keys($activePlayerLookup),
+            'filtered_out_user_ids' => $filteredOutUserIds,
+        ]);
+    }
+
     arsort($scores);
     $playersData = [];
     $rank = 1;
     foreach ($scores as $playerId => $score) {
+        if (empty($activePlayerLookup[(string) $playerId])) {
+            continue;
+        }
+
         $playersData[] = [
             'user_id' => (int) $playerId,
             'rank' => $rank,
