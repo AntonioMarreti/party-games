@@ -1,5 +1,6 @@
 <?php
 header('Content-Type: application/json');
+header('X-Content-Type-Options: nosniff');
 
 require_once 'config.php';
 require_once 'auth.php';

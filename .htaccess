@@ -19,7 +19,17 @@ Options -Indexes
     Deny from all
 </FilesMatch>
 
-# Optional: Force HTTPS (uncomment if needed)
-# RewriteEngine On
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Force HTTPS. The second condition avoids a redirect loop when TLS is
+# terminated by an upstream proxy (e.g. Cloudflare) that talks HTTP to the origin.
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    # Telegram Mini Apps are framed by Telegram clients, so framing is restricted
+    # to self and Telegram rather than denied outright.
+    Header always set Content-Security-Policy "frame-ancestors 'self' https://*.telegram.org"
+</IfModule>
