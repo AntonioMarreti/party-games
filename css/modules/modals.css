@@ -287,6 +287,8 @@
     max-height: min(82vh, 620px);
     display: flex;
     flex-direction: column;
+    background: var(--app-surface-strong, #ffffff);
+    color: var(--app-text, #2D3436);
 }
 
 .daily-tasks-modal-header {
@@ -319,7 +321,7 @@
     gap: 12px;
     padding: 12px;
     border-radius: 18px;
-    background: var(--bg-secondary);
+    background: var(--app-bg, #F8F9FD);
     border: 1px solid var(--border-main);
 }
 
@@ -353,7 +355,7 @@
     height: 6px;
     margin: 10px 2px 14px;
     border-radius: 999px;
-    background: var(--bg-secondary);
+    background: color-mix(in srgb, var(--primary-color), transparent 88%);
     overflow: hidden;
 }
 
@@ -402,7 +404,7 @@
     gap: 12px;
     padding: 10px 11px;
     border-radius: 16px;
-    background: var(--bg-secondary);
+    background: var(--app-surface, #ffffff);
     border: 1px solid var(--border-main);
 }
 
@@ -461,7 +463,7 @@
 .daily-task-modal-status-active {
     border: 1px solid var(--border-main);
     color: var(--text-muted);
-    background: var(--bg-card);
+    background: var(--app-bg, #F8F9FD);
 }
 
 .daily-task-modal-status-claim {

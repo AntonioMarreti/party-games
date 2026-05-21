@@ -2,16 +2,26 @@
     /* === Multi-Mode Theme Tokens === */
 
     /* 1. Surfaces & Backgrounds */
-    --bg-app: #F8F9FD;
-    --bg-secondary: #ffffff;
-    --bg-card: rgba(255, 255, 255, 0.65);
-    --bg-glass: rgba(255, 255, 255, 0.75);
-    --bg-glass-strong: rgba(255, 255, 255, 0.9);
+    --app-bg: #F8F9FD;
+    --app-surface: #ffffff;
+    --app-surface-card: rgba(255, 255, 255, 0.65);
+    --app-surface-glass: rgba(255, 255, 255, 0.75);
+    --app-surface-strong: rgba(255, 255, 255, 0.96);
+    --bg-app: var(--app-bg);
+    --bg-secondary: var(--app-surface);
+    --bg-card: var(--app-surface-card);
+    --bg-glass: var(--app-surface-glass);
+    --bg-glass-strong: var(--app-surface-strong);
 
     /* 2. Typography */
-    --text-main: #2D3436;
-    --text-muted: #999999;
+    --app-text: #2D3436;
+    --app-text-muted: #727783;
+    --text-main: var(--app-text);
+    --text-muted: var(--app-text-muted);
     --text-on-accent: #FFFFFF;
+    --text-on-dark: rgba(255, 255, 255, 0.94);
+    --text-on-dark-muted: rgba(255, 255, 255, 0.74);
+    --link-on-dark: rgba(255, 255, 255, 0.92);
 
     /* 3. Borders & Dividers */
     --border-main: #f0f0f0;
@@ -20,7 +30,7 @@
 
     /* 4. Brand & Accent (Synced with TG or Custom) */
     --primary-color: #6C5CE7;
-    --accent-color: var(--tg-theme-accent-text-color, #00CEC9);
+    --accent-color: #00CEC9;
 
     /* 5. Gradients & Dynamic Styles */
     --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
@@ -63,28 +73,40 @@
     /* Dynamic UI Borders */
     --border-color: #f0f0f0;
 
-    /* Telegram Fallbacks */
-    --bg-app: var(--tg-theme-bg-color, #F8F9FD);
-    --bg-secondary: var(--tg-theme-secondary-bg-color, #ffffff);
+    /* Telegram chrome colors are intentionally separate from app surfaces.
+       Some Telegram Desktop themes expose very dark/purple variables, so
+       internal cards/modals must keep stable app tokens for contrast. */
+    --tg-chrome-bg: var(--tg-theme-bg-color, #F8F9FD);
+    --tg-chrome-secondary-bg: var(--tg-theme-secondary-bg-color, #ffffff);
     --bg-dark: #0f172a;
 }
 
 /* === DARK MODE OVERRIDES === */
 body.dark-mode {
     /* Backgrounds - Premium Dark Slate/Telegram Mix */
-    --bg-app: #0f172a;
+    --app-bg: #0f172a;
+    --bg-app: var(--app-bg);
     /* Deeper slate for better contrast */
-    --bg-secondary: #1e293b;
-    --bg-card: rgba(30, 41, 59, 0.7);
-    --bg-glass: rgba(15, 23, 42, 0.6);
-    --bg-glass-strong: rgba(15, 23, 42, 0.9);
+    --app-surface: #1e293b;
+    --app-surface-card: rgba(30, 41, 59, 0.7);
+    --app-surface-glass: rgba(15, 23, 42, 0.6);
+    --app-surface-strong: rgba(15, 23, 42, 0.9);
+    --bg-secondary: var(--app-surface);
+    --bg-card: var(--app-surface-card);
+    --bg-glass: var(--app-surface-glass);
+    --bg-glass-strong: var(--app-surface-strong);
     --bg-dark: #020617;
 
     /* Text */
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
+    --app-text: #f1f5f9;
+    --app-text-muted: #94a3b8;
+    --text-main: var(--app-text);
+    --text-muted: var(--app-text-muted);
     --text-light: #ffffff;
     --text-on-accent: #ffffff;
+    --text-on-dark: rgba(255, 255, 255, 0.94);
+    --text-on-dark-muted: rgba(255, 255, 255, 0.76);
+    --link-on-dark: rgba(255, 255, 255, 0.94);
 
     /* Status Colors - slightly more vibrant for dark mode */
     --status-success: #00d1a0;

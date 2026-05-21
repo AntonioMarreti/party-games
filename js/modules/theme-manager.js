@@ -14,6 +14,18 @@ const DEFAULT_SETTINGS = {
 let appSettings = Object.assign({}, DEFAULT_SETTINGS); // Initialize with defaults immediately
 // will be merged with storage in loadSettings()
 
+function getTelegramColorScheme() {
+    try {
+        return window.Telegram?.WebApp?.colorScheme || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function syncTelegramThemeClass() {
+    document.body.classList.toggle('tg-dark-theme', getTelegramColorScheme() === 'dark');
+}
+
 // === THEME MANAGEMENT ===
 // Internal function: Dynamic style injection to fix Safari/WebKit repaint bug
 function _updateThemeStyles(explicitColor = null) {
@@ -99,6 +111,12 @@ function loadSettings() {
 
     applySettings();
     syncUI();
+
+    try {
+        window.Telegram?.WebApp?.onEvent?.('themeChanged', syncTelegramThemeClass);
+    } catch (e) {
+        // Theme event is optional outside Telegram.
+    }
 }
 
 function applySettings() {
@@ -110,6 +128,7 @@ function applySettings() {
     body.classList.toggle('simple-bg', !!appSettings.simpleBg);
     body.classList.toggle('large-font', !!appSettings.largeFont);
     body.classList.toggle('thermal-safe', !!appSettings.thermalSafe);
+    syncTelegramThemeClass();
 
     // Refresh theme if dark mode changed (to update mix colors)
     const savedColor = localStorage.getItem('pgb_accent_color');

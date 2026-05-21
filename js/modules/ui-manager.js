@@ -343,8 +343,8 @@ function showAlert(title, message, type = 'info') { // type: info, success, erro
 
     const alertHtml = `
     <div id="${alertId}" class="custom-modal-overlay active show" style="z-index: 100000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
-        <div class="custom-modal-content p-4 text-center animate__animated animate__zoomIn" style="border-radius: 28px; background: var(--tg-theme-bg-color, var(--bs-body-bg, #1a1d24)); border: 1px solid rgba(128,128,128,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.5); max-width: 320px; width: 90%; color: var(--tg-theme-text-color, var(--bs-body-color, #fff));">
-            <div class="text-${colorMap[type]} mb-3 d-flex justify-content-center align-items-center mx-auto" style="width: 60px; height: 60px; border-radius: 50%; background: var(--tg-theme-secondary-bg-color, rgba(128,128,128,0.15)); font-size: 1.8rem;">
+        <div class="custom-modal-content p-4 text-center animate__animated animate__zoomIn" style="border-radius: 28px; background: var(--bg-glass-strong, #ffffff); border: 1px solid var(--border-glass, rgba(128,128,128,0.2)); box-shadow: var(--shadow-strong, 0 20px 40px rgba(0,0,0,0.18)); max-width: 320px; width: 90%; color: var(--text-main, #2D3436);">
+            <div class="text-${colorMap[type]} mb-3 d-flex justify-content-center align-items-center mx-auto" style="width: 60px; height: 60px; border-radius: 50%; background: var(--bg-secondary, rgba(128,128,128,0.15)); font-size: 1.8rem;">
                 <i class="bi ${iconMap[type]}"></i>
             </div>
             <h5 class="fw-bold mb-2">${title}</h5>
