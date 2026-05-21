@@ -73,7 +73,15 @@ function bbGetPlayerIds($pdo, $roomId)
 
 function bbGetHumanIds($pdo, $roomId)
 {
-    $stmt = $pdo->prepare("SELECT rp.user_id FROM room_players rp JOIN users u ON u.id = rp.user_id WHERE rp.room_id = ? AND u.is_bot = 0 ORDER BY rp.id ASC");
+    $stmt = $pdo->prepare("
+        SELECT rp.user_id
+        FROM room_players rp
+        JOIN users u ON u.id = rp.user_id
+        WHERE rp.room_id = ?
+          AND COALESCE(rp.is_bot, 0) = 0
+          AND COALESCE(u.is_bot, 0) = 0
+        ORDER BY rp.id ASC
+    ");
     $stmt->execute([$roomId]);
     return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 }
@@ -1454,7 +1462,13 @@ function processBots($pdo, $roomId, &$state)
     }
 
     // 1. Get Bots in Room
-    $stmt = $pdo->prepare("SELECT u.* FROM room_players rp JOIN users u ON rp.user_id = u.id WHERE rp.room_id = ? AND u.is_bot = 1");
+    $stmt = $pdo->prepare("
+        SELECT u.*
+        FROM room_players rp
+        JOIN users u ON rp.user_id = u.id
+        WHERE rp.room_id = ?
+          AND (COALESCE(rp.is_bot, 0) = 1 OR COALESCE(u.is_bot, 0) = 1)
+    ");
     $stmt->execute([$roomId]);
     $bots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

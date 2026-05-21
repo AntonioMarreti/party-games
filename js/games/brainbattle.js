@@ -6,10 +6,16 @@
     let brainBattleSummaryPending = null;
     let brainBattleSummaryKey = '';
     let brainBattleFallbackSignature = '';
+    let brainBattleAutoTickInterval = null;
+    let brainBattleAutoTickInFlight = false;
+    let brainBattleAutoTickWarnedAt = 0;
+    let brainBattleAutoTickRoomKey = '';
+    let brainBattleAutoTickSnapshot = null;
     let brainBattleDelegatedClicksBound = false;
     let activeRoundSessionId = 0;
     let activeRoundId = '';
     const BRAINBATTLE_SUMMARY_VERSION = 2;
+    const BRAINBATTLE_AUTO_TICK_MS = 8000;
     const brainBattleTimeouts = new Set();
     const brainBattleIntervals = new Set();
     const brainBattleAnimationFrames = new Set();
@@ -102,6 +108,7 @@
             const state = parseBrainBattleState(res);
             const validation = validateBrainBattleState(state, res);
             if (!validation.valid) {
+                stopBrainBattleAutoTick('invalid_state', { reason: validation.reason });
                 reportBrainBattleRenderError('invalid_state', new Error(validation.reason), res, state);
                 renderBrainBattleFallback(container, res);
                 return;
@@ -114,6 +121,7 @@
             }
 
             window.lastBBState = state; // Сохраняем стейт для финиша
+            syncBrainBattleAutoTick(state, res);
             if (bbShouldIgnoreServerState(state)) return;
             const myId = String(res.user.id);
 
@@ -192,6 +200,7 @@
                 }
             }
             else if (state.phase === 'game_over') {
+                stopBrainBattleAutoTick('game_over');
                 wrapper.classList.remove('bb-setup-mode');
                 bbResetViewRound();
                 const viewType = brainBattleViewState.reviewMode ? 'review' : 'final';
@@ -215,6 +224,7 @@
             }
 
         } catch (e) {
+            stopBrainBattleAutoTick('render_error', { message: e?.message || String(e) });
             console.error("BB Render Error:", e);
             reportBrainBattleRenderError('render_failed', e, res);
             renderBrainBattleFallback(container, res);
@@ -287,6 +297,7 @@
     }
 
     function renderBrainBattleFallback(container, res = {}) {
+        stopBrainBattleAutoTick('fallback');
         cleanupBrainBattleRound();
         const overlay = document.getElementById('bb-overlay-layer');
         if (overlay) overlay.remove();
@@ -322,6 +333,148 @@
             window.renderLobby(res);
         }
     };
+
+    function syncBrainBattleAutoTick(state, res = {}) {
+        const roomKey = getBrainBattleAutoTickRoomKey(res);
+        if (!state || state.phase !== 'playing' || res?.room?.status !== 'playing' || !roomKey) {
+            stopBrainBattleAutoTick('not_playing_or_room_inactive', {
+                phase: state?.phase || null,
+                room_status: res?.room?.status || null,
+                room_key: roomKey || null
+            });
+            return;
+        }
+
+        startBrainBattleAutoTick({
+            roomKey,
+            roomId: res?.room?.id || null,
+            roomCode: res?.room?.room_code || null,
+            phase: state.phase,
+            roundId: state.round_id || null,
+            currentRound: state.current_round || null
+        });
+    }
+
+    function startBrainBattleAutoTick(snapshot) {
+        if (brainBattleAutoTickInterval && brainBattleAutoTickRoomKey === snapshot.roomKey) {
+            brainBattleAutoTickSnapshot = snapshot;
+            debugBrainBattleAutoTick('already_running', {
+                phase: snapshot.phase,
+                room_key: snapshot.roomKey,
+                round_id: snapshot.roundId
+            });
+            return;
+        }
+
+        if (brainBattleAutoTickInterval) {
+            stopBrainBattleAutoTick('room_changed', {
+                previous_room_key: brainBattleAutoTickRoomKey,
+                next_room_key: snapshot.roomKey
+            });
+        }
+
+        brainBattleAutoTickRoomKey = snapshot.roomKey;
+        brainBattleAutoTickSnapshot = snapshot;
+        brainBattleAutoTickInterval = window.setInterval(runBrainBattleAutoTick, BRAINBATTLE_AUTO_TICK_MS);
+        debugBrainBattleAutoTick('start', {
+            interval_ms: BRAINBATTLE_AUTO_TICK_MS,
+            phase: snapshot.phase,
+            room_key: snapshot.roomKey,
+            room_id: snapshot.roomId,
+            room_code: snapshot.roomCode,
+            round_id: snapshot.roundId
+        });
+    }
+
+    function stopBrainBattleAutoTick(reason = 'stop', details = {}) {
+        if (!brainBattleAutoTickInterval) return;
+        clearInterval(brainBattleAutoTickInterval);
+        brainBattleAutoTickInterval = null;
+        brainBattleAutoTickRoomKey = '';
+        brainBattleAutoTickSnapshot = null;
+        debugBrainBattleAutoTick('stop', { reason, ...details });
+    }
+
+    async function runBrainBattleAutoTick() {
+        if (brainBattleAutoTickInFlight) return;
+
+        const gameScreen = document.getElementById('screen-game');
+        const isGameScreenActive = !gameScreen || gameScreen.classList.contains('active-screen');
+        const snapshot = brainBattleAutoTickSnapshot;
+        const selectedGameId = window.selectedGameId || '';
+        if (!isGameScreenActive || (selectedGameId && selectedGameId !== 'brainbattle') || !snapshot || snapshot.phase !== 'playing') {
+            stopBrainBattleAutoTick('runtime_guard', {
+                is_game_screen_active: isGameScreenActive,
+                selected_game_id: selectedGameId || null,
+                phase: snapshot?.phase || null,
+                room_key: snapshot?.roomKey || null
+            });
+            return;
+        }
+
+        if (typeof window.apiRequest !== 'function') {
+            debugBrainBattleAutoTick('api_missing');
+            return;
+        }
+
+        brainBattleAutoTickInFlight = true;
+        debugBrainBattleAutoTick('fired', {
+            room_key: snapshot.roomKey,
+            round_id: snapshot.roundId || null,
+            current_round: snapshot.currentRound || null
+        });
+        try {
+            const response = await window.apiRequest({ action: 'game_action', type: 'tick' });
+            debugBrainBattleAutoTick('response', {
+                status: response?.status || null,
+                changed: response?.changed === true,
+                noop: response?.noop || null
+            });
+            if (response?.status && response.status !== 'ok') {
+                warnBrainBattleAutoTick(response.message || response.status, snapshot);
+                return;
+            }
+            if (response?.status === 'ok' && response.changed === true && brainBattleAutoTickInterval && typeof window.checkState === 'function') {
+                await window.checkState();
+            }
+        } catch (error) {
+            warnBrainBattleAutoTick(error, snapshot);
+        } finally {
+            brainBattleAutoTickInFlight = false;
+        }
+    }
+
+    function getBrainBattleAutoTickRoomKey(res = {}) {
+        const roomId = res?.room?.id;
+        if (roomId !== undefined && roomId !== null && roomId !== '') {
+            return `id:${roomId}`;
+        }
+        const roomCode = res?.room?.room_code;
+        if (roomCode) {
+            return `code:${roomCode}`;
+        }
+        return '';
+    }
+
+    function debugBrainBattleAutoTick(event, details = {}) {
+        if (window.DEBUG_BRAINBATTLE_TICK !== true) return;
+        console.debug('[BrainBattle auto-tick]', event, details);
+    }
+
+    function warnBrainBattleAutoTick(error, snapshot = null) {
+        const now = Date.now();
+        if (now - brainBattleAutoTickWarnedAt <= 60000) return;
+
+        brainBattleAutoTickWarnedAt = now;
+        console.warn('BrainBattle auto tick failed:', error);
+        if (window.logClientError) {
+            window.logClientError('BrainBattle Auto Tick Failed', error?.stack || error?.message || String(error), {
+                phase: snapshot?.phase || null,
+                round_id: snapshot?.roundId || null,
+                room_key: snapshot?.roomKey || null
+            });
+        }
+    }
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -1517,8 +1670,8 @@
         const answeredCount = Object.keys(state.round_results || {}).length;
         const totalPlayers = res.players.length;
         const myRank = Math.max(1, sorted.findIndex(([uid]) => String(uid) === myId) + 1);
-        const waitingPlayers = res.players.filter((p) => !state.round_results[String(p.id)]);
-        const hasWaitingHumans = waitingPlayers.some((p) => Number(p.is_bot) !== 1);
+        const waitingPlayers = res.players.filter((p) => Number(p.is_bot) !== 1 && !state.round_results[String(p.id)]);
+        const hasWaitingHumans = waitingPlayers.length > 0;
         const isLastRound = state.current_round >= state.total_rounds;
         const canRevealCorrectAnswer = !hasWaitingHumans && typeof state.round_data?.correct_val !== 'undefined';
 
