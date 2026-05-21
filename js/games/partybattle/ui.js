@@ -1050,7 +1050,7 @@ window.PartyBattleUI = {
             : null;
 
         let html = `
-            <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column pb-results-screen" style="height: var(--pb-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px);">
                 <div class="header-container text-center mb-3 mt-2 px-3">
                     <div class="small text-uppercase fw-bold mb-2" style="color:var(--text-muted); letter-spacing:0.18em;">ФИНАЛ</div>
                     <i class="bi bi-trophy-fill display-4 mb-2 animate__animated animate__bounceIn" style="color: var(--primary-color);"></i>
@@ -1065,7 +1065,7 @@ window.PartyBattleUI = {
                     ` : ''}
                 </div>
                 
-                <div class="flex-grow-1 overflow-auto px-3 mb-4">
+                <div class="px-3 mb-4 pb-2">
                     ${hasScores ? sortedIds.map((uid, index) => {
             const score = scores[uid];
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
