@@ -9,6 +9,42 @@ if (!window.avatarDataMap) {
     window.avatarDataMap = {};
 }
 
+function avatarEsc(value) {
+    if (typeof window.safeHTML === 'function') return window.safeHTML(value);
+    return String(value == null ? '' : value).replace(/[&<>"']/g, '');
+}
+
+// Only http(s) and data:image URLs are allowed; quotes/brackets stripped so the
+// value cannot break out of an attribute or a CSS url('...').
+function safeAvatarUrl(url) {
+    if (typeof url !== 'string') return '';
+    const u = url.trim();
+    if (/^https?:\/\//i.test(u) || /^data:image\//i.test(u)) {
+        return u.replace(/["'<>\\]/g, '');
+    }
+    return '';
+}
+
+// Restricts a CSS color/gradient to a safe character set and blocks url()/expression.
+function safeAvatarColor(color) {
+    if (typeof color !== 'string') return '#eee';
+    const c = color.trim();
+    if (c && /^[#0-9a-z(),.%\s-]+$/i.test(c) && !/url|expression|javascript|image/i.test(c)) {
+        return c;
+    }
+    return '#eee';
+}
+
+// Resolves a legacy avatar path string and strips characters that could escape an attribute.
+function legacyAvatarPath(raw) {
+    let path = String(raw == null ? '' : raw).replace(/["'<>\\]/g, '');
+    if (!path.startsWith('http') && !path.startsWith('server/')) {
+        if (!path.startsWith('avatars/')) path = 'avatars/' + path;
+        path = 'server/' + path;
+    }
+    return path;
+}
+
 /**
  * Renders an avatar (Circle or Square) based on user data
  * @param {Object} user User object
@@ -34,20 +70,15 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     if (isLink) {
         // Return just the style string for background-image (Legacy support)
         if (user.photo_url && user.photo_url !== '🤖') {
-            return `background-image: url('${user.photo_url}')`;
+            return `background-image: url('${safeAvatarUrl(user.photo_url)}')`;
         } else if (user.custom_avatar) {
             try {
                 const cfg = JSON.parse(user.custom_avatar);
                 if (cfg.type !== 'emoji') {
-                    return `background-image: url('${cfg.src}')`;
+                    return `background-image: url('${safeAvatarUrl(cfg.src)}')`;
                 }
             } catch (e) {
-                let path = user.custom_avatar;
-                if (!path.startsWith('http') && !path.startsWith('server/')) {
-                    if (!path.startsWith('avatars/')) path = 'avatars/' + path;
-                    path = 'server/' + path;
-                }
-                return `background-image: url('${path}')`;
+                return `background-image: url('${legacyAvatarPath(user.custom_avatar)}')`;
             }
         }
         return `background-color: #bdc3c7;`;
@@ -64,24 +95,18 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
                 isEmoji = true;
-                emojiVal = cfg.value;
-                bgColor = cfg.bg || '#eee';
+                emojiVal = avatarEsc(cfg.value);
+                bgColor = safeAvatarColor(cfg.bg);
             } else {
-                innerContent = `<img src="${cfg.src}" style="${style}">`;
+                innerContent = `<img src="${safeAvatarUrl(cfg.src)}" style="${style}">`;
             }
         } catch (e) {
-            // Legacy path string
-            let path = user.custom_avatar;
-            if (!path.startsWith('http') && !path.startsWith('server/')) {
-                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
-                path = 'server/' + path;
-            }
-            innerContent = `<img src="${path}" style="${style}">`;
+            innerContent = `<img src="${legacyAvatarPath(user.custom_avatar)}" style="${style}">`;
         }
     }
     // 2. Photo URL (Telegram or External)
     else if (user.photo_url && user.photo_url.includes('http')) {
-        innerContent = `<img src="${user.photo_url}" style="${style}">`;
+        innerContent = `<img src="${safeAvatarUrl(user.photo_url)}" style="${style}">`;
     }
     // 3. Fallback (Initials or default)
     else {
@@ -143,23 +168,17 @@ export function openAvatarViewer(uidOrStr) {
 
     // Check Photo
     if (user.photo_url && user.photo_url !== '🤖') {
-        content = `<img src="${user.photo_url}" style="width:100%; height:100%; object-fit:cover;">`;
+        content = `<img src="${safeAvatarUrl(user.photo_url)}" style="width:100%; height:100%; object-fit:cover;">`;
     } else if (user.custom_avatar) {
         try {
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
-                content = `<div style="width:100%; height:100%; background:${cfg.bg}; display:flex; align-items:center; justify-content:center; font-size:120px;">${cfg.value}</div>`;
+                content = `<div style="width:100%; height:100%; background:${safeAvatarColor(cfg.bg)}; display:flex; align-items:center; justify-content:center; font-size:120px;">${avatarEsc(cfg.value)}</div>`;
             } else {
-                content = `<img src="${cfg.src}" style="width:100%; height:100%; object-fit:cover;">`;
+                content = `<img src="${safeAvatarUrl(cfg.src)}" style="width:100%; height:100%; object-fit:cover;">`;
             }
         } catch (e) {
-            // Drawn avatar path
-            let path = user.custom_avatar;
-            if (!path.startsWith('http') && !path.startsWith('server/')) {
-                if (!path.startsWith('avatars/')) path = 'avatars/' + path;
-                path = 'server/' + path;
-            }
-            content = `<img src="${path}" style="width:100%; height:100%; object-fit:cover;">`;
+            content = `<img src="${legacyAvatarPath(user.custom_avatar)}" style="width:100%; height:100%; object-fit:cover;">`;
         }
     } else {
         // UI Avatar fallback
