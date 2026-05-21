@@ -43,7 +43,7 @@ class TelegramLogger
             'chat_id' => LOG_CHANNEL_ID,
             'text' => $text,
             'parse_mode' => 'HTML'
-        ]);
+        ], self::LOG_TIMEOUT);
     }
 
     public static function logError($errorType, $errorData, $context = [])
@@ -84,7 +84,7 @@ class TelegramLogger
             'chat_id' => LOG_CHANNEL_ID,
             'text' => $message,
             'parse_mode' => 'HTML'
-        ]);
+        ], self::LOG_TIMEOUT);
     }
 
     public static function sendAnalytics($title, $text, $chatId = null)
@@ -123,7 +123,7 @@ class TelegramLogger
             'chat_id' => LOG_CHANNEL_ID,
             'text' => $text,
             'parse_mode' => 'HTML'
-        ]);
+        ], self::LOG_TIMEOUT);
     }
 
     public static function sendToUser($chatId, $message)
@@ -140,7 +140,11 @@ class TelegramLogger
 
     public static $lastError = null;
 
-    public static function sendRequest($method, $params = [])
+    // Shorter budget for log/telemetry calls so a slow proxy cannot stall a
+    // user-facing request for the full default timeout.
+    const LOG_TIMEOUT = 3;
+
+    public static function sendRequest($method, $params = [], $timeout = 5)
     {
         if (!defined('BOT_TOKEN')) {
             self::$lastError = "BOT_TOKEN not defined";
@@ -161,7 +165,8 @@ class TelegramLogger
         curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
 
         $result = curl_exec($ch);
 
