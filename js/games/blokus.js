@@ -3,15 +3,39 @@
  * Manages global state and orchestrates rendering.
  */
 
-// Global Scroll Lock (Modified)
+// Blokus needs a temporary viewport lock while the board is active. Keep it
+// scoped to this game so Android WebView scroll is restored after leaving.
 (function () {
+    if (document.getElementById('blokus-scroll-lock-style')) return;
     const style = document.createElement('style');
-    // Removed 'touch-action: none !important' to allow scrolling in menus
-    // Kept fixed positioning to prevent body bounce effects
-    // Added padding: 0 !important to remove global body padding which causes bottom strip
-    style.innerHTML = 'body, html { position: fixed; width: 100%; height: 100%; overflow: hidden; padding: 0 !important; margin: 0 !important; } .blokus-board { touch-action: none; }';
+    style.id = 'blokus-scroll-lock-style';
+    style.innerHTML = 'html.blokus-scroll-lock, body.blokus-scroll-lock { position: fixed; width: 100%; height: 100%; overflow: hidden; padding: 0 !important; margin: 0 !important; } .blokus-board { touch-action: none; }';
     document.head.appendChild(style);
 })();
+
+function enableBlokusScrollLock() {
+    document.documentElement.classList.add('blokus-scroll-lock');
+    document.body.classList.add('blokus-scroll-lock');
+}
+
+function disableBlokusScrollLock() {
+    document.documentElement.classList.remove('blokus-scroll-lock');
+    document.body.classList.remove('blokus-scroll-lock');
+    if (window.blokusState) {
+        window.blokusState.swipeActive = false;
+        window.blokusState.pieceSelectorOpen = false;
+        window.blokusState.headerMenuOpen = false;
+        window.blokusState.turnMenuOpen = false;
+    }
+}
+
+window.cleanupBlokusLifecycle = disableBlokusScrollLock;
+
+window.addEventListener('screenChanged', event => {
+    if (event?.detail?.screenId !== 'screen-game') {
+        disableBlokusScrollLock();
+    }
+});
 
 // Global state for UI
 if (typeof window.blokusState === 'undefined') {
@@ -38,7 +62,6 @@ if (typeof window.blokusState === 'undefined') {
 }
 
 function render_blokus(res) {
-
     // 0. Check Local Game Mode
     if (blokusState.isLocalGame) {
         if (!blokusState.game) {
@@ -53,7 +76,10 @@ function render_blokus(res) {
     } else {
         // 1. Parse Server State
         // Ensure res object and room exist (robustness)
-        if (!res || !res.room) return;
+        if (!res || !res.room) {
+            disableBlokusScrollLock();
+            return;
+        }
 
         let gameState = null;
         try {
@@ -62,9 +88,10 @@ function render_blokus(res) {
                 : res.room.game_state;
         } catch (e) { console.error("Parse error", e); }
 
-        if (!gameState) return; // Wait for valid state
-
-        if (!gameState) return; // Wait for valid state
+        if (!gameState) {
+            disableBlokusScrollLock();
+            return; // Wait for valid state
+        }
 
         blokusState.serverState = gameState;
         blokusState.players = res.players; // Store player metadata (names, avatars)
@@ -72,6 +99,7 @@ function render_blokus(res) {
         // 2. Determine My Color (Dynamic for 2/3 Player Modes)
         if (!res.players || !res.user) {
             console.warn("[Blokus] Missing players or user in res", res);
+            disableBlokusScrollLock();
             return;
         }
         const myIndex = res.players.findIndex(p => p.id == res.user.id);
@@ -117,7 +145,12 @@ function render_blokus(res) {
     }
 
     const container = document.getElementById('game-area');
-    if (!container) return;
+    if (!container) {
+        disableBlokusScrollLock();
+        return;
+    }
+
+    enableBlokusScrollLock();
 
     // 3. Build Static Wrapper if not present
     if (!document.querySelector('.blokus-wrapper')) {
@@ -507,4 +540,3 @@ window.blokusApplyMove = async function () {
 const originalPieceSelect = window.selectPiece;
 // We need to catch where selectPiece is defined. It's likely in ui.js or handlers.js. 
 // Since we are editing blokus.js which is the entry point, we can wrap standard UI interactions here if exposed.
-

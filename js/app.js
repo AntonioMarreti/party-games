@@ -444,6 +444,9 @@ window.checkState = async function () {
             if (gameType && gameType !== 'lobby') {
                 window.selectedGameId = gameType;
             }
+            if (gameType !== 'blokus' && typeof window.cleanupBlokusLifecycle === 'function') {
+                window.cleanupBlokusLifecycle();
+            }
             const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
                 ? window.AVAILABLE_GAMES.find(g => g.id === gameType)
                 : null;
@@ -481,6 +484,9 @@ window.checkState = async function () {
                     try {
                         renderFunc(res);
                     } catch (e) {
+                        if (gameType === 'blokus' && typeof window.cleanupBlokusLifecycle === 'function') {
+                            window.cleanupBlokusLifecycle();
+                        }
                         console.error('Game Render Error:', e);
                         const gameArea = document.getElementById('game-area');
                         if (gameArea) gameArea.innerHTML = `<div class="p-5 text-center"><h3 class="mb-3 text-danger">Ошибка отображения</h3><p class="text-muted mb-4">${e.message}</p><button class="btn btn-outline-danger" onclick="leaveRoom()">Выйти</button></div>`;

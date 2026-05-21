@@ -306,6 +306,9 @@ async function leaveRoom() {
     window.showConfirmation(title, text, async () => {
         isLeavingProcess = true;
         stopPolling();
+        if (typeof window.cleanupBlokusLifecycle === 'function') {
+            window.cleanupBlokusLifecycle();
+        }
 
         try {
             if (amIHost && typeof window.apiRequest === 'function') {
@@ -1230,6 +1233,9 @@ function stopPolling() {
 function renderLobby(res) {
     if (typeof window.document === 'undefined') return;
     document.body.classList.remove('wordclash-active'); // Cleanup WordClash state
+    if (typeof window.cleanupBlokusLifecycle === 'function') {
+        window.cleanupBlokusLifecycle();
+    }
 
     const codeDisplay = document.getElementById('room-code-display');
     if (codeDisplay) codeDisplay.innerText = res.room.room_code;
