@@ -252,8 +252,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.pendingScheduledGameDeepLinkHandled = false;
     }
 
-    fetchAppVersion();
-
     /* Main Application Logic
      */
     const hash = window.location.hash;
@@ -339,6 +337,13 @@ window.addEventListener('screenChanged', (e) => {
     }
 
     if (id === 'screen-settings' && window.syncColorButtonSelection) syncColorButtonSelection();
+
+    // Fetch the app version (external GitHub API call) only when the settings
+    // screen — the only place it is shown — is first opened.
+    if (id === 'screen-settings' && !window.appVersionFetched) {
+        window.appVersionFetched = true;
+        fetchAppVersion();
+    }
 
     const showcase = document.getElementById('screen-game-detail');
     if (id === 'screen-game-detail' && showcase && !showcase.dataset.swipeBound) {
