@@ -37,7 +37,7 @@ function action_admin_get_stats($pdo, $user, $data)
 
 function action_reset_leaderboard($pdo, $user, $data)
 {
-    // SECURITY: Demo only. Resets ALL stats.
+    require_admin($user);
 
     try {
         // Reset user_statistics to defaults
@@ -63,8 +63,7 @@ function action_reset_leaderboard($pdo, $user, $data)
 
 function action_seed_achievements($pdo, $user, $data)
 {
-    // Basic Security: Admin only
-    // if (!in_array($user['id'], ADMIN_IDS)) sendError('Access Denied');
+    require_admin($user);
 
     $achievements = [
         [
@@ -182,6 +181,8 @@ function action_seed_achievements($pdo, $user, $data)
 
 function action_setup_reactions($pdo, $user, $data)
 {
+    require_admin($user);
+
     try {
         // 1. Room Events Table
         $sql = "CREATE TABLE IF NOT EXISTS room_events (
