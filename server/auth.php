@@ -89,31 +89,8 @@ function registerOrLoginUser($tg_user, $platform = 'web', $device = null)
         $device = parseDeviceFromUA($ua);
     }
 
-    // Ensure user_sessions table exists (safe guard for environments without migration)
-    $pdo->exec("CREATE TABLE IF NOT EXISTS user_sessions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        auth_token VARCHAR(64) UNIQUE NOT NULL,
-        platform ENUM('tma','web','dev') DEFAULT 'web',
-        device VARCHAR(150) DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_used DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_token (auth_token),
-        INDEX idx_user (user_id),
-        INDEX idx_last (last_used)
-    )");
-
-    // Add session_ttl_days to users if missing (idempotent)
-    try {
-        $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS session_ttl_days INT DEFAULT 30");
-    } catch (\Exception $e) {
-        // Column may already exist in older MySQL — ignore
-    }
-
-    // Migrate existing tokens from users table (one-time, safe to run multiple times)
-    $pdo->exec("INSERT IGNORE INTO user_sessions (user_id, auth_token, platform, device)
-        SELECT id, auth_token, 'web', 'Перенесено из старой системы'
-        FROM users WHERE auth_token IS NOT NULL AND auth_token != ''");
+    // Schema (user_sessions table, users.session_ttl_days) is provisioned by
+    // migrations/010_session_tables.php — not on the request path.
 
     // Find or create user
     $stmt = $pdo->prepare("SELECT * FROM users WHERE telegram_id = ?");
@@ -181,9 +158,13 @@ function getUserByToken($token)
 
     if ($user) {
         $user['is_admin'] = in_array((int) $user['telegram_id'], ADMIN_IDS);
-        // Update last_used for this session
-        $pdo->prepare("UPDATE user_sessions SET last_used = NOW() WHERE id = ?")
-            ->execute([$user['session_id']]);
+        // Throttle the last_used write: this runs on every API call (incl. the 3s
+        // poll), so only refresh when the stored value is more than 60s stale.
+        $lastUsed = $user['session_last_used'] ?? null;
+        if ($lastUsed === null || strtotime($lastUsed) < time() - 60) {
+            $pdo->prepare("UPDATE user_sessions SET last_used = NOW() WHERE id = ?")
+                ->execute([$user['session_id']]);
+        }
     }
 
     return $user;

@@ -87,19 +87,7 @@ if ($action === 'login_telegram') {
     exit;
 }
 if ($action === 'create_auth_session') {
-    // Ensure table exists (fallback for failed migration)
-    $pdo->exec("CREATE TABLE IF NOT EXISTS auth_sessions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        temp_code VARCHAR(64) UNIQUE NOT NULL,
-        telegram_id BIGINT DEFAULT NULL,
-        auth_token VARCHAR(64) DEFAULT NULL,
-        status ENUM('pending', 'authorized') DEFAULT 'pending',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        expires_at DATETIME DEFAULT (CURRENT_TIMESTAMP + INTERVAL 10 MINUTE),
-        INDEX idx_code (temp_code),
-        INDEX idx_status (status)
-    )");
-
+    // auth_sessions table is provisioned by migrations/010_session_tables.php.
     $tempCode = 'auth_' . bin2hex(random_bytes(16));
     $stmt = $pdo->prepare("INSERT INTO auth_sessions (temp_code) VALUES (?)");
     $stmt->execute([$tempCode]);
