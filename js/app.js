@@ -185,6 +185,9 @@ window.returnToRoomFromGameError = async function () {
 function openSettingsScreen() {
     if (window.ThemeManager) window.ThemeManager.loadSettings();
     showScreen('settings');
+    if (window.ScrollQA && typeof window.ScrollQA.refreshAccess === 'function') {
+        window.ScrollQA.refreshAccess();
+    }
     triggerHaptic('impact', 'medium');
 }
 

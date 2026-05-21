@@ -39,15 +39,36 @@
         return safeLocalStorageGet(STORAGE_KEY) === '1';
     }
 
-    function isTesterUser(user = window.globalUser) {
+    function getCurrentUser() {
+        return window.globalUser
+            || window.AuthManager?.getGlobalUser?.()
+            || window.currentUser
+            || window.user
+            || null;
+    }
+
+    function getRawTesterValue(user = getCurrentUser()) {
+        return user?.is_tester;
+    }
+
+    function isTesterUser(user = getCurrentUser()) {
         return user?.is_tester === true
             || user?.is_tester === 1
             || user?.is_tester === '1'
+            || user?.isTester === true
+            || user?.tester === true
+            || user?.role === 'tester'
+            || (Array.isArray(user?.roles) && user.roles.includes('tester'))
             || window.isTesterUser === true;
     }
 
-    function hasToolsAccess(user = window.globalUser) {
+    function hasToolsAccess(user = getCurrentUser()) {
         return isTesterUser(user) || isEnabled();
+    }
+
+    function getActiveScreen() {
+        const activeScreen = document.querySelector('.screen.active-screen, .screen.active, .app-screen.active, [data-screen].active');
+        return activeScreen?.id || activeScreen?.dataset?.screen || null;
     }
 
     function ensureStyles() {
@@ -280,22 +301,53 @@
     function init() {
         syncFlagFromUrl();
         refreshAccess();
+        window.addEventListener('screenChanged', (event) => {
+            if (event.detail?.screenId === 'screen-settings') {
+                refreshAccess();
+            }
+        });
         if (!isEnabled()) return;
         ensureStyles();
         ensureButton();
     }
 
-    function refreshAccess(user = window.globalUser) {
+    function refreshAccess(user = getCurrentUser()) {
+        const access = hasToolsAccess(user);
         const group = document.getElementById('qa-tools-settings-group');
         if (group) {
-            group.style.display = hasToolsAccess(user) ? '' : 'none';
+            group.classList.toggle('d-none', !access);
+            group.hidden = !access;
+            group.style.display = access ? '' : 'none';
         }
-        if (isEnabled()) {
+        if (access) {
             ensureStyles();
             ensureButton();
         } else {
             removeButton();
         }
+        return access;
+    }
+
+    function debugAccess() {
+        const user = getCurrentUser();
+        const rawTesterValue = getRawTesterValue(user);
+        const group = document.getElementById('qa-tools-settings-group');
+        const access = hasToolsAccess(user);
+        return {
+            debugFlag: isEnabled(),
+            currentUser: user ? {
+                id: user.id ?? null,
+                telegram_id: user.telegram_id ?? null
+            } : null,
+            is_tester: {
+                value: rawTesterValue,
+                type: typeof rawTesterValue
+            },
+            hasAccess: access,
+            settingsBlockFound: Boolean(group),
+            settingsBlockDisplay: group ? window.getComputedStyle(group).display : null,
+            activeScreen: getActiveScreen()
+        };
     }
 
     function ensureButton() {
@@ -776,6 +828,7 @@
         enable: enableScrollQa,
         disable: disableScrollQa,
         refreshAccess,
+        debugAccess,
         getDebugInfo,
         copyDebugInfo,
         copyBugReport,
