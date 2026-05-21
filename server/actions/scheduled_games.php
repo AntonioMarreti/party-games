@@ -241,7 +241,7 @@ function scheduled_create_room($pdo, $user, $game, $hostId)
 {
     clearUserRooms($pdo, $hostId);
 
-    $code = strtoupper(substr(md5(uniqid('', true)), 0, 6));
+    $code = generateRoomCode();
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $ipHash = null;
     if ($ip && defined('IP_SALT')) {

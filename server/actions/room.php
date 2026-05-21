@@ -52,7 +52,7 @@ function action_create_room($pdo, $user, $data)
         // 1. Сначала удаляем игрока из старых комнат
         clearUserRooms($pdo, $user['id']);
 
-        $code = strtoupper(substr(md5(uniqid()), 0, 6)); // 6 chars
+        $code = generateRoomCode();
         $pass = !empty($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
 
         // IP Hash for Local Discovery

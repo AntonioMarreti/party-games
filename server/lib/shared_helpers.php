@@ -1,6 +1,19 @@
 <?php
 // server/lib/shared_helpers.php
 
+// Cryptographically random room code. Alphabet excludes 0/O/1/I to avoid
+// ambiguity when codes are typed by hand.
+function generateRoomCode($length = 6)
+{
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $max = strlen($alphabet) - 1;
+    $code = '';
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $alphabet[random_int(0, $max)];
+    }
+    return $code;
+}
+
 function calculateLevel($xp)
 {
     if ($xp < 0)
