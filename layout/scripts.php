@@ -34,6 +34,7 @@ if (!defined('TG_CLIENT_ID')) {
 <script src="js/modules/room-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/ai-manager.js?v=<?php echo $v; ?>"></script>
 <script src="js/modules/avatar-editor.js?v=<?php echo $v; ?>"></script>
+<script src="js/modules/debug-scroll-qa.js?v=<?php echo $v; ?>"></script>
 
 <!-- Main App Logic -->
 <script src="js/app.js?v=<?php echo $v; ?>"></script>
