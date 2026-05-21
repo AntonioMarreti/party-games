@@ -125,39 +125,6 @@ if ($action === 'poll_auth_session') {
     exit;
 }
 
-// === DEV LOGIN (TEMPORARY - REMOVE IN PRODUCTION) ===
-if ($action === 'dev_login') {
-    try {
-        $index = isset($_POST['index']) ? (int) $_POST['index'] : 1;
-        if ($index < 1)
-            $index = 1;
-
-        $tgId = 999999990 + $index; // 999999991, 999999992...
-
-        $tgUser = [
-            'id' => $tgId,
-            'first_name' => "DevPlayer " . $index,
-            'username' => "dev" . $index,
-            'photo_url' => ''
-        ];
-
-        // Ensure user exists and get token from new session system
-        require_once 'auth.php';
-        $token = registerOrLoginUser($tgUser, 'dev', 'Dev Device ' . $index);
-
-        // Ensure username and custom_name are set
-        $pdo->prepare("UPDATE users SET username = ?, custom_name = ? WHERE telegram_id = ?")
-            ->execute([$tgUser['username'], $tgUser['first_name'], $tgId]);
-
-        $testUser = getUserByToken($token);
-
-        echo json_encode(['status' => 'ok', 'token' => $token, 'user' => $testUser]);
-    } catch (Exception $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-    }
-    exit;
-}
-
 // === CLIENT ERROR LOGGING (Unauthenticated) ===
 if ($action === 'log_client_error') {
     $errorMsg = $_POST['message'] ?? 'Unknown Client Error';

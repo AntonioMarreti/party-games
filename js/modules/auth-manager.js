@@ -169,54 +169,6 @@ function logout() {
     }
 }
 
-async function devLogin(index = 1) {
-    try {
-        const formData = new FormData();
-        formData.append('action', 'dev_login');
-        formData.append('index', index);
-        // We need API_URL. Assuming it's global or we need to import it?
-        // Ideally api-manager handles the fetch, but devLogin bypasses std apiRequest sometimes?
-        // Re-using apiRequest is better if possible, but dev_login might be separate.
-        // Let's assume apiRequest handles it or use fetch if global API_URL exists.
-        // js/modules/api-manager.js handles API_URL.
-
-        // Wait, app.js had direct fetch using API_URL.
-        // We should try to use apiRequest if possible, or access window.API_URL
-
-        let response;
-        if (window.API_URL) {
-            response = await fetch(window.API_URL, { method: 'POST', body: formData });
-        } else {
-            // Fallback or error
-            console.error("API_URL not found for devLogin");
-            return;
-        }
-
-        const data = await response.json();
-
-        if (data.status === 'ok') {
-            setAuthToken(data.token);
-            setGlobalUser(data.user);
-
-            if (window.showScreen) window.showScreen('lobby');
-
-            // Call SocialManager to update UI
-            if (window.SocialManager && window.SocialManager.renderCurrentUser) {
-                window.SocialManager.renderCurrentUser(data.user);
-            } else if (window.updateUserInfo) {
-                window.updateUserInfo(data.user); // Backward compat
-            }
-
-            if (window.startPolling) window.startPolling();
-            if (window.showAlert) window.showAlert('Успех', 'Вы вошли как ' + (data.user.custom_name || data.user.first_name), 'success');
-        } else {
-            if (window.showAlert) window.showAlert('Ошибка', data.message, 'error');
-        }
-    } catch (e) {
-        if (window.showAlert) window.showAlert('Ошибка сети', e.message, 'error');
-    }
-}
-
 // === HELPERS ===
 
 function setAuthToken(token) {
@@ -245,7 +197,6 @@ window.AuthManager = {
     initApp,
     loginTMA,
     logout,
-    devLogin,
     setAuthToken,
     getAuthToken,
     setGlobalUser,
@@ -256,6 +207,5 @@ window.AuthManager = {
 window.initApp = initApp;
 window.loginTMA = loginTMA;
 window.logout = logout;
-window.devLogin = devLogin;
 window.authToken = authToken; // Initial sync
 window.globalUser = globalUser;
