@@ -346,7 +346,8 @@
             hasAccess: access,
             settingsBlockFound: Boolean(group),
             settingsBlockDisplay: group ? window.getComputedStyle(group).display : null,
-            activeScreen: getActiveScreen()
+            activeScreen: getActiveScreen(),
+            appBuild: getAppBuildVersion()
         };
     }
 
@@ -537,11 +538,15 @@
 
     function getDebugInfo() {
         const tg = window.Telegram?.WebApp;
-        const user = window.globalUser || null;
+        const user = getCurrentUser();
+        const rawTesterValue = getRawTesterValue(user);
         return {
             user_id: user?.id || null,
             telegram_id: user?.telegram_id || null,
             is_tester: isTesterUser(user),
+            user_is_tester: rawTesterValue,
+            user_is_tester_type: typeof rawTesterValue,
+            scroll_qa_has_tools_access: hasToolsAccess(user),
             platform: tg?.platform || 'web',
             app_version: getAppBuildVersion(),
             debug_scroll_qa: isEnabled(),
