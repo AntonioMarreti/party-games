@@ -43,9 +43,6 @@ async function loadGameScript(gameType) {
 
         if (isComplex) {
             filesToLoad = [`js/games/${gameType}/index.js`];
-            // Also try to load CSS if not implicitly handled? 
-            // Better to just rely on files array for complex games. 
-            // But let's keep fallback logic just in case.
         } else {
             filesToLoad = [`js/games/${gameType}.js`];
         }
@@ -191,8 +188,6 @@ const GameManager = {
             const emoji = payload.emoji || '👍';
             const count = payload.count || 1;
 
-            // ... (rest of emoji logic) ...
-
             // Find player info for attribution
             const players = window.currentGamePlayers || [];
             const player = players.find(p => p.id == ev.user_id);
@@ -221,7 +216,6 @@ const GameManager = {
     },
 
     handleAudioPing(ev, payload) {
-        // ... (existing code) ...
         const sound = payload.sound || payload.emoji;
         const playAt = payload.playAt; // Shared target timestamp (ms)
         const serverTimeOffset = window.serverTimeOffset || 0;
