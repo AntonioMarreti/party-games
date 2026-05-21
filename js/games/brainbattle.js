@@ -12,6 +12,10 @@
     let brainBattleAutoTickRoomKey = '';
     let brainBattleAutoTickSnapshot = null;
     let brainBattleDelegatedClicksBound = false;
+    let brainBattleTouchDebugBound = false;
+    let brainBattleTouchDebugState = null;
+    let brainBattleTouchDebugOverlay = null;
+    let brainBattleTouchDebugOverlayLines = [];
     let activeRoundSessionId = 0;
     let activeRoundId = '';
     const BRAINBATTLE_SUMMARY_VERSION = 2;
@@ -29,6 +33,12 @@
         reviewMode: false,
         reviewDevMode: false
     };
+
+    window.addEventListener('screenChanged', event => {
+        if (event?.detail?.screenId !== 'screen-game') {
+            clearBrainBattleScreenModes();
+        }
+    });
     const brainBattleRoundState = {
         blindClick: null,
         checkSafe: null,
@@ -103,12 +113,17 @@
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
+        setBrainBattleScreenMode(true);
+        bindBrainBattleTouchDebug();
+        syncBrainBattleTouchDebugFromUrl();
+        ensureBrainBattleTouchDebugOverlay();
 
         try {
             const state = parseBrainBattleState(res);
             const validation = validateBrainBattleState(state, res);
             if (!validation.valid) {
                 stopBrainBattleAutoTick('invalid_state', { reason: validation.reason });
+                setBrainBattleFinalScrollMode(false);
                 reportBrainBattleRenderError('invalid_state', new Error(validation.reason), res, state);
                 renderBrainBattleFallback(container, res);
                 return;
@@ -160,6 +175,7 @@
             wrapper.style.opacity = '1';
 
             if (state.phase === 'setup') {
+                setBrainBattleFinalScrollMode(false);
                 brainBattleViewState.reviewMode = false;
                 brainBattleViewState.reviewDevMode = false;
                 bbResetViewRound();
@@ -173,6 +189,7 @@
                 }
             }
             else if (state.phase === 'playing') {
+                setBrainBattleFinalScrollMode(false);
                 brainBattleViewState.reviewMode = false;
                 wrapper.classList.remove('bb-setup-mode');
                 wrapper.dataset.rendered = ''; // Сбрасываем флаг сетапа
@@ -225,6 +242,7 @@
 
         } catch (e) {
             stopBrainBattleAutoTick('render_error', { message: e?.message || String(e) });
+            setBrainBattleFinalScrollMode(false);
             console.error("BB Render Error:", e);
             reportBrainBattleRenderError('render_failed', e, res);
             renderBrainBattleFallback(container, res);
@@ -298,6 +316,8 @@
 
     function renderBrainBattleFallback(container, res = {}) {
         stopBrainBattleAutoTick('fallback');
+        setBrainBattleScreenMode(true);
+        setBrainBattleFinalScrollMode(false);
         cleanupBrainBattleRound();
         const overlay = document.getElementById('bb-overlay-layer');
         if (overlay) overlay.remove();
@@ -1133,6 +1153,7 @@
                 await bbToggleDeepSettings(target);
                 return;
             case 'back-to-lobby':
+                clearBrainBattleScreenModes();
                 if (typeof window.backToLobby === 'function') window.backToLobby();
                 return;
             case 'start-battle':
@@ -1154,9 +1175,11 @@
                 brainBattleController.finish();
                 return;
             case 'leave-room':
+                clearBrainBattleScreenModes();
                 if (typeof window.leaveRoom === 'function') window.leaveRoom();
                 return;
             case 'force-exit':
+                clearBrainBattleScreenModes();
                 brainBattleController.confirmForceExit();
                 return;
             case 'streak-info':
@@ -1402,6 +1425,7 @@
     }
 
     function renderReview(wrapper, state, res) {
+        setBrainBattleFinalScrollMode(false);
         wrapper.classList.remove('bb-setup-mode');
         wrapper.classList.remove('bb-with-round-context');
         clearBrainBattleFinalActions();
@@ -1453,6 +1477,273 @@
         const portal = document.getElementById('bb-final-actions-portal');
         if (portal) portal.remove();
         finalActionsPortalState = null;
+    }
+
+    function setBrainBattleScreenMode(enabled) {
+        document.getElementById('screen-game')?.classList.toggle('bb-brainbattle-active', enabled);
+        document.getElementById('game-area')?.classList.toggle('bb-brainbattle-active', enabled);
+    }
+
+    function setBrainBattleFinalScrollMode(enabled) {
+        document.getElementById('bb-wrapper')?.classList.toggle('bb-final-mode', enabled);
+        if (enabled) setBrainBattleScreenMode(true);
+    }
+
+    function clearBrainBattleScreenModes() {
+        setBrainBattleFinalScrollMode(false);
+        setBrainBattleScreenMode(false);
+        removeBrainBattleTouchDebugOverlay();
+    }
+
+    function bindBrainBattleTouchDebug() {
+        if (brainBattleTouchDebugBound) return;
+        brainBattleTouchDebugBound = true;
+        document.addEventListener('touchstart', handleBrainBattleDebugTouchStart, { capture: true, passive: true });
+        document.addEventListener('touchmove', handleBrainBattleDebugTouchMove, { capture: true, passive: true });
+    }
+
+    function isBrainBattleTouchDebugEnabled() {
+        return window.DEBUG_BB_TOUCH === true || localStorage.getItem('DEBUG_BB_TOUCH') === '1';
+    }
+
+    function syncBrainBattleTouchDebugFromUrl() {
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            if (params.get('debug_bb_touch') === '1') {
+                localStorage.setItem('DEBUG_BB_TOUCH', '1');
+                window.DEBUG_BB_TOUCH = true;
+            }
+        } catch (error) {
+            if (window.DEBUG_BB_TOUCH === true) {
+                console.warn('BrainBattle touch debug URL parse failed:', error);
+            }
+        }
+    }
+
+    function ensureBrainBattleTouchDebugOverlay() {
+        if (!isBrainBattleTouchDebugEnabled()) {
+            removeBrainBattleTouchDebugOverlay();
+            return;
+        }
+        if (brainBattleTouchDebugOverlay && document.body.contains(brainBattleTouchDebugOverlay)) return;
+
+        brainBattleTouchDebugOverlay = document.createElement('div');
+        brainBattleTouchDebugOverlay.id = 'bb-touch-debug-overlay';
+        brainBattleTouchDebugOverlay.style.cssText = [
+            'position:fixed',
+            'left:8px',
+            'right:8px',
+            'bottom:8px',
+            'z-index:2147483647',
+            'max-height:42vh',
+            'overflow:auto',
+            '-webkit-overflow-scrolling:touch',
+            'padding:8px 10px',
+            'border-radius:12px',
+            'background:rgba(0,0,0,0.82)',
+            'color:#9efc9e',
+            'font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace',
+            'white-space:pre-wrap',
+            'pointer-events:none',
+            'box-shadow:0 8px 28px rgba(0,0,0,0.35)'
+        ].join(';');
+        document.body.appendChild(brainBattleTouchDebugOverlay);
+        updateBrainBattleTouchDebugOverlay('overlay ready');
+    }
+
+    function removeBrainBattleTouchDebugOverlay() {
+        if (brainBattleTouchDebugOverlay) {
+            brainBattleTouchDebugOverlay.remove();
+            brainBattleTouchDebugOverlay = null;
+        }
+        brainBattleTouchDebugOverlayLines = [];
+        brainBattleTouchDebugState = null;
+    }
+
+    function updateBrainBattleTouchDebugOverlay(label, data = null) {
+        if (!isBrainBattleTouchDebugEnabled()) return;
+        ensureBrainBattleTouchDebugOverlay();
+        if (!brainBattleTouchDebugOverlay) return;
+
+        const line = data
+            ? `${new Date().toLocaleTimeString()} ${label}\n${JSON.stringify(data, null, 2)}`
+            : `${new Date().toLocaleTimeString()} ${label}`;
+        brainBattleTouchDebugOverlayLines.push(line);
+        brainBattleTouchDebugOverlayLines = brainBattleTouchDebugOverlayLines.slice(-6);
+        brainBattleTouchDebugOverlay.textContent = brainBattleTouchDebugOverlayLines.join('\n\n');
+    }
+
+    function isBrainBattleDebugTouchTarget(target) {
+        const screen = document.getElementById('screen-game');
+        if (!screen?.classList.contains('bb-brainbattle-active')) return false;
+        return !!(target && screen.contains(target));
+    }
+
+    function handleBrainBattleDebugTouchStart(event) {
+        if (!isBrainBattleTouchDebugEnabled() || !isBrainBattleDebugTouchTarget(event.target)) return;
+        const touch = event.touches?.[0];
+        if (!touch) return;
+
+        const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+        const scrollParent = findBrainBattleScrollableParent(event.target);
+        const wrapper = document.getElementById('bb-wrapper');
+        brainBattleTouchDebugState = {
+            startedAt: Date.now(),
+            startX: touch.clientX,
+            startY: touch.clientY,
+            target: event.target,
+            elementAtPoint,
+            scrollParent,
+            startScrollTop: scrollParent?.scrollTop ?? null,
+            moveCount: 0
+        };
+
+        const payload = {
+            target: describeBrainBattleElement(event.target),
+            elementFromPoint: describeBrainBattleElement(elementAtPoint),
+            scrollParent: describeBrainBattleElement(scrollParent),
+            wrapper: getBrainBattleScrollMetrics(wrapper),
+            scrollParentMetrics: getBrainBattleScrollMetrics(scrollParent),
+            targetChain: getBrainBattleComputedChain(event.target),
+            elementFromPointChain: elementAtPoint && elementAtPoint !== event.target
+                ? getBrainBattleComputedChain(elementAtPoint)
+                : null,
+            telegram: getBrainBattleTelegramTouchState()
+        };
+        console.log('[BB touch] start', payload);
+        updateBrainBattleTouchDebugOverlay('[BB touch] start', summarizeBrainBattleTouchDebugPayload(payload));
+    }
+
+    function handleBrainBattleDebugTouchMove(event) {
+        if (!isBrainBattleTouchDebugEnabled() || !brainBattleTouchDebugState || !isBrainBattleDebugTouchTarget(event.target)) return;
+        const touch = event.touches?.[0];
+        if (!touch) return;
+
+        const state = brainBattleTouchDebugState;
+        state.moveCount += 1;
+        const scrollParent = state.scrollParent || findBrainBattleScrollableParent(event.target);
+        const beforeScrollTop = scrollParent?.scrollTop ?? null;
+        const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        window.requestAnimationFrame(() => {
+            const payload = {
+                move: state.moveCount,
+                target: describeBrainBattleElement(event.target),
+                elementFromPoint: describeBrainBattleElement(elementAtPoint),
+                scrollParent: describeBrainBattleElement(scrollParent),
+                deltaX: Math.round(touch.clientX - state.startX),
+                deltaY: Math.round(touch.clientY - state.startY),
+                scrollTopBefore: beforeScrollTop,
+                scrollTopAfter: scrollParent?.scrollTop ?? null,
+                wrapper: getBrainBattleScrollMetrics(document.getElementById('bb-wrapper')),
+                scrollParentMetrics: getBrainBattleScrollMetrics(scrollParent),
+                eventCancelable: event.cancelable,
+                defaultPrevented: event.defaultPrevented
+            };
+            console.log('[BB touch] move', payload);
+            updateBrainBattleTouchDebugOverlay('[BB touch] move', summarizeBrainBattleTouchDebugPayload(payload));
+        });
+    }
+
+    function summarizeBrainBattleTouchDebugPayload(payload) {
+        return {
+            target: payload.target,
+            elementFromPoint: payload.elementFromPoint,
+            scrollParent: payload.scrollParent,
+            deltaY: payload.deltaY,
+            scrollTopBefore: payload.scrollTopBefore,
+            scrollTopAfter: payload.scrollTopAfter,
+            wrapper: payload.wrapper ? {
+                element: payload.wrapper.element,
+                overflowY: payload.wrapper.overflowY,
+                touchAction: payload.wrapper.touchAction,
+                clientHeight: payload.wrapper.clientHeight,
+                scrollHeight: payload.wrapper.scrollHeight,
+                scrollTop: payload.wrapper.scrollTop
+            } : null,
+            scrollParentMetrics: payload.scrollParentMetrics ? {
+                element: payload.scrollParentMetrics.element,
+                overflowY: payload.scrollParentMetrics.overflowY,
+                touchAction: payload.scrollParentMetrics.touchAction,
+                pointerEvents: payload.scrollParentMetrics.pointerEvents,
+                clientHeight: payload.scrollParentMetrics.clientHeight,
+                scrollHeight: payload.scrollParentMetrics.scrollHeight,
+                scrollTop: payload.scrollParentMetrics.scrollTop
+            } : null,
+            eventCancelable: payload.eventCancelable,
+            defaultPrevented: payload.defaultPrevented,
+            telegram: payload.telegram
+        };
+    }
+
+    function findBrainBattleScrollableParent(element) {
+        let node = element instanceof Element ? element : null;
+        while (node && node !== document.body) {
+            const styles = window.getComputedStyle(node);
+            const overflowY = styles.overflowY;
+            const canScroll = /(auto|scroll|overlay)/.test(overflowY)
+                && node.scrollHeight > node.clientHeight + 1;
+            if (canScroll) return node;
+            node = node.parentElement;
+        }
+
+        const wrapper = document.getElementById('bb-wrapper');
+        if (wrapper && wrapper.scrollHeight > wrapper.clientHeight + 1) return wrapper;
+        return document.scrollingElement || document.documentElement;
+    }
+
+    function describeBrainBattleElement(element) {
+        if (!element) return null;
+        if (element === window) return 'window';
+        if (element === document) return 'document';
+        if (!(element instanceof Element)) return String(element);
+        const id = element.id ? `#${element.id}` : '';
+        const classes = typeof element.className === 'string' && element.className.trim()
+            ? `.${element.className.trim().split(/\s+/).slice(0, 5).join('.')}`
+            : '';
+        return `${element.tagName.toLowerCase()}${id}${classes}`;
+    }
+
+    function getBrainBattleScrollMetrics(element) {
+        if (!element || !(element instanceof Element)) return null;
+        const styles = window.getComputedStyle(element);
+        return {
+            element: describeBrainBattleElement(element),
+            overflow: styles.overflow,
+            overflowY: styles.overflowY,
+            touchAction: styles.touchAction,
+            pointerEvents: styles.pointerEvents,
+            position: styles.position,
+            zIndex: styles.zIndex,
+            height: styles.height,
+            clientHeight: element.clientHeight,
+            scrollHeight: element.scrollHeight,
+            scrollTop: element.scrollTop
+        };
+    }
+
+    function getBrainBattleComputedChain(element, limit = 8) {
+        const chain = [];
+        let node = element instanceof Element ? element : null;
+        while (node && chain.length < limit) {
+            chain.push(getBrainBattleScrollMetrics(node));
+            node = node.parentElement;
+        }
+        return chain;
+    }
+
+    function getBrainBattleTelegramTouchState() {
+        const webApp = window.Telegram?.WebApp;
+        if (!webApp) return null;
+        return {
+            platform: webApp.platform || null,
+            version: webApp.version || null,
+            isExpanded: typeof webApp.isExpanded === 'boolean' ? webApp.isExpanded : null,
+            viewportHeight: webApp.viewportHeight || null,
+            viewportStableHeight: webApp.viewportStableHeight || null,
+            hasDisableVerticalSwipes: typeof webApp.disableVerticalSwipes === 'function',
+            hasEnableVerticalSwipes: typeof webApp.enableVerticalSwipes === 'function'
+        };
     }
 
     function mountBrainBattleFinalActions(wrapper, contentHtml) {
@@ -1782,7 +2073,7 @@
 
         wrapper.innerHTML = `
         <div class="d-flex flex-column h-100">
-            <div class="flex-grow-1 overflow-auto pt-4 px-2" style="-webkit-overflow-scrolling: touch;">
+            <div class="bb-waiting-content px-2">
                 <div id="bb-waiting-status-icon" class="bb-result-circle mx-auto"></div>
                 <h2 id="bb-waiting-status-title" class="fw-bold mb-1 text-center"></h2>
                 <p id="bb-waiting-status-time" class="text-muted mb-4 text-center fw-bold"></p>
@@ -2029,6 +2320,7 @@
     }
 
     function renderFinal(wrapper, state, res) {
+        setBrainBattleFinalScrollMode(true);
         wrapper.classList.remove('bb-setup-mode');
         wrapper.classList.remove('bb-with-round-context');
         wrapper.style.pointerEvents = 'auto';
@@ -2151,6 +2443,7 @@
     }
 
     async function finishBrainBattle() {
+        clearBrainBattleScreenModes();
         // 1. Собираем результаты для рейтинга
         if (window.lastBBState && !window.lastBBState.stats_recorded) {
             const scores = window.lastBBState.scores || {};
@@ -2246,11 +2539,13 @@
 
     function confirmForceExit() {
         if(confirm("Принудительно завершить игру и выйти в настройки?")) {
+            clearBrainBattleScreenModes();
             sendGameAction('force_reset');
         }
     }
 
     window.finishGameSession = async function () {
+        clearBrainBattleScreenModes();
         await apiRequest({ action: 'stop_game' });
         checkState();
     };
@@ -2321,11 +2616,13 @@
                 };
             },
             playAgain: function () {
+                clearBrainBattleScreenModes();
                 if (typeof window.sendGameAction === 'function') {
                     window.sendGameAction('force_reset');
                 }
             },
             'return-to-room': function () {
+                clearBrainBattleScreenModes();
                 if (typeof window.checkState === 'function') {
                     window.checkState();
                 }

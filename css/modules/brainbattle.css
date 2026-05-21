@@ -2,22 +2,69 @@
 
 /* Wrapper */
 #bb-wrapper {
-    height: 100%;
+    flex: 1 1 auto;
+    height: auto;
     display: flex;
     flex-direction: column;
+    min-height: 0;
     padding-top: calc(132px + env(safe-area-inset-top));
     /* Standardized top padding */
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+#screen-game.bb-brainbattle-active #bb-wrapper,
+#screen-game.bb-brainbattle-active #bb-wrapper * {
+    touch-action: pan-y;
+}
+
+#screen-game.bb-brainbattle-active #bb-wrapper :where(button, input, select, textarea, label, [role="button"], [data-bb-action], [data-bb-preset], [data-bb-submit]) {
+    touch-action: manipulation;
 }
 
 #bb-wrapper.bb-setup-mode {
     padding-top: calc(80px + env(safe-area-inset-top));
+    flex: 1 1 auto;
     height: auto;
-    min-height: 100%;
-    overflow-y: visible;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
     overscroll-behavior: contain;
+}
+
+#screen-game.bb-brainbattle-active {
+    display: flex !important;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#game-area.bb-brainbattle-active {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#bb-wrapper.bb-final-mode {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    padding-top: calc(80px + env(safe-area-inset-top));
+    padding-bottom: 0 !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 /* Glass Cards */
@@ -325,6 +372,12 @@
 }
 
 /* Waiting / Results */
+.bb-waiting-content {
+    flex: 0 0 auto;
+    padding-top: 24px;
+    padding-bottom: 16px;
+}
+
 .bb-result-circle {
     width: 120px;
     height: 120px;
@@ -421,7 +474,7 @@
 }
 
 .bb-final-spacer {
-    height: 180px;
+    height: calc(190px + env(safe-area-inset-bottom));
     flex: 0 0 auto;
 }
 
@@ -555,6 +608,8 @@
 
 .bb-final-screen {
     gap: 10px;
+    width: 100%;
+    min-height: min-content;
 }
 
 .bb-final-icon {
@@ -862,6 +917,12 @@
 
     .bb-round-context__title {
         font-size: 16px;
+    }
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+    #screen-game.bb-brainbattle-active {
+        height: 100%;
     }
 }
 
