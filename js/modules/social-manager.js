@@ -577,7 +577,7 @@ function renderFriends(friends, requests) {
                 div.innerHTML = `
                     <div class="d-flex align-items-center gap-2">
                         ${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'sm') : ''}
-                        <div class="fw-bold">${req.custom_name || req.first_name}</div>
+                        <div class="fw-bold">${window.safeHTML(req.custom_name) || window.safeHTML(req.first_name)}</div>
                     </div>
                     <div>
                          <button class="btn btn-sm btn-success rounded-circle" onclick="acceptFriend(${req.id})"><i class="bi bi-check-lg"></i></button>
@@ -605,7 +605,7 @@ function renderFriends(friends, requests) {
                 <div class="d-flex align-items-center gap-2">
                      ${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}
                      <div>
-                        <div class="fw-bold">${f.custom_name || f.first_name}</div>
+                        <div class="fw-bold">${window.safeHTML(f.custom_name) || window.safeHTML(f.first_name)}</div>
                         <div style="font-size:10px; color: #888;">ID: ${f.id}</div>
                      </div>
                 </div>
@@ -644,7 +644,7 @@ async function searchFriendsAction() {
                 div.innerHTML = `
                     <div class="d-flex align-items-center gap-2">
                         ${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'sm') : ''}
-                        <div class="fw-bold">${u.custom_name || u.first_name}</div>
+                        <div class="fw-bold">${window.safeHTML(u.custom_name) || window.safeHTML(u.first_name)}</div>
                     </div>
                     <button class="btn btn-sm btn-primary rounded-circle" onclick="addFriend(${u.id})"><i class="bi bi-person-plus"></i></button>
                  `;
@@ -750,7 +750,7 @@ async function loadLeaderboardList(type = 'global') {
                 <div class="lb-rank ${rankClass}" style="min-width: 30px; text-align: center; font-size: ${index < 3 ? '24px' : '16px'}">${rankContent}</div>
                 <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'md') : ''}</div>
                 <div class="lb-info">
-                    <div class="lb-name">${u.custom_name || u.first_name}</div>
+                    <div class="lb-name">${window.safeHTML(u.custom_name) || window.safeHTML(u.first_name)}</div>
                     <div class="lb-detail">
                         <span class="level-pill">LVL ${typeof window.calculateLevel === 'function' ? window.calculateLevel(u.total_points_earned) : 1}</span>
                     </div>
@@ -804,7 +804,7 @@ async function loadFriendsList() {
                 div.innerHTML = `
                     <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}</div>
                     <div class="flex-grow-1">
-                        <div class="fw-bold">${f.custom_name || f.first_name}</div>
+                        <div class="fw-bold">${window.safeHTML(f.custom_name) || window.safeHTML(f.first_name)}</div>
                         <div class="small text-muted">Друг</div>
                     </div>
                     <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeFriend(${f.id}, event)">
@@ -845,7 +845,7 @@ async function loadFriendRequests() {
             div.innerHTML = `
                 <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'md') : ''}</div>
                 <div class="flex-grow-1">
-                    <div class="fw-bold">${req.custom_name || req.first_name}</div>
+                    <div class="fw-bold">${window.safeHTML(req.custom_name) || window.safeHTML(req.first_name)}</div>
                     <div class="small text-muted">Хочет добавить вас</div>
                 </div>
                 <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" onclick="acceptFriend(${req.id}, event)">
