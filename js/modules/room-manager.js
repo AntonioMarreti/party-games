@@ -34,32 +34,6 @@ function getDefaultScheduledStartValue() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function toggleCreateRoomScheduleMode() {
-    const toggle = document.getElementById('create-room-scheduled');
-    const fields = document.getElementById('create-room-scheduled-fields');
-    const startsInput = document.getElementById('create-room-scheduled-starts');
-    const submitBtn = document.getElementById('create-room-submit');
-    const isScheduled = !!toggle?.checked;
-
-    if (fields) fields.hidden = !isScheduled;
-    if (startsInput && isScheduled && !startsInput.value) {
-        startsInput.value = getDefaultScheduledStartValue();
-    }
-    if (submitBtn) submitBtn.innerText = isScheduled ? 'Запланировать' : 'Создать';
-}
-
-function resetCreateRoomScheduleMode() {
-    const toggle = document.getElementById('create-room-scheduled');
-    const fields = document.getElementById('create-room-scheduled-fields');
-    const submitBtn = document.getElementById('create-room-submit');
-    if (toggle) {
-        toggle.checked = false;
-        toggle.disabled = false;
-    }
-    if (fields) fields.hidden = true;
-    if (submitBtn) submitBtn.innerText = 'Создать';
-}
-
 function markReplayFlowCompleted() {
     if (window.pendingReplayFlow) {
         window.pendingReplayFlow.completed = true;
@@ -70,12 +44,6 @@ function markReplayFlowCompleted() {
 
 async function createRoom() {
     if (isCreateRoomPending) return;
-
-    const scheduledToggle = document.getElementById('create-room-scheduled');
-    if (scheduledToggle?.checked) {
-        await createScheduledGameFromCreateModal();
-        return;
-    }
 
     const passInput = document.getElementById('create-room-pass');
     const titleInput = document.getElementById('create-room-title');
@@ -151,7 +119,6 @@ function handleCreateRoomModalClosed() {
 
     resetCreateRoomModalTitle();
     resetCreateRoomReplayHint();
-    resetCreateRoomScheduleMode();
 
     if (!replayFlow || replayFlow.completed) return;
     if ('previousSelectedGameId' in replayFlow) {
@@ -897,55 +864,6 @@ async function createScheduledGame() {
             submitBtn.disabled = false;
             submitBtn.innerText = originalSubmitText;
         }
-    }
-}
-
-async function createScheduledGameFromCreateModal() {
-    if (typeof window.apiRequest !== 'function') return;
-
-    const gameType = window.selectedGameId || (Array.isArray(window.AVAILABLE_GAMES) ? window.AVAILABLE_GAMES[0]?.id : '');
-    const meta = getPublicRoomGameMeta(gameType);
-    const titleInput = document.getElementById('create-room-title');
-    const startsInput = document.getElementById('create-room-scheduled-starts');
-    const title = titleInput?.value?.trim() || `Открытая игра ${meta.name}`;
-    const startsAt = startsInput?.value || '';
-
-    if (!startsAt) {
-        if (window.showToast) window.showToast('Выберите время старта', 'warning');
-        return;
-    }
-
-    isCreateRoomPending = true;
-    try {
-        const res = await window.apiRequest({
-            action: 'create_scheduled_game',
-            game_type: gameType,
-            title,
-            starts_at: startsAt,
-            min_players: 2,
-            max_players: 8,
-            description: ''
-        });
-
-        if (res?.status !== 'ok') return;
-
-        const modalEl = document.getElementById('createModal');
-        if (modalEl && window.bootstrap) {
-            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-        } else if (window.closeModal) {
-            window.closeModal('createModal');
-            handleCreateRoomModalClosed();
-        }
-
-        resetCreateRoomScheduleMode();
-        resetCreateRoomModalTitle();
-        resetCreateRoomReplayHint();
-
-        if (window.showToast) window.showToast('Игра добавлена в расписание', 'success');
-        if (typeof window.switchTab === 'function') window.switchTab('games');
-        switchRoomsMode('scheduled');
-    } finally {
-        isCreateRoomPending = false;
     }
 }
 
@@ -1794,8 +1712,6 @@ window.RoomManager = {
     openScheduledGameModal,
     editScheduledGame,
     createScheduledGame,
-    createScheduledGameFromCreateModal,
-    toggleCreateRoomScheduleMode,
     subscribeScheduledGame,
     unsubscribeScheduledGame,
     openScheduledGame,
@@ -1839,8 +1755,6 @@ window.switchRoomsMode = switchRoomsMode;
 window.openScheduledGameModal = openScheduledGameModal;
 window.editScheduledGame = editScheduledGame;
 window.createScheduledGame = createScheduledGame;
-window.createScheduledGameFromCreateModal = createScheduledGameFromCreateModal;
-window.toggleCreateRoomScheduleMode = toggleCreateRoomScheduleMode;
 window.subscribeScheduledGame = subscribeScheduledGame;
 window.unsubscribeScheduledGame = unsubscribeScheduledGame;
 window.openScheduledGame = openScheduledGame;

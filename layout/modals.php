@@ -183,29 +183,26 @@
 </div>
 
 <!-- 7. Join Modal -->
-<div class="modal fade" id="joinModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade lobby-modal" id="joinModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold ps-2">Присоединиться к комнате</h5>
+                <h5 class="modal-title fw-bold ps-2">Присоединиться</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-2">
-                <form onsubmit="joinRoom(); return false;">
+                <form class="lobby-modal-form" onsubmit="joinRoom(); return false;">
                     <input type="text" id="join-room-code"
-                        class="form-control form-control-lg text-center text-uppercase mb-3 fw-bold"
-                        placeholder="A1B2C3"
-                        style="border-radius: 16px; height: 60px; font-size: 24px; letter-spacing: 2px;">
-                    <input type="password" id="join-room-pass" class="form-control mb-3"
-                        placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
+                        class="form-control lobby-modal-code-input text-center text-uppercase"
+                        placeholder="A1B2C3">
+                    <input type="password" id="join-room-pass" class="form-control"
+                        placeholder="Пароль комнаты (необязательно)">
 
-                    <button type="button" class="btn btn-light w-100 mb-2 fw-bold text-primary" onclick="scanQrCode()"
-                        style="border-radius: 16px; border: 1px solid var(--primary-color);">
+                    <button type="button" class="btn lobby-modal-secondary-btn" onclick="scanQrCode()">
                         <i class="bi bi-qr-code-scan me-2"></i>Сканировать QR
                     </button>
 
-                    <button type="submit" class="btn btn-primary w-100 btn-lg"
-                        style="border-radius: 16px;">Присоединиться</button>
+                    <button type="submit" class="btn btn-primary lobby-modal-primary-btn">Присоединиться</button>
                 </form>
             </div>
         </div>
@@ -213,7 +210,7 @@
 </div>
 
 <!-- 8. Create Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade lobby-modal" id="createModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">
             <div class="modal-header border-0 pb-0">
@@ -222,42 +219,22 @@
                     aria-label="Закрыть"></button>
             </div>
             <div class="modal-body pt-2">
-                <form onsubmit="createRoom(); return false;">
-                    <div id="create-room-replay-hint" class="create-room-replay-hint mb-3" hidden></div>
-                    <input type="text" id="create-room-title" class="form-control mb-3 fw-bold"
-                        placeholder="Название комнаты" style="border-radius: 16px;">
-                    <input type="password" id="create-room-pass" class="form-control mb-3"
-                        placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
-                    <div class="create-room-options mb-3">
-                        <div class="create-room-options-title">Параметры комнаты</div>
-                        <label class="create-room-option-line" for="create-room-public">
-                            <span class="create-room-option-text">
-                                <span class="create-room-option-title">Сделать публичной</span>
-                                <span class="create-room-option-desc">Комната будет видна в открытых играх</span>
-                            </span>
-                            <span class="form-check form-switch create-room-option-switch">
-                                <input class="form-check-input" type="checkbox" id="create-room-public">
-                            </span>
-                        </label>
-                        <label class="create-room-option-line" for="create-room-scheduled">
-                            <span class="create-room-option-text">
-                                <span class="create-room-option-title">Отложенная игра</span>
-                                <span class="create-room-option-desc">Запланировать игру на время</span>
-                            </span>
-                            <span class="form-check form-switch create-room-option-switch">
-                                <input class="form-check-input" type="checkbox" id="create-room-scheduled"
-                                    onchange="toggleCreateRoomScheduleMode()">
-                            </span>
-                        </label>
-                        <div id="create-room-scheduled-fields" hidden>
-                            <label class="form-label small fw-bold text-muted mb-1" for="create-room-scheduled-starts">Когда начать</label>
-                            <input type="datetime-local" id="create-room-scheduled-starts" class="form-control"
-                                style="border-radius: 16px;">
-                            <div class="form-text small">Создаст запись в расписании вместо комнаты прямо сейчас.</div>
-                        </div>
-                    </div>
-                    <button type="submit" id="create-room-submit" class="btn btn-primary w-100 btn-lg"
-                        style="border-radius: 16px;">Создать</button>
+                <form class="lobby-modal-form" onsubmit="createRoom(); return false;">
+                    <div id="create-room-replay-hint" class="create-room-replay-hint" hidden></div>
+                    <input type="text" id="create-room-title" class="form-control"
+                        placeholder="Название комнаты">
+                    <input type="password" id="create-room-pass" class="form-control"
+                        placeholder="Пароль комнаты (необязательно)">
+                    <label class="create-room-public-row" for="create-room-public">
+                        <span class="create-room-public-copy">
+                            <span class="create-room-public-title">Сделать публичной</span>
+                            <span class="create-room-public-help">Комната появится в открытых играх</span>
+                        </span>
+                        <span class="form-check form-switch create-room-public-switch">
+                            <input class="form-check-input" type="checkbox" id="create-room-public">
+                        </span>
+                    </label>
+                    <button type="submit" id="create-room-submit" class="btn btn-primary lobby-modal-primary-btn">Создать</button>
                 </form>
             </div>
         </div>

@@ -89,7 +89,7 @@ body.modal-open {
     font-size: 22px;
 }
 
-#createModal .modal-content {
+.lobby-modal .modal-content {
     background: rgba(255, 255, 255, 0.97) !important;
     background-image: none !important;
     border-color: rgba(255, 255, 255, 0.82) !important;
@@ -97,65 +97,125 @@ body.modal-open {
     box-shadow: 0 24px 52px rgba(17, 24, 39, 0.18) !important;
 }
 
-#createModal .modal-header,
-#createModal .modal-body {
+.lobby-modal .modal-header,
+.lobby-modal .modal-body {
     background: transparent !important;
 }
 
-#createModal .modal-title,
-#createModal .form-label,
-#createModal .create-room-options-title,
-#createModal .create-room-option-title {
+.lobby-modal .modal-header {
+    padding-bottom: 10px !important;
+}
+
+.lobby-modal .modal-body {
+    padding-top: 0 !important;
+    padding-bottom: 4px !important;
+}
+
+.lobby-modal .modal-title {
+    color: #2D3436 !important;
+    font-size: 24px;
+    font-weight: 850;
+    line-height: 1.14;
+    letter-spacing: 0;
+}
+
+.lobby-modal .form-label,
+.lobby-modal .create-room-public-title {
     color: #2D3436 !important;
 }
 
-#createModal .create-room-option-desc,
-#createModal .form-text,
-#createModal .text-muted {
+.lobby-modal .create-room-public-help,
+.lobby-modal .form-text,
+.lobby-modal .text-muted {
     color: #6f7682 !important;
 }
 
-#createModal .form-control {
+.lobby-modal-form {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lobby-modal-form .form-control,
+.lobby-modal-form .btn,
+.lobby-modal-form .create-room-public-row {
+    width: 100%;
+}
+
+.lobby-modal .form-control {
+    min-height: 52px;
+    padding: 13px 15px;
+    border-radius: 16px !important;
     background: #ffffff !important;
     background-image: none !important;
-    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    border: 1px solid rgba(203, 213, 225, 0.78) !important;
     color: #2D3436 !important;
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 1.25;
     box-shadow: none !important;
 }
 
-#createModal .form-control::placeholder {
+.lobby-modal .form-control::placeholder {
     color: #7b8491 !important;
     opacity: 1;
+    font-weight: 550;
 }
 
-#createModal .form-control:focus {
+.lobby-modal .form-control:focus {
     background: #ffffff !important;
+    border-color: rgba(108, 92, 231, 0.48) !important;
     color: #2D3436 !important;
+    box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.1) !important;
 }
 
-#createModal .create-room-options {
-    background: rgba(248, 250, 252, 0.94) !important;
-    border-color: rgba(226, 232, 240, 0.9) !important;
-    color: #2D3436 !important;
+.lobby-modal-code-input {
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 20px !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.08em;
 }
 
-#createModal .create-room-option-switch .form-check-input {
+.lobby-modal-primary-btn,
+.lobby-modal-secondary-btn {
+    min-height: 52px;
+    border-radius: 16px !important;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.lobby-modal-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(108, 92, 231, 0.2) !important;
+    background: rgba(108, 92, 231, 0.06) !important;
+    color: var(--primary-color) !important;
+    box-shadow: none !important;
+}
+
+.lobby-modal-secondary-btn:active {
+    background: rgba(108, 92, 231, 0.1) !important;
+}
+
+.lobby-modal .create-room-public-switch .form-check-input {
     background-color: rgba(148, 163, 184, 0.28) !important;
     border-color: rgba(148, 163, 184, 0.16) !important;
 }
 
-#createModal .create-room-option-switch .form-check-input:checked {
+.lobby-modal .create-room-public-switch .form-check-input:checked {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
 }
 
-body.thermal-safe #createModal .modal-content {
+body.thermal-safe .lobby-modal .modal-content {
     background: rgba(255, 255, 255, 0.98) !important;
     border-color: rgba(226, 232, 240, 0.9) !important;
-}
-
-body.thermal-safe #createModal .create-room-options {
-    background: rgba(248, 249, 253, 0.96) !important;
 }
 
 .btn-close {
