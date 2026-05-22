@@ -1273,6 +1273,67 @@ body.dark-mode .game-summary-share-preview {
     font-size: 1.05rem;
 }
 
+.create-room-options {
+    display: grid;
+    gap: 10px;
+}
+
+.create-room-option-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 14px;
+    min-height: 62px;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--bg-secondary), var(--primary-color) 4%);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 88%);
+    box-shadow: 0 8px 18px rgba(31, 38, 135, 0.05);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.create-room-option-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.create-room-option-title {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.create-room-option-hint {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.create-room-option-switch {
+    width: 2.7rem !important;
+    height: 1.5rem !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+    background-color: rgba(40, 45, 55, 0.16);
+    border-color: rgba(40, 45, 55, 0.08);
+    box-shadow: none !important;
+}
+
+.create-room-option-switch:focus {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color), transparent 84%) !important;
+}
+
+.create-room-option-switch:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
 .create-room-replay-hint span {
     min-width: 0;
     overflow: hidden;
@@ -1281,17 +1342,19 @@ body.dark-mode .game-summary-share-preview {
 }
 
 .create-room-schedule-box {
-    padding: 8px 0 0;
+    padding: 0;
     border: 0;
-    border-radius: 18px;
+    border-radius: 0;
     background: transparent;
 }
 
 .create-room-schedule-row {
-    display: flex;
-    align-items: center;
-    min-height: 46px;
-    padding: 0 2px;
+    min-height: 62px;
+}
+
+#create-room-scheduled-fields {
+    margin-top: 8px;
+    padding: 0 6px 0 58px;
 }
 
 .rooms-mode-switch {
@@ -1526,6 +1589,12 @@ body.dark-mode .game-summary-share-preview {
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
+}
+
+.thermal-safe .create-room-option-row {
+    background: var(--thermal-surface-bg-strong) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
 }
 
 .thermal-safe .rooms-list-header {
