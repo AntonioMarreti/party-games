@@ -350,6 +350,12 @@ function closeHistoryDetails() {
     document.body.classList.remove('history-details-open');
 }
 
+function cleanupHistoryDetailsForScreen(screenId = '') {
+    if (screenId && screenId !== 'screen-history') {
+        closeHistoryDetails();
+    }
+}
+
 function replayHistoryGameFromSheet(event) {
     if (event) event.stopPropagation();
     const replayBtn = document.getElementById('history-details-replay');
@@ -378,3 +384,14 @@ window.showGameDetailsModal = showGameDetailsModal;
 window.showGameDetailsModalById = showGameDetailsModalById;
 window.closeHistoryDetails = closeHistoryDetails;
 window.replayHistoryGameFromSheet = replayHistoryGameFromSheet;
+
+window.addEventListener('screenChanged', (event) => {
+    cleanupHistoryDetailsForScreen(event?.detail?.screenId || '');
+});
+
+window.addEventListener('tabChanged', (event) => {
+    const tabId = event?.detail?.tabId || '';
+    if (tabId !== 'history') {
+        closeHistoryDetails();
+    }
+});
