@@ -52,7 +52,6 @@ function action_create_room($pdo, $user, $data)
         // 1. Сначала удаляем игрока из старых комнат
         clearUserRooms($pdo, $user['id']);
 
-        $code = strtoupper(substr(md5(uniqid()), 0, 6)); // 6 chars
         $pass = !empty($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
 
         // IP Hash for Local Discovery
@@ -62,8 +61,24 @@ function action_create_room($pdo, $user, $data)
             $ipHash = hash('sha256', $ip . IP_SALT);
         }
 
-        $pdo->prepare("INSERT INTO rooms (room_code, host_user_id, password, ip_hash) VALUES (?, ?, ?, ?)")->execute([$code, $user['id'], $pass, $ipHash]);
-        $rid = $pdo->lastInsertId();
+        $roomStmt = $pdo->prepare("INSERT INTO rooms (room_code, host_user_id, password, ip_hash) VALUES (?, ?, ?, ?)");
+        $rid = null;
+        for ($attempt = 0; $attempt < 8; $attempt++) {
+            $code = generateAvailableRoomCode($pdo);
+            try {
+                $roomStmt->execute([$code, $user['id'], $pass, $ipHash]);
+                $rid = $pdo->lastInsertId();
+                break;
+            } catch (PDOException $e) {
+                if (isDuplicateKeyException($e)) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+        if (!$rid) {
+            throw new RuntimeException('Unable to create room with a unique code');
+        }
 
         $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_host) VALUES (?, ?, 1)")->execute([$rid, $user['id']]);
 

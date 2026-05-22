@@ -241,7 +241,6 @@ function scheduled_create_room($pdo, $user, $game, $hostId)
 {
     clearUserRooms($pdo, $hostId);
 
-    $code = strtoupper(substr(md5(uniqid('', true)), 0, 6));
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $ipHash = null;
     if ($ip && defined('IP_SALT')) {
@@ -252,8 +251,23 @@ function scheduled_create_room($pdo, $user, $game, $hostId)
         INSERT INTO rooms (room_code, host_user_id, ip_hash, game_type)
         VALUES (?, ?, ?, ?)
     ");
-    $stmt->execute([$code, $hostId, $ipHash, $game['game_type']]);
-    $roomId = (int) $pdo->lastInsertId();
+    $roomId = null;
+    for ($attempt = 0; $attempt < 8; $attempt++) {
+        $code = generateAvailableRoomCode($pdo);
+        try {
+            $stmt->execute([$code, $hostId, $ipHash, $game['game_type']]);
+            $roomId = (int) $pdo->lastInsertId();
+            break;
+        } catch (PDOException $e) {
+            if (isDuplicateKeyException($e)) {
+                continue;
+            }
+            throw $e;
+        }
+    }
+    if (!$roomId) {
+        throw new RuntimeException('Unable to create scheduled room with a unique code');
+    }
 
     $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_host) VALUES (?, ?, 1)")
         ->execute([$roomId, $hostId]);

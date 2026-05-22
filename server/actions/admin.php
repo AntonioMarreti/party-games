@@ -1,5 +1,12 @@
 <?php
 
+function require_admin($user)
+{
+    if (empty($user['is_admin'])) {
+        sendError('Access Denied');
+    }
+}
+
 function action_admin_stats($pdo, $user, $data)
 {
     action_admin_get_stats($pdo, $user, $data);
@@ -7,17 +14,7 @@ function action_admin_stats($pdo, $user, $data)
 
 function action_admin_get_stats($pdo, $user, $data)
 {
-    // Basic security: Check if user is an admin
-    // For now, we can hardcode specific user IDs or add an 'is_admin' column to users.
-    // Let's rely on a secret token for now or just open (as requested Strategy says "Telegram commands", but here we do API).
-    // Better: Allow only if user ID matches specific IDs (e.g., Developer).
-
-    // TEMPORARY: Allow anyone for demo, OR check specific ID
-    // if ($user['id'] != 12345) sendError('Access Denied');
-
-    $secret = $data['admin_secret'] ?? '';
-    if ($secret !== 'MySuperSecretAdminKey123')
-        sendError('Access Denied'); // Simple protection
+    require_admin($user);
 
     $stats = [];
 
@@ -39,7 +36,7 @@ function action_admin_get_stats($pdo, $user, $data)
 
 function action_reset_leaderboard($pdo, $user, $data)
 {
-    // SECURITY: Demo only. Resets ALL stats.
+    require_admin($user);
 
     try {
         // Reset user_statistics to defaults
@@ -65,8 +62,7 @@ function action_reset_leaderboard($pdo, $user, $data)
 
 function action_seed_achievements($pdo, $user, $data)
 {
-    // Basic Security: Admin only
-    // if (!in_array($user['id'], ADMIN_IDS)) sendError('Access Denied');
+    require_admin($user);
 
     $achievements = [
         [
@@ -184,6 +180,8 @@ function action_seed_achievements($pdo, $user, $data)
 
 function action_setup_reactions($pdo, $user, $data)
 {
+    require_admin($user);
+
     try {
         // 1. Room Events Table
         $sql = "CREATE TABLE IF NOT EXISTS room_events (
@@ -212,11 +210,7 @@ function action_setup_reactions($pdo, $user, $data)
 
 function action_db_doctor($pdo, $user, $data)
 {
-    if (!$user['is_admin']) {
-        $secret = $data['admin_secret'] ?? '';
-        if ($secret !== 'MySuperSecretAdminKey123')
-            sendError('Access Denied');
-    }
+    require_admin($user);
 
     $report = [
         'orphans' => [],
@@ -263,11 +257,7 @@ function action_db_doctor($pdo, $user, $data)
 
 function action_db_repair($pdo, $user, $data)
 {
-    if (!$user['is_admin']) {
-        $secret = $data['admin_secret'] ?? '';
-        if ($secret !== 'MySuperSecretAdminKey123')
-            sendError('Access Denied');
-    }
+    require_admin($user);
 
     $res = perform_db_repair($pdo);
     if ($res['status'] === 'ok') {

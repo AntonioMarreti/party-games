@@ -1,6 +1,41 @@
 <?php
 // server/lib/shared_helpers.php
 
+function generateRoomCode($length = 6)
+{
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $max = strlen($alphabet) - 1;
+    $code = '';
+
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $alphabet[random_int(0, $max)];
+    }
+
+    return $code;
+}
+
+function isDuplicateKeyException($e)
+{
+    return $e instanceof PDOException
+        && $e->getCode() === '23000'
+        && (int) ($e->errorInfo[1] ?? 0) === 1062;
+}
+
+function generateAvailableRoomCode($pdo, $length = 6, $maxAttempts = 8)
+{
+    $stmt = $pdo->prepare("SELECT id FROM rooms WHERE room_code = ? LIMIT 1");
+
+    for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+        $code = generateRoomCode($length);
+        $stmt->execute([$code]);
+        if (!$stmt->fetchColumn()) {
+            return $code;
+        }
+    }
+
+    throw new RuntimeException('Unable to generate unique room code');
+}
+
 function calculateLevel($xp)
 {
     if ($xp < 0)

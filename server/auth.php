@@ -25,7 +25,7 @@ function checkTmaAuth($initDataString)
     $secret_key = hash_hmac('sha256', BOT_TOKEN, "WebAppData", true);
     $hash = bin2hex(hash_hmac('sha256', $data_check_string, $secret_key, true));
 
-    if (strcmp($hash, $check_hash) === 0) {
+    if (hash_equals($hash, (string) $check_hash)) {
         if (isset($data['auth_date']) && (time() - $data['auth_date'] > 86400)) {
             return false;
         }
