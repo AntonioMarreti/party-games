@@ -902,23 +902,23 @@ body.dark-mode .badge-info {
 }
 
 .glass-btn-warning {
-    background: color-mix(in srgb, var(--status-warning), transparent 85%);
-    border-color: color-mix(in srgb, var(--status-warning), transparent 70%);
-    color: var(--status-warning);
+    background: color-mix(in srgb, var(--status-warning), white 80%);
+    border-color: color-mix(in srgb, var(--status-warning), transparent 58%);
+    color: color-mix(in srgb, var(--status-warning), #7a4a00 58%);
 }
 
 .glass-btn-warning:hover {
-    background: color-mix(in srgb, var(--status-warning), transparent 75%);
+    background: color-mix(in srgb, var(--status-warning), white 72%);
 }
 
 .glass-btn-danger {
-    background: color-mix(in srgb, var(--status-error), transparent 85%);
-    border-color: color-mix(in srgb, var(--status-error), transparent 70%);
-    color: var(--status-error);
+    background: color-mix(in srgb, var(--status-error), white 90%);
+    border-color: color-mix(in srgb, var(--status-error), transparent 72%);
+    color: color-mix(in srgb, var(--status-error), #7f1d1d 24%);
 }
 
 .glass-btn-danger:hover {
-    background: color-mix(in srgb, var(--status-error), transparent 75%);
+    background: color-mix(in srgb, var(--status-error), white 84%);
 }
 
 .glass-btn-primary {
@@ -1281,10 +1281,17 @@ body.dark-mode .game-summary-share-preview {
 }
 
 .create-room-schedule-box {
-    padding: 12px;
-    border: 1px solid rgba(108, 92, 231, 0.12);
+    padding: 8px 0 0;
+    border: 0;
     border-radius: 18px;
-    background: rgba(108, 92, 231, 0.06);
+    background: transparent;
+}
+
+.create-room-schedule-row {
+    display: flex;
+    align-items: center;
+    min-height: 46px;
+    padding: 0 2px;
 }
 
 .rooms-mode-switch {
@@ -1462,6 +1469,8 @@ body.dark-mode .game-summary-share-preview {
     font-size: 12px;
     font-weight: 900;
     line-height: 1;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .scheduled-game-subscribed {
@@ -1511,6 +1520,12 @@ body.dark-mode .game-summary-share-preview {
     box-shadow: var(--thermal-shadow-soft) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+}
+
+.thermal-safe .create-room-schedule-box {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
 }
 
 .thermal-safe .rooms-list-header {

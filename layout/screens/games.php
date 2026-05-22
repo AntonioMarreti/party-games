@@ -4,7 +4,7 @@
         <div class="header-title">Открытые игры</div>
         <div class="header-subtitle">Найдите компанию сейчас или запишитесь на игру</div>
         <div class="position-relative">
-            <i class="bi bi-search position-absolute text-white" style="top: 27px; right: 15px; opacity: 0.7;"></i>
+            <i class="bi bi-search position-absolute rooms-search-icon" style="top: 27px; right: 15px;"></i>
             <input type="text" class="search-bar ps-3" placeholder="Найти игру...">
         </div>
     </div>

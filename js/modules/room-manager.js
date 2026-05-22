@@ -106,6 +106,8 @@ async function createRoom() {
                     document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
                     document.body.classList.remove('modal-open');
                     document.body.style.overflow = '';
+                    document.documentElement.classList.remove('modal-open');
+                    if (typeof window.syncModalOpenState === 'function') window.syncModalOpenState();
                 }, 300);
                 setTimeout(() => {
                     if (window.pendingReplayFlow?.completed) {
@@ -252,6 +254,8 @@ async function joinRoom(code = null, passwordOverride = null) {
                 document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
                 document.body.classList.remove('modal-open');
                 document.body.style.overflow = '';
+                document.documentElement.classList.remove('modal-open');
+                if (typeof window.syncModalOpenState === 'function') window.syncModalOpenState();
             }, 300);
 
             if (typeof window.checkState === 'function') await window.checkState();
@@ -707,12 +711,17 @@ function getScheduledReadinessText(count, minPlayers) {
     const min = Math.max(1, Number(minPlayers || 1));
     if (value >= min) return 'Игра состоится';
     const left = min - value;
-    const lastTwo = left % 100;
-    const last = left % 10;
-    const noun = last === 1 && lastTwo !== 11
-        ? 'игрок'
-        : (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'игрока' : 'игроков');
-    return `Нужно ещё ${left} ${noun}`;
+    if (left === 1) return 'Нужен ещё 1 игрок';
+    return `Нужно ещё игроков: ${left}`;
+}
+
+function getScheduledDescriptionText(game, isHost = false) {
+    const rawDescription = String(game?.description || '').trim();
+    if (rawDescription) return rawDescription;
+    if (game?.status === 'live') {
+        return isHost ? 'Комната уже собирает записавшихся игроков' : 'Игра открыта для записавшихся игроков';
+    }
+    return isHost ? 'Запись на игру' : 'Игра по приглашению или коду';
 }
 
 function canOpenScheduledGame(startsAt) {
@@ -1008,12 +1017,12 @@ async function loadScheduledGames() {
         currentScheduledGamesById.set(Number(game.id), game);
         const meta = getPublicRoomGameMeta(game.game_type);
         const title = roomSafeHtml(game.title || meta.name);
-        const description = roomSafeHtml(game.description || 'Открытая игра для всех желающих');
+        const isHost = Number(game.is_host || 0) === 1
+            || (window.globalUser && Number(game.host_id) === Number(window.globalUser.id));
+        const description = roomSafeHtml(getScheduledDescriptionText(game, isHost));
         const hostName = roomSafeHtml(game.host_name || 'Хост');
         const startText = roomSafeHtml(getScheduledGameDateText(game.starts_at));
         const statusText = roomSafeHtml(getScheduledGameStatusText(game.status, game.starts_at));
-        const isHost = Number(game.is_host || 0) === 1
-            || (window.globalUser && Number(game.host_id) === Number(window.globalUser.id));
         const subscribersCount = Number(game.subscribers_count || 0);
         const maxPlayers = Number(game.max_players || 0);
         const minPlayers = Number(game.min_players || 1);
@@ -1042,8 +1051,8 @@ async function loadScheduledGames() {
         } else if (isHost) {
             primaryAction = canOpen
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)})">Открыть</button>`
-                : `<span class="scheduled-game-disabled-action">Открыть позже</span>`;
-            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Редактировать</button>${hasRealSubscribers ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>` : ''}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить</button>`;
+                : `<span class="scheduled-game-disabled-action" aria-disabled="true">Откроется после набора игроков</span>`;
+            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Редактировать</button>${hasRealSubscribers ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>` : ''}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить игру</button>`;
         } else {
             primaryAction = spotsLeft <= 0 && !isSubscribed
                 ? `<span class="scheduled-game-disabled-action">Мест нет</span>`
@@ -1187,7 +1196,8 @@ async function cancelScheduledGame(id) {
 
     if (typeof window.showConfirmation === 'function') {
         window.showConfirmation('Отменить игру?', 'Игроки больше не увидят её в расписании.', run, {
-            confirmText: 'Отменить',
+            confirmText: 'Отменить игру',
+            cancelText: 'Не отменять',
             isDanger: true
         });
     } else {
@@ -1306,7 +1316,7 @@ function renderPlayerList(players, containerId) {
         const div = document.createElement('div');
         div.className = 'player-grid-item';
 
-        const avatarHtml = typeof window.renderAvatar === 'function' ? window.renderAvatar(p, 'md') : '';
+        const avatarHtml = typeof window.renderAvatar === 'function' ? window.renderAvatar(p, 'md', false, true) : '';
 
         // Professional Icon (Star) as requested by user
         const crown = p.is_host == 1 ?
@@ -1314,8 +1324,14 @@ function renderPlayerList(players, containerId) {
 
         let botBadge = '';
         if (p.is_bot == 1) {
-            const diffColor = p.bot_difficulty === 'hard' ? 'danger' : (p.bot_difficulty === 'easy' ? 'success' : 'warning');
-            botBadge = `<span class="badge bg-${diffColor} position-absolute bottom-0 start-50 translate-middle-x" style="font-size: 10px; margin-bottom: -5px;">${p.bot_difficulty || 'AI'}</span>`;
+            const difficulty = String(p.bot_difficulty || 'AI').toLowerCase();
+            const difficultyLabelMap = {
+                easy: 'Лёгкий',
+                medium: 'Средний',
+                hard: 'Сложный',
+                ai: 'AI'
+            };
+            botBadge = `<span class="player-bot-badge player-bot-badge--${difficulty} position-absolute bottom-0 start-50 translate-middle-x">${difficultyLabelMap[difficulty] || 'AI'}</span>`;
         }
 
         div.innerHTML = `
@@ -1329,11 +1345,19 @@ function renderPlayerList(players, containerId) {
 
         if (amIHost && p.is_host != 1) {
             div.style.cursor = 'pointer';
+            div.setAttribute('role', 'button');
+            div.setAttribute('tabindex', '0');
             if (p.is_bot == 1) {
                 if (typeof window.removeBot === 'function') div.onclick = () => window.removeBot(p.id);
             } else {
                 if (typeof window.kickPlayer === 'function') div.onclick = () => window.kickPlayer(p.id, p.first_name);
             }
+            div.onkeydown = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    div.click();
+                }
+            };
         }
 
         list.appendChild(div);
@@ -1480,6 +1504,8 @@ function scanQrCode() {
                 document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
                 document.body.classList.remove('modal-open');
                 document.body.style.overflow = '';
+                document.documentElement.classList.remove('modal-open');
+                if (typeof window.syncModalOpenState === 'function') window.syncModalOpenState();
             }, 300);
 
             return true; // standard callback return
@@ -1704,6 +1730,7 @@ async function addBot(difficulty) {
     }
     // Also try closing generic custom overlays
     document.querySelectorAll('.custom-modal-overlay').forEach(el => el.remove());
+    if (typeof window.syncModalOpenState === 'function') window.syncModalOpenState();
 
     await window.apiRequest({
         action: 'add_bot',
@@ -1998,7 +2025,7 @@ function renderGameSelectorUI(lobbyState) {
                 .game-fav-btn {
                     padding: 8px;
                     margin-right: 2px;
-                    color: #e0e0e0;
+                    color: color-mix(in srgb, var(--status-warning), var(--text-main) 46%);
                     transition: transform 0.2s, color 0.2s;
                     z-index: 5;
                 }
@@ -2006,7 +2033,7 @@ function renderGameSelectorUI(lobbyState) {
                     transform: scale(0.8);
                 }
                 .game-fav-btn.active {
-                    color: #ffc107;
+                    color: color-mix(in srgb, var(--status-warning), #9a6700 14%);
                 }
 
                 /* Filter Tabs Solid Design */

@@ -836,7 +836,9 @@ function renderAllGames(category = gameCatalogState.category, query = gameCatalo
         const iconColor = game.color || '#6c757d';
         const isLiked = window.userFavorites && window.userFavorites.includes(game.id);
         const heartIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
-        const heartColor = isLiked ? '#dc3545' : 'var(--text-muted)';
+        const heartColor = isLiked
+            ? '#dc3545'
+            : 'color-mix(in srgb, var(--status-warning), var(--text-main) 48%)';
         const safeName = window.safeHTML ? window.safeHTML(game.name) : game.name;
         const safeDescription = window.safeHTML ? window.safeHTML(game.description || '') : (game.description || '');
         const meta = getCatalogGameMeta(game);

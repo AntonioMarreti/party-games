@@ -234,7 +234,7 @@
                         <label class="form-check-label ms-2 fw-bold" for="create-room-public">Сделать публичной</label>
                     </div>
                     <div class="create-room-schedule-box mb-3">
-                        <div class="form-check form-switch ps-5 mb-2">
+                        <div class="form-check form-switch ps-5 mb-2 create-room-schedule-row">
                             <input class="form-check-input" type="checkbox" id="create-room-scheduled"
                                 onchange="toggleCreateRoomScheduleMode()" style="transform: scale(1.3);">
                             <label class="form-check-label ms-2 fw-bold" for="create-room-scheduled">Отложенная игра</label>
@@ -376,8 +376,7 @@
 
 <!-- 12. Avatar Viewer Modal -->
 <div id="modal-avatar-view" class="custom-modal-overlay" onclick="closeModal('modal-avatar-view')">
-    <div class="modal-content animate__animated animate__zoomIn"
-        style="background: transparent; box-shadow: none; width: 100%; max-width: 350px;"
+    <div class="avatar-view-shell animate__animated animate__zoomIn"
         onclick="event.stopPropagation()">
         <div class="d-flex justify-content-center align-items-center position-relative">
             <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-2 shadow"

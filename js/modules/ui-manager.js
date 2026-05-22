@@ -277,6 +277,17 @@ function isScreenActive(id) {
 
 // === MODALS ===
 
+function hasVisibleModalOpen() {
+    const visibleBootstrapModal = document.querySelector('.modal.show');
+    const visibleCustomModal = document.querySelector('.custom-modal-overlay.show, .custom-modal-overlay.active');
+    return !!(visibleBootstrapModal || visibleCustomModal);
+}
+
+function syncModalOpenState() {
+    const isOpen = hasVisibleModalOpen();
+    document.documentElement.classList.toggle('modal-open', isOpen);
+    document.body.classList.toggle('modal-open', isOpen);
+}
 
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -284,6 +295,7 @@ function openModal(modalId) {
         modal.classList.add('active');
         modal.classList.add('show'); // Bootstrap compatibility
         modal.style.display = 'flex'; // Ensure visibility
+        syncModalOpenState();
         if (window.ThemeManager) {
             window.ThemeManager.triggerHaptic('impact', 'medium');
         }
@@ -296,6 +308,7 @@ function closeModal(modalId) {
         modal.classList.remove('active');
         modal.classList.remove('show');
         modal.style.display = 'none';
+        syncModalOpenState();
         if (window.ThemeManager) {
             window.ThemeManager.triggerHaptic('impact', 'light');
         }
@@ -322,6 +335,20 @@ function setupModalClosing() {
             }
         }
     });
+
+    if (window.bootstrap && !document.body.dataset.modalLockBound) {
+        document.body.dataset.modalLockBound = 'true';
+        document.addEventListener('show.bs.modal', syncModalOpenState);
+        document.addEventListener('shown.bs.modal', syncModalOpenState);
+        document.addEventListener('hide.bs.modal', () => requestAnimationFrame(syncModalOpenState));
+        document.addEventListener('hidden.bs.modal', syncModalOpenState);
+    }
+
+    if (!window.__pgModalSyncBound) {
+        window.__pgModalSyncBound = true;
+        window.addEventListener('screenChanged', syncModalOpenState);
+        window.addEventListener('tabChanged', syncModalOpenState);
+    }
 }
 
 // === ALERTS & NOTIFICATIONS ===
@@ -358,6 +385,7 @@ function showAlert(title, message, type = 'info') { // type: info, success, erro
 
     const container = document.getElementById('bg-wrapper') || document.body;
     container.insertAdjacentHTML('beforeend', alertHtml);
+    syncModalOpenState();
 
     if (window.ThemeManager) {
         window.ThemeManager.triggerHaptic('notification', type === 'info' ? 'success' : type);
@@ -368,7 +396,11 @@ function closeAlert(id) {
     const el = document.getElementById(id);
     if (el) {
         el.classList.remove('show');
-        setTimeout(() => el.remove(), 200);
+        el.classList.remove('active');
+        setTimeout(() => {
+            el.remove();
+            syncModalOpenState();
+        }, 200);
     }
 }
 
@@ -441,6 +473,7 @@ function showConfirmation(title, message, onConfirm, options = {}) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', html);
+    syncModalOpenState();
 
     const yesBtn = document.getElementById(confirmId + '-yes');
     if (yesBtn) {
@@ -491,6 +524,7 @@ function showPrompt(title, message, onConfirm, options = {}) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', html);
+    syncModalOpenState();
 
     const input = document.getElementById(`${promptId}-input`);
     if (input) {
@@ -529,6 +563,7 @@ function showLoading(title, message) {
     </div>`;
 
     document.body.insertAdjacentHTML('beforeend', html);
+    syncModalOpenState();
 
     return {
         update: (percent, text) => {
@@ -541,7 +576,11 @@ function showLoading(title, message) {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.remove('show');
-                setTimeout(() => el.remove(), 200);
+                el.classList.remove('active');
+                setTimeout(() => {
+                    el.remove();
+                    syncModalOpenState();
+                }, 200);
             }
         }
     };
@@ -743,6 +782,7 @@ window.UIManager = {
     isScreenActive,
     openModal,
     closeModal,
+    syncModalOpenState,
     setupModalClosing,
     showAlert,
     showToast,
@@ -773,6 +813,7 @@ window.showToast = showToast;
 window.showConfirmation = showConfirmation;
 window.showPrompt = showPrompt;
 window.showLoading = showLoading;
+window.syncModalOpenState = syncModalOpenState;
 window.closeAlert = closeAlert;
 window.safeHTML = safeHTML;
 window.safeText = safeText;

@@ -17,6 +17,7 @@
     background: linear-gradient(to bottom, rgba(241, 245, 249, 0.85), rgba(241, 245, 249, 0.95)), url('../../../img/games/bunker/bunker_global_bg_1769853095597.png') fixed center;
     background-size: cover;
     min-height: 100dvh;
+    min-height: 100%;
     color: var(--bunker-text);
     font-family: 'Inter', -apple-system, system-ui, sans-serif;
     padding-bottom: 110px !important;
@@ -28,7 +29,7 @@
 
 #bunker-wrapper {
     position: relative;
-    height: 100dvh;
+    height: auto;
     min-height: 100dvh;
     overflow-x: hidden;
     overflow-y: auto;
@@ -62,7 +63,8 @@
 /* Base layout */
 .bunker-main-layout {
     width: 100%;
-    height: 100%;
+    height: auto;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
     position: relative;
