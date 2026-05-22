@@ -240,6 +240,7 @@ $routes = [
     'revoke_all_sessions' => 'actions/sessions.php',
     'update_session_ttl' => 'actions/sessions.php',
     'update_session_info' => 'actions/sessions.php',
+    'submit_qa_bug_report' => 'actions/qa.php',
 
     'start_game' => 'actions/game.php',
     'stop_game' => 'actions/game.php',

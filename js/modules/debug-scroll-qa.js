@@ -5,6 +5,14 @@
     const BUTTON_ID = 'scroll-qa-button';
     const STYLE_ID = 'scroll-qa-styles';
     const TESTER_CHAT_URL = 'https://t.me/+w6d97lbezTlmYzky';
+    const BUG_REPORT_RATE_LIMIT_MS = 10000;
+    let lastBugReportSentAt = 0;
+    let selectedBugElement = null;
+    let bugDraft = {
+        actual: '',
+        expected: '',
+        steps: ''
+    };
 
     const longParagraph = 'Проверьте свайп с этого текста, с карточек, с пустого фона и рядом с кнопками. Контент должен прокручиваться до самого низа без второго внутреннего скролла.';
 
@@ -78,12 +86,14 @@
         style.textContent = `
             #${BUTTON_ID} {
                 position: fixed;
-                right: 14px;
-                top: calc(14px + env(safe-area-inset-top));
+                left: 14px;
+                top: calc(118px + env(safe-area-inset-top));
                 z-index: 2147483000;
                 border: 0;
                 border-radius: 999px;
-                padding: 9px 12px;
+                min-width: 42px;
+                height: 34px;
+                padding: 0 11px;
                 background: #111827;
                 color: #fff;
                 font: 700 12px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -261,10 +271,65 @@
                 color: #fff;
                 font-weight: 800;
             }
+            .scroll-qa-action.secondary {
+                background: #eef2ff;
+                color: #4338ca;
+                border: 1px solid rgba(79,70,229,0.14);
+            }
             .scroll-qa-muted {
                 color: #64748b;
                 font-size: 12px;
                 line-height: 1.35;
+            }
+            .scroll-qa-field {
+                display: grid;
+                gap: 6px;
+            }
+            .scroll-qa-field label {
+                color: #111827;
+                font-size: 13px;
+                font-weight: 800;
+            }
+            .scroll-qa-field textarea {
+                width: 100%;
+                min-height: 82px;
+                resize: vertical;
+                border: 1px solid rgba(148,163,184,0.44);
+                border-radius: 14px;
+                padding: 11px 12px;
+                background: #fff;
+                color: #111827;
+                font: 600 14px/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                outline: 0;
+            }
+            .scroll-qa-field textarea:focus {
+                border-color: rgba(79,70,229,0.48);
+                box-shadow: 0 0 0 4px rgba(79,70,229,0.1);
+            }
+            .scroll-qa-element-summary {
+                border: 1px solid rgba(148,163,184,0.28);
+                border-radius: 14px;
+                padding: 10px 12px;
+                background: #fff;
+                color: #334155;
+                font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+            .scroll-qa-picker-hint {
+                position: fixed;
+                left: 50%;
+                top: calc(18px + env(safe-area-inset-top));
+                transform: translateX(-50%);
+                z-index: 2147483001;
+                max-width: min(340px, calc(100vw - 28px));
+                padding: 10px 14px;
+                border-radius: 999px;
+                background: #111827;
+                color: #fff;
+                font: 800 13px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                box-shadow: 0 12px 32px rgba(15,23,42,0.28);
+                pointer-events: none;
             }
             .scroll-qa-rank-row,
             .scroll-qa-player-row {
@@ -356,7 +421,9 @@
         const button = document.createElement('button');
         button.id = BUTTON_ID;
         button.type = 'button';
-        button.textContent = 'Scroll QA';
+        button.textContent = 'QA';
+        button.title = 'Scroll QA';
+        button.setAttribute('aria-label', 'Scroll QA');
         button.addEventListener('click', openPanel);
         document.body.appendChild(button);
     }
@@ -411,7 +478,8 @@
                         <div class="scroll-qa-muted" style="margin-top:4px;">Чат, баг-репорт и быстрый доступ к Scroll QA.</div>
                         <div style="display:grid;gap:8px;margin-top:12px;">
                             <button class="scroll-qa-action" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
-                            <button class="scroll-qa-action" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
+                            <button class="scroll-qa-action" type="button" data-scroll-qa-open-bug-report>Сообщить о баге</button>
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
                         </div>
                     </div>
                     <div class="scroll-qa-card">
@@ -432,6 +500,7 @@
         `;
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
         root.querySelector('[data-scroll-qa-chat]')?.addEventListener('click', openTesterChat);
+        root.querySelector('[data-scroll-qa-open-bug-report]')?.addEventListener('click', openBugReporter);
         root.querySelector('[data-scroll-qa-bug-report]')?.addEventListener('click', () => copyBugReport(info));
         root.querySelector('[data-scroll-qa-enable]')?.addEventListener('click', () => {
             enableScrollQa();
@@ -458,6 +527,246 @@
             window.open(TESTER_CHAT_URL, '_blank', 'noopener');
         } catch (e) {
             window.location.href = TESTER_CHAT_URL;
+        }
+    }
+
+    function openBugReporter() {
+        if (!hasToolsAccess()) return;
+        ensureStyles();
+        closeScenario();
+        let root = document.getElementById(ROOT_ID);
+        if (!root) {
+            root = document.createElement('div');
+            root.id = ROOT_ID;
+            document.body.appendChild(root);
+        }
+        root.className = 'is-open';
+        root.innerHTML = `
+            <div class="scroll-qa-shell" role="dialog" aria-modal="true" aria-label="Bug Report">
+                <div class="scroll-qa-header">
+                    <div>
+                        <h2 class="scroll-qa-title">Сообщить о баге</h2>
+                        <div class="scroll-qa-subtitle">Опишите проблему. Техническая информация добавится автоматически.</div>
+                    </div>
+                    <button class="scroll-qa-close" type="button" data-scroll-qa-close>×</button>
+                </div>
+                <div class="scroll-qa-body">
+                    <div class="scroll-qa-list">
+                        <div class="scroll-qa-field">
+                            <label for="qa-bug-actual">Что произошло? *</label>
+                            <textarea id="qa-bug-actual" required placeholder="Например: кнопка не нажимается, экран уехал, ошибка после хода">${escapeHtml(bugDraft.actual)}</textarea>
+                        </div>
+                        <div class="scroll-qa-field">
+                            <label for="qa-bug-expected">Что ожидали?</label>
+                            <textarea id="qa-bug-expected" placeholder="Как должно было работать">${escapeHtml(bugDraft.expected)}</textarea>
+                        </div>
+                        <div class="scroll-qa-field">
+                            <label for="qa-bug-steps">Шаги / комментарий</label>
+                            <textarea id="qa-bug-steps" placeholder="Что нажали перед багом, как повторить, ссылка на скрин/видео">${escapeHtml(bugDraft.steps)}</textarea>
+                        </div>
+                        <div>
+                            <div class="scroll-qa-muted" style="font-weight:800;margin-bottom:6px;">Проблемный элемент</div>
+                            <div class="scroll-qa-element-summary" data-scroll-qa-element-summary>${escapeHtml(formatElementSummary(selectedBugElement) || 'Не выбран')}</div>
+                        </div>
+                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-pick-element>Выбрать элемент на экране</button>
+                        <button class="scroll-qa-action" type="button" data-scroll-qa-submit-bug>Отправить баг-репорт</button>
+                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-bug>Скопировать баг-репорт</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
+        root.querySelector('[data-scroll-qa-pick-element]')?.addEventListener('click', startElementPicker);
+        root.querySelector('[data-scroll-qa-submit-bug]')?.addEventListener('click', submitBugReport);
+        root.querySelector('[data-scroll-qa-copy-bug]')?.addEventListener('click', () => copyBugReport(buildCurrentBugReport()));
+        root.querySelectorAll('#qa-bug-actual, #qa-bug-expected, #qa-bug-steps').forEach(input => {
+            input.addEventListener('input', updateBugDraftFromForm);
+        });
+    }
+
+    function updateBugDraftFromForm() {
+        bugDraft = {
+            actual: document.getElementById('qa-bug-actual')?.value || '',
+            expected: document.getElementById('qa-bug-expected')?.value || '',
+            steps: document.getElementById('qa-bug-steps')?.value || ''
+        };
+    }
+
+    function startElementPicker() {
+        updateBugDraftFromForm();
+        closePanel();
+        const hint = document.createElement('div');
+        hint.className = 'scroll-qa-picker-hint';
+        hint.textContent = 'Нажмите на проблемный элемент';
+        document.body.appendChild(hint);
+
+        let handled = false;
+        const cleanupPicker = () => {
+            document.removeEventListener('pointerdown', onPick, true);
+            hint.remove();
+        };
+        const cleanupClickSuppressor = () => {
+            document.removeEventListener('click', suppressClick, true);
+        };
+        const suppressClick = (event) => {
+            if (!handled) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+        };
+        const onPick = (event) => {
+            if (event.target === hint) return;
+            handled = true;
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            selectedBugElement = describeElement(event.target, event);
+            cleanupPicker();
+            setTimeout(cleanupClickSuppressor, 450);
+            setTimeout(openBugReporter, 80);
+        };
+
+        document.addEventListener('pointerdown', onPick, true);
+        document.addEventListener('click', suppressClick, true);
+    }
+
+    function describeElement(target, event) {
+        const element = target instanceof Element ? target : null;
+        if (!element) return null;
+        const closest = element.closest('button,a,input,textarea,select,label,[role="button"],[onclick]');
+        const rect = element.getBoundingClientRect();
+        const closestRect = closest && closest !== element ? closest.getBoundingClientRect() : null;
+        return {
+            tagName: element.tagName,
+            id: element.id || '',
+            className: safeClassName(element),
+            textContent: trimText(element.textContent, 120),
+            ariaLabel: element.getAttribute('aria-label') || '',
+            role: element.getAttribute('role') || '',
+            name: element.getAttribute('name') || '',
+            type: element.getAttribute('type') || '',
+            placeholder: element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement ? element.placeholder || '' : '',
+            selector: buildElementPath(element),
+            closest: closest ? {
+                tagName: closest.tagName,
+                id: closest.id || '',
+                className: safeClassName(closest),
+                textContent: trimText(closest.textContent, 120),
+                ariaLabel: closest.getAttribute('aria-label') || '',
+                role: closest.getAttribute('role') || '',
+                name: closest.getAttribute('name') || '',
+                type: closest.getAttribute('type') || '',
+                selector: buildElementPath(closest),
+                rect: closestRect ? rectToPlain(closestRect) : null
+            } : null,
+            rect: rectToPlain(rect),
+            click: {
+                x: Math.round(event.clientX),
+                y: Math.round(event.clientY)
+            }
+        };
+    }
+
+    function safeClassName(element) {
+        const value = typeof element.className === 'string' ? element.className : '';
+        return value.trim().replace(/\s+/g, ' ').slice(0, 180);
+    }
+
+    function trimText(value, maxLength) {
+        return String(value || '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+    }
+
+    function rectToPlain(rect) {
+        return {
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            top: Math.round(rect.top),
+            left: Math.round(rect.left)
+        };
+    }
+
+    function buildElementPath(element) {
+        const parts = [];
+        let node = element;
+        while (node && node.nodeType === 1 && parts.length < 5 && node !== document.body) {
+            let part = node.tagName.toLowerCase();
+            if (node.id) {
+                part += `#${cssEscape(node.id)}`;
+                parts.unshift(part);
+                break;
+            }
+            const classes = safeClassName(node).split(' ').filter(Boolean).slice(0, 2);
+            if (classes.length) part += `.${classes.map(cssEscape).join('.')}`;
+            const parent = node.parentElement;
+            if (parent) {
+                const siblings = Array.from(parent.children).filter(child => child.tagName === node.tagName);
+                if (siblings.length > 1) part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
+            }
+            parts.unshift(part);
+            node = parent;
+        }
+        return parts.join(' > ');
+    }
+
+    function cssEscape(value) {
+        if (window.CSS?.escape) return window.CSS.escape(String(value));
+        return String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+    }
+
+    function formatElementSummary(info) {
+        if (!info) return '';
+        const primary = formatElementLine(info);
+        const closest = info.closest && info.closest.selector !== info.selector ? `\nClosest: ${formatElementLine(info.closest)}` : '';
+        const text = info.textContent ? `\nТекст: ${info.textContent}` : '';
+        const rect = info.rect ? `\nRect: x=${info.rect.x}, y=${info.rect.y}, w=${info.rect.width}, h=${info.rect.height}` : '';
+        const click = info.click ? `\nClick: x=${info.click.x}, y=${info.click.y}` : '';
+        return `${primary}${closest}${text}${rect}${click}`;
+    }
+
+    function formatElementLine(info) {
+        if (!info) return 'unknown';
+        if (info.selector) return info.selector;
+        const id = info.id ? `#${info.id}` : '';
+        const classes = info.className ? `.${info.className.split(' ').slice(0, 2).join('.')}` : '';
+        return `${String(info.tagName || 'element').toLowerCase()}${id}${classes}`;
+    }
+
+    function buildCurrentBugReport() {
+        updateBugDraftFromForm();
+        return buildBugReport(getDebugInfo(selectedBugElement), bugDraft);
+    }
+
+    async function submitBugReport() {
+        updateBugDraftFromForm();
+        if (!bugDraft.actual.trim()) {
+            if (window.showToast) window.showToast('Заполните поле “Что произошло?”', 'warning');
+            else if (window.showAlert) window.showAlert('QA tools', 'Заполните поле “Что произошло?”', 'warning');
+            return;
+        }
+        const now = Date.now();
+        if (now - lastBugReportSentAt < BUG_REPORT_RATE_LIMIT_MS) {
+            const wait = Math.ceil((BUG_REPORT_RATE_LIMIT_MS - (now - lastBugReportSentAt)) / 1000);
+            if (window.showToast) window.showToast(`Подождите ${wait} сек. перед повторной отправкой`, 'warning');
+            return;
+        }
+
+        const report = buildBugReport(getDebugInfo(selectedBugElement), bugDraft);
+        lastBugReportSentAt = now;
+        try {
+            const res = typeof window.apiRequest === 'function'
+                ? await window.apiRequest({ action: 'submit_qa_bug_report', report })
+                : null;
+            if (res?.status === 'ok') {
+                if (window.showToast) window.showToast('Баг-репорт отправлен', 'success');
+                else if (window.showAlert) window.showAlert('QA tools', 'Баг-репорт отправлен', 'success');
+                closePanel();
+                return;
+            }
+            throw new Error(res?.message || 'logger unavailable');
+        } catch (e) {
+            copyBugReport(report, 'Отправка не удалась. Баг-репорт скопирован');
         }
     }
 
@@ -536,11 +845,13 @@
         return window.appVersion || 'unknown';
     }
 
-    function getDebugInfo() {
+    function getDebugInfo(selectedElement = selectedBugElement) {
         const tg = window.Telegram?.WebApp;
         const user = getCurrentUser();
         const rawTesterValue = getRawTesterValue(user);
+        const visualViewport = window.visualViewport;
         return {
+            timestamp: new Date().toISOString(),
             user_id: user?.id || null,
             telegram_id: user?.telegram_id || null,
             is_tester: isTesterUser(user),
@@ -549,22 +860,100 @@
             scroll_qa_has_tools_access: hasToolsAccess(user),
             platform: tg?.platform || 'web',
             app_version: getAppBuildVersion(),
+            app_build: getAppBuildVersion(),
             debug_scroll_qa: isEnabled(),
             debug_bb_touch: safeLocalStorageGet('DEBUG_BB_TOUCH') === '1',
+            active_screen: getActiveScreen(),
+            active_tab: getActiveTabSummary(),
             viewport: {
                 width: window.innerWidth,
                 height: window.innerHeight,
-                visual_width: window.visualViewport ? Math.round(window.visualViewport.width) : null,
-                visual_height: window.visualViewport ? Math.round(window.visualViewport.height) : null
+                visual_width: visualViewport ? Math.round(visualViewport.width) : null,
+                visual_height: visualViewport ? Math.round(visualViewport.height) : null,
+                visual_offset_top: visualViewport ? Math.round(visualViewport.offsetTop) : null,
+                visual_offset_left: visualViewport ? Math.round(visualViewport.offsetLeft) : null
             },
             telegram: tg ? {
+                platform: tg.platform || null,
+                color_scheme: tg.colorScheme || null,
+                theme_params: sanitizeThemeParams(tg.themeParams),
                 version: tg.version || null,
                 is_expanded: typeof tg.isExpanded === 'boolean' ? tg.isExpanded : null,
                 viewport_height: tg.viewportHeight || null,
                 viewport_stable_height: tg.viewportStableHeight || null
             } : null,
+            classes: {
+                body: document.body?.className || '',
+                html: document.documentElement?.className || ''
+            },
+            visible_overlays: getVisibleOverlaySummary(),
+            scroll: getScrollSummary(),
             url: window.location.href,
-            user_agent: navigator.userAgent
+            user_agent: navigator.userAgent,
+            selected_element: selectedElement || null
+        };
+    }
+
+    function getActiveTabSummary() {
+        const selectors = [
+            '.nav-link.active',
+            '.tab.active',
+            '.bottom-nav .active',
+            '[data-tab].active',
+            '[aria-selected="true"]'
+        ];
+        for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+                return {
+                    selector: buildElementPath(el),
+                    id: el.id || '',
+                    text: trimText(el.textContent, 80),
+                    data_tab: el.getAttribute('data-tab') || ''
+                };
+            }
+        }
+        return null;
+    }
+
+    function sanitizeThemeParams(themeParams) {
+        if (!themeParams || typeof themeParams !== 'object') return null;
+        const allowed = {};
+        Object.keys(themeParams).forEach(key => {
+            const value = themeParams[key];
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                allowed[key] = value;
+            }
+        });
+        return allowed;
+    }
+
+    function getVisibleOverlaySummary() {
+        const selectors = [
+            '.modal.show',
+            '.custom-modal-overlay.active',
+            '.custom-modal-overlay.show',
+            '.history-details-overlay.active'
+        ];
+        return selectors.flatMap(selector => Array.from(document.querySelectorAll(selector)).map(el => ({
+            selector,
+            id: el.id || '',
+            className: safeClassName(el),
+            text: trimText(el.textContent, 100)
+        })));
+    }
+
+    function getScrollSummary() {
+        const appContainer = document.querySelector('.device-content, #app, #main-content, main, .screen.active-screen, .screen.active');
+        return {
+            window_scroll_y: Math.round(window.scrollY || 0),
+            window_scroll_x: Math.round(window.scrollX || 0),
+            app_container: appContainer ? {
+                selector: buildElementPath(appContainer),
+                scroll_top: Math.round(appContainer.scrollTop || 0),
+                scroll_height: Math.round(appContainer.scrollHeight || 0),
+                client_height: Math.round(appContainer.clientHeight || 0)
+            } : null
         };
     }
 
@@ -581,39 +970,62 @@
         }
     }
 
-    function buildBugReport(info = getDebugInfo()) {
+    function buildBugReport(info = getDebugInfo(), fields = null) {
+        const reportFields = fields || {
+            actual: '',
+            expected: '',
+            steps: ''
+        };
         const device = info.telegram?.platform || info.platform || 'unknown';
         const viewport = `${info.viewport?.width || '?'}x${info.viewport?.height || '?'}`;
+        const visualViewport = info.viewport?.visual_width
+            ? `${info.viewport.visual_width}x${info.viewport.visual_height}+${info.viewport.visual_offset_left || 0},${info.viewport.visual_offset_top || 0}`
+            : 'unknown';
+        const elementSummary = formatElementSummary(info.selected_element);
         return [
+            '#qa_bug #party_games',
+            '',
             'Что произошло:',
+            reportFields.actual || '',
             '',
-            'Что ожидал:',
-            '',
-            'Где в приложении:',
+            'Что ожидали:',
+            reportFields.expected || '',
             '',
             'Шаги:',
-            '1.',
-            '2.',
-            '3.',
+            reportFields.steps || '',
             '',
-            `Устройство: ${device}, viewport ${viewport}`,
-            `OS / Telegram / Browser: ${info.user_agent || 'unknown'}`,
-            `App build: ${info.app_version || 'unknown'}`,
-            `User ID: ${info.user_id || 'unknown'}`,
-            `URL: ${info.url || window.location.href}`,
+            `Экран: ${info.active_screen || 'unknown'}${info.active_tab ? ` / ${info.active_tab.text || info.active_tab.data_tab || info.active_tab.selector}` : ''}`,
             '',
-            'Скрин/видео:',
+            'Элемент:',
+            elementSummary || 'Не выбран',
+            '',
+            'Техника:',
+            `timestamp=${info.timestamp || ''}`,
+            `user_id=${info.user_id || 'unknown'}`,
+            `telegram_id=${info.telegram_id || 'unknown'}`,
+            `is_tester=${info.is_tester ? 1 : 0}`,
+            `platform=${device}`,
+            `app_build=${info.app_build || info.app_version || 'unknown'}`,
+            `viewport=${viewport}`,
+            `visual_viewport=${visualViewport}`,
+            `telegram_platform=${info.telegram?.platform || 'unknown'}`,
+            `telegram_version=${info.telegram?.version || 'unknown'}`,
+            `telegram_color_scheme=${info.telegram?.color_scheme || 'unknown'}`,
+            `DEBUG_SCROLL_QA=${info.debug_scroll_qa ? 1 : 0}`,
+            `DEBUG_BB_TOUCH=${info.debug_bb_touch ? 1 : 0}`,
+            `url=${info.url || window.location.href}`,
+            `ua=${info.user_agent || 'unknown'}`,
             '',
             'Debug info:',
             JSON.stringify(info, null, 2)
         ].join('\n');
     }
 
-    function copyBugReport(info = getDebugInfo()) {
-        const text = buildBugReport(info);
+    function copyBugReport(infoOrText = getDebugInfo(), successMessage = 'Шаблон баг-репорта скопирован') {
+        const text = typeof infoOrText === 'string' ? infoOrText : buildBugReport(infoOrText);
         const done = () => {
-            if (window.showToast) window.showToast('Шаблон баг-репорта скопирован');
-            else if (window.showAlert) window.showAlert('QA tools', 'Шаблон баг-репорта скопирован', 'success');
+            if (window.showToast) window.showToast(successMessage);
+            else if (window.showAlert) window.showAlert('QA tools', successMessage, 'success');
         };
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
