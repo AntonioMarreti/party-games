@@ -104,11 +104,12 @@ body.modal-open {
 
 #createModal .modal-title,
 #createModal .form-label,
+#createModal .create-room-options-title,
 #createModal .create-room-option-title {
     color: #2D3436 !important;
 }
 
-#createModal .create-room-option-hint,
+#createModal .create-room-option-desc,
 #createModal .form-text,
 #createModal .text-muted {
     color: #6f7682 !important;
@@ -132,17 +133,18 @@ body.modal-open {
     color: #2D3436 !important;
 }
 
-#createModal .create-room-option-row {
-    background: rgba(248, 249, 253, 0.92) !important;
+#createModal .create-room-options {
+    background: rgba(248, 250, 252, 0.94) !important;
+    border-color: rgba(226, 232, 240, 0.9) !important;
     color: #2D3436 !important;
 }
 
-#createModal .create-room-option-switch {
+#createModal .create-room-option-switch .form-check-input {
     background-color: rgba(148, 163, 184, 0.28) !important;
-    border-color: rgba(148, 163, 184, 0.12) !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
 }
 
-#createModal .create-room-option-switch:checked {
+#createModal .create-room-option-switch .form-check-input:checked {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
 }
@@ -152,7 +154,7 @@ body.thermal-safe #createModal .modal-content {
     border-color: rgba(226, 232, 240, 0.9) !important;
 }
 
-body.thermal-safe #createModal .create-room-option-row {
+body.thermal-safe #createModal .create-room-options {
     background: rgba(248, 249, 253, 0.96) !important;
 }
 

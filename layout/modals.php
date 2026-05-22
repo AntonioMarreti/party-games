@@ -229,19 +229,24 @@
                     <input type="password" id="create-room-pass" class="form-control mb-3"
                         placeholder="Пароль комнаты (необязательно)" style="border-radius: 16px;">
                     <div class="create-room-options mb-3">
-                        <label class="create-room-option-row" for="create-room-public">
-                            <input class="form-check-input create-room-option-switch" type="checkbox" id="create-room-public">
-                            <span class="create-room-option-main">
+                        <div class="create-room-options-title">Параметры комнаты</div>
+                        <label class="create-room-option-line" for="create-room-public">
+                            <span class="create-room-option-text">
                                 <span class="create-room-option-title">Сделать публичной</span>
-                                <span class="create-room-option-hint">Комната будет видна в открытых играх</span>
+                                <span class="create-room-option-desc">Комната будет видна в открытых играх</span>
+                            </span>
+                            <span class="form-check form-switch create-room-option-switch">
+                                <input class="form-check-input" type="checkbox" id="create-room-public">
                             </span>
                         </label>
-                        <label class="create-room-option-row create-room-schedule-row" for="create-room-scheduled">
-                            <input class="form-check-input create-room-option-switch" type="checkbox" id="create-room-scheduled"
-                                onchange="toggleCreateRoomScheduleMode()">
-                            <span class="create-room-option-main">
+                        <label class="create-room-option-line" for="create-room-scheduled">
+                            <span class="create-room-option-text">
                                 <span class="create-room-option-title">Отложенная игра</span>
-                                <span class="create-room-option-hint">Запланировать игру на время</span>
+                                <span class="create-room-option-desc">Запланировать игру на время</span>
+                            </span>
+                            <span class="form-check form-switch create-room-option-switch">
+                                <input class="form-check-input" type="checkbox" id="create-room-scheduled"
+                                    onchange="toggleCreateRoomScheduleMode()">
                             </span>
                         </label>
                         <div id="create-room-scheduled-fields" hidden>
