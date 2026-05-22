@@ -236,16 +236,14 @@
                                 <span class="create-room-option-hint">Комната будет видна в открытых играх</span>
                             </span>
                         </label>
-                        <div class="create-room-schedule-box">
-                            <label class="create-room-option-row create-room-schedule-row" for="create-room-scheduled">
-                                <input class="form-check-input create-room-option-switch" type="checkbox" id="create-room-scheduled"
-                                    onchange="toggleCreateRoomScheduleMode()">
-                                <span class="create-room-option-main">
-                                    <span class="create-room-option-title">Отложенная игра</span>
-                                    <span class="create-room-option-hint">Запланировать игру на время</span>
-                                </span>
-                            </label>
-                        </div>
+                        <label class="create-room-option-row create-room-schedule-row" for="create-room-scheduled">
+                            <input class="form-check-input create-room-option-switch" type="checkbox" id="create-room-scheduled"
+                                onchange="toggleCreateRoomScheduleMode()">
+                            <span class="create-room-option-main">
+                                <span class="create-room-option-title">Отложенная игра</span>
+                                <span class="create-room-option-hint">Запланировать игру на время</span>
+                            </span>
+                        </label>
                         <div id="create-room-scheduled-fields" hidden>
                             <label class="form-label small fw-bold text-muted mb-1" for="create-room-scheduled-starts">Когда начать</label>
                             <input type="datetime-local" id="create-room-scheduled-starts" class="form-control"

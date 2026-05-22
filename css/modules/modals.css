@@ -89,6 +89,73 @@ body.modal-open {
     font-size: 22px;
 }
 
+#createModal .modal-content {
+    background: rgba(255, 255, 255, 0.97) !important;
+    background-image: none !important;
+    border-color: rgba(255, 255, 255, 0.82) !important;
+    color: #2D3436 !important;
+    box-shadow: 0 24px 52px rgba(17, 24, 39, 0.18) !important;
+}
+
+#createModal .modal-header,
+#createModal .modal-body {
+    background: transparent !important;
+}
+
+#createModal .modal-title,
+#createModal .form-label,
+#createModal .create-room-option-title {
+    color: #2D3436 !important;
+}
+
+#createModal .create-room-option-hint,
+#createModal .form-text,
+#createModal .text-muted {
+    color: #6f7682 !important;
+}
+
+#createModal .form-control {
+    background: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    color: #2D3436 !important;
+    box-shadow: none !important;
+}
+
+#createModal .form-control::placeholder {
+    color: #7b8491 !important;
+    opacity: 1;
+}
+
+#createModal .form-control:focus {
+    background: #ffffff !important;
+    color: #2D3436 !important;
+}
+
+#createModal .create-room-option-row {
+    background: rgba(248, 249, 253, 0.92) !important;
+    color: #2D3436 !important;
+}
+
+#createModal .create-room-option-switch {
+    background-color: rgba(148, 163, 184, 0.28) !important;
+    border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+#createModal .create-room-option-switch:checked {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+body.thermal-safe #createModal .modal-content {
+    background: rgba(255, 255, 255, 0.98) !important;
+    border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+body.thermal-safe #createModal .create-room-option-row {
+    background: rgba(248, 249, 253, 0.96) !important;
+}
+
 .btn-close {
     background-color: var(--divider);
     border-radius: 50%;
