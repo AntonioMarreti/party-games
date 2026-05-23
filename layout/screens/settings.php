@@ -166,7 +166,7 @@
             <div class="settings-item border-0 pb-0 clickable" onclick="window.ScrollQA && window.ScrollQA.openTools()">
                 <div class="settings-label-wrap">
                     <div class="fw-bold">QA tools</div>
-                    <div class="text-muted small">Scroll QA и debug info для тестеров</div>
+                    <div class="text-muted small">Bug reporter, Scroll QA, Theme Contrast QA и debug info</div>
                 </div>
                 <div class="menu-icon-wrap" style="background: var(--bg-glass); color: var(--primary-color);">
                     <i class="bi bi-bug"></i>

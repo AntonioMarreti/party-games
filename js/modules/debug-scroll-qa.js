@@ -1,9 +1,11 @@
 // Debug-only Android scroll/touch QA panel. Disabled unless explicitly enabled.
 (function () {
     const STORAGE_KEY = 'DEBUG_SCROLL_QA';
+    const THEME_QA_STORAGE_KEY = 'DEBUG_THEME_QA';
     const ROOT_ID = 'scroll-qa-root';
     const BUTTON_ID = 'scroll-qa-button';
     const STYLE_ID = 'scroll-qa-styles';
+    const THEME_QA_SCREEN_ID = 'theme-qa-screen';
     const BUTTON_POS_KEY = 'QA_FLOATING_BUTTON_POS';
     const TESTER_CHAT_URL = 'https://t.me/+w6d97lbezTlmYzky';
     const BUG_REPORT_RATE_LIMIT_MS = 10000;
@@ -42,13 +44,28 @@
             if (params.get('debug_scroll_qa') === '1') {
                 safeLocalStorageSet(STORAGE_KEY, '1');
             }
+            if (params.get('debug_theme_qa') === '1') {
+                safeLocalStorageSet(THEME_QA_STORAGE_KEY, '1');
+            }
         } catch (e) {
             // noop
         }
     }
 
+    function hasThemeQaUrlParam() {
+        try {
+            return new URLSearchParams(window.location.search || '').get('debug_theme_qa') === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
     function isEnabled() {
         return safeLocalStorageGet(STORAGE_KEY) === '1';
+    }
+
+    function isThemeQaEnabled() {
+        return safeLocalStorageGet(THEME_QA_STORAGE_KEY) === '1';
     }
 
     function getCurrentUser() {
@@ -74,8 +91,17 @@
             || window.isTesterUser === true;
     }
 
+    function isAdminUser(user = getCurrentUser()) {
+        return user?.is_admin === true
+            || user?.is_admin === 1
+            || user?.is_admin === '1'
+            || user?.isAdmin === true
+            || user?.role === 'admin'
+            || (Array.isArray(user?.roles) && user.roles.includes('admin'));
+    }
+
     function hasToolsAccess(user = getCurrentUser()) {
-        return isTesterUser(user) || isEnabled();
+        return isTesterUser(user) || isAdminUser(user) || isEnabled() || isThemeQaEnabled();
     }
 
     function getActiveScreen() {
@@ -370,11 +396,251 @@
                 -webkit-overflow-scrolling: touch;
                 touch-action: pan-y;
             }
+            .theme-qa-summary {
+                display: grid;
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .theme-qa-summary pre {
+                margin: 0;
+                white-space: pre-wrap;
+                word-break: break-word;
+                font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                color: #334155;
+            }
+            .theme-qa-rules {
+                margin: 0;
+                padding-left: 18px;
+                color: #475569;
+                font-size: 12px;
+                line-height: 1.45;
+            }
+            .theme-qa-grid {
+                display: grid;
+                gap: 14px;
+            }
+            .theme-qa-scenario {
+                border-radius: 22px;
+                border: 1px solid rgba(15, 23, 42, 0.1);
+                background: var(--qa-bg);
+                color: var(--qa-text);
+                overflow: hidden;
+                box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            }
+            .theme-qa-scenario-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 12px 14px;
+                border-bottom: 1px solid var(--qa-border);
+                background: var(--qa-surface);
+                color: var(--qa-text);
+            }
+            .theme-qa-scenario-title {
+                font-size: 13px;
+                font-weight: 900;
+                line-height: 1.2;
+            }
+            .theme-qa-scenario-note {
+                margin-top: 2px;
+                color: var(--qa-muted);
+                font-size: 11px;
+                line-height: 1.3;
+                font-weight: 600;
+            }
+            .theme-qa-score-list {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 4px;
+            }
+            .theme-qa-score {
+                border-radius: 999px;
+                padding: 4px 7px;
+                font-size: 9px;
+                line-height: 1;
+                font-weight: 900;
+                background: #e2e8f0;
+                color: #334155;
+            }
+            .theme-qa-score.ok {
+                background: #dcfce7;
+                color: #166534;
+            }
+            .theme-qa-score.check {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            .theme-qa-score.risk {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+            .theme-qa-preview {
+                display: grid;
+                gap: 12px;
+                padding: 12px;
+            }
+            .theme-qa-hero {
+                border-radius: 18px;
+                padding: 16px;
+                background: var(--qa-hero-bg);
+                color: var(--qa-hero-text);
+            }
+            .theme-qa-hero-title {
+                font-size: 23px;
+                font-weight: 900;
+                line-height: 1.05;
+            }
+            .theme-qa-hero-subtitle {
+                margin-top: 5px;
+                color: var(--qa-hero-muted);
+                font-size: 12px;
+                line-height: 1.35;
+                font-weight: 650;
+            }
+            .theme-qa-section-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+            .theme-qa-section-title {
+                color: var(--qa-text);
+                font-size: 16px;
+                font-weight: 900;
+                line-height: 1.2;
+            }
+            .theme-qa-link {
+                border: 0;
+                background: transparent;
+                color: var(--qa-link);
+                padding: 0;
+                font-size: 12px;
+                font-weight: 900;
+            }
+            .theme-qa-card,
+            .theme-qa-modal {
+                border: 1px solid var(--qa-border);
+                border-radius: 16px;
+                background: var(--qa-surface);
+                color: var(--qa-text);
+                padding: 13px;
+            }
+            .theme-qa-card-title,
+            .theme-qa-modal-title {
+                color: var(--qa-text);
+                font-size: 14px;
+                font-weight: 900;
+                line-height: 1.2;
+            }
+            .theme-qa-card-subtitle,
+            .theme-qa-muted-text {
+                margin-top: 4px;
+                color: var(--qa-muted);
+                font-size: 12px;
+                line-height: 1.35;
+                font-weight: 600;
+            }
+            .theme-qa-chip-row,
+            .theme-qa-button-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 10px;
+            }
+            .theme-qa-chip,
+            .theme-qa-badge {
+                display: inline-flex;
+                align-items: center;
+                min-height: 24px;
+                border-radius: 999px;
+                padding: 4px 8px;
+                border: 1px solid var(--qa-border);
+                background: var(--qa-chip-bg);
+                color: var(--qa-muted);
+                font-size: 10px;
+                font-weight: 850;
+            }
+            .theme-qa-input {
+                width: 100%;
+                min-height: 42px;
+                border-radius: 13px;
+                border: 1px solid var(--qa-border);
+                background: var(--qa-input-bg);
+                color: var(--qa-text);
+                padding: 0 12px;
+                font: 750 13px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                outline: 0;
+            }
+            .theme-qa-input::placeholder {
+                color: var(--qa-placeholder);
+                opacity: 1;
+            }
+            .theme-qa-btn {
+                min-height: 38px;
+                border-radius: 13px;
+                border: 1px solid transparent;
+                padding: 0 11px;
+                font-size: 12px;
+                font-weight: 900;
+            }
+            .theme-qa-btn.primary {
+                background: var(--qa-primary);
+                color: var(--qa-primary-text);
+            }
+            .theme-qa-btn.secondary {
+                border-color: var(--qa-border);
+                background: var(--qa-secondary);
+                color: var(--qa-text);
+            }
+            .theme-qa-btn.danger {
+                background: var(--qa-danger);
+                color: #fff;
+            }
+            .theme-qa-btn.warning {
+                background: var(--qa-warning);
+                color: var(--qa-warning-text);
+            }
+            .theme-qa-modal {
+                background: var(--qa-modal-bg);
+                color: var(--qa-modal-text);
+            }
+            .theme-qa-modal .theme-qa-modal-title {
+                color: var(--qa-modal-text);
+            }
+            .theme-qa-modal .theme-qa-muted-text {
+                color: var(--qa-modal-muted);
+            }
+            .theme-qa-nav {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                border: 1px solid var(--qa-border);
+                border-radius: 15px;
+                padding: 6px;
+                background: var(--qa-surface);
+            }
+            .theme-qa-nav-item {
+                min-height: 34px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--qa-muted);
+                font-size: 11px;
+                font-weight: 850;
+            }
+            .theme-qa-nav-item.active {
+                background: var(--qa-primary);
+                color: var(--qa-primary-text);
+            }
         `;
         document.head.appendChild(style);
     }
 
     function init() {
+        const openThemeQaFromUrl = hasThemeQaUrlParam();
         syncFlagFromUrl();
         refreshAccess();
         window.addEventListener('screenChanged', (event) => {
@@ -382,6 +648,9 @@
                 refreshAccess();
             }
         });
+        if (openThemeQaFromUrl && hasToolsAccess()) {
+            setTimeout(openThemeContrastQa, 0);
+        }
         if (!isEnabled()) return;
         ensureStyles();
         ensureButton();
@@ -411,6 +680,7 @@
         const access = hasToolsAccess(user);
         return {
             debugFlag: isEnabled(),
+            themeQaFlag: isThemeQaEnabled(),
             currentUser: user ? {
                 id: user.id ?? null,
                 telegram_id: user.telegram_id ?? null
@@ -420,6 +690,7 @@
                 type: typeof rawTesterValue
             },
             hasAccess: access,
+            isAdmin: isAdminUser(user),
             settingsBlockFound: Boolean(group),
             settingsBlockDisplay: group ? window.getComputedStyle(group).display : null,
             activeScreen: getActiveScreen(),
@@ -464,6 +735,17 @@
         closeScenario();
         removeButton();
         refreshAccess();
+    }
+
+    function disableThemeQa() {
+        try {
+            if (window.localStorage) window.localStorage.removeItem(THEME_QA_STORAGE_KEY);
+        } catch (e) {
+            // noop
+        }
+        closeThemeContrastQa();
+        refreshAccess();
+        if (window.showToast) window.showToast('Theme Contrast QA выключен');
     }
 
     function resetFloatingButtonPosition() {
@@ -670,7 +952,7 @@
                 <div class="scroll-qa-header">
                     <div>
                         <h2 class="scroll-qa-title">QA tools</h2>
-                        <div class="scroll-qa-subtitle">Видно только тестерам или при DEBUG_SCROLL_QA.</div>
+                        <div class="scroll-qa-subtitle">Видно тестерам/admin или при debug flags.</div>
                     </div>
                     <button class="scroll-qa-close" type="button" data-scroll-qa-close>×</button>
                 </div>
@@ -681,6 +963,7 @@
                         <div style="display:grid;gap:8px;margin-top:12px;">
                             <button class="scroll-qa-action" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
                             <button class="scroll-qa-action" type="button" data-scroll-qa-open-bug-report>Сообщить о баге</button>
+                            <button class="scroll-qa-action secondary" type="button" data-theme-qa-open>Theme Contrast QA</button>
                             <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
                             <button class="scroll-qa-action secondary" type="button" data-scroll-qa-reset-pos>Сбросить позицию QA</button>
                         </div>
@@ -694,6 +977,14 @@
                         </div>
                     </div>
                     <div class="scroll-qa-card">
+                        <strong>Theme Contrast QA</strong>
+                        <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние debug flag: ${isThemeQaEnabled() ? 'включено' : 'выключено'}</div>
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <button class="scroll-qa-action" type="button" data-theme-qa-open style="flex:1;">Открыть Theme Contrast QA</button>
+                            <button class="scroll-qa-back" type="button" data-theme-qa-disable style="min-width:96px;">Выключить</button>
+                        </div>
+                    </div>
+                    <div class="scroll-qa-card">
                         <strong>Debug info</strong>
                         <pre style="white-space:pre-wrap;word-break:break-word;margin:10px 0 0;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#334155;">${escapeHtml(buildFullDebugInfoText(info))}</pre>
                         <button class="scroll-qa-action" type="button" data-scroll-qa-copy style="margin-top:12px;">Скопировать debug info</button>
@@ -704,6 +995,14 @@
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
         root.querySelector('[data-scroll-qa-chat]')?.addEventListener('click', openTesterChat);
         root.querySelector('[data-scroll-qa-open-bug-report]')?.addEventListener('click', () => openBugReporter({ resetContext: true }));
+        root.querySelectorAll('[data-theme-qa-open]').forEach(button => {
+            button.addEventListener('click', openThemeContrastQa);
+        });
+        root.querySelector('[data-theme-qa-disable]')?.addEventListener('click', () => {
+            disableThemeQa();
+            if (hasToolsAccess()) openTools();
+            else closePanel();
+        });
         root.querySelector('[data-scroll-qa-bug-report]')?.addEventListener('click', () => copyBugReport(info));
         root.querySelector('[data-scroll-qa-reset-pos]')?.addEventListener('click', resetFloatingButtonPosition);
         root.querySelector('[data-scroll-qa-enable]')?.addEventListener('click', () => {
@@ -1036,6 +1335,512 @@
         });
     }
 
+    function openThemeContrastQa() {
+        if (!hasToolsAccess()) return;
+        ensureStyles();
+        closePanel();
+        closeScenario();
+        closeThemeContrastQa();
+
+        const screen = document.createElement('div');
+        screen.id = THEME_QA_SCREEN_ID;
+        screen.className = 'scroll-qa-screen';
+        const env = getThemeQaEnvironment();
+        screen.innerHTML = `
+            <div class="scroll-qa-screen-header">
+                <div>
+                    <div class="scroll-qa-screen-title">Theme Contrast QA</div>
+                    <div class="scroll-qa-muted">Проверка текста по surface, без изменения глобальной темы.</div>
+                </div>
+                <button class="scroll-qa-back" type="button" data-theme-qa-tools>QA tools</button>
+                <button class="scroll-qa-close" type="button" data-theme-qa-close>×</button>
+            </div>
+            <div class="scroll-qa-scroll">
+                <div class="scroll-qa-card theme-qa-summary">
+                    <strong>Current environment</strong>
+                    <pre>${escapeHtml(formatThemeQaEnvironment(env))}</pre>
+                </div>
+                <div class="scroll-qa-card">
+                    <strong>Rules to verify</strong>
+                    <ul class="theme-qa-rules">
+                        <li>White text must only be on dark surfaces.</li>
+                        <li>Light card/modal surfaces must use dark text.</li>
+                        <li>Placeholder must be readable.</li>
+                        <li>Muted text must not disappear.</li>
+                        <li>Buttons must have readable text.</li>
+                        <li>Thermal-safe must not create white-on-white or gray-on-gray.</li>
+                    </ul>
+                </div>
+                <div class="theme-qa-grid">
+                    ${getThemeQaScenarios().map(renderThemeQaScenario).join('')}
+                </div>
+            </div>
+        `;
+        screen.querySelector('[data-theme-qa-close]')?.addEventListener('click', closeThemeContrastQa);
+        screen.querySelector('[data-theme-qa-tools]')?.addEventListener('click', () => {
+            closeThemeContrastQa();
+            openTools();
+        });
+        document.body.appendChild(screen);
+    }
+
+    function closeThemeContrastQa() {
+        document.getElementById(THEME_QA_SCREEN_ID)?.remove();
+    }
+
+    function getThemeQaEnvironment() {
+        const tg = window.Telegram?.WebApp;
+        const theme = sanitizeThemeParams(tg?.themeParams);
+        return {
+            telegram_platform: tg?.platform || 'web',
+            telegram_color_scheme: tg?.colorScheme || 'unknown',
+            theme_params: {
+                bg_color: theme?.bg_color || 'unknown',
+                secondary_bg_color: theme?.secondary_bg_color || 'unknown',
+                text_color: theme?.text_color || 'unknown',
+                hint_color: theme?.hint_color || 'unknown',
+                button_color: theme?.button_color || 'unknown',
+                button_text_color: theme?.button_text_color || 'unknown'
+            },
+            body_classes: document.body?.className || '',
+            html_classes: document.documentElement?.className || '',
+            thermal_safe: document.body?.classList.contains('thermal-safe') || false,
+            app_build: getAppBuildVersion()
+        };
+    }
+
+    function formatThemeQaEnvironment(env) {
+        return [
+            `telegram_platform=${env.telegram_platform}`,
+            `telegram_color_scheme=${env.telegram_color_scheme}`,
+            `theme_bg_color=${env.theme_params.bg_color}`,
+            `theme_secondary_bg_color=${env.theme_params.secondary_bg_color}`,
+            `theme_text_color=${env.theme_params.text_color}`,
+            `theme_hint_color=${env.theme_params.hint_color}`,
+            `theme_button_color=${env.theme_params.button_color}`,
+            `theme_button_text_color=${env.theme_params.button_text_color}`,
+            `body_classes=${env.body_classes || 'none'}`,
+            `html_classes=${env.html_classes || 'none'}`,
+            `thermal_safe=${env.thermal_safe ? 1 : 0}`,
+            `app_build=${env.app_build}`
+        ].join('\n');
+    }
+
+    function getThemeQaScenarios() {
+        const current = getCurrentThemeScenario();
+        return [
+            current,
+            {
+                id: 'light-surface',
+                title: 'Light app surface',
+                note: 'Светлый content/card surface, где текст должен быть тёмным.',
+                vars: {
+                    bg: '#F8F9FD',
+                    surface: '#FFFFFF',
+                    text: '#2D3436',
+                    muted: '#727783',
+                    link: '#6C5CE7',
+                    border: '#E7EAF2',
+                    chipBg: '#F3F5FA',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#8A92A3',
+                    heroBg: '#29224F',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.78)',
+                    modalBg: '#FFFFFF',
+                    modalText: '#1F2937',
+                    modalMuted: '#687386',
+                    primary: '#6C5CE7',
+                    primaryText: '#FFFFFF',
+                    secondary: '#F1F4FF',
+                    danger: '#EF4444',
+                    warning: '#FBBF24',
+                    warningText: '#3F2B00'
+                }
+            },
+            {
+                id: 'dark-hero',
+                title: 'Dark hero surface',
+                note: 'Тёмный header/hero, где допустим text-on-dark.',
+                vars: {
+                    bg: '#F7F8FC',
+                    surface: '#FFFFFF',
+                    text: '#202631',
+                    muted: '#667085',
+                    link: '#6958E8',
+                    border: '#E4E7EF',
+                    chipBg: '#F2F4F8',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#8790A1',
+                    heroBg: '#101827',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.74)',
+                    modalBg: '#FFFFFF',
+                    modalText: '#202631',
+                    modalMuted: '#667085',
+                    primary: '#6C5CE7',
+                    primaryText: '#FFFFFF',
+                    secondary: '#EEF2FF',
+                    danger: '#DC2626',
+                    warning: '#F59E0B',
+                    warningText: '#231A00'
+                }
+            },
+            {
+                id: 'purple-dark',
+                title: 'Telegram dark custom-like purple',
+                note: 'Purplenight-like Telegram colors with light content surfaces.',
+                vars: {
+                    bg: '#241B3D',
+                    surface: '#FBFAFF',
+                    text: '#211B31',
+                    muted: '#6F6880',
+                    link: '#7C5CFF',
+                    border: '#DDD8EA',
+                    chipBg: '#F2EFFB',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#8D86A1',
+                    heroBg: '#2B1B52',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.76)',
+                    modalBg: '#FFFCF7',
+                    modalText: '#241B2F',
+                    modalMuted: '#746B82',
+                    primary: '#7C5CFF',
+                    primaryText: '#FFFFFF',
+                    secondary: '#F1ECFF',
+                    danger: '#E54864',
+                    warning: '#F4B740',
+                    warningText: '#301F00'
+                }
+            },
+            {
+                id: 'teal-green',
+                title: 'Telegram green/teal custom-like',
+                note: 'Зелёно-бирюзовая тема Telegram, проверка muted/link.',
+                vars: {
+                    bg: '#E9F8F4',
+                    surface: '#FFFFFF',
+                    text: '#14302B',
+                    muted: '#58706A',
+                    link: '#0F8B78',
+                    border: '#CFE5DF',
+                    chipBg: '#F1FAF7',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#74918A',
+                    heroBg: '#075E56',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.78)',
+                    modalBg: '#FFFFFF',
+                    modalText: '#14302B',
+                    modalMuted: '#58706A',
+                    primary: '#0F8B78',
+                    primaryText: '#FFFFFF',
+                    secondary: '#DDF5EF',
+                    danger: '#D63D3D',
+                    warning: '#EAB308',
+                    warningText: '#2C2100'
+                }
+            },
+            {
+                id: 'warm-orange',
+                title: 'Warm/orange custom-like',
+                note: 'Тёплая тема: важно не потерять warning и muted.',
+                vars: {
+                    bg: '#FFF2E7',
+                    surface: '#FFFFFF',
+                    text: '#332418',
+                    muted: '#806B59',
+                    link: '#B45309',
+                    border: '#EAD6C5',
+                    chipBg: '#FFF7ED',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#9A8572',
+                    heroBg: '#803B12',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.78)',
+                    modalBg: '#FFFDF9',
+                    modalText: '#332418',
+                    modalMuted: '#806B59',
+                    primary: '#D97706',
+                    primaryText: '#FFFFFF',
+                    secondary: '#FFF1DC',
+                    danger: '#B91C1C',
+                    warning: '#FACC15',
+                    warningText: '#332400'
+                }
+            },
+            {
+                id: 'low-contrast-gray',
+                title: 'Low-contrast gray custom-like',
+                note: 'Специально грязный gray case, где слабый muted быстро пропадает.',
+                vars: {
+                    bg: '#DADADA',
+                    surface: '#E9E9E9',
+                    text: '#343434',
+                    muted: '#777777',
+                    link: '#4B5563',
+                    border: '#C8C8C8',
+                    chipBg: '#DEDEDE',
+                    inputBg: '#F0F0F0',
+                    placeholder: '#838383',
+                    heroBg: '#4A4A4A',
+                    heroText: '#FFFFFF',
+                    heroMuted: '#D6D6D6',
+                    modalBg: '#F3F3F3',
+                    modalText: '#303030',
+                    modalMuted: '#707070',
+                    primary: '#555B66',
+                    primaryText: '#FFFFFF',
+                    secondary: '#DDDDDD',
+                    danger: '#A33A3A',
+                    warning: '#D6A600',
+                    warningText: '#241F08'
+                }
+            },
+            {
+                id: 'thermal-safe',
+                title: 'Thermal-safe simulation',
+                note: 'Без glass/blur: surface остаётся читаемым, без white-on-white.',
+                vars: {
+                    bg: '#F6F7FA',
+                    surface: '#FFFFFF',
+                    text: '#20242D',
+                    muted: '#626B7A',
+                    link: '#5B4FD8',
+                    border: '#DDE2EC',
+                    chipBg: '#F1F3F8',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#7D8796',
+                    heroBg: '#26324A',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.78)',
+                    modalBg: '#FFFFFF',
+                    modalText: '#20242D',
+                    modalMuted: '#626B7A',
+                    primary: '#5B4FD8',
+                    primaryText: '#FFFFFF',
+                    secondary: '#EEF1FB',
+                    danger: '#D92D20',
+                    warning: '#F6C343',
+                    warningText: '#2B2100'
+                }
+            }
+        ];
+    }
+
+    function getCurrentThemeScenario() {
+        const styles = window.getComputedStyle(document.documentElement);
+        const bodyStyles = window.getComputedStyle(document.body);
+        const primary = readCssVar(styles, '--primary-color', '#6C5CE7');
+        const bg = readCssVar(styles, '--app-bg', bodyStyles.backgroundColor || '#F8F9FD');
+        const surface = readCssVar(styles, '--app-surface', readCssVar(styles, '--bg-secondary', '#FFFFFF'));
+        const text = readCssVar(styles, '--app-text', readCssVar(styles, '--text-main', '#2D3436'));
+        const muted = readCssVar(styles, '--app-text-muted', readCssVar(styles, '--text-muted', '#727783'));
+        return {
+            id: 'current-real',
+            title: 'Current real theme',
+            note: 'Реальные CSS variables текущего browser/Telegram окружения.',
+            vars: {
+                bg,
+                surface,
+                text,
+                muted,
+                link: primary,
+                border: readCssVar(styles, '--border-main', '#E7EAF2'),
+                chipBg: readCssVar(styles, '--bg-secondary', surface),
+                inputBg: surface,
+                placeholder: muted,
+                heroBg: primary,
+                heroText: '#FFFFFF',
+                heroMuted: 'rgba(255,255,255,0.78)',
+                modalBg: readCssVar(styles, '--modal-bg', '#FFFFFF'),
+                modalText: readCssVar(styles, '--modal-text', text),
+                modalMuted: readCssVar(styles, '--modal-muted', muted),
+                primary,
+                primaryText: readCssVar(styles, '--text-on-accent', '#FFFFFF'),
+                secondary: readCssVar(styles, '--bg-secondary', surface),
+                danger: readCssVar(styles, '--status-danger', '#EF4444'),
+                warning: readCssVar(styles, '--status-warning', '#F59E0B'),
+                warningText: '#2B2100'
+            }
+        };
+    }
+
+    function readCssVar(styles, name, fallback) {
+        const value = styles.getPropertyValue(name).trim();
+        return value || fallback;
+    }
+
+    function renderThemeQaScenario(scenario) {
+        const vars = scenario.vars;
+        const style = [
+            `--qa-bg:${vars.bg}`,
+            `--qa-surface:${vars.surface}`,
+            `--qa-text:${vars.text}`,
+            `--qa-muted:${vars.muted}`,
+            `--qa-link:${vars.link}`,
+            `--qa-border:${vars.border}`,
+            `--qa-chip-bg:${vars.chipBg}`,
+            `--qa-input-bg:${vars.inputBg}`,
+            `--qa-placeholder:${vars.placeholder}`,
+            `--qa-hero-bg:${vars.heroBg}`,
+            `--qa-hero-text:${vars.heroText}`,
+            `--qa-hero-muted:${vars.heroMuted}`,
+            `--qa-modal-bg:${vars.modalBg}`,
+            `--qa-modal-text:${vars.modalText}`,
+            `--qa-modal-muted:${vars.modalMuted}`,
+            `--qa-primary:${vars.primary}`,
+            `--qa-primary-text:${vars.primaryText}`,
+            `--qa-secondary:${vars.secondary}`,
+            `--qa-danger:${vars.danger}`,
+            `--qa-warning:${vars.warning}`,
+            `--qa-warning-text:${vars.warningText}`
+        ].join(';');
+        return `
+            <section class="theme-qa-scenario" data-theme-qa-scenario="${escapeHtml(scenario.id)}" style="${escapeHtml(style)}">
+                <div class="theme-qa-scenario-head">
+                    <div>
+                        <div class="theme-qa-scenario-title">${escapeHtml(scenario.title)}</div>
+                        <div class="theme-qa-scenario-note">${escapeHtml(scenario.note)}</div>
+                    </div>
+                    <div class="theme-qa-score-list">${renderThemeQaScores(vars)}</div>
+                </div>
+                <div class="theme-qa-preview">
+                    <div class="theme-qa-hero">
+                        <div class="theme-qa-hero-title">Во что поиграем?</div>
+                        <div class="theme-qa-hero-subtitle">Быстрый старт, комнаты и рекомендации для компании.</div>
+                    </div>
+                    <div class="theme-qa-section-row">
+                        <div class="theme-qa-section-title">Рекомендуемые игры</div>
+                        <button class="theme-qa-link" type="button">Все игры</button>
+                    </div>
+                    <div class="theme-qa-card">
+                        <div class="theme-qa-card-title">BrainBattle</div>
+                        <div class="theme-qa-card-subtitle">Карточка на светлой content surface. Subtitle должен читаться.</div>
+                        <div class="theme-qa-chip-row">
+                            <span class="theme-qa-chip">3-8 игроков</span>
+                            <span class="theme-qa-badge">Новое</span>
+                            <button class="theme-qa-link" type="button">Подробнее</button>
+                        </div>
+                    </div>
+                    <input class="theme-qa-input" type="text" placeholder="Название комнаты или код" aria-label="QA input sample">
+                    <div class="theme-qa-button-row">
+                        <button class="theme-qa-btn primary" type="button">Primary</button>
+                        <button class="theme-qa-btn secondary" type="button">Secondary</button>
+                        <button class="theme-qa-btn danger" type="button">Danger</button>
+                        <button class="theme-qa-btn warning" type="button">Warning</button>
+                    </div>
+                    <div class="theme-qa-modal">
+                        <div class="theme-qa-modal-title">Modal surface</div>
+                        <div class="theme-qa-muted-text">Светлая модалка должна использовать modal text, а не text-on-dark.</div>
+                    </div>
+                    <div class="theme-qa-nav">
+                        <div class="theme-qa-nav-item active">Главная</div>
+                        <div class="theme-qa-nav-item">Игры</div>
+                        <div class="theme-qa-nav-item">Профиль</div>
+                    </div>
+                    <div class="theme-qa-muted-text">Small muted text: не должен исчезать на текущей поверхности.</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderThemeQaScores(vars) {
+        const checks = [
+            ['surface', vars.text, vars.surface],
+            ['muted', vars.muted, vars.surface],
+            ['hero', vars.heroText, vars.heroBg],
+            ['modal', vars.modalText, vars.modalBg],
+            ['primary', vars.primaryText, vars.primary],
+            ['placeholder', vars.placeholder, vars.inputBg]
+        ];
+        return checks.map(([label, fg, bg]) => {
+            const result = contrastStatus(fg, bg);
+            return `<span class="theme-qa-score ${result.status}" title="${escapeHtml(result.title)}">${escapeHtml(label)} ${result.label}</span>`;
+        }).join('');
+    }
+
+    function contrastStatus(foreground, background) {
+        const ratio = contrastRatio(foreground, background);
+        if (!Number.isFinite(ratio)) {
+            return { status: 'check', label: 'CHECK', title: 'Contrast cannot be computed for this color value' };
+        }
+        if (ratio >= 4.5) return { status: 'ok', label: 'OK', title: `Contrast ${ratio.toFixed(2)}` };
+        if (ratio >= 3) return { status: 'check', label: 'CHECK', title: `Contrast ${ratio.toFixed(2)}` };
+        return { status: 'risk', label: 'RISK', title: `Contrast ${ratio.toFixed(2)}` };
+    }
+
+    function contrastRatio(foreground, background) {
+        const fg = parseColor(foreground);
+        const bg = parseColor(background);
+        if (!fg || !bg) return NaN;
+        const fgLum = relativeLuminance(blendAlpha(fg, bg));
+        const bgLum = relativeLuminance(bg);
+        const lighter = Math.max(fgLum, bgLum);
+        const darker = Math.min(fgLum, bgLum);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    function parseColor(value) {
+        const text = String(value || '').trim();
+        if (!text || text.includes('gradient') || text.includes('var(') || text.includes('color-mix(')) return null;
+        const hex = text.match(/^#([0-9a-f]{3,8})$/i);
+        if (hex) return parseHexColor(hex[1]);
+        const rgb = text.match(/^rgba?\(([^)]+)\)$/i);
+        if (!rgb) return null;
+        const parts = rgb[1].split(',').map(part => part.trim());
+        if (parts.length < 3) return null;
+        return {
+            r: parseColorChannel(parts[0]),
+            g: parseColorChannel(parts[1]),
+            b: parseColorChannel(parts[2]),
+            a: parts[3] !== undefined ? parseFloat(parts[3]) : 1
+        };
+    }
+
+    function parseHexColor(hex) {
+        let normalized = hex;
+        if (hex.length === 3 || hex.length === 4) {
+            normalized = hex.split('').map(char => char + char).join('');
+        }
+        const hasAlpha = normalized.length === 8;
+        const value = parseInt(normalized.slice(0, 6), 16);
+        if (!Number.isFinite(value)) return null;
+        return {
+            r: (value >> 16) & 255,
+            g: (value >> 8) & 255,
+            b: value & 255,
+            a: hasAlpha ? parseInt(normalized.slice(6, 8), 16) / 255 : 1
+        };
+    }
+
+    function parseColorChannel(value) {
+        if (String(value).endsWith('%')) {
+            return Math.round(Math.min(100, Math.max(0, parseFloat(value))) * 2.55);
+        }
+        return Math.min(255, Math.max(0, parseFloat(value)));
+    }
+
+    function blendAlpha(color, background) {
+        const alpha = Number.isFinite(color.a) ? color.a : 1;
+        if (alpha >= 1) return color;
+        return {
+            r: Math.round(color.r * alpha + background.r * (1 - alpha)),
+            g: Math.round(color.g * alpha + background.g * (1 - alpha)),
+            b: Math.round(color.b * alpha + background.b * (1 - alpha)),
+            a: 1
+        };
+    }
+
+    function relativeLuminance(color) {
+        const channels = [color.r, color.g, color.b].map(channel => {
+            const value = channel / 255;
+            return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+        });
+        return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    }
+
     function scenarioButton(id, title, description) {
         return `
             <button class="scroll-qa-scenario-btn" type="button" data-scroll-qa-scenario="${id}">
@@ -1086,6 +1891,7 @@
             app_version: getAppBuildVersion(),
             app_build: getAppBuildVersion(),
             debug_scroll_qa: isEnabled(),
+            debug_theme_qa: isThemeQaEnabled(),
             debug_bb_touch: safeLocalStorageGet('DEBUG_BB_TOUCH') === '1',
             active_screen: getActiveScreen(),
             active_tab: getActiveTabSummary(),
@@ -1252,6 +2058,7 @@
             `theme_button_color=${theme.button_color || 'unknown'}`,
             `theme_button_text_color=${theme.button_text_color || 'unknown'}`,
             `DEBUG_SCROLL_QA=${info.debug_scroll_qa ? 1 : 0}`,
+            `DEBUG_THEME_QA=${info.debug_theme_qa ? 1 : 0}`,
             `DEBUG_BB_TOUCH=${info.debug_bb_touch ? 1 : 0}`,
             `ua=${truncateText(info.user_agent || 'unknown', 240)}`
         ].join('\n');
@@ -1520,6 +2327,9 @@
         getDebugInfo,
         copyDebugInfo,
         copyBugReport,
+        openThemeContrastQa,
+        closeThemeContrastQa,
+        isThemeQaEnabled,
         openTesterChat,
         isEnabled,
         hasToolsAccess
