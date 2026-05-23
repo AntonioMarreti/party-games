@@ -113,7 +113,7 @@ async function fetchDailyTasks() {
     return cachedDailyTasks;
 }
 
-function renderProfileDailyTasks() {
+function renderProfileDailyTasks(options = {}) {
     const card = document.getElementById('profile-daily-card');
     const list = document.getElementById('profile-daily-list');
     const summary = document.getElementById('profile-daily-summary');
@@ -122,6 +122,8 @@ function renderProfileDailyTasks() {
     const chip = document.getElementById('profile-daily-reward-chip');
     const expandedWrap = document.getElementById('profile-daily-expanded-wrap');
     if (!card || !list) return;
+    const animateList = !!options.animateList;
+    const previousWrapHeight = animateList && expandedWrap ? expandedWrap.getBoundingClientRect().height : 0;
 
     const tasks = Array.isArray(cachedDailyTasks) ? cachedDailyTasks : [];
     if (!tasks.length) {
@@ -167,6 +169,18 @@ function renderProfileDailyTasks() {
                     </button>
                 </div>
             `;
+        } else if (tasks.length > 3 && profileDailyShowAll) {
+            toggle.innerHTML = `
+                <div class="daily-profile-actions">
+                    <button type="button" class="btn-unstyled daily-profile-action-link" onclick="event.stopPropagation(); previewProfileDailyTasks()">
+                        Показать 3
+                    </button>
+                    <span class="daily-profile-actions-separator" aria-hidden="true">·</span>
+                    <button type="button" class="btn-unstyled daily-profile-action-link" onclick="event.stopPropagation(); collapseProfileDailyTasks()">
+                        Свернуть
+                    </button>
+                </div>
+            `;
         } else {
             toggle.innerHTML = `
                 <div class="daily-profile-actions">
@@ -177,6 +191,8 @@ function renderProfileDailyTasks() {
             `;
         }
     }
+
+    animateProfileDailyHeight(expandedWrap, previousWrapHeight, animateList);
 }
 
 function renderProfileDailyTaskRow(task) {
@@ -241,13 +257,34 @@ function toggleProfileDailyTasks() {
 function showAllProfileDailyTasks() {
     profileDailyExpanded = true;
     profileDailyShowAll = true;
-    renderProfileDailyTasks();
+    renderProfileDailyTasks({ animateList: true });
+}
+
+function previewProfileDailyTasks() {
+    profileDailyExpanded = true;
+    profileDailyShowAll = false;
+    renderProfileDailyTasks({ animateList: true });
 }
 
 function collapseProfileDailyTasks() {
     profileDailyExpanded = false;
     profileDailyShowAll = false;
     renderProfileDailyTasks();
+}
+
+function animateProfileDailyHeight(expandedWrap, previousHeight, shouldAnimate) {
+    if (!expandedWrap || !shouldAnimate || !profileDailyExpanded) return;
+    const nextHeight = expandedWrap.getBoundingClientRect().height;
+    if (!previousHeight || !nextHeight || Math.abs(nextHeight - previousHeight) < 2) return;
+    expandedWrap.style.height = `${previousHeight}px`;
+    expandedWrap.classList.add('is-resizing');
+    requestAnimationFrame(() => {
+        expandedWrap.style.height = `${nextHeight}px`;
+        window.setTimeout(() => {
+            expandedWrap.style.height = '';
+            expandedWrap.classList.remove('is-resizing');
+        }, 240);
+    });
 }
 
 async function claimProfileDailyTask(taskId, code) {
