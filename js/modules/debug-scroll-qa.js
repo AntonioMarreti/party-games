@@ -635,6 +635,38 @@
                 background: var(--qa-primary);
                 color: var(--qa-primary-text);
             }
+            .theme-qa-lobby-smoke {
+                border: 1px dashed var(--qa-border);
+                border-radius: 16px;
+                background: var(--qa-surface);
+                padding: 10px;
+            }
+            .theme-qa-lobby-smoke-label {
+                margin-bottom: 8px;
+                color: var(--qa-muted);
+                font-size: 10px;
+                font-weight: 900;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+            .theme-qa-lobby-smoke .home-flow {
+                --home-surface-text: var(--qa-text);
+                --home-surface-muted: var(--qa-muted);
+                --home-surface-link: var(--qa-link);
+                --home-surface-border: var(--qa-border);
+                --home-content-bg: var(--qa-surface);
+                display: grid !important;
+                gap: 8px;
+                padding: 10px !important;
+                background: var(--qa-surface);
+                border-radius: 12px;
+            }
+            .theme-qa-lobby-smoke .home-flow::before {
+                display: none;
+            }
+            .theme-qa-lobby-smoke .section-title {
+                margin-bottom: 0;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -1431,6 +1463,34 @@
         return [
             current,
             {
+                id: 'tg-dark-thermal-home-smoke',
+                title: 'Telegram dark + thermal-safe home-flow smoke',
+                note: 'Реальный lobby class smoke для .home-flow .section-title и .home-section-link.',
+                vars: {
+                    bg: '#281E2F',
+                    surface: '#FAFAFC',
+                    text: '#2D3436',
+                    muted: '#6F7682',
+                    link: '#6C5CE7',
+                    border: '#E4E0EA',
+                    chipBg: '#F4F3F8',
+                    inputBg: '#FFFFFF',
+                    placeholder: '#858C99',
+                    heroBg: '#6C5CE7',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.84)',
+                    modalBg: '#FFFFFF',
+                    modalText: '#2D3436',
+                    modalMuted: '#6F7682',
+                    primary: '#6C5CE7',
+                    primaryText: '#FFFFFF',
+                    secondary: '#F2F0FF',
+                    danger: '#EF4444',
+                    warning: '#FBBF24',
+                    warningText: '#3F2B00'
+                }
+            },
+            {
                 id: 'light-surface',
                 title: 'Light app surface',
                 note: 'Светлый content/card surface, где текст должен быть тёмным.',
@@ -1739,6 +1799,18 @@
                         <div class="theme-qa-nav-item active">Главная</div>
                         <div class="theme-qa-nav-item">Игры</div>
                         <div class="theme-qa-nav-item">Профиль</div>
+                    </div>
+                    <div class="theme-qa-lobby-smoke">
+                        <div class="theme-qa-lobby-smoke-label">Real lobby class smoke</div>
+                        <div class="content-wrapper home-flow pt-4">
+                            <section class="home-section">
+                                <div class="section-title">Хочу играть</div>
+                            </section>
+                            <div class="home-section-header">
+                                <div class="section-title mb-0">Рекомендуемые игры</div>
+                                <button class="btn-unstyled home-section-link" type="button">Все игры →</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="theme-qa-muted-text">Small muted text: не должен исчезать на текущей поверхности.</div>
                 </div>
