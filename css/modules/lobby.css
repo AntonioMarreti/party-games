@@ -124,13 +124,25 @@
     --home-surface-link: var(--primary-color);
     --home-surface-border: rgba(218, 221, 232, 0.72);
     --home-surface-chip-bg: rgba(248, 249, 253, 0.92);
+    --home-content-bg: var(--app-bg, #F8F9FD);
     display: flex !important;
     flex-direction: column;
     gap: 16px;
     padding-top: 18px !important;
     padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
-    background: var(--app-bg, #F8F9FD);
+    background: transparent;
     color: var(--home-surface-text);
+    position: relative;
+    isolation: isolate;
+}
+
+.home-flow::before {
+    content: '';
+    position: absolute;
+    inset: 35px 0 0;
+    z-index: -1;
+    background: var(--home-content-bg);
+    pointer-events: none;
 }
 
 .home-primary-cta {
@@ -246,8 +258,11 @@
 
 body.tg-dark-theme #tab-home,
 body.tg-dark-theme .home-flow {
-    background: var(--app-bg, #F8F9FD);
     color: var(--home-surface-text, #2D3436);
+}
+
+body.tg-dark-theme #tab-home {
+    background: var(--app-bg, #F8F9FD);
 }
 
 body.tg-dark-theme .home-flow .section-title {
