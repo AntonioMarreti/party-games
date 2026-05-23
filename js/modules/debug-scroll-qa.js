@@ -4,10 +4,14 @@
     const ROOT_ID = 'scroll-qa-root';
     const BUTTON_ID = 'scroll-qa-button';
     const STYLE_ID = 'scroll-qa-styles';
+    const BUTTON_POS_KEY = 'QA_FLOATING_BUTTON_POS';
     const TESTER_CHAT_URL = 'https://t.me/+w6d97lbezTlmYzky';
     const BUG_REPORT_RATE_LIMIT_MS = 10000;
+    const BUTTON_DRAG_THRESHOLD = 6;
+    const BUTTON_LONG_PRESS_MS = 550;
     let lastBugReportSentAt = 0;
     let selectedBugElement = null;
+    let bugContextSnapshot = null;
     let bugDraft = {
         actual: '',
         expected: '',
@@ -98,7 +102,14 @@
                 color: #fff;
                 font: 700 12px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 box-shadow: 0 10px 28px rgba(0,0,0,0.22);
-                touch-action: manipulation;
+                touch-action: none;
+                user-select: none;
+                -webkit-user-select: none;
+                cursor: grab;
+            }
+            #${BUTTON_ID}.is-dragging {
+                cursor: grabbing;
+                box-shadow: 0 14px 34px rgba(0,0,0,0.28);
             }
             #${ROOT_ID} {
                 position: fixed;
@@ -417,15 +428,19 @@
     }
 
     function ensureButton() {
-        if (document.getElementById(BUTTON_ID)) return;
+        if (document.getElementById(BUTTON_ID)) {
+            clampButtonToViewport();
+            return;
+        }
         const button = document.createElement('button');
         button.id = BUTTON_ID;
         button.type = 'button';
         button.textContent = 'QA';
-        button.title = 'Scroll QA';
-        button.setAttribute('aria-label', 'Scroll QA');
-        button.addEventListener('click', openPanel);
+        button.title = 'Сообщить о баге';
+        button.setAttribute('aria-label', 'Сообщить о баге');
+        bindFloatingButton(button);
         document.body.appendChild(button);
+        applySavedButtonPosition(button);
     }
 
     function removeButton() {
@@ -449,6 +464,193 @@
         closeScenario();
         removeButton();
         refreshAccess();
+    }
+
+    function resetFloatingButtonPosition() {
+        try {
+            if (window.localStorage) window.localStorage.removeItem(BUTTON_POS_KEY);
+        } catch (e) {
+            // noop
+        }
+        const button = document.getElementById(BUTTON_ID);
+        if (button) applySavedButtonPosition(button);
+        if (window.showToast) window.showToast('Позиция QA сброшена');
+    }
+
+    function bindFloatingButton(button) {
+        if (!window.PointerEvent) {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                openBugReporter({ resetContext: true });
+            });
+            return;
+        }
+
+        let pointerId = null;
+        let startX = 0;
+        let startY = 0;
+        let startLeft = 0;
+        let startTop = 0;
+        let dragged = false;
+        let longPressed = false;
+        let longPressTimer = null;
+
+        const clearLongPress = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+
+        button.addEventListener('pointerdown', (event) => {
+            if (!hasToolsAccess()) return;
+            pointerId = event.pointerId;
+            startX = event.clientX;
+            startY = event.clientY;
+            const rect = button.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            dragged = false;
+            longPressed = false;
+            button.classList.add('is-dragging');
+            button.setPointerCapture?.(pointerId);
+            clearLongPress();
+            longPressTimer = setTimeout(() => {
+                if (dragged) return;
+                longPressed = true;
+                button.classList.remove('is-dragging');
+                openTools();
+            }, BUTTON_LONG_PRESS_MS);
+            event.preventDefault();
+        });
+
+        button.addEventListener('pointermove', (event) => {
+            if (pointerId !== event.pointerId) return;
+            const dx = event.clientX - startX;
+            const dy = event.clientY - startY;
+            if (Math.hypot(dx, dy) >= BUTTON_DRAG_THRESHOLD) {
+                dragged = true;
+                clearLongPress();
+            }
+            if (!dragged) return;
+            const next = clampButtonPosition(startLeft + dx, startTop + dy, button);
+            button.style.left = `${next.left}px`;
+            button.style.top = `${next.top}px`;
+            button.style.right = 'auto';
+            button.style.bottom = 'auto';
+            event.preventDefault();
+        });
+
+        const finishPointer = (event) => {
+            if (pointerId !== event.pointerId) return;
+            clearLongPress();
+            button.releasePointerCapture?.(pointerId);
+            button.classList.remove('is-dragging');
+            pointerId = null;
+            if (dragged) {
+                saveButtonPosition(button);
+                event.preventDefault();
+                return;
+            }
+            if (longPressed) {
+                event.preventDefault();
+                return;
+            }
+            openBugReporter({ resetContext: true });
+            event.preventDefault();
+        };
+
+        button.addEventListener('pointerup', finishPointer);
+        button.addEventListener('pointercancel', (event) => {
+            if (pointerId !== event.pointerId) return;
+            clearLongPress();
+            button.releasePointerCapture?.(pointerId);
+            button.classList.remove('is-dragging');
+            pointerId = null;
+        });
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        window.addEventListener('resize', clampButtonToViewport);
+        window.visualViewport?.addEventListener('resize', clampButtonToViewport);
+    }
+
+    function getDefaultButtonPosition(button = null) {
+        const width = button?.offsetWidth || 42;
+        const viewport = getButtonViewport();
+        return {
+            left: 14,
+            top: Math.min(118, Math.max(14, viewport.height - getBottomSafeOffset() - (button?.offsetHeight || 34) - 14 - 160)),
+            width
+        };
+    }
+
+    function getButtonViewport() {
+        return {
+            width: Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth || 390)),
+            height: Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight || 700))
+        };
+    }
+
+    function getBottomSafeOffset() {
+        const nav = document.querySelector('.bottom-nav, .app-bottom-nav, .tabbar, .bottom-menu');
+        const navHeight = nav ? Math.min(96, Math.round(nav.getBoundingClientRect().height || 0)) : 0;
+        return Math.max(18, navHeight + 10);
+    }
+
+    function getSavedButtonPosition() {
+        try {
+            const raw = safeLocalStorageGet(BUTTON_POS_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!Number.isFinite(parsed.left) || !Number.isFinite(parsed.top)) return null;
+            return parsed;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function applySavedButtonPosition(button) {
+        const saved = getSavedButtonPosition();
+        const fallback = getDefaultButtonPosition(button);
+        const next = clampButtonPosition(saved?.left ?? fallback.left, saved?.top ?? fallback.top, button);
+        button.style.left = `${next.left}px`;
+        button.style.top = `${next.top}px`;
+        button.style.right = 'auto';
+        button.style.bottom = 'auto';
+        saveButtonPosition(button);
+    }
+
+    function clampButtonPosition(left, top, button = document.getElementById(BUTTON_ID)) {
+        const viewport = getButtonViewport();
+        const width = button?.offsetWidth || 42;
+        const height = button?.offsetHeight || 34;
+        const margin = 8;
+        const maxLeft = Math.max(margin, viewport.width - width - margin);
+        const maxTop = Math.max(margin, viewport.height - height - getBottomSafeOffset());
+        return {
+            left: Math.round(Math.min(Math.max(left, margin), maxLeft)),
+            top: Math.round(Math.min(Math.max(top, margin), maxTop))
+        };
+    }
+
+    function saveButtonPosition(button) {
+        const rect = button.getBoundingClientRect();
+        const pos = clampButtonPosition(rect.left, rect.top, button);
+        safeLocalStorageSet(BUTTON_POS_KEY, JSON.stringify(pos));
+    }
+
+    function clampButtonToViewport() {
+        const button = document.getElementById(BUTTON_ID);
+        if (!button) return;
+        const rect = button.getBoundingClientRect();
+        const next = clampButtonPosition(rect.left, rect.top, button);
+        button.style.left = `${next.left}px`;
+        button.style.top = `${next.top}px`;
+        button.style.right = 'auto';
+        button.style.bottom = 'auto';
+        safeLocalStorageSet(BUTTON_POS_KEY, JSON.stringify(next));
     }
 
     function openTools() {
@@ -480,6 +682,7 @@
                             <button class="scroll-qa-action" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
                             <button class="scroll-qa-action" type="button" data-scroll-qa-open-bug-report>Сообщить о баге</button>
                             <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-reset-pos>Сбросить позицию QA</button>
                         </div>
                     </div>
                     <div class="scroll-qa-card">
@@ -492,7 +695,7 @@
                     </div>
                     <div class="scroll-qa-card">
                         <strong>Debug info</strong>
-                        <pre style="white-space:pre-wrap;word-break:break-word;margin:10px 0 0;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#334155;">${escapeHtml(JSON.stringify(info, null, 2))}</pre>
+                        <pre style="white-space:pre-wrap;word-break:break-word;margin:10px 0 0;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#334155;">${escapeHtml(buildFullDebugInfoText(info))}</pre>
                         <button class="scroll-qa-action" type="button" data-scroll-qa-copy style="margin-top:12px;">Скопировать debug info</button>
                     </div>
                 </div>
@@ -500,8 +703,9 @@
         `;
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
         root.querySelector('[data-scroll-qa-chat]')?.addEventListener('click', openTesterChat);
-        root.querySelector('[data-scroll-qa-open-bug-report]')?.addEventListener('click', openBugReporter);
+        root.querySelector('[data-scroll-qa-open-bug-report]')?.addEventListener('click', () => openBugReporter({ resetContext: true }));
         root.querySelector('[data-scroll-qa-bug-report]')?.addEventListener('click', () => copyBugReport(info));
+        root.querySelector('[data-scroll-qa-reset-pos]')?.addEventListener('click', resetFloatingButtonPosition);
         root.querySelector('[data-scroll-qa-enable]')?.addEventListener('click', () => {
             enableScrollQa();
             openPanel();
@@ -530,10 +734,16 @@
         }
     }
 
-    function openBugReporter() {
+    function openBugReporter(options = {}) {
         if (!hasToolsAccess()) return;
         ensureStyles();
         closeScenario();
+        if (options.resetContext) {
+            selectedBugElement = null;
+        }
+        if (options.resetContext || !bugContextSnapshot) {
+            bugContextSnapshot = getDebugInfo(selectedBugElement);
+        }
         let root = document.getElementById(ROOT_ID);
         if (!root) {
             root = document.createElement('div');
@@ -571,6 +781,7 @@
                         <button class="scroll-qa-action secondary" type="button" data-scroll-qa-pick-element>Выбрать элемент на экране</button>
                         <button class="scroll-qa-action" type="button" data-scroll-qa-submit-bug>Отправить баг-репорт</button>
                         <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-bug>Скопировать баг-репорт</button>
+                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-tools>QA tools</button>
                     </div>
                 </div>
             </div>
@@ -579,6 +790,10 @@
         root.querySelector('[data-scroll-qa-pick-element]')?.addEventListener('click', startElementPicker);
         root.querySelector('[data-scroll-qa-submit-bug]')?.addEventListener('click', submitBugReport);
         root.querySelector('[data-scroll-qa-copy-bug]')?.addEventListener('click', () => copyBugReport(buildCurrentBugReport()));
+        root.querySelector('[data-scroll-qa-tools]')?.addEventListener('click', () => {
+            updateBugDraftFromForm();
+            openTools();
+        });
         root.querySelectorAll('#qa-bug-actual, #qa-bug-expected, #qa-bug-steps').forEach(input => {
             input.addEventListener('input', updateBugDraftFromForm);
         });
@@ -621,9 +836,10 @@
             event.stopPropagation();
             event.stopImmediatePropagation();
             selectedBugElement = describeElement(event.target, event);
+            if (bugContextSnapshot) bugContextSnapshot.selected_element = selectedBugElement;
             cleanupPicker();
             setTimeout(cleanupClickSuppressor, 450);
-            setTimeout(openBugReporter, 80);
+            setTimeout(() => openBugReporter({ preserveContext: true }), 80);
         };
 
         document.addEventListener('pointerdown', onPick, true);
@@ -735,7 +951,15 @@
 
     function buildCurrentBugReport() {
         updateBugDraftFromForm();
-        return buildBugReport(getDebugInfo(selectedBugElement), bugDraft);
+        return buildCompactBugReport(getBugReportDebugInfo(), bugDraft);
+    }
+
+    function getBugReportDebugInfo() {
+        const info = bugContextSnapshot || getDebugInfo(selectedBugElement);
+        return {
+            ...info,
+            selected_element: selectedBugElement || info.selected_element || null
+        };
     }
 
     async function submitBugReport() {
@@ -752,7 +976,7 @@
             return;
         }
 
-        const report = buildBugReport(getDebugInfo(selectedBugElement), bugDraft);
+        const report = buildCompactBugReport(getBugReportDebugInfo(), bugDraft);
         lastBugReportSentAt = now;
         try {
             const res = typeof window.apiRequest === 'function'
@@ -958,7 +1182,7 @@
     }
 
     function copyDebugInfo(info = getDebugInfo()) {
-        const text = JSON.stringify(info, null, 2);
+        const text = buildFullDebugInfoText(info);
         const done = () => {
             if (window.showToast) window.showToast('Debug info скопирован');
             else if (window.showAlert) window.showAlert('QA tools', 'Debug info скопирован', 'success');
@@ -970,59 +1194,106 @@
         }
     }
 
-    function buildBugReport(info = getDebugInfo(), fields = null) {
+    function buildFullDebugInfoText(info = getDebugInfo()) {
+        return JSON.stringify(info, null, 2);
+    }
+
+    function buildCompactBugReport(info = getDebugInfo(), fields = null) {
         const reportFields = fields || {
             actual: '',
             expected: '',
             steps: ''
         };
-        const device = info.telegram?.platform || info.platform || 'unknown';
-        const viewport = `${info.viewport?.width || '?'}x${info.viewport?.height || '?'}`;
-        const visualViewport = info.viewport?.visual_width
-            ? `${info.viewport.visual_width}x${info.viewport.visual_height}+${info.viewport.visual_offset_left || 0},${info.viewport.visual_offset_top || 0}`
-            : 'unknown';
-        const elementSummary = formatElementSummary(info.selected_element);
+        const theme = info.telegram?.theme_params || {};
+        const activeTab = info.active_tab?.text || info.active_tab?.data_tab || info.active_tab?.selector || '';
+        const overlays = Array.isArray(info.visible_overlays) && info.visible_overlays.length
+            ? info.visible_overlays.map(overlay => `${overlay.selector}${overlay.id ? `#${overlay.id}` : ''}`).join(', ')
+            : 'none';
+        const bodyClasses = truncateText(info.classes?.body || '', 220);
+        const htmlClasses = truncateText(info.classes?.html || '', 220);
         return [
             '#qa_bug #party_games',
             '',
             'Что произошло:',
-            reportFields.actual || '',
+            truncateText(fields.actual || '', 1000),
             '',
             'Что ожидали:',
-            reportFields.expected || '',
+            truncateText(fields.expected || '', 1000),
             '',
             'Шаги:',
-            reportFields.steps || '',
+            truncateText(fields.steps || '', 1000),
             '',
-            `Экран: ${info.active_screen || 'unknown'}${info.active_tab ? ` / ${info.active_tab.text || info.active_tab.data_tab || info.active_tab.selector}` : ''}`,
+            'Экран:',
+            `${info.active_screen || 'unknown'}${activeTab ? ` / ${activeTab}` : ''}`,
             '',
             'Элемент:',
-            elementSummary || 'Не выбран',
+            formatCompactElementSummary(info.selected_element) || 'Не выбран',
             '',
-            'Техника:',
-            `timestamp=${info.timestamp || ''}`,
+            'Контекст:',
+            `timestamp=${info.timestamp || 'unknown'}`,
             `user_id=${info.user_id || 'unknown'}`,
             `telegram_id=${info.telegram_id || 'unknown'}`,
             `is_tester=${info.is_tester ? 1 : 0}`,
-            `platform=${device}`,
-            `app_build=${info.app_build || info.app_version || 'unknown'}`,
-            `viewport=${viewport}`,
-            `visual_viewport=${visualViewport}`,
+            `platform=${info.platform || 'unknown'}`,
             `telegram_platform=${info.telegram?.platform || 'unknown'}`,
             `telegram_version=${info.telegram?.version || 'unknown'}`,
+            `app_build=${info.app_build || info.app_version || 'unknown'}`,
+            `viewport=${formatViewport(info)}`,
+            `visual_viewport=${formatVisualViewport(info)}`,
+            `url=${info.url || window.location.href}`,
+            `body_classes=${bodyClasses || 'none'}`,
+            `html_classes=${htmlClasses || 'none'}`,
+            `visible_overlays=${truncateText(overlays, 260)}`,
             `telegram_color_scheme=${info.telegram?.color_scheme || 'unknown'}`,
+            `theme_bg_color=${theme.bg_color || 'unknown'}`,
+            `theme_secondary_bg_color=${theme.secondary_bg_color || 'unknown'}`,
+            `theme_text_color=${theme.text_color || 'unknown'}`,
+            `theme_hint_color=${theme.hint_color || 'unknown'}`,
+            `theme_button_color=${theme.button_color || 'unknown'}`,
+            `theme_button_text_color=${theme.button_text_color || 'unknown'}`,
             `DEBUG_SCROLL_QA=${info.debug_scroll_qa ? 1 : 0}`,
             `DEBUG_BB_TOUCH=${info.debug_bb_touch ? 1 : 0}`,
-            `url=${info.url || window.location.href}`,
-            `ua=${info.user_agent || 'unknown'}`,
-            '',
-            'Debug info:',
-            JSON.stringify(info, null, 2)
+            `ua=${truncateText(info.user_agent || 'unknown', 240)}`
         ].join('\n');
     }
 
+    function truncateText(value, maxLength) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (text.length <= maxLength) return text;
+        return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
+    }
+
+    function formatViewport(info) {
+        return `${info.viewport?.width || '?'}x${info.viewport?.height || '?'}`;
+    }
+
+    function formatVisualViewport(info) {
+        return info.viewport?.visual_width
+            ? `${info.viewport.visual_width}x${info.viewport.visual_height}+${info.viewport.visual_offset_left || 0},${info.viewport.visual_offset_top || 0}`
+            : 'unknown';
+    }
+
+    function formatCompactElementSummary(info) {
+        if (!info) return '';
+        const lines = [
+            `selector=${truncateText(formatElementLine(info), 300)}`
+        ];
+        const label = truncateText(info.textContent || info.placeholder || info.ariaLabel || '', 160);
+        if (label) lines.push(`text=${label}`);
+        if (info.rect) {
+            lines.push(`rect=x=${info.rect.x}, y=${info.rect.y}, w=${info.rect.width}, h=${info.rect.height}`);
+        }
+        if (info.click) {
+            lines.push(`click=x=${info.click.x}, y=${info.click.y}`);
+        }
+        if (info.closest && info.closest.selector !== info.selector) {
+            lines.push(`closest=${truncateText(formatElementLine(info.closest), 300)}`);
+        }
+        return lines.join('\n');
+    }
+
     function copyBugReport(infoOrText = getDebugInfo(), successMessage = 'Шаблон баг-репорта скопирован') {
-        const text = typeof infoOrText === 'string' ? infoOrText : buildBugReport(infoOrText);
+        const text = typeof infoOrText === 'string' ? infoOrText : buildCompactBugReport(infoOrText);
         const done = () => {
             if (window.showToast) window.showToast(successMessage);
             else if (window.showAlert) window.showAlert('QA tools', successMessage, 'success');
