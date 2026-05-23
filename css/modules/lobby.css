@@ -119,13 +119,18 @@
 }
 
 .home-flow {
+    --home-surface-text: #2D3436;
+    --home-surface-muted: #6f7682;
+    --home-surface-link: var(--primary-color);
+    --home-surface-border: rgba(218, 221, 232, 0.72);
+    --home-surface-chip-bg: rgba(248, 249, 253, 0.92);
     display: flex !important;
     flex-direction: column;
     gap: 16px;
     padding-top: 18px !important;
     padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
     background: var(--app-bg, #F8F9FD);
-    color: var(--app-text, #2D3436);
+    color: var(--home-surface-text);
 }
 
 .home-primary-cta {
@@ -219,7 +224,7 @@
     border-radius: 18px;
     border: 1px solid #ececf4 !important;
     background: #fff !important;
-    color: var(--text-main) !important;
+    color: var(--home-surface-text) !important;
     box-shadow: 0 10px 24px rgba(24, 29, 37, 0.06);
     font-size: 13px;
     font-weight: 800;
@@ -235,18 +240,19 @@
 }
 
 .home-flow .section-title {
-    color: var(--app-text, #2D3436);
+    color: var(--home-surface-text);
     opacity: 1;
 }
 
 body.tg-dark-theme #tab-home,
 body.tg-dark-theme .home-flow {
-    background: transparent;
+    background: var(--app-bg, #F8F9FD);
+    color: var(--home-surface-text, #2D3436);
 }
 
 body.tg-dark-theme .home-flow .section-title {
-    color: var(--text-on-dark, rgba(255, 255, 255, 0.94));
-    text-shadow: 0 1px 10px rgba(12, 9, 36, 0.18);
+    color: var(--home-surface-text);
+    text-shadow: none;
 }
 
 .home-section-header {
@@ -258,15 +264,15 @@ body.tg-dark-theme .home-flow .section-title {
 }
 
 .home-section-link {
-    color: var(--primary-color);
+    color: var(--home-surface-link);
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
 }
 
 body.tg-dark-theme .home-section-link {
-    color: var(--link-on-dark, rgba(255, 255, 255, 0.92));
-    text-shadow: 0 1px 10px rgba(12, 9, 36, 0.16);
+    color: var(--home-surface-link);
+    text-shadow: none;
 }
 
 .play-mode-grid {
@@ -351,10 +357,10 @@ body.tg-dark-theme .home-section-link {
     min-height: 86px;
     padding: 12px 15px 12px 12px;
     border-radius: 22px;
-    border: 1px solid rgba(218, 221, 232, 0.72) !important;
+    border: 1px solid var(--home-surface-border) !important;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 249, 253, 0.88)) !important;
     box-shadow: 0 12px 30px rgba(24, 29, 37, 0.055);
-    color: var(--text-main) !important;
+    color: var(--home-surface-text) !important;
     text-align: left;
 }
 
@@ -379,12 +385,12 @@ body.tg-dark-theme .home-section-link {
     font-size: 15px;
     font-weight: 800;
     line-height: 1.2;
-    color: var(--text-main);
+    color: var(--home-surface-text);
 }
 
 .recommended-game-desc {
     margin-top: 4px;
-    color: var(--text-muted);
+    color: var(--home-surface-muted);
     font-size: 12px;
     line-height: 1.3;
 }
@@ -402,9 +408,9 @@ body.tg-dark-theme .home-section-link {
     gap: 4px;
     padding: 4px 8px;
     border-radius: 999px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-main);
-    color: var(--text-muted);
+    background: var(--home-surface-chip-bg);
+    border: 1px solid var(--home-surface-border);
+    color: var(--home-surface-muted);
     font-size: 10px;
     font-weight: 800;
     white-space: nowrap;
@@ -413,13 +419,13 @@ body.tg-dark-theme .home-section-link {
 .home-public-rooms-card {
     padding: 16px;
     border-radius: 22px;
-    border: 1px solid rgba(218, 221, 232, 0.72);
+    border: 1px solid var(--home-surface-border);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 249, 253, 0.88));
     box-shadow: 0 12px 30px rgba(24, 29, 37, 0.055);
 }
 
 .home-public-title {
-    color: var(--text-main);
+    color: var(--home-surface-text);
     font-size: 16px;
     font-weight: 800;
     line-height: 1.2;
@@ -427,7 +433,7 @@ body.tg-dark-theme .home-section-link {
 
 .home-public-subtitle,
 .home-public-meta {
-    color: var(--text-muted);
+    color: var(--home-surface-muted);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.3;
@@ -445,7 +451,7 @@ body.tg-dark-theme .home-section-link {
     justify-content: space-between;
     gap: 12px;
     padding: 10px 0;
-    border-top: 1px solid var(--border-main);
+    border-top: 1px solid var(--home-surface-border);
 }
 
 .home-public-room-row:first-child {
@@ -467,9 +473,13 @@ body.tg-dark-theme .home-section-link {
 }
 
 .thermal-safe .home-secondary-action,
-.thermal-safe .play-mode-card,
 .thermal-safe .recommended-game-card,
 .thermal-safe .home-public-rooms-card {
+    background: #fff !important;
+    border-color: var(--home-surface-border) !important;
+}
+
+.thermal-safe .play-mode-card {
     background: var(--bg-secondary) !important;
     border-color: var(--border-main) !important;
 }
