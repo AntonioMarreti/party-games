@@ -215,6 +215,13 @@ function renderProfileDailyTaskRow(task) {
             <circle cx="12" cy="12" r="8.5"></circle>
         </svg>
     `;
+    const claimIcon = `
+        <svg class="profile-daily-status-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="8.5"></circle>
+            <path d="M12 7.5v9"></path>
+            <path d="M7.5 12h9"></path>
+        </svg>
+    `;
     let statusHtml = `
         <span class="profile-daily-status profile-daily-status-active" aria-label="${progress}/${target}">
             ${progress}/${target}
@@ -226,7 +233,7 @@ function renderProfileDailyTaskRow(task) {
             <button type="button" class="btn-unstyled profile-daily-status profile-daily-status-claim"
                 onclick="event.stopPropagation(); claimProfileDailyTask(${taskId}, '${code}')"
                 aria-label="Получить ${reward} XP">
-                ${checkIcon}
+                ${claimIcon}
             </button>
         `;
     } else if (isClaimed) {
@@ -411,6 +418,13 @@ function renderDailyTaskModalRow(task) {
             <circle cx="12" cy="12" r="8.5"></circle>
         </svg>
     `;
+    const claimIcon = `
+        <svg class="daily-task-modal-status-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="8.5"></circle>
+            <path d="M12 7.5v9"></path>
+            <path d="M7.5 12h9"></path>
+        </svg>
+    `;
     let statusHtml = `
         <span class="daily-task-modal-status daily-task-modal-status-active" aria-label="${progress}/${target}">
             ${progress}/${target}
@@ -422,7 +436,7 @@ function renderDailyTaskModalRow(task) {
             <button type="button" class="btn-unstyled daily-task-modal-status daily-task-modal-status-claim ${isLoading ? 'is-loading' : ''}"
                 onclick="event.stopPropagation(); claimDailyTaskReward(${taskId}, '${code}')"
                 aria-label="Получить ${reward} XP">
-                ${isLoading ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>' : checkIcon}
+                ${isLoading ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>' : claimIcon}
             </button>
         `;
     } else if (isClaimed) {

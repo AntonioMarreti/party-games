@@ -838,15 +838,16 @@ body.dark-mode .profile-level-badge-float {
 }
 
 .profile-daily-status-claim {
-    background: color-mix(in srgb, var(--primary-color), white 86%) !important;
-    color: var(--primary-color) !important;
-    box-shadow: none;
+    background: var(--primary-color) !important;
+    color: var(--text-on-accent, #fff) !important;
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--primary-color), transparent 72%);
 }
 
 .profile-daily-status-claimed {
-    background: color-mix(in srgb, var(--primary-color), white 88%);
-    color: var(--primary-color);
-    opacity: 0.82;
+    border: 1px solid color-mix(in srgb, var(--status-success, #00b894), transparent 70%);
+    background: color-mix(in srgb, var(--status-success, #00b894), white 86%);
+    color: var(--status-success, #00b894);
+    opacity: 0.92;
 }
 
 .profile-daily-toggle {
@@ -905,6 +906,18 @@ body.dark-mode .profile-level-badge-float {
     background: var(--thermal-surface-muted) !important;
     border-color: var(--thermal-border) !important;
     box-shadow: none !important;
+}
+
+.thermal-safe .profile-daily-status-claim {
+    background: var(--primary-color) !important;
+    color: var(--text-on-accent, #fff) !important;
+    box-shadow: none !important;
+}
+
+.thermal-safe .profile-daily-status-claimed {
+    background: color-mix(in srgb, var(--status-success, #00b894), white 86%) !important;
+    border-color: color-mix(in srgb, var(--status-success, #00b894), transparent 70%) !important;
+    color: var(--status-success, #00b894) !important;
 }
 
 .thermal-safe .profile-level-progress {

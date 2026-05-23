@@ -629,14 +629,16 @@ body.thermal-safe .lobby-modal .modal-content {
 }
 
 .daily-task-modal-status-claim {
-    background: color-mix(in srgb, var(--primary-color), white 86%) !important;
-    color: var(--primary-color) !important;
+    background: var(--primary-color) !important;
+    color: var(--text-on-accent, #fff) !important;
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--primary-color), transparent 72%);
 }
 
 .daily-task-modal-status-claimed {
-    background: color-mix(in srgb, var(--primary-color), white 88%);
-    color: var(--primary-color);
-    opacity: 0.82;
+    border: 1px solid color-mix(in srgb, var(--status-success, #00b894), transparent 70%);
+    background: color-mix(in srgb, var(--status-success, #00b894), white 86%);
+    color: var(--status-success, #00b894);
+    opacity: 0.92;
 }
 
 .daily-task-modal-status.is-loading {
@@ -672,8 +674,18 @@ body.thermal-safe .lobby-modal .modal-content {
 
 .thermal-safe .daily-task-modal-status-claim,
 .thermal-safe .daily-task-modal-status-claimed {
-    background: color-mix(in srgb, var(--primary-color), white 88%) !important;
-    color: var(--primary-color) !important;
+    box-shadow: none !important;
+}
+
+.thermal-safe .daily-task-modal-status-claim {
+    background: var(--primary-color) !important;
+    color: var(--text-on-accent, #fff) !important;
+}
+
+.thermal-safe .daily-task-modal-status-claimed {
+    background: color-mix(in srgb, var(--status-success, #00b894), white 86%) !important;
+    border-color: color-mix(in srgb, var(--status-success, #00b894), transparent 70%) !important;
+    color: var(--status-success, #00b894) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
