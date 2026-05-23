@@ -7,14 +7,19 @@
     const STYLE_ID = 'scroll-qa-styles';
     const THEME_QA_SCREEN_ID = 'theme-qa-screen';
     const BUTTON_POS_KEY = 'QA_FLOATING_BUTTON_POS';
+    const LAST_BUG_REPORT_KEY = 'QA_LAST_BUG_REPORT';
     const TESTER_CHAT_URL = 'https://t.me/+w6d97lbezTlmYzky';
     const BUG_REPORT_RATE_LIMIT_MS = 10000;
     const BUTTON_DRAG_THRESHOLD = 6;
     const BUTTON_LONG_PRESS_MS = 550;
+    const QA_EVENT_LIMIT = 15;
     let lastBugReportSentAt = 0;
     let selectedBugElement = null;
     let bugContextSnapshot = null;
+    let qaEventTrail = [];
     let bugDraft = {
+        type: 'bug',
+        severity: 'medium',
         actual: '',
         expected: '',
         steps: ''
@@ -107,6 +112,46 @@
     function getActiveScreen() {
         const activeScreen = document.querySelector('.screen.active-screen, .screen.active, .app-screen.active, [data-screen].active');
         return activeScreen?.id || activeScreen?.dataset?.screen || null;
+    }
+
+    function initQaEventTrail() {
+        if (initQaEventTrail.initialized) return;
+        initQaEventTrail.initialized = true;
+        logQaEvent('qa_loaded', document.body);
+        window.addEventListener('screenChanged', (event) => {
+            logQaEvent('screenChanged', null, event.detail?.screenId || '');
+        });
+        document.addEventListener('click', (event) => {
+            const target = event.target instanceof Element
+                ? event.target.closest('button,a,input,textarea,select,label,[role="button"],[onclick]') || event.target
+                : null;
+            if (!target || target.closest(`#${ROOT_ID}, #${THEME_QA_SCREEN_ID}`)) return;
+            logQaEvent('click', target);
+        }, true);
+    }
+
+    function logQaEvent(type, target = null, detail = '') {
+        const element = target instanceof Element ? target : null;
+        const inputLike = element instanceof HTMLInputElement
+            || element instanceof HTMLTextAreaElement
+            || element instanceof HTMLSelectElement;
+        const event = {
+            t: new Date().toISOString().slice(11, 19),
+            type,
+            screen: getActiveScreen() || '',
+            target: element ? formatElementLine({
+                tagName: element.tagName,
+                id: element.id || '',
+                className: safeClassName(element),
+                selector: buildElementPath(element)
+            }) : truncateText(detail, 80),
+            text: element && !inputLike ? trimText(element.textContent, 60) : ''
+        };
+        if (event.text) event.target = `${event.target} "${event.text}"`;
+        qaEventTrail.push(event);
+        if (qaEventTrail.length > QA_EVENT_LIMIT) {
+            qaEventTrail = qaEventTrail.slice(-QA_EVENT_LIMIT);
+        }
     }
 
     function ensureStyles() {
@@ -312,6 +357,64 @@
                 background: #eef2ff;
                 color: #4338ca;
                 border: 1px solid rgba(79,70,229,0.14);
+            }
+            .scroll-qa-inline-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .scroll-qa-link-action {
+                width: 100%;
+                border: 0;
+                background: transparent;
+                color: #4f46e5;
+                padding: 8px 4px;
+                font-size: 12px;
+                font-weight: 850;
+                text-align: center;
+            }
+            .scroll-qa-advanced {
+                border-top: 1px solid rgba(148,163,184,0.18);
+                padding-top: 2px;
+            }
+            .scroll-qa-advanced summary {
+                cursor: pointer;
+                color: #4f46e5;
+                font-size: 12px;
+                font-weight: 850;
+                list-style: none;
+                padding: 8px 0;
+            }
+            .scroll-qa-advanced summary::-webkit-details-marker {
+                display: none;
+            }
+            .scroll-qa-segment {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+            }
+            .scroll-qa-segment input {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .scroll-qa-segment span {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 34px;
+                border-radius: 12px;
+                border: 1px solid rgba(148,163,184,0.28);
+                background: #fff;
+                color: #334155;
+                font-size: 11px;
+                font-weight: 850;
+                text-align: center;
+            }
+            .scroll-qa-segment input:checked + span {
+                border-color: rgba(79,70,229,0.34);
+                background: #eef2ff;
+                color: #4338ca;
             }
             .scroll-qa-muted {
                 color: #64748b;
@@ -704,6 +807,7 @@
         if (openThemeQaFromUrl && hasToolsAccess()) {
             setTimeout(openThemeContrastQa, 0);
         }
+        initQaEventTrail();
         if (!isEnabled()) return;
         ensureStyles();
         ensureButton();
@@ -1018,7 +1122,10 @@
                             <button class="scroll-qa-action" type="button" data-scroll-qa-open-bug-report>Сообщить о баге</button>
                             <button class="scroll-qa-action secondary" type="button" data-theme-qa-open>Theme Contrast QA</button>
                             <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-codex>Скопировать prompt для Codex</button>
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-last>Скопировать последний репорт</button>
                             <button class="scroll-qa-action secondary" type="button" data-scroll-qa-reset-pos>Сбросить позицию QA</button>
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-clear-flags>Очистить debug flags</button>
                         </div>
                     </div>
                     <div class="scroll-qa-card">
@@ -1057,7 +1164,10 @@
             else closePanel();
         });
         root.querySelector('[data-scroll-qa-bug-report]')?.addEventListener('click', () => copyBugReport(info));
+        root.querySelector('[data-scroll-qa-copy-codex]')?.addEventListener('click', () => copyCodexPrompt(buildCurrentBugReport()));
+        root.querySelector('[data-scroll-qa-copy-last]')?.addEventListener('click', copyLastBugReport);
         root.querySelector('[data-scroll-qa-reset-pos]')?.addEventListener('click', resetFloatingButtonPosition);
+        root.querySelector('[data-scroll-qa-clear-flags]')?.addEventListener('click', clearDebugFlags);
         root.querySelector('[data-scroll-qa-enable]')?.addEventListener('click', () => {
             enableScrollQa();
             openPanel();
@@ -1108,18 +1218,18 @@
                 <div class="scroll-qa-header">
                     <div>
                         <h2 class="scroll-qa-title">Сообщить о баге</h2>
-                        <div class="scroll-qa-subtitle">Опишите проблему. Техническая информация добавится автоматически.</div>
+                        <div class="scroll-qa-subtitle">Коротко опишите проблему. Технический контекст добавится автоматически.</div>
                     </div>
                     <button class="scroll-qa-close" type="button" data-scroll-qa-close>×</button>
                 </div>
                 <div class="scroll-qa-body">
                     <div class="scroll-qa-list">
                         <div class="scroll-qa-field">
-                            <label for="qa-bug-actual">Что произошло? *</label>
-                            <textarea id="qa-bug-actual" required placeholder="Например: кнопка не нажимается, экран уехал, ошибка после хода">${escapeHtml(bugDraft.actual)}</textarea>
+                            <label for="qa-bug-actual">Что не так? *</label>
+                            <textarea id="qa-bug-actual" required placeholder="Например: кнопка не нажимается, текст плохо видно, экран уехал">${escapeHtml(bugDraft.actual)}</textarea>
                         </div>
                         <div class="scroll-qa-field">
-                            <label for="qa-bug-expected">Что ожидали?</label>
+                            <label for="qa-bug-expected">Как должно быть?</label>
                             <textarea id="qa-bug-expected" placeholder="Как должно было работать">${escapeHtml(bugDraft.expected)}</textarea>
                         </div>
                         <div class="scroll-qa-field">
@@ -1130,10 +1240,40 @@
                             <div class="scroll-qa-muted" style="font-weight:800;margin-bottom:6px;">Проблемный элемент</div>
                             <div class="scroll-qa-element-summary" data-scroll-qa-element-summary>${escapeHtml(formatElementSummary(selectedBugElement) || 'Не выбран')}</div>
                         </div>
-                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-pick-element>Выбрать элемент на экране</button>
-                        <button class="scroll-qa-action" type="button" data-scroll-qa-submit-bug>Отправить баг-репорт</button>
-                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-bug>Скопировать баг-репорт</button>
-                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-tools>QA tools</button>
+                        <div class="scroll-qa-inline-actions">
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-pick-element>Выбрать элемент</button>
+                            <button class="scroll-qa-action" type="button" data-scroll-qa-submit-bug>Отправить</button>
+                        </div>
+                        <div class="scroll-qa-inline-actions">
+                            <button class="scroll-qa-link-action" type="button" data-scroll-qa-copy-bug>Скопировать</button>
+                        </div>
+                        <details class="scroll-qa-advanced" data-scroll-qa-advanced>
+                            <summary>Дополнительно</summary>
+                            <div class="scroll-qa-list" style="gap:10px;">
+                                <div class="scroll-qa-field">
+                                    <label>Тип проблемы</label>
+                                    <div class="scroll-qa-segment">
+                                        ${reportOption('type', 'bug', 'Баг', bugDraft.type)}
+                                        ${reportOption('type', 'ux', 'UX', bugDraft.type)}
+                                        ${reportOption('type', 'theme', 'Тема', bugDraft.type)}
+                                        ${reportOption('type', 'scroll', 'Скролл', bugDraft.type)}
+                                        ${reportOption('type', 'copy', 'Текст', bugDraft.type)}
+                                        ${reportOption('type', 'idea', 'Идея', bugDraft.type)}
+                                    </div>
+                                </div>
+                                <div class="scroll-qa-field">
+                                    <label>Важность</label>
+                                    <div class="scroll-qa-segment">
+                                        ${reportOption('severity', 'critical', 'Критично', bugDraft.severity)}
+                                        ${reportOption('severity', 'medium', 'Средне', bugDraft.severity)}
+                                        ${reportOption('severity', 'minor', 'Мелочь', bugDraft.severity)}
+                                    </div>
+                                </div>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-codex>Скопировать prompt для Codex</button>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-debug>Скопировать полный debug info</button>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-last>Скопировать последний репорт</button>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -1142,21 +1282,34 @@
         root.querySelector('[data-scroll-qa-pick-element]')?.addEventListener('click', startElementPicker);
         root.querySelector('[data-scroll-qa-submit-bug]')?.addEventListener('click', submitBugReport);
         root.querySelector('[data-scroll-qa-copy-bug]')?.addEventListener('click', () => copyBugReport(buildCurrentBugReport()));
-        root.querySelector('[data-scroll-qa-tools]')?.addEventListener('click', () => {
-            updateBugDraftFromForm();
-            openTools();
-        });
-        root.querySelectorAll('#qa-bug-actual, #qa-bug-expected, #qa-bug-steps').forEach(input => {
+        root.querySelector('[data-scroll-qa-copy-codex]')?.addEventListener('click', () => copyCodexPrompt(buildCurrentBugReport()));
+        root.querySelector('[data-scroll-qa-copy-debug]')?.addEventListener('click', () => copyDebugInfo(getBugReportDebugInfo()));
+        root.querySelector('[data-scroll-qa-copy-last]')?.addEventListener('click', copyLastBugReport);
+        root.querySelectorAll('#qa-bug-actual, #qa-bug-expected, #qa-bug-steps, input[name="qa-bug-type"], input[name="qa-bug-severity"]').forEach(input => {
             input.addEventListener('input', updateBugDraftFromForm);
+            input.addEventListener('change', updateBugDraftFromForm);
         });
     }
 
     function updateBugDraftFromForm() {
         bugDraft = {
+            type: document.querySelector('input[name="qa-bug-type"]:checked')?.value || bugDraft.type || 'bug',
+            severity: document.querySelector('input[name="qa-bug-severity"]:checked')?.value || bugDraft.severity || 'medium',
             actual: document.getElementById('qa-bug-actual')?.value || '',
             expected: document.getElementById('qa-bug-expected')?.value || '',
             steps: document.getElementById('qa-bug-steps')?.value || ''
         };
+    }
+
+    function reportOption(group, value, label, currentValue) {
+        const name = group === 'severity' ? 'qa-bug-severity' : 'qa-bug-type';
+        const id = `${name}-${value}`;
+        return `
+            <label for="${id}">
+                <input id="${id}" name="${name}" type="radio" value="${escapeHtml(value)}" ${currentValue === value ? 'checked' : ''}>
+                <span>${escapeHtml(label)}</span>
+            </label>
+        `;
     }
 
     function startElementPicker() {
@@ -1310,15 +1463,16 @@
         const info = bugContextSnapshot || getDebugInfo(selectedBugElement);
         return {
             ...info,
-            selected_element: selectedBugElement || info.selected_element || null
+            selected_element: selectedBugElement || info.selected_element || null,
+            qa_event_trail: qaEventTrail.slice(-QA_EVENT_LIMIT)
         };
     }
 
     async function submitBugReport() {
         updateBugDraftFromForm();
         if (!bugDraft.actual.trim()) {
-            if (window.showToast) window.showToast('Заполните поле “Что произошло?”', 'warning');
-            else if (window.showAlert) window.showAlert('QA tools', 'Заполните поле “Что произошло?”', 'warning');
+            if (window.showToast) window.showToast('Заполните поле “Что не так?”', 'warning');
+            else if (window.showAlert) window.showAlert('QA tools', 'Заполните поле “Что не так?”', 'warning');
             return;
         }
         const now = Date.now();
@@ -1329,6 +1483,7 @@
         }
 
         const report = buildCompactBugReport(getBugReportDebugInfo(), bugDraft);
+        saveLastBugReport(report);
         lastBugReportSentAt = now;
         try {
             const res = typeof window.apiRequest === 'function'
@@ -2059,6 +2214,7 @@
             scroll: getScrollSummary(),
             url: window.location.href,
             user_agent: navigator.userAgent,
+            qa_event_trail: qaEventTrail.slice(-QA_EVENT_LIMIT),
             selected_element: selectedElement || null
         };
     }
@@ -2145,10 +2301,14 @@
 
     function buildCompactBugReport(info = getDebugInfo(), fields = null) {
         const reportFields = fields || {
+            type: 'bug',
+            severity: 'medium',
             actual: '',
             expected: '',
             steps: ''
         };
+        const reportType = reportFields.type || 'bug';
+        const severity = reportFields.severity || 'medium';
         const theme = info.telegram?.theme_params || {};
         const activeTab = info.active_tab?.text || info.active_tab?.data_tab || info.active_tab?.selector || '';
         const overlays = Array.isArray(info.visible_overlays) && info.visible_overlays.length
@@ -2156,23 +2316,28 @@
             : 'none';
         const bodyClasses = truncateText(info.classes?.body || '', 220);
         const htmlClasses = truncateText(info.classes?.html || '', 220);
+        const eventTrail = formatQaEventTrail(info.qa_event_trail);
         return [
-            '#qa_bug #party_games',
+            `#qa_bug #party_games${getReportTypeTag(reportType)}`,
+            `severity=${severity}`,
             '',
-            'Что произошло:',
-            truncateText(fields.actual || '', 1000),
+            'Что не так:',
+            truncateText(reportFields.actual || '', 1000),
             '',
-            'Что ожидали:',
-            truncateText(fields.expected || '', 1000),
+            'Как должно быть:',
+            truncateText(reportFields.expected || '', 1000),
             '',
             'Шаги:',
-            truncateText(fields.steps || '', 1000),
+            truncateText(reportFields.steps || '', 1000),
             '',
             'Экран:',
             `${info.active_screen || 'unknown'}${activeTab ? ` / ${activeTab}` : ''}`,
             '',
             'Элемент:',
             formatCompactElementSummary(info.selected_element) || 'Не выбран',
+            '',
+            'Последние QA события:',
+            eventTrail || 'none',
             '',
             'Контекст:',
             `timestamp=${info.timestamp || 'unknown'}`,
@@ -2201,6 +2366,25 @@
             `DEBUG_BB_TOUCH=${info.debug_bb_touch ? 1 : 0}`,
             `ua=${truncateText(info.user_agent || 'unknown', 240)}`
         ].join('\n');
+    }
+
+    function getReportTypeTag(type) {
+        const tags = {
+            ux: ' #ux',
+            theme: ' #theme',
+            scroll: ' #scroll',
+            copy: ' #copy',
+            idea: ' #idea'
+        };
+        return tags[type] || '';
+    }
+
+    function formatQaEventTrail(events) {
+        if (!Array.isArray(events) || !events.length) return '';
+        return events.slice(-QA_EVENT_LIMIT).map(event => {
+            const label = [event.type, event.screen, event.target].filter(Boolean).join(' | ');
+            return `${event.t || 'time?'} ${truncateText(label, 180)}`;
+        }).join('\n');
     }
 
     function truncateText(value, maxLength) {
@@ -2240,6 +2424,62 @@
 
     function copyBugReport(infoOrText = getDebugInfo(), successMessage = 'Шаблон баг-репорта скопирован') {
         const text = typeof infoOrText === 'string' ? infoOrText : buildCompactBugReport(infoOrText);
+        saveLastBugReport(text);
+        const done = () => {
+            if (window.showToast) window.showToast(successMessage);
+            else if (window.showAlert) window.showAlert('QA tools', successMessage, 'success');
+        };
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        } else {
+            fallbackCopy(text, done);
+        }
+    }
+
+    function copyCodexPrompt(report = buildCurrentBugReport()) {
+        const text = [
+            'Ответь на русском.',
+            '',
+            'Нужно принять QA bug report и предложить/внести focused fix без broad redesign.',
+            '',
+            report
+        ].join('\n');
+        copyText(text, 'Prompt для Codex скопирован');
+    }
+
+    function copyLastBugReport() {
+        const text = safeLocalStorageGet(LAST_BUG_REPORT_KEY);
+        if (!text) {
+            if (window.showToast) window.showToast('Последнего репорта пока нет', 'warning');
+            else if (window.showAlert) window.showAlert('QA tools', 'Последнего репорта пока нет', 'warning');
+            return;
+        }
+        copyText(text, 'Последний репорт скопирован');
+    }
+
+    function saveLastBugReport(report) {
+        if (!report) return;
+        safeLocalStorageSet(LAST_BUG_REPORT_KEY, report);
+    }
+
+    function clearDebugFlags() {
+        try {
+            if (window.localStorage) {
+                window.localStorage.removeItem(STORAGE_KEY);
+                window.localStorage.removeItem(THEME_QA_STORAGE_KEY);
+                window.localStorage.removeItem('DEBUG_BB_TOUCH');
+            }
+        } catch (e) {
+            // noop
+        }
+        closePanel();
+        closeThemeContrastQa();
+        removeButton();
+        refreshAccess();
+        if (window.showToast) window.showToast('Debug flags очищены');
+    }
+
+    function copyText(text, successMessage) {
         const done = () => {
             if (window.showToast) window.showToast(successMessage);
             else if (window.showAlert) window.showAlert('QA tools', successMessage, 'success');
