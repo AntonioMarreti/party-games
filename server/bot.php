@@ -192,9 +192,82 @@ if (strpos($cmd, '/help') === 0) {
     $msg .= getSfEmoji('stats') . " /stats — Общая статистика сервера\n";
     $msg .= getSfEmoji('users') . " /users — Последние регистрации\n";
     $msg .= getSfEmoji('public') . " /public — Список публичных комнат\n";
+    $msg .= "🧪 /tester &lt;telegram_id|@username&gt; — Статус тестера\n";
+    $msg .= "✅ /tester_on &lt;telegram_id|@username&gt; — Включить тестера\n";
+    $msg .= "🚫 /tester_off &lt;telegram_id|@username&gt; — Выключить тестера\n";
     $msg .= "❓ /help — Список всех команд";
 
     reply($chatId, $msg);
+}
+
+// /tester, /tester_on, /tester_off - Manage tester flag
+$commandParts = preg_split('/\s+/', trim($cmd));
+$commandName = strtolower(explode('@', $commandParts[0] ?? '')[0]);
+if (in_array($commandName, ['/tester', '/tester_on', '/tester_off'], true)) {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    $target = $commandParts[1] ?? '';
+    $mode = 'status';
+    if ($commandName === '/tester_on') {
+        $mode = 'on';
+    } elseif ($commandName === '/tester_off') {
+        $mode = 'off';
+    } elseif (isset($commandParts[2])) {
+        $mode = strtolower(trim($commandParts[2]));
+    }
+
+    if ($target === '' || !in_array($mode, ['status', 'on', 'off'], true)) {
+        reply($chatId, getTesterCommandUsage());
+        exit;
+    }
+
+    try {
+        $resolved = findTesterTargetUser($pdo, $target);
+        if ($resolved['status'] === 'not_found') {
+            reply($chatId, "Пользователь не найден. Он должен сначала открыть Mini App.");
+            exit;
+        }
+        if ($resolved['status'] === 'multiple') {
+            reply($chatId, formatTesterCandidates($resolved['users']));
+            exit;
+        }
+
+        $targetUser = $resolved['user'];
+        $before = (int) ($targetUser['is_tester'] ?? 0);
+        $after = $before;
+
+        if ($mode !== 'status') {
+            $after = $mode === 'on' ? 1 : 0;
+            $stmt = $pdo->prepare("UPDATE users SET is_tester = ? WHERE telegram_id = ?");
+            $stmt->execute([$after, $targetUser['telegram_id']]);
+            if (class_exists('TelegramLogger')) {
+                TelegramLogger::logEvent('admin', 'Tester flag changed', [
+                    'admin_telegram_id' => $message['from']['id'] ?? null,
+                    'target_user_id' => $targetUser['id'] ?? null,
+                    'target_telegram_id' => $targetUser['telegram_id'] ?? null,
+                    'before' => $before,
+                    'after' => $after
+                ]);
+            }
+        }
+
+        reply($chatId, formatTesterStatusReply($targetUser, $before, $after, $mode));
+    } catch (Throwable $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('admin', [
+                'message' => 'Tester command failed',
+                'stack' => $e->getMessage()
+            ], [
+                'user_id' => $message['from']['id'] ?? null,
+                'action' => $commandName
+            ]);
+        }
+        reply($chatId, getSfEmoji('error') . " Ошибка управления tester flag");
+    }
+    exit;
 }
 
 // /stats - Общая статистика
@@ -362,6 +435,73 @@ function sendTelegram($method, $data)
     $res = curl_exec($ch);
     curl_close($ch);
     return $res;
+}
+
+function getTesterCommandUsage()
+{
+    return "Использование:\n"
+        . "/tester 207737178\n"
+        . "/tester_on 207737178\n"
+        . "/tester_off 207737178\n"
+        . "/tester @username\n\n"
+        . "Можно также: /tester 207737178 on|off|status";
+}
+
+function findTesterTargetUser($pdo, $target)
+{
+    $target = trim((string) $target);
+    if ($target === '') {
+        return ['status' => 'not_found'];
+    }
+
+    if (preg_match('/^\d+$/', $target)) {
+        $stmt = $pdo->prepare("SELECT id, telegram_id, username, first_name, is_tester FROM users WHERE telegram_id = ? LIMIT 2");
+        $stmt->execute([$target]);
+        $users = $stmt->fetchAll();
+    } else {
+        $username = ltrim($target, '@');
+        $username = trim($username);
+        if ($username === '') {
+            return ['status' => 'not_found'];
+        }
+
+        $stmt = $pdo->prepare("SELECT id, telegram_id, username, first_name, is_tester FROM users WHERE LOWER(username) = LOWER(?) LIMIT 6");
+        $stmt->execute([$username]);
+        $users = $stmt->fetchAll();
+    }
+
+    if (!$users) {
+        return ['status' => 'not_found'];
+    }
+    if (count($users) > 1) {
+        return ['status' => 'multiple', 'users' => $users];
+    }
+    return ['status' => 'ok', 'user' => $users[0]];
+}
+
+function formatTesterCandidates($users)
+{
+    $msg = "Найдено несколько пользователей. Используй telegram_id:\n\n";
+    foreach ($users as $user) {
+        $msg .= "• user_id=" . htmlspecialchars((string) ($user['id'] ?? '')) .
+            ", telegram_id=" . htmlspecialchars((string) ($user['telegram_id'] ?? '')) .
+            ", @" . htmlspecialchars((string) ($user['username'] ?? '')) .
+            ", " . htmlspecialchars((string) ($user['first_name'] ?? '')) . "\n";
+    }
+    return $msg;
+}
+
+function formatTesterStatusReply($user, $before, $after, $mode)
+{
+    $title = $mode === 'status' ? 'Статус tester flag' : 'Tester flag обновлён';
+    $username = !empty($user['username']) ? '@' . $user['username'] : '—';
+    return "🧪 <b>$title</b>\n\n"
+        . "user_id: <b>" . htmlspecialchars((string) ($user['id'] ?? '')) . "</b>\n"
+        . "telegram_id: <b>" . htmlspecialchars((string) ($user['telegram_id'] ?? '')) . "</b>\n"
+        . "username: <b>" . htmlspecialchars($username) . "</b>\n"
+        . "first_name: <b>" . htmlspecialchars((string) ($user['first_name'] ?? '—')) . "</b>\n"
+        . "is_tester before: <b>$before</b>\n"
+        . "is_tester after: <b>$after</b>";
 }
 
 function getSfEmoji($key)
