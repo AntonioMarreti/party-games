@@ -124,6 +124,9 @@
     --home-surface-link: var(--primary-color);
     --home-surface-border: rgba(218, 221, 232, 0.72);
     --home-surface-chip-bg: rgba(248, 249, 253, 0.92);
+    --home-surface-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 249, 253, 0.88));
+    --home-surface-card-bg-solid: #fff;
+    --home-surface-action-bg: #fff;
     --home-content-bg: var(--app-bg, #F8F9FD);
     display: flex !important;
     flex-direction: column;
@@ -234,8 +237,8 @@
     gap: 8px;
     padding: 12px;
     border-radius: 18px;
-    border: 1px solid #ececf4 !important;
-    background: #fff !important;
+    border: 1px solid var(--home-surface-border) !important;
+    background: var(--home-surface-action-bg) !important;
     color: var(--home-surface-text) !important;
     box-shadow: 0 10px 24px rgba(24, 29, 37, 0.06);
     font-size: 13px;
@@ -264,6 +267,20 @@ body.tg-dark-theme .home-flow {
 
 body.tg-dark-theme #tab-home {
     background: var(--app-bg, #F8F9FD);
+}
+
+body.dark-mode #tab-home .home-flow,
+body.tg-dark-theme.dark-mode #tab-home .home-flow,
+body.tg-dark-theme.dark-mode.thermal-safe #tab-home .home-flow {
+    --home-surface-text: rgba(248, 250, 252, 0.94);
+    --home-surface-muted: rgba(203, 213, 225, 0.82);
+    --home-surface-link: color-mix(in srgb, var(--primary-color), white 22%);
+    --home-surface-border: rgba(148, 163, 184, 0.24);
+    --home-surface-chip-bg: rgba(15, 23, 42, 0.28);
+    --home-surface-card-bg: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(30, 41, 59, 0.9));
+    --home-surface-card-bg-solid: #1e293b;
+    --home-surface-action-bg: #1e293b;
+    --home-content-bg: var(--app-bg, #0f172a);
 }
 
 body.tg-dark-theme .home-flow .section-title {
@@ -326,8 +343,8 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     padding: 8px 4px;
     border-radius: 999px;
     border: 1px solid rgba(var(--primary-rgb), 0.14) !important;
-    background: var(--app-surface, #ffffff) !important;
-    color: var(--app-text, #2D3436) !important;
+    background: var(--home-surface-action-bg, var(--app-surface, #ffffff)) !important;
+    color: var(--home-surface-text, var(--app-text, #2D3436)) !important;
     box-shadow: 0 8px 20px rgba(24, 29, 37, 0.05);
     text-align: center;
 }
@@ -391,7 +408,7 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     padding: 12px 15px 12px 12px;
     border-radius: 22px;
     border: 1px solid var(--home-surface-border) !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 249, 253, 0.88)) !important;
+    background: var(--home-surface-card-bg) !important;
     box-shadow: 0 12px 30px rgba(24, 29, 37, 0.055);
     color: var(--home-surface-text) !important;
     text-align: left;
@@ -453,7 +470,7 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     padding: 16px;
     border-radius: 22px;
     border: 1px solid var(--home-surface-border);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 249, 253, 0.88));
+    background: var(--home-surface-card-bg);
     box-shadow: 0 12px 30px rgba(24, 29, 37, 0.055);
 }
 
@@ -508,13 +525,13 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
 .thermal-safe .home-secondary-action,
 .thermal-safe .recommended-game-card,
 .thermal-safe .home-public-rooms-card {
-    background: #fff !important;
+    background: var(--home-surface-card-bg-solid, #fff) !important;
     border-color: var(--home-surface-border) !important;
 }
 
 .thermal-safe .play-mode-card {
-    background: var(--bg-secondary) !important;
-    border-color: var(--border-main) !important;
+    background: var(--home-surface-action-bg, var(--bg-secondary)) !important;
+    border-color: var(--home-surface-border, var(--border-main)) !important;
 }
 
 .thermal-safe .play-mode-card.active {

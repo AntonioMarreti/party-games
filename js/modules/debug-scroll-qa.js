@@ -667,6 +667,27 @@
             .theme-qa-lobby-smoke .section-title {
                 margin-bottom: 0;
             }
+            .theme-qa-lobby-smoke .bottom-nav {
+                --bottom-nav-bg: var(--qa-surface);
+                --bottom-nav-border: var(--qa-border);
+                --bottom-nav-muted: var(--qa-muted);
+                --bottom-nav-active: var(--qa-primary);
+                position: static;
+                left: auto;
+                bottom: auto;
+                transform: none;
+                width: 100%;
+                max-width: none;
+                min-height: 60px;
+                margin: 10px 0 0;
+                display: flex !important;
+                z-index: auto;
+            }
+            .theme-qa-lobby-smoke .bottom-nav .nav-item {
+                min-width: 0;
+                padding-left: 6px;
+                padding-right: 6px;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -1463,6 +1484,34 @@
         return [
             current,
             {
+                id: 'tg-dark-app-dark-thermal',
+                title: 'Telegram dark + app dark-mode + thermal-safe',
+                note: 'Dark lobby surface: section text and inactive bottom nav must be muted-light, not dark.',
+                vars: {
+                    bg: '#0F172A',
+                    surface: '#1E293B',
+                    text: 'rgba(248,250,252,0.94)',
+                    muted: 'rgba(203,213,225,0.82)',
+                    link: '#A08CFF',
+                    border: 'rgba(148,163,184,0.26)',
+                    chipBg: 'rgba(15,23,42,0.28)',
+                    inputBg: '#1E293B',
+                    placeholder: 'rgba(203,213,225,0.62)',
+                    heroBg: '#6C5CE7',
+                    heroText: '#FFFFFF',
+                    heroMuted: 'rgba(255,255,255,0.84)',
+                    modalBg: '#FFFFFF',
+                    modalText: '#2D3436',
+                    modalMuted: '#6F7682',
+                    primary: '#7C68F2',
+                    primaryText: '#FFFFFF',
+                    secondary: '#243044',
+                    danger: '#F87171',
+                    warning: '#FACC15',
+                    warningText: '#2B2100'
+                }
+            },
+            {
                 id: 'tg-dark-thermal-home-smoke',
                 title: 'Telegram dark + thermal-safe home-flow smoke',
                 note: 'Реальный lobby class smoke для .home-flow .section-title и .home-section-link.',
@@ -1810,6 +1859,24 @@
                                 <div class="section-title mb-0">Рекомендуемые игры</div>
                                 <button class="btn-unstyled home-section-link" type="button">Все игры →</button>
                             </div>
+                        </div>
+                        <div class="bottom-nav">
+                            <button class="nav-item active" type="button">
+                                <i class="bi bi-play-fill" aria-hidden="true"></i>
+                                <span>Играть</span>
+                            </button>
+                            <button class="nav-item" type="button">
+                                <i class="bi bi-people-fill" aria-hidden="true"></i>
+                                <span>Комнаты</span>
+                            </button>
+                            <button class="nav-item" type="button">
+                                <i class="bi bi-clock-fill" aria-hidden="true"></i>
+                                <span>История</span>
+                            </button>
+                            <button class="nav-item" type="button">
+                                <i class="bi bi-person-fill" aria-hidden="true"></i>
+                                <span>Профиль</span>
+                            </button>
                         </div>
                     </div>
                     <div class="theme-qa-muted-text">Small muted text: не должен исчезать на текущей поверхности.</div>
