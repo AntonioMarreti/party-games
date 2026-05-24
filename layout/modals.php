@@ -43,46 +43,55 @@
 <!-- 3. Rewards Overview Modal -->
 <div id="modal-detailed-stats" class="custom-modal-overlay" style="display: none;">
     <div class="custom-modal-content glass-panel rewards-overview-modal">
-        <div class="position-relative mb-3 text-center">
-            <h5 class="fw-bold mb-0 text-main" style="color: var(--text-main);">Задания и награды</h5>
+        <div class="rewards-modal-header">
+            <button type="button" class="btn-unstyled rewards-modal-back" id="rewards-modal-back"
+                onclick="setRewardsView('overview')" style="display:none;" aria-label="Назад">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                <span>Назад</span>
+            </button>
+            <h5 class="fw-bold mb-0 text-main" id="rewards-modal-title" style="color: var(--text-main);">Задания и награды</h5>
             <button class="btn-close position-absolute top-50 end-0 translate-middle-y"
                 onclick="closeModal('modal-detailed-stats')" style="font-size: 0.8rem;"></button>
         </div>
 
-        <div class="rewards-level-strip">
-            <div class="rewards-level-strip-top">
-                <span id="detail-level-val">1 LVL</span>
-                <span id="detail-xp-range">0 / 100 XP</span>
+        <div id="rewards-overview-view">
+            <div class="rewards-level-strip">
+                <div class="rewards-level-strip-top">
+                    <span id="detail-level-val">1 LVL</span>
+                    <span id="detail-xp-range">0 / 100 XP</span>
+                </div>
+                <div class="rewards-level-progress" aria-hidden="true">
+                    <div id="detail-xp-progress" class="rewards-level-progress-fill"></div>
+                </div>
             </div>
-            <div class="rewards-level-progress" aria-hidden="true">
-                <div id="detail-xp-progress" class="rewards-level-progress-fill"></div>
-            </div>
+
+            <section class="rewards-overview-section">
+                <div class="rewards-overview-section-head">
+                    <div>
+                        <div class="rewards-overview-eyebrow">Сегодня</div>
+                        <h6 class="rewards-overview-title">Задания дня</h6>
+                    </div>
+                    <span class="rewards-overview-chip" id="detail-daily-summary">Загружаем...</span>
+                </div>
+                <div id="detail-daily-list" class="rewards-overview-daily-list">
+                    <div class="daily-tasks-modal-state">Загружаем задания...</div>
+                </div>
+            </section>
+
+            <section class="rewards-overview-section">
+                <div class="rewards-overview-section-head">
+                    <div>
+                        <div class="rewards-overview-eyebrow">Коллекция</div>
+                        <h6 class="rewards-overview-title">Полученные награды</h6>
+                    </div>
+                    <span class="rewards-overview-chip" id="detail-achievements-summary">0</span>
+                </div>
+                <div id="detail-achievements-list" class="rewards-overview-achievements-list"></div>
+                <div class="rewards-overview-note">Больше достижений скоро</div>
+            </section>
         </div>
 
-        <section class="rewards-overview-section">
-            <div class="rewards-overview-section-head">
-                <div>
-                    <div class="rewards-overview-eyebrow">Сегодня</div>
-                    <h6 class="rewards-overview-title">Задания дня</h6>
-                </div>
-                <span class="rewards-overview-chip" id="detail-daily-summary">Загружаем...</span>
-            </div>
-            <div id="detail-daily-list" class="rewards-overview-daily-list">
-                <div class="daily-tasks-modal-state">Загружаем задания...</div>
-            </div>
-        </section>
-
-        <section class="rewards-overview-section">
-            <div class="rewards-overview-section-head">
-                <div>
-                    <div class="rewards-overview-eyebrow">Коллекция</div>
-                    <h6 class="rewards-overview-title">Полученные награды</h6>
-                </div>
-                <span class="rewards-overview-chip" id="detail-achievements-summary">0</span>
-            </div>
-            <div id="detail-achievements-list" class="rewards-overview-achievements-list"></div>
-            <div class="rewards-overview-note">Больше достижений скоро</div>
-        </section>
+        <div id="rewards-detail-view" style="display:none;"></div>
 
         <button class="btn btn-primary w-100 mt-2 rounded-pill py-2 fw-bold shadow-sm"
             onclick="closeModal('modal-detailed-stats')">Закрыть</button>

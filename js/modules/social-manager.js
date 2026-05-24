@@ -9,6 +9,7 @@ let cachedDailyTasks = [];
 let profileDailyExpanded = false;
 let profileDailyShowAll = false;
 let dailyTaskClaimInFlight = null;
+let rewardsView = 'overview';
 
 // === USER PROFILES & STATS ===
 
@@ -320,8 +321,7 @@ async function claimDailyTaskReward(taskId, code) {
         renderProfileDailyTasks();
         renderDailyTasksModal();
         await loadMyProfileStats();
-        renderRewardsDailyOverview();
-        renderRewardsAchievementsOverview(cachedUserStats || {});
+        renderRewardsCurrentView();
     } catch (err) {
         console.warn('Daily Task Claim Error:', err);
         if (window.showToast) window.showToast(err.message || 'Не удалось получить награду', 'error');
@@ -480,7 +480,20 @@ function renderRewardsDailyOverview() {
     summary.textContent = readyXp > 0
         ? `${completed}/${tasks.length} · +${readyXp} XP`
         : `${completed}/${tasks.length}`;
-    list.innerHTML = tasks.map(renderRewardsDailyTaskRow).join('');
+    const previewTasks = tasks.slice(0, 3);
+    list.innerHTML = `
+        ${previewTasks.map(renderRewardsDailyTaskRow).join('')}
+        ${tasks.length > 3 ? renderRewardsShowAllRow('Все задания', "setRewardsView('daily')") : ''}
+    `;
+}
+
+function renderRewardsShowAllRow(label, action) {
+    return `
+        <button type="button" class="btn-unstyled rewards-show-all-row" onclick="${action}">
+            <span>${escapeProfileHtml(label)}</span>
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+    `;
 }
 
 function renderRewardsDailyTaskRow(task) {
@@ -607,17 +620,98 @@ function renderUnlockedRewards(achievements) {
     `;
 }
 
+function getUnlockedRewards(achievements) {
+    return Array.isArray(achievements)
+        ? achievements.filter(item => item && item.unlocked_at)
+        : [];
+}
+
+function renderRewardsAchievementPreview(achievements) {
+    const unlocked = getUnlockedRewards(achievements);
+    if (!unlocked.length) {
+        return '<div class="rewards-overview-empty rewards-overview-empty-compact">Пока нет полученных наград</div>';
+    }
+
+    return `
+        <div class="rewards-achievement-preview" aria-label="Полученные награды">
+            ${unlocked.slice(0, 5).map(achievement => {
+                const label = escapeProfileHtml(achievement.name || 'Награда');
+                const icon = String(achievement.icon || '').trim();
+                const iconHtml = icon
+                    ? escapeProfileHtml(icon)
+                    : '<i class="bi bi-trophy" aria-hidden="true"></i>';
+                return `
+                    <div class="rewards-achievement-preview-item" title="${label}" aria-label="${label}">
+                        ${iconHtml}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        ${renderRewardsShowAllRow('Все награды', "setRewardsView('achievements')")}
+    `;
+}
+
 function renderRewardsAchievementsOverview(stats) {
     const container = document.getElementById('detail-achievements-list');
     const summary = document.getElementById('detail-achievements-summary');
     if (!container) return;
 
     const achievements = Array.isArray(stats?.achievements) ? stats.achievements : [];
-    if (summary) summary.textContent = String(achievements.filter(item => item && item.unlocked_at).length);
-    container.innerHTML = renderUnlockedRewards(achievements);
+    if (summary) summary.textContent = String(getUnlockedRewards(achievements).length);
+    container.innerHTML = renderRewardsAchievementPreview(achievements);
+}
+
+function renderRewardsFullDailyView() {
+    const detail = document.getElementById('rewards-detail-view');
+    if (!detail) return;
+
+    const tasks = Array.isArray(cachedDailyTasks) ? cachedDailyTasks : [];
+    detail.innerHTML = tasks.length
+        ? `<div class="rewards-overview-daily-list">${tasks.map(renderRewardsDailyTaskRow).join('')}</div>`
+        : '<div class="rewards-overview-empty">Сегодня заданий пока нет</div>';
+}
+
+function renderRewardsFullAchievementsView() {
+    const detail = document.getElementById('rewards-detail-view');
+    if (!detail) return;
+
+    const stats = cachedUserStats || {};
+    const achievements = Array.isArray(stats.achievements) ? stats.achievements : [];
+    detail.innerHTML = renderUnlockedRewards(achievements);
+}
+
+function renderRewardsCurrentView() {
+    const title = document.getElementById('rewards-modal-title');
+    const back = document.getElementById('rewards-modal-back');
+    const overview = document.getElementById('rewards-overview-view');
+    const detail = document.getElementById('rewards-detail-view');
+    if (!overview || !detail) return;
+
+    const isOverview = rewardsView === 'overview';
+    overview.style.display = isOverview ? '' : 'none';
+    detail.style.display = isOverview ? 'none' : '';
+    if (back) back.style.display = isOverview ? 'none' : 'inline-flex';
+
+    if (rewardsView === 'daily') {
+        if (title) title.textContent = 'Задания дня';
+        renderRewardsFullDailyView();
+    } else if (rewardsView === 'achievements') {
+        if (title) title.textContent = 'Коллекция наград';
+        renderRewardsFullAchievementsView();
+    } else {
+        if (title) title.textContent = 'Задания и награды';
+        renderRewardsDailyOverview();
+        renderRewardsAchievementsOverview(cachedUserStats || {});
+    }
+}
+
+function setRewardsView(view) {
+    rewardsView = ['daily', 'achievements'].includes(view) ? view : 'overview';
+    renderRewardsCurrentView();
 }
 
 async function openDetailedStatsModal() {
+    rewardsView = 'overview';
     if (!cachedUserStats) {
         if (window.showToast) window.showToast("Загрузка статистики...", "info");
         await loadMyProfileStats();
@@ -654,8 +748,7 @@ async function openDetailedStatsModal() {
     const progBar = document.getElementById('detail-xp-progress');
     if (progBar) progBar.style.width = progressPct + '%';
 
-    renderRewardsDailyOverview();
-    renderRewardsAchievementsOverview(s);
+    renderRewardsCurrentView();
 
     if (window.showModal) window.showModal('modal-detailed-stats');
 }
@@ -1538,6 +1631,7 @@ window.SocialManager = {
     claimProfileDailyTask,
     openDailyTasksModal,
     claimDailyTaskReward,
+    setRewardsView,
 
     // NEW PROFILE LOGIC
     renderCurrentUser,
@@ -1564,6 +1658,7 @@ window.collapseProfileDailyTasks = collapseProfileDailyTasks;
 window.claimProfileDailyTask = claimProfileDailyTask;
 window.openDailyTasksModal = openDailyTasksModal;
 window.claimDailyTaskReward = claimDailyTaskReward;
+window.setRewardsView = setRewardsView;
 window.openDetailedStatsModal = openDetailedStatsModal;
 window.fetchUserStats = fetchUserStats;
 window.openUserProfile = openUserProfile;

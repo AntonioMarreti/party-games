@@ -566,6 +566,35 @@ body.thermal-safe .lobby-modal .modal-content {
     overflow-y: auto;
 }
 
+.rewards-modal-header {
+    position: relative;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.rewards-modal-back {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 30px;
+    padding: 0 4px 0 0;
+    color: var(--primary-color) !important;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.rewards-modal-back .bi {
+    font-size: 17px;
+}
+
 .rewards-level-strip {
     margin-bottom: 12px;
 }
@@ -667,6 +696,28 @@ body.thermal-safe .lobby-modal .modal-content {
     text-align: center;
 }
 
+.rewards-overview-empty-compact {
+    padding: 12px;
+}
+
+.rewards-show-all-row {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    color: var(--primary-color) !important;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.rewards-show-all-row .bi {
+    font-size: 14px;
+}
+
 .rewards-daily-row {
     min-height: 50px;
     display: flex;
@@ -752,6 +803,34 @@ body.thermal-safe .lobby-modal .modal-content {
 .rewards-daily-status.is-loading {
     opacity: 0.65;
     pointer-events: none;
+}
+
+.rewards-achievement-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    overflow-x: auto;
+    padding: 2px 0 4px;
+    scrollbar-width: none;
+}
+
+.rewards-achievement-preview::-webkit-scrollbar {
+    display: none;
+}
+
+.rewards-achievement-preview-item {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-main);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--primary-color), white 88%);
+    color: var(--primary-color);
+    font-size: 21px;
 }
 
 .rewards-achievement-row {
@@ -904,6 +983,7 @@ body.thermal-safe .lobby-modal .modal-content {
 .thermal-safe .daily-task-modal-row,
 .thermal-safe .rewards-daily-row,
 .thermal-safe .rewards-overview-empty,
+.thermal-safe .rewards-achievement-preview-item,
 .thermal-safe .rewards-achievement-row {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -919,6 +999,7 @@ body.thermal-safe .lobby-modal .modal-content {
 .thermal-safe .daily-task-modal-row,
 .thermal-safe .rewards-daily-row,
 .thermal-safe .rewards-overview-empty,
+.thermal-safe .rewards-achievement-preview-item,
 .thermal-safe .rewards-achievement-row {
     background: var(--thermal-surface-muted) !important;
     border-color: var(--thermal-border) !important;
