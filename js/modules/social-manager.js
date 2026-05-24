@@ -480,7 +480,68 @@ function renderRewardsDailyOverview() {
     summary.textContent = readyXp > 0
         ? `${completed}/${tasks.length} · +${readyXp} XP`
         : `${completed}/${tasks.length}`;
-    list.innerHTML = tasks.map(renderDailyTaskModalRow).join('');
+    list.innerHTML = tasks.map(renderRewardsDailyTaskRow).join('');
+}
+
+function renderRewardsDailyTaskRow(task) {
+    const progress = Math.min(Number(task.progress) || 0, Number(task.target_count) || 1);
+    const target = Math.max(1, Number(task.target_count) || 1);
+    const reward = Number(task.xp_reward) || 0;
+    const title = escapeProfileHtml(task.title || 'Задание');
+    const code = escapeProfileHtml(task.code || '');
+    const taskId = Number(task.task_id || task.id || 0);
+    const isCompleted = task.status === 'completed';
+    const isClaimed = task.status === 'claimed';
+    const rowClass = isCompleted ? 'is-claimable' : (isClaimed ? 'is-claimed' : 'is-active');
+    const meta = isCompleted
+        ? `Выполнено · +${reward} XP`
+        : (isClaimed ? `Получено · +${reward} XP` : `${progress}/${target} · +${reward} XP`);
+    const clickAttr = isCompleted ? ` onclick="claimDailyTaskReward(${taskId}, '${code}')"` : '';
+    const isLoading = dailyTaskClaimInFlight === (taskId > 0 ? String(taskId) : String(code || ''));
+    const checkIcon = `
+        <svg class="rewards-daily-status-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 12.5l2 2 4.5-5"></path>
+            <circle cx="12" cy="12" r="8.5"></circle>
+        </svg>
+    `;
+    const claimIcon = `
+        <svg class="rewards-daily-status-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="8.5"></circle>
+            <path d="M12 7.5v9"></path>
+            <path d="M7.5 12h9"></path>
+        </svg>
+    `;
+    let statusHtml = `
+        <span class="rewards-daily-status rewards-daily-status-active" aria-label="${progress}/${target}">
+            ${progress}/${target}
+        </span>
+    `;
+
+    if (isCompleted) {
+        statusHtml = `
+            <button type="button" class="btn-unstyled rewards-daily-status rewards-daily-status-claim ${isLoading ? 'is-loading' : ''}"
+                onclick="event.stopPropagation(); claimDailyTaskReward(${taskId}, '${code}')"
+                aria-label="Получить ${reward} XP">
+                ${isLoading ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>' : claimIcon}
+            </button>
+        `;
+    } else if (isClaimed) {
+        statusHtml = `
+            <span class="rewards-daily-status rewards-daily-status-claimed" aria-label="Получено">
+                ${checkIcon}
+            </span>
+        `;
+    }
+
+    return `
+        <div class="rewards-daily-row ${rowClass}"${clickAttr}>
+            <div class="rewards-daily-copy">
+                <div class="rewards-daily-title">${title}</div>
+                <div class="rewards-daily-meta">${meta}</div>
+            </div>
+            ${statusHtml}
+        </div>
+    `;
 }
 
 function formatAchievementDate(value) {
@@ -576,9 +637,6 @@ async function openDetailedStatsModal() {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'light');
 
     const s = cachedUserStats || {};
-    const games = s.total_games_played || 0;
-    const wins = s.total_wins || 0;
-    const winrate = games > 0 ? Math.round((wins / games) * 100) : 0;
     const xp = s.total_points_earned || 0;
 
     const level = typeof window.calculateLevel === 'function' ? window.calculateLevel(xp) : 1;
@@ -589,9 +647,7 @@ async function openDetailedStatsModal() {
     const progressPct = Math.min(100, Math.max(0, (progressXP / neededXP) * 100));
 
     if (window.safeText) {
-        window.safeText('detail-total-games', games);
-        window.safeText('detail-winrate', winrate + '%');
-        window.safeText('detail-level-val', level);
+        window.safeText('detail-level-val', `${level} LVL`);
         window.safeText('detail-xp-range', `${xp} / ${nextThreshold} XP`);
     }
 

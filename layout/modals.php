@@ -49,41 +49,13 @@
                 onclick="closeModal('modal-detailed-stats')" style="font-size: 0.8rem;"></button>
         </div>
 
-        <div class="row g-2 mb-3">
-            <div class="col-12">
-                <div class="p-2 rounded-4 shadow-sm"
-                    style="background: var(--bg-glass-strong); border: 1px solid var(--border-glass);">
-                    <div class="d-flex justify-content-between align-items-end mb-1">
-                        <div>
-                            <div class="text-muted"
-                                style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Уровень и
-                                Прогресс</div>
-                            <div class="fw-bold fs-5 text-primary"><span id="detail-level-val">1</span> LVL</div>
-                        </div>
-                        <div class="text-muted" style="font-size: 11px;" id="detail-xp-range">0 / 100 XP</div>
-                    </div>
-                    <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(0,0,0,0.05);">
-                        <div id="detail-xp-progress"
-                            class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                            role="progressbar" style="width: 0%; border-radius: 3px;"></div>
-                    </div>
-                </div>
+        <div class="rewards-level-strip">
+            <div class="rewards-level-strip-top">
+                <span id="detail-level-val">1 LVL</span>
+                <span id="detail-xp-range">0 / 100 XP</span>
             </div>
-            <div class="col-6">
-                <div class="p-2 rounded-4 text-center shadow-sm"
-                    style="background: var(--bg-glass-strong); border: 1px solid var(--border-glass);">
-                    <i class="bi bi-controller text-primary mb-1 d-block" style="font-size: 1.1rem;"></i>
-                    <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Игр</div>
-                    <div class="fw-bold fs-6" style="color: var(--text-main);" id="detail-total-games">0</div>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="p-2 rounded-4 text-center shadow-sm"
-                    style="background: var(--bg-glass-strong); border: 1px solid var(--border-glass);">
-                    <i class="bi bi-graph-up-arrow text-success mb-1 d-block" style="font-size: 1.1rem;"></i>
-                    <div class="text-muted mb-0" style="font-size: 9px; text-transform: uppercase;">Винрейт</div>
-                    <div class="fw-bold fs-6 text-success" id="detail-winrate">0%</div>
-                </div>
+            <div class="rewards-level-progress" aria-hidden="true">
+                <div id="detail-xp-progress" class="rewards-level-progress-fill"></div>
             </div>
         </div>
 

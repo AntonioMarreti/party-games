@@ -562,12 +562,50 @@ body.thermal-safe .lobby-modal .modal-content {
     max-width: 400px;
     width: 90%;
     max-height: min(86vh, 720px);
-    padding: 16px;
+    padding: 15px 16px 16px;
     overflow-y: auto;
 }
 
+.rewards-level-strip {
+    margin-bottom: 12px;
+}
+
+.rewards-level-strip-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.rewards-level-strip-top span:last-child {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.rewards-level-progress {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-main), transparent 90%);
+}
+
+.rewards-level-progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary-gradient, var(--primary-color));
+    transition: width 180ms ease;
+}
+
 .rewards-overview-section {
-    margin-top: 14px;
+    margin-top: 12px;
 }
 
 .rewards-overview-section-head {
@@ -575,7 +613,7 @@ body.thermal-safe .lobby-modal .modal-content {
     align-items: flex-end;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
 }
 
 .rewards-overview-eyebrow {
@@ -614,11 +652,11 @@ body.thermal-safe .lobby-modal .modal-content {
 .rewards-achievement-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .rewards-overview-empty {
-    padding: 18px 12px;
+    padding: 15px 12px;
     border: 1px solid var(--border-main);
     border-radius: 16px;
     background: var(--app-surface, #fff);
@@ -629,12 +667,99 @@ body.thermal-safe .lobby-modal .modal-content {
     text-align: center;
 }
 
+.rewards-daily-row {
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-main);
+    border-radius: 13px;
+    background: var(--app-surface, #fff);
+}
+
+.rewards-daily-row.is-claimable {
+    cursor: pointer;
+    border-color: color-mix(in srgb, var(--primary-color), transparent 72%);
+}
+
+.rewards-daily-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.rewards-daily-title {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.18;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rewards-daily-meta {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.rewards-daily-status {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.rewards-daily-status-icon {
+    width: 20px;
+    height: 20px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.rewards-daily-status-active {
+    border: 1px solid var(--border-main);
+    color: var(--text-muted);
+    background: var(--app-bg, #F8F9FD);
+}
+
+.rewards-daily-status-claim {
+    background: var(--primary-color) !important;
+    color: var(--text-on-accent, #fff) !important;
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--primary-color), transparent 76%);
+}
+
+.rewards-daily-status-claimed {
+    border: 1px solid color-mix(in srgb, var(--status-success, #00b894), transparent 70%);
+    background: color-mix(in srgb, var(--status-success, #00b894), white 86%);
+    color: var(--status-success, #00b894);
+}
+
+.rewards-daily-status.is-loading {
+    opacity: 0.65;
+    pointer-events: none;
+}
+
 .rewards-achievement-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-height: 58px;
-    padding: 10px 11px;
+    min-height: 54px;
+    padding: 9px 10px;
     border: 1px solid var(--border-main);
     border-radius: 16px;
     background: var(--app-surface, #fff);
@@ -642,8 +767,8 @@ body.thermal-safe .lobby-modal .modal-content {
 
 .rewards-achievement-icon {
     flex: 0 0 auto;
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -679,7 +804,7 @@ body.thermal-safe .lobby-modal .modal-content {
 }
 
 .rewards-overview-note {
-    margin-top: 8px;
+    margin-top: 7px;
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 700;
@@ -777,6 +902,7 @@ body.thermal-safe .lobby-modal .modal-content {
 .thermal-safe .daily-tasks-modal,
 .thermal-safe .daily-tasks-modal-summary,
 .thermal-safe .daily-task-modal-row,
+.thermal-safe .rewards-daily-row,
 .thermal-safe .rewards-overview-empty,
 .thermal-safe .rewards-achievement-row {
     backdrop-filter: none !important;
@@ -791,6 +917,7 @@ body.thermal-safe .lobby-modal .modal-content {
 
 .thermal-safe .daily-tasks-modal-summary,
 .thermal-safe .daily-task-modal-row,
+.thermal-safe .rewards-daily-row,
 .thermal-safe .rewards-overview-empty,
 .thermal-safe .rewards-achievement-row {
     background: var(--thermal-surface-muted) !important;
@@ -804,17 +931,27 @@ body.thermal-safe .lobby-modal .modal-content {
     color: var(--text-muted) !important;
 }
 
+.thermal-safe .rewards-daily-status-active {
+    background: var(--thermal-surface-bg-strong) !important;
+    border-color: var(--thermal-border) !important;
+    color: var(--text-muted) !important;
+}
+
 .thermal-safe .daily-task-modal-status-claim,
-.thermal-safe .daily-task-modal-status-claimed {
+.thermal-safe .daily-task-modal-status-claimed,
+.thermal-safe .rewards-daily-status-claim,
+.thermal-safe .rewards-daily-status-claimed {
     box-shadow: none !important;
 }
 
-.thermal-safe .daily-task-modal-status-claim {
+.thermal-safe .daily-task-modal-status-claim,
+.thermal-safe .rewards-daily-status-claim {
     background: var(--primary-color) !important;
     color: var(--text-on-accent, #fff) !important;
 }
 
-.thermal-safe .daily-task-modal-status-claimed {
+.thermal-safe .daily-task-modal-status-claimed,
+.thermal-safe .rewards-daily-status-claimed {
     background: color-mix(in srgb, var(--status-success, #00b894), white 86%) !important;
     border-color: color-mix(in srgb, var(--status-success, #00b894), transparent 70%) !important;
     color: var(--status-success, #00b894) !important;
