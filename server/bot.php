@@ -13,6 +13,91 @@ function botWebhookLog($message, $data = [])
     }
 }
 
+function detectBotUpdateType($update)
+{
+    if (isset($update['pre_checkout_query'])) {
+        return 'pre_checkout_query';
+    }
+    if (isset($update['message']['successful_payment'])) {
+        return 'successful_payment';
+    }
+    if (isset($update['callback_query'])) {
+        return 'callback_query';
+    }
+    if (isset($update['message'])) {
+        return 'message';
+    }
+    return 'unknown';
+}
+
+function getBotWebhookLogData($update)
+{
+    $type = detectBotUpdateType($update);
+    $data = [
+        'update_id' => $update['update_id'] ?? null,
+        'update_type' => $type,
+        'has_message' => isset($update['message']),
+        'has_callback_query' => isset($update['callback_query']),
+        'has_pre_checkout_query' => isset($update['pre_checkout_query']),
+    ];
+
+    if ($type === 'pre_checkout_query') {
+        $pcq = $update['pre_checkout_query'] ?? [];
+        $from = $pcq['from'] ?? [];
+        return array_merge($data, [
+            'user_id' => $from['id'] ?? null,
+            'username' => $from['username'] ?? null,
+            'first_name' => $from['first_name'] ?? null,
+            'chat_id' => null,
+            'message_text' => null,
+            'currency' => $pcq['currency'] ?? null,
+            'total_amount' => $pcq['total_amount'] ?? null,
+            'invoice_payload' => $pcq['invoice_payload'] ?? null,
+        ]);
+    }
+
+    if ($type === 'successful_payment') {
+        $message = $update['message'] ?? [];
+        $payment = $message['successful_payment'] ?? [];
+        $from = $message['from'] ?? [];
+        return array_merge($data, [
+            'user_id' => $from['id'] ?? null,
+            'username' => $from['username'] ?? null,
+            'first_name' => $from['first_name'] ?? null,
+            'chat_id' => $message['chat']['id'] ?? null,
+            'message_text' => null,
+            'currency' => $payment['currency'] ?? null,
+            'total_amount' => $payment['total_amount'] ?? null,
+            'invoice_payload' => $payment['invoice_payload'] ?? null,
+            'telegram_payment_charge_id' => $payment['telegram_payment_charge_id'] ?? null,
+            'provider_payment_charge_id' => $payment['provider_payment_charge_id'] ?? null,
+        ]);
+    }
+
+    if ($type === 'callback_query') {
+        $callback = $update['callback_query'] ?? [];
+        $from = $callback['from'] ?? [];
+        return array_merge($data, [
+            'user_id' => $from['id'] ?? null,
+            'username' => $from['username'] ?? null,
+            'first_name' => $from['first_name'] ?? null,
+            'chat_id' => $callback['message']['chat']['id'] ?? null,
+            'message_text' => null,
+            'callback_data' => $callback['data'] ?? null,
+        ]);
+    }
+
+    $message = $update['message'] ?? [];
+    $from = $message['from'] ?? [];
+    return array_merge($data, [
+        'user_id' => $from['id'] ?? null,
+        'username' => $from['username'] ?? null,
+        'first_name' => $from['first_name'] ?? null,
+        'chat_id' => $message['chat']['id'] ?? null,
+        'message_text' => $message['text'] ?? '',
+    ]);
+}
+
 register_shutdown_function(function () {
     $error = error_get_last();
     if (!$error) {
@@ -50,6 +135,7 @@ if (!$update) {
 if (!isset($update['message']) && !isset($update['pre_checkout_query']) && !isset($update['callback_query'])) {
     botWebhookLog('unsupported_update', [
         'update_id' => $update['update_id'] ?? null,
+        'update_type' => detectBotUpdateType($update),
         'keys' => array_keys($update),
     ]);
     echo 'ok';
@@ -60,15 +146,7 @@ $message = $update['message'] ?? null;
 $chatId = $message['chat']['id'] ?? ($update['callback_query']['message']['chat']['id'] ?? 0);
 $text = $message['text'] ?? '';
 
-botWebhookLog('received', [
-    'update_id' => $update['update_id'] ?? null,
-    'user_id' => $message['from']['id'] ?? ($update['callback_query']['from']['id'] ?? null),
-    'chat_id' => $chatId,
-    'message_text' => $text,
-    'has_message' => isset($update['message']),
-    'has_callback_query' => isset($update['callback_query']),
-    'has_pre_checkout_query' => isset($update['pre_checkout_query']),
-]);
+botWebhookLog('received', getBotWebhookLogData($update));
 
 // Логика команды /start
 if (isset($update['pre_checkout_query'])) {
