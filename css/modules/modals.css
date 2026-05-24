@@ -718,6 +718,55 @@ body.thermal-safe .lobby-modal .modal-content {
     font-size: 14px;
 }
 
+.rewards-daily-summary-card {
+    min-height: 76px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--border-main);
+    border-radius: 14px;
+    background: var(--app-surface, #fff);
+}
+
+.rewards-daily-summary-text {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.rewards-daily-summary-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.rewards-daily-summary-link {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--primary-color) !important;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.rewards-daily-summary-link .bi {
+    font-size: 13px;
+}
+
 .rewards-daily-row {
     min-height: 50px;
     display: flex;
@@ -982,6 +1031,7 @@ body.thermal-safe .lobby-modal .modal-content {
 .thermal-safe .daily-tasks-modal-summary,
 .thermal-safe .daily-task-modal-row,
 .thermal-safe .rewards-daily-row,
+.thermal-safe .rewards-daily-summary-card,
 .thermal-safe .rewards-overview-empty,
 .thermal-safe .rewards-achievement-preview-item,
 .thermal-safe .rewards-achievement-row {
@@ -998,6 +1048,7 @@ body.thermal-safe .lobby-modal .modal-content {
 .thermal-safe .daily-tasks-modal-summary,
 .thermal-safe .daily-task-modal-row,
 .thermal-safe .rewards-daily-row,
+.thermal-safe .rewards-daily-summary-card,
 .thermal-safe .rewards-overview-empty,
 .thermal-safe .rewards-achievement-preview-item,
 .thermal-safe .rewards-achievement-row {

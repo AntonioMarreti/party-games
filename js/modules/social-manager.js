@@ -480,10 +480,29 @@ function renderRewardsDailyOverview() {
     summary.textContent = readyXp > 0
         ? `${completed}/${tasks.length} · +${readyXp} XP`
         : `${completed}/${tasks.length}`;
-    const previewTasks = tasks.slice(0, 3);
-    list.innerHTML = `
-        ${previewTasks.map(renderRewardsDailyTaskRow).join('')}
-        ${tasks.length > 3 ? renderRewardsShowAllRow('Все задания', "setRewardsView('daily')") : ''}
+    list.innerHTML = renderRewardsDailySummaryBlock(tasks);
+}
+
+function renderRewardsDailySummaryBlock(tasks) {
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const preview = safeTasks.slice(0, 3);
+    const remaining = Math.max(0, safeTasks.length - preview.length);
+    const labels = preview
+        .map(task => escapeProfileHtml(task.title || 'Задание'))
+        .join(' · ');
+    const extraText = remaining > 0 ? `+ ещё ${remaining}` : 'Все задания на сегодня';
+
+    return `
+        <div class="rewards-daily-summary-card">
+            <div class="rewards-daily-summary-text">${labels}</div>
+            <div class="rewards-daily-summary-footer">
+                <span>${escapeProfileHtml(extraText)}</span>
+                <button type="button" class="btn-unstyled rewards-daily-summary-link" onclick="setRewardsView('daily')">
+                    Все задания
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
     `;
 }
 
