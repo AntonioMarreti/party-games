@@ -487,21 +487,43 @@ function renderRewardsDailySummaryBlock(tasks) {
     const safeTasks = Array.isArray(tasks) ? tasks : [];
     const preview = safeTasks.slice(0, 3);
     const remaining = Math.max(0, safeTasks.length - preview.length);
-    const labels = preview
-        .map(task => escapeProfileHtml(task.title || 'Задание'))
-        .join(' · ');
-    const extraText = remaining > 0 ? `+ ещё ${remaining}` : 'Все задания на сегодня';
 
     return `
-        <div class="rewards-daily-summary-card">
-            <div class="rewards-daily-summary-text">${labels}</div>
-            <div class="rewards-daily-summary-footer">
-                <span>${escapeProfileHtml(extraText)}</span>
-                <button type="button" class="btn-unstyled rewards-daily-summary-link" onclick="setRewardsView('daily')">
-                    Все задания
-                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                </button>
-            </div>
+        <div class="rewards-preview-tile-row" aria-label="Задания дня">
+            ${preview.map(renderRewardsDailyPreviewTile).join('')}
+            ${remaining > 0 ? `
+                <div class="rewards-preview-tile rewards-preview-tile-more" aria-label="Ещё ${remaining} заданий">
+                    +${remaining}
+                </div>
+            ` : ''}
+        </div>
+        ${renderRewardsShowAllRow('Все задания', "setRewardsView('daily')")}
+    `;
+}
+
+function getRewardsDailyIconClass(task) {
+    const code = String(task?.code || task?.event_type || '').toLowerCase();
+    if (code.includes('win')) return 'bi-trophy-fill';
+    if (code.includes('create_room') || code.includes('room_created')) return 'bi-people-fill';
+    if (code.includes('schedule') || code.includes('scheduled_created')) return 'bi-calendar2-plus';
+    if (code.includes('join_scheduled') || code.includes('scheduled_subscribed')) return 'bi-calendar2-check';
+    if (code.includes('game_finished') || code.includes('play')) return 'bi-controller';
+    return 'bi-stars';
+}
+
+function renderRewardsDailyPreviewTile(task) {
+    const title = escapeProfileHtml(task?.title || 'Задание');
+    const status = String(task?.status || '');
+    const stateClass = status === 'claimed'
+        ? 'is-claimed'
+        : (status === 'completed' ? 'is-ready' : 'is-active');
+    const iconClass = getRewardsDailyIconClass(task);
+
+    return `
+        <div class="rewards-preview-tile rewards-preview-tile-task ${stateClass}" title="${title}" aria-label="${title}">
+            <i class="bi ${iconClass}" aria-hidden="true"></i>
+            ${status === 'claimed' ? '<span class="rewards-preview-state-dot"><i class="bi bi-check2" aria-hidden="true"></i></span>' : ''}
+            ${status === 'completed' ? '<span class="rewards-preview-state-dot"><i class="bi bi-plus" aria-hidden="true"></i></span>' : ''}
         </div>
     `;
 }
@@ -652,7 +674,7 @@ function renderRewardsAchievementPreview(achievements) {
     }
 
     return `
-        <div class="rewards-achievement-preview" aria-label="Полученные награды">
+        <div class="rewards-preview-tile-row" aria-label="Полученные награды">
             ${unlocked.slice(0, 5).map(achievement => {
                 const label = escapeProfileHtml(achievement.name || 'Награда');
                 const icon = String(achievement.icon || '').trim();
@@ -660,7 +682,7 @@ function renderRewardsAchievementPreview(achievements) {
                     ? escapeProfileHtml(icon)
                     : '<i class="bi bi-trophy" aria-hidden="true"></i>';
                 return `
-                    <div class="rewards-achievement-preview-item" title="${label}" aria-label="${label}">
+                    <div class="rewards-preview-tile rewards-preview-tile-achievement" title="${label}" aria-label="${label}">
                         ${iconHtml}
                     </div>
                 `;
