@@ -40,11 +40,11 @@
     </div>
 </div>
 
-<!-- 3. Detailed Stats Modal -->
+<!-- 3. Rewards Overview Modal -->
 <div id="modal-detailed-stats" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-content glass-panel p-3" style="max-width: 400px; width: 90%;">
+    <div class="custom-modal-content glass-panel rewards-overview-modal">
         <div class="position-relative mb-3 text-center">
-            <h5 class="fw-bold mb-0 text-main" style="color: var(--text-main);">Статистика</h5>
+            <h5 class="fw-bold mb-0 text-main" style="color: var(--text-main);">Задания и награды</h5>
             <button class="btn-close position-absolute top-50 end-0 translate-middle-y"
                 onclick="closeModal('modal-detailed-stats')" style="font-size: 0.8rem;"></button>
         </div>
@@ -87,9 +87,30 @@
             </div>
         </div>
 
-        <h6 class="fw-bold mb-2 text-center" style="font-size: 14px; color: var(--text-main);">Достижения</h6>
-        <div id="detail-achievements-list" class="overflow-auto px-3 pb-4 pt-2"
-            style="margin: 0 -16px; max-height: 250px; min-height: 60px;"></div>
+        <section class="rewards-overview-section">
+            <div class="rewards-overview-section-head">
+                <div>
+                    <div class="rewards-overview-eyebrow">Сегодня</div>
+                    <h6 class="rewards-overview-title">Задания дня</h6>
+                </div>
+                <span class="rewards-overview-chip" id="detail-daily-summary">Загружаем...</span>
+            </div>
+            <div id="detail-daily-list" class="rewards-overview-daily-list">
+                <div class="daily-tasks-modal-state">Загружаем задания...</div>
+            </div>
+        </section>
+
+        <section class="rewards-overview-section">
+            <div class="rewards-overview-section-head">
+                <div>
+                    <div class="rewards-overview-eyebrow">Коллекция</div>
+                    <h6 class="rewards-overview-title">Полученные награды</h6>
+                </div>
+                <span class="rewards-overview-chip" id="detail-achievements-summary">0</span>
+            </div>
+            <div id="detail-achievements-list" class="rewards-overview-achievements-list"></div>
+            <div class="rewards-overview-note">Больше достижений скоро</div>
+        </section>
 
         <button class="btn btn-primary w-100 mt-2 rounded-pill py-2 fw-bold shadow-sm"
             onclick="closeModal('modal-detailed-stats')">Закрыть</button>

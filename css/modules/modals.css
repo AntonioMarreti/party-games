@@ -558,6 +558,134 @@ body.thermal-safe .lobby-modal .modal-content {
     font-weight: 900;
 }
 
+.rewards-overview-modal {
+    max-width: 400px;
+    width: 90%;
+    max-height: min(86vh, 720px);
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.rewards-overview-section {
+    margin-top: 14px;
+}
+
+.rewards-overview-section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.rewards-overview-eyebrow {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.rewards-overview-title {
+    margin: 2px 0 0;
+    color: var(--text-main);
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.rewards-overview-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary-color), white 88%);
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.rewards-overview-daily-list,
+.rewards-achievement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rewards-overview-empty {
+    padding: 18px 12px;
+    border: 1px solid var(--border-main);
+    border-radius: 16px;
+    background: var(--app-surface, #fff);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+}
+
+.rewards-achievement-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 58px;
+    padding: 10px 11px;
+    border: 1px solid var(--border-main);
+    border-radius: 16px;
+    background: var(--app-surface, #fff);
+}
+
+.rewards-achievement-icon {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--primary-color), white 86%);
+    color: var(--primary-color);
+    font-size: 20px;
+}
+
+.rewards-achievement-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.rewards-achievement-name {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.rewards-achievement-desc,
+.rewards-achievement-date {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.rewards-achievement-date {
+    color: color-mix(in srgb, var(--primary-color), var(--text-muted) 35%);
+}
+
+.rewards-overview-note {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
 .daily-task-modal-row {
     min-height: 62px;
     display: flex;
@@ -648,7 +776,9 @@ body.thermal-safe .lobby-modal .modal-content {
 
 .thermal-safe .daily-tasks-modal,
 .thermal-safe .daily-tasks-modal-summary,
-.thermal-safe .daily-task-modal-row {
+.thermal-safe .daily-task-modal-row,
+.thermal-safe .rewards-overview-empty,
+.thermal-safe .rewards-achievement-row {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
@@ -660,7 +790,9 @@ body.thermal-safe .lobby-modal .modal-content {
 }
 
 .thermal-safe .daily-tasks-modal-summary,
-.thermal-safe .daily-task-modal-row {
+.thermal-safe .daily-task-modal-row,
+.thermal-safe .rewards-overview-empty,
+.thermal-safe .rewards-achievement-row {
     background: var(--thermal-surface-muted) !important;
     border-color: var(--thermal-border) !important;
     box-shadow: none !important;

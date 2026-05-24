@@ -320,6 +320,8 @@ async function claimDailyTaskReward(taskId, code) {
         renderProfileDailyTasks();
         renderDailyTasksModal();
         await loadMyProfileStats();
+        renderRewardsDailyOverview();
+        renderRewardsAchievementsOverview(cachedUserStats || {});
     } catch (err) {
         console.warn('Daily Task Claim Error:', err);
         if (window.showToast) window.showToast(err.message || 'Не удалось получить награду', 'error');
@@ -459,11 +461,115 @@ function renderDailyTaskModalRow(task) {
     `;
 }
 
+function renderRewardsDailyOverview() {
+    const summary = document.getElementById('detail-daily-summary');
+    const list = document.getElementById('detail-daily-list');
+    if (!summary || !list) return;
+
+    const tasks = Array.isArray(cachedDailyTasks) ? cachedDailyTasks : [];
+    if (!tasks.length) {
+        summary.textContent = '0/0';
+        list.innerHTML = '<div class="rewards-overview-empty">Сегодня заданий пока нет</div>';
+        return;
+    }
+
+    const completed = tasks.filter(task => task.status === 'completed' || task.status === 'claimed').length;
+    const readyXp = tasks
+        .filter(task => task.status === 'completed')
+        .reduce((sum, task) => sum + (Number(task.xp_reward) || 0), 0);
+    summary.textContent = readyXp > 0
+        ? `${completed}/${tasks.length} · +${readyXp} XP`
+        : `${completed}/${tasks.length}`;
+    list.innerHTML = tasks.map(renderDailyTaskModalRow).join('');
+}
+
+function formatAchievementDate(value) {
+    if (!value) return '';
+    const normalized = String(value).replace(' ', 'T');
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return '';
+
+    try {
+        return new Intl.DateTimeFormat('ru-RU', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        }).format(date);
+    } catch (err) {
+        return '';
+    }
+}
+
+function renderUnlockedRewards(achievements) {
+    const unlocked = Array.isArray(achievements)
+        ? achievements.filter(item => item && item.unlocked_at)
+        : [];
+
+    if (!unlocked.length) {
+        return '<div class="rewards-overview-empty">Пока нет полученных наград. Они появятся здесь после выполнения условий.</div>';
+    }
+
+    const iconMap = {
+        'first_game': 'bi-controller',
+        'first_win': 'bi-trophy-fill',
+        'social_butterfly': 'bi-people-fill',
+        'pacifist': 'bi-peace',
+        'flash': 'bi-lightning-charge-fill',
+        'brute': 'bi-hammer',
+        'veteran': 'bi-award-fill',
+        'champion': 'bi-star-fill'
+    };
+
+    return `
+        <div class="rewards-achievement-list">
+            ${unlocked.map(achievement => {
+                const name = escapeProfileHtml(achievement.name || 'Награда');
+                const description = escapeProfileHtml(achievement.description || '');
+                const date = escapeProfileHtml(formatAchievementDate(achievement.unlocked_at));
+                const icon = String(achievement.icon || '').trim();
+                const iconHtml = icon
+                    ? escapeProfileHtml(icon)
+                    : `<i class="bi ${iconMap[achievement.code] || 'bi-trophy'}" aria-hidden="true"></i>`;
+
+                return `
+                    <div class="rewards-achievement-row">
+                        <div class="rewards-achievement-icon" aria-hidden="true">${iconHtml}</div>
+                        <div class="rewards-achievement-copy">
+                            <div class="rewards-achievement-name">${name}</div>
+                            ${description ? `<div class="rewards-achievement-desc">${description}</div>` : ''}
+                            ${date ? `<div class="rewards-achievement-date">Получено ${date}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderRewardsAchievementsOverview(stats) {
+    const container = document.getElementById('detail-achievements-list');
+    const summary = document.getElementById('detail-achievements-summary');
+    if (!container) return;
+
+    const achievements = Array.isArray(stats?.achievements) ? stats.achievements : [];
+    if (summary) summary.textContent = String(achievements.filter(item => item && item.unlocked_at).length);
+    container.innerHTML = renderUnlockedRewards(achievements);
+}
+
 async function openDetailedStatsModal() {
     if (!cachedUserStats) {
         if (window.showToast) window.showToast("Загрузка статистики...", "info");
         await loadMyProfileStats();
-        if (cachedUserStats && window.showModal) window.showModal('modal-detailed-stats');
+    }
+
+    try {
+        await fetchDailyTasks();
+    } catch (err) {
+        console.warn('Rewards Daily Tasks Error:', err);
+    }
+
+    if (!cachedUserStats) {
+        if (window.showToast) window.showToast("Не удалось загрузить награды", "error");
         return;
     }
 
@@ -492,10 +598,8 @@ async function openDetailedStatsModal() {
     const progBar = document.getElementById('detail-xp-progress');
     if (progBar) progBar.style.width = progressPct + '%';
 
-    const achContainer = document.getElementById('detail-achievements-list');
-    if (achContainer && typeof window.renderAchievements === 'function') {
-        achContainer.innerHTML = window.renderAchievements(s.achievements);
-    }
+    renderRewardsDailyOverview();
+    renderRewardsAchievementsOverview(s);
 
     if (window.showModal) window.showModal('modal-detailed-stats');
 }
