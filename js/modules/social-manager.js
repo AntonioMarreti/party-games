@@ -803,6 +803,7 @@ function renderRewardsAchievementFilters() {
             ${filters.map(([value, label]) => `
                 <button type="button"
                     class="btn-unstyled rewards-achievement-filter ${rewardsAchievementFilter === value ? 'is-active' : ''}"
+                    data-filter="${value}"
                     onclick="setRewardsAchievementFilter('${value}')">
                     ${label}
                 </button>

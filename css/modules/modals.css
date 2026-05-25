@@ -996,9 +996,8 @@ body.thermal-safe .lobby-modal .modal-content {
     flex: 0 0 auto;
     align-items: center;
     width: 100%;
-    gap: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+    gap: 2px;
+    overflow: hidden;
     padding: 3px;
     margin: 0 0 9px;
     border: 1px solid rgba(108, 92, 231, 0.12);
@@ -1022,7 +1021,7 @@ body.thermal-safe .lobby-modal .modal-content {
     min-width: 0;
     height: 36px;
     min-height: 36px;
-    padding: 0 10px;
+    padding: 0 6px;
     border: 1px solid transparent;
     border-radius: 14px;
     background: transparent;
@@ -1037,6 +1036,22 @@ body.thermal-safe .lobby-modal .modal-content {
     box-sizing: border-box;
     position: relative;
     transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.rewards-achievement-filter[data-filter="all"] {
+    flex-grow: 0.72;
+}
+
+.rewards-achievement-filter[data-filter="game"] {
+    flex-grow: 0.82;
+}
+
+.rewards-achievement-filter[data-filter="social"] {
+    flex-grow: 1.48;
+}
+
+.rewards-achievement-filter[data-filter="milestone"] {
+    flex-grow: 1.36;
 }
 
 .rewards-achievement-filter.is-active {
@@ -1068,6 +1083,20 @@ body.tg-dark-theme .rewards-achievement-filter.is-active {
     box-shadow:
         0 1px 2px rgba(16, 24, 40, 0.08),
         0 2px 8px rgba(16, 24, 40, 0.06);
+}
+
+@media (max-width: 380px) {
+    .rewards-achievement-filters {
+        gap: 1px;
+        padding: 2px;
+    }
+
+    .rewards-achievement-filter {
+        height: 34px;
+        min-height: 34px;
+        padding: 0 4px;
+        font-size: 11px;
+    }
 }
 
 .rewards-overview-note {
