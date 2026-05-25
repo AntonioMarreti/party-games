@@ -656,7 +656,23 @@ body.dark-mode .profile-level-badge-float {
 
 .profile-daily-icon {
     position: relative;
-    box-shadow: none !important;
+}
+
+.profile-daily-icon.profile-menu-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color), transparent 88%);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 78%);
+    opacity: 1;
+    filter: none;
+    box-shadow: none;
 }
 
 .profile-daily-icon .bi-calendar2-check {
@@ -956,6 +972,13 @@ body.dark-mode .profile-level-badge-float {
         flex-basis: 40px;
     }
 
+    .profile-daily-icon.profile-menu-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        flex: 0 0 40px;
+    }
+
     .profile-daily-reward-chip {
         padding: 4px 6px;
         font-size: 10px;
@@ -1112,6 +1135,15 @@ body.tg-dark-theme.dark-mode .profile-daily-icon {
     border-color: color-mix(in srgb, var(--primary-color), transparent 68%);
 }
 
+body.dark-mode .profile-daily-icon.profile-menu-icon,
+body.tg-dark-theme.dark-mode .profile-daily-icon.profile-menu-icon {
+    color: var(--primary-color);
+    opacity: 1;
+    filter: none;
+    background: color-mix(in srgb, var(--primary-color), transparent 84%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 68%);
+}
+
 body.dark-mode .profile-menu-chevron,
 body.tg-dark-theme.dark-mode .profile-menu-chevron {
     color: var(--text-muted);
@@ -1133,6 +1165,15 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
 }
 
 .thermal-safe .profile-menu-icon {
+    box-shadow: none !important;
+}
+
+.thermal-safe .profile-daily-icon.profile-menu-icon {
+    background: color-mix(in srgb, var(--primary-color), transparent 88%) !important;
+    border-color: color-mix(in srgb, var(--primary-color), transparent 78%) !important;
+    color: var(--primary-color) !important;
+    opacity: 1 !important;
+    filter: none !important;
     box-shadow: none !important;
 }
 
