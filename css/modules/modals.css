@@ -700,24 +700,6 @@ body.thermal-safe .lobby-modal .modal-content {
     padding: 12px;
 }
 
-.rewards-show-all-row {
-    min-height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 6px 10px;
-    border-radius: 12px;
-    color: var(--primary-color) !important;
-    background: transparent;
-    font-size: 12px;
-    font-weight: 900;
-}
-
-.rewards-show-all-row .bi {
-    font-size: 14px;
-}
-
 .rewards-preview-tile-row {
     display: flex;
     align-items: center;
@@ -759,10 +741,10 @@ body.thermal-safe .lobby-modal .modal-content {
     color: var(--status-success, #00b894);
 }
 
-.rewards-preview-tile-more {
+.rewards-preview-tile-nav {
     background: var(--app-surface, #fff);
-    color: var(--text-muted);
-    font-size: 13px;
+    color: var(--primary-color) !important;
+    font-size: 18px;
 }
 
 .rewards-preview-state-dot {

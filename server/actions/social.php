@@ -188,7 +188,13 @@ function action_get_public_profile($pdo, $user, $data) {
     }
     
     // 4. Get Achievements
-    $stmt = $pdo->prepare("SELECT a.*, ua.unlocked_at FROM achievements a JOIN user_achievements ua ON ua.achievement_id = a.id WHERE ua.user_id = ?");
+    $stmt = $pdo->prepare("
+        SELECT a.*, ua.unlocked_at
+        FROM achievements a
+        JOIN user_achievements ua ON ua.achievement_id = a.id
+        WHERE ua.user_id = ?
+        ORDER BY COALESCE(a.sort_order, 100), a.id
+    ");
     $stmt->execute([$targetId]);
     $achievements = $stmt->fetchAll();
 
@@ -380,7 +386,16 @@ function action_get_social_graph($pdo, $user, $data) {
 // === ACHIEVEMENTS ===
 
 function action_get_achievements($pdo, $user, $data) {
-    $stmt = $pdo->prepare("SELECT a.*, ua.unlocked_at FROM achievements a LEFT JOIN user_achievements ua ON ua.achievement_id = a.id AND ua.user_id = ?");
+    $stmt = $pdo->prepare("
+        SELECT a.*, ua.unlocked_at
+        FROM achievements a
+        LEFT JOIN user_achievements ua
+          ON ua.achievement_id = a.id
+         AND ua.user_id = ?
+        WHERE COALESCE(a.is_hidden, 0) = 0
+           OR ua.unlocked_at IS NOT NULL
+        ORDER BY COALESCE(a.sort_order, 100), a.id
+    ");
     $stmt->execute([$user['id']]);
     echo json_encode(['status' => 'ok', 'achievements' => $stmt->fetchAll()]);
 }

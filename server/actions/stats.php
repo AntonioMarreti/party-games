@@ -498,7 +498,13 @@ function action_get_stats($pdo, $user, $data)
     $stats['level'] = calculateLevel($stats['total_points_earned'] ?? 0);
 
     // Add Achievements
-    $stmt = $pdo->prepare("SELECT a.*, ua.unlocked_at FROM achievements a JOIN user_achievements ua ON ua.achievement_id = a.id WHERE ua.user_id = ?");
+    $stmt = $pdo->prepare("
+        SELECT a.*, ua.unlocked_at
+        FROM achievements a
+        JOIN user_achievements ua ON ua.achievement_id = a.id
+        WHERE ua.user_id = ?
+        ORDER BY COALESCE(a.sort_order, 100), a.id
+    ");
     $stmt->execute([$targetId]);
     $stats['achievements'] = $stmt->fetchAll();
 

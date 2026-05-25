@@ -63,116 +63,11 @@ function action_reset_leaderboard($pdo, $user, $data)
 function action_seed_achievements($pdo, $user, $data)
 {
     require_admin($user);
-
-    $achievements = [
-        [
-            'code' => 'first_win',
-            'name' => 'First Victory',
-            'description' => 'Win your first game',
-            'icon' => '🏆',
-            'category' => 'game',
-            'condition_type' => 'wins',
-            'condition_value' => 1
-        ],
-        [
-            'code' => 'social_butterfly',
-            'name' => 'Social Butterfly',
-            'description' => 'Add 3 friends',
-            'icon' => '🦋',
-            'category' => 'social',
-            'condition_type' => 'friends_added',
-            'condition_value' => 3
-        ],
-        [
-            'code' => 'veteran',
-            'name' => 'Veteran',
-            'description' => 'Play 50 games',
-            'icon' => '🎖️',
-            'category' => 'milestone',
-            'condition_type' => 'games_played',
-            'condition_value' => 50
-        ],
-        [
-            'code' => 'champion',
-            'name' => 'Champion',
-            'description' => 'Win 10 games',
-            'icon' => '👑',
-            'category' => 'game',
-            'condition_type' => 'wins',
-            'condition_value' => 10
-        ],
-        [
-            'code' => 'pacifist',
-            'name' => '🕊️ Pacifist',
-            'description' => 'Win Blokus without blocking anyone',
-            'icon' => '🕊️',
-            'category' => 'game',
-            'condition_type' => 'game_event',
-            'condition_value' => 0
-        ],
-        [
-            'code' => 'flash',
-            'name' => '⚡ Flash',
-            'description' => 'Answer in under 0.5s',
-            'icon' => '⚡',
-            'category' => 'game',
-            'condition_type' => 'game_event',
-            'condition_value' => 500
-        ],
-        [
-            'code' => 'brute',
-            'name' => '🔪 Brute',
-            'description' => 'Kick 3 people in Bunker',
-            'icon' => '🔪',
-            'category' => 'game',
-            'condition_type' => 'game_event',
-            'condition_value' => 3
-        ],
-        [
-            'code' => 'spyfall_spy_win',
-            'name' => 'Агент 007',
-            'description' => 'Выграть партию за Шпиона',
-            'icon' => '🕵️‍♂️',
-            'category' => 'game',
-            'condition_type' => 'game_event',
-            'condition_value' => 1
-        ],
-        [
-            'code' => 'spyfall_detective_win',
-            'name' => 'Шерлок',
-            'description' => 'Выиграть партию за Местного жителя',
-            'icon' => '🔍',
-            'category' => 'game',
-            'condition_type' => 'game_event',
-            'condition_value' => 1
-        ],
-        [
-            'code' => 'spyfall_vet',
-            'name' => 'Ветеран Шпиона',
-            'description' => 'Выиграть 5 партий в Шпиона',
-            'icon' => '🎖️',
-            'category' => 'game',
-            'condition_type' => 'game_event',
-            'condition_value' => 5
-        ]
-    ];
+    require_once __DIR__ . '/../lib/achievement_definitions.php';
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO achievements (code, name, description, icon, category, condition_type, condition_value) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), condition_value=VALUES(condition_value), icon=VALUES(icon)");
-
-        foreach ($achievements as $ach) {
-            $stmt->execute([
-                $ach['code'],
-                $ach['name'],
-                $ach['description'],
-                $ach['icon'],
-                $ach['category'],
-                $ach['condition_type'],
-                $ach['condition_value']
-            ]);
-        }
-
-        echo json_encode(['status' => 'ok', 'message' => 'Achievements seeded']);
+        $count = seedAchievementDefinitions($pdo);
+        echo json_encode(['status' => 'ok', 'message' => "Achievements seeded: {$count}"]);
     } catch (Exception $e) {
         sendError('Seeding failed: ' . $e->getMessage());
     }

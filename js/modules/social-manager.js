@@ -485,19 +485,13 @@ function renderRewardsDailyOverview() {
 
 function renderRewardsDailySummaryBlock(tasks) {
     const safeTasks = Array.isArray(tasks) ? tasks : [];
-    const preview = safeTasks.slice(0, 3);
-    const remaining = Math.max(0, safeTasks.length - preview.length);
+    const preview = safeTasks.slice(0, 4);
 
     return `
         <div class="rewards-preview-tile-row" aria-label="Задания дня">
             ${preview.map(renderRewardsDailyPreviewTile).join('')}
-            ${remaining > 0 ? `
-                <div class="rewards-preview-tile rewards-preview-tile-more" aria-label="Ещё ${remaining} заданий">
-                    +${remaining}
-                </div>
-            ` : ''}
+            ${renderRewardsNavTile('daily', 'Все задания')}
         </div>
-        ${renderRewardsShowAllRow('Все задания', "setRewardsView('daily')")}
     `;
 }
 
@@ -528,10 +522,11 @@ function renderRewardsDailyPreviewTile(task) {
     `;
 }
 
-function renderRewardsShowAllRow(label, action) {
+function renderRewardsNavTile(view, label) {
+    const safeView = view === 'achievements' ? 'achievements' : 'daily';
     return `
-        <button type="button" class="btn-unstyled rewards-show-all-row" onclick="${action}">
-            <span>${escapeProfileHtml(label)}</span>
+        <button type="button" class="btn-unstyled rewards-preview-tile rewards-preview-tile-nav"
+            onclick="setRewardsView('${safeView}')" aria-label="${escapeProfileHtml(label)}">
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </button>
     `;
@@ -624,27 +619,13 @@ function renderUnlockedRewards(achievements) {
         return '<div class="rewards-overview-empty">Пока нет полученных наград. Они появятся здесь после выполнения условий.</div>';
     }
 
-    const iconMap = {
-        'first_game': 'bi-controller',
-        'first_win': 'bi-trophy-fill',
-        'social_butterfly': 'bi-people-fill',
-        'pacifist': 'bi-peace',
-        'flash': 'bi-lightning-charge-fill',
-        'brute': 'bi-hammer',
-        'veteran': 'bi-award-fill',
-        'champion': 'bi-star-fill'
-    };
-
     return `
         <div class="rewards-achievement-list">
             ${unlocked.map(achievement => {
                 const name = escapeProfileHtml(achievement.name || 'Награда');
                 const description = escapeProfileHtml(achievement.description || '');
                 const date = escapeProfileHtml(formatAchievementDate(achievement.unlocked_at));
-                const icon = String(achievement.icon || '').trim();
-                const iconHtml = icon
-                    ? escapeProfileHtml(icon)
-                    : `<i class="bi ${iconMap[achievement.code] || 'bi-trophy'}" aria-hidden="true"></i>`;
+                const iconHtml = renderAchievementIconHtml(achievement, 'bi-award-fill');
 
                 return `
                     <div class="rewards-achievement-row">
@@ -661,6 +642,18 @@ function renderUnlockedRewards(achievements) {
     `;
 }
 
+function renderAchievementIconHtml(achievement, fallbackIcon = 'bi-trophy-fill') {
+    const icon = String(achievement?.icon || '').trim();
+    const iconType = String(achievement?.icon_type || '').trim().toLowerCase();
+    const isBootstrapIcon = /^bi-[a-z0-9-]+$/i.test(icon);
+
+    if ((iconType === 'bootstrap' || icon.startsWith('bi-')) && isBootstrapIcon) {
+        return `<i class="bi ${escapeProfileHtml(icon)}" aria-hidden="true"></i>`;
+    }
+
+    return `<i class="bi ${escapeProfileHtml(fallbackIcon)}" aria-hidden="true"></i>`;
+}
+
 function getUnlockedRewards(achievements) {
     return Array.isArray(achievements)
         ? achievements.filter(item => item && item.unlocked_at)
@@ -675,20 +668,17 @@ function renderRewardsAchievementPreview(achievements) {
 
     return `
         <div class="rewards-preview-tile-row" aria-label="Полученные награды">
-            ${unlocked.slice(0, 5).map(achievement => {
+            ${unlocked.slice(0, 4).map(achievement => {
                 const label = escapeProfileHtml(achievement.name || 'Награда');
-                const icon = String(achievement.icon || '').trim();
-                const iconHtml = icon
-                    ? escapeProfileHtml(icon)
-                    : '<i class="bi bi-trophy" aria-hidden="true"></i>';
+                const iconHtml = renderAchievementIconHtml(achievement, 'bi-trophy-fill');
                 return `
                     <div class="rewards-preview-tile rewards-preview-tile-achievement" title="${label}" aria-label="${label}">
                         ${iconHtml}
                     </div>
                 `;
             }).join('')}
+            ${renderRewardsNavTile('achievements', 'Все награды')}
         </div>
-        ${renderRewardsShowAllRow('Все награды', "setRewardsView('achievements')")}
     `;
 }
 
@@ -1273,23 +1263,12 @@ function renderAchievements(achievements) {
         return '<div class="text-muted small w-100 py-4 text-center">Пока нет достижений 🕸️</div>';
     }
 
-    const iconMap = {
-        'first_game': 'bi-controller',
-        'first_win': 'bi-trophy-fill',
-        'social_butterfly': 'bi-people-fill',
-        'pacifist': 'bi-peace',
-        'flash': 'bi-lightning-charge-fill',
-        'brute': 'bi-hammer',
-        'veteran': 'bi-award-fill',
-        'champion': 'bi-star-fill'
-    };
-
     return `
     <div class="achievement-list">
         ${achievements.map(a => `
                 <div class="achievement-card">
                     <div class="achievement-icon-container">
-                        <i class="bi ${iconMap[a.code] || 'bi-trophy'}"></i>
+                        ${renderAchievementIconHtml(a, 'bi-trophy-fill')}
                     </div>
                     <div class="achievement-info">
                         <div class="achievement-name">${a.name || 'Achievement'}</div>
