@@ -40,7 +40,7 @@
         <section class="profile-daily-card daily-tasks-card" id="profile-daily-card" style="display:none;">
             <button type="button" class="btn-unstyled profile-daily-head daily-collapsed-card" onclick="toggleProfileDailyTasks()"
                 aria-expanded="false" id="profile-daily-head">
-                <div class="profile-daily-icon" aria-hidden="true">
+                <div class="profile-daily-icon profile-menu-icon" aria-hidden="true">
                     <i class="bi bi-calendar2-check"></i>
                     <i class="bi bi-stars"></i>
                 </div>

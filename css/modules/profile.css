@@ -655,27 +655,20 @@ body.dark-mode .profile-level-badge-float {
 }
 
 .profile-daily-icon {
-    flex: 0 0 40px;
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
     position: relative;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--primary-color), transparent 88%) !important;
-    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 78%) !important;
     box-shadow: none !important;
-    color: var(--primary-color) !important;
-    font-size: 20px;
+}
+
+.profile-daily-icon .bi-calendar2-check {
+    font-size: 21px;
+    line-height: 1;
 }
 
 .profile-daily-icon .bi-stars {
     position: absolute;
-    right: 7px;
-    bottom: 7px;
-    font-size: 8px;
+    right: 6px;
+    bottom: 6px;
+    font-size: 9px;
     color: inherit;
     line-height: 1;
 }
@@ -960,9 +953,7 @@ body.dark-mode .profile-level-badge-float {
     }
 
     .profile-daily-icon {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
+        flex-basis: 40px;
     }
 
     .profile-daily-reward-chip {
