@@ -367,27 +367,42 @@
             .scroll-qa-link-action {
                 width: 100%;
                 border: 0;
-                background: transparent;
+                background: #f8fafc;
                 color: #4f46e5;
-                padding: 8px 4px;
+                min-height: 34px;
+                padding: 8px 10px;
+                border: 1px solid rgba(79,70,229,0.10);
+                border-radius: 12px;
                 font-size: 12px;
                 font-weight: 850;
                 text-align: center;
             }
             .scroll-qa-advanced {
-                border-top: 1px solid rgba(148,163,184,0.18);
-                padding-top: 2px;
+                padding-top: 0;
             }
             .scroll-qa-advanced summary {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 34px;
                 cursor: pointer;
                 color: #4f46e5;
                 font-size: 12px;
                 font-weight: 850;
                 list-style: none;
-                padding: 8px 0;
+                padding: 8px 10px;
+                border: 1px solid rgba(79,70,229,0.10);
+                border-radius: 12px;
+                background: #f8fafc;
+                text-align: center;
             }
             .scroll-qa-advanced summary::-webkit-details-marker {
                 display: none;
+            }
+            .scroll-qa-advanced-body {
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid rgba(148,163,184,0.18);
             }
             .scroll-qa-segment {
                 display: grid;
@@ -1247,10 +1262,13 @@
                         </div>
                         <div class="scroll-qa-inline-actions">
                             <button class="scroll-qa-link-action" type="button" data-scroll-qa-copy-bug>Скопировать</button>
+                            <details class="scroll-qa-advanced" data-scroll-qa-advanced>
+                                <summary>Дополнительно ↓</summary>
+                            </details>
                         </div>
-                        <details class="scroll-qa-advanced" data-scroll-qa-advanced>
-                            <summary>Дополнительно</summary>
-                            <div class="scroll-qa-list" style="gap:10px;">
+                        <details class="scroll-qa-advanced" data-scroll-qa-advanced-panel>
+                            <summary style="display:none;">Дополнительно</summary>
+                            <div class="scroll-qa-list scroll-qa-advanced-body" style="gap:10px;">
                                 <div class="scroll-qa-field">
                                     <label>Тип проблемы</label>
                                     <div class="scroll-qa-segment">
@@ -1279,6 +1297,12 @@
                 </div>
             </div>
         `;
+        const advancedToggle = root.querySelector('[data-scroll-qa-advanced]');
+        const advancedPanel = root.querySelector('[data-scroll-qa-advanced-panel]');
+        advancedToggle?.addEventListener('toggle', () => {
+            if (!advancedPanel) return;
+            advancedPanel.open = advancedToggle.open;
+        });
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
         root.querySelector('[data-scroll-qa-pick-element]')?.addEventListener('click', startElementPicker);
         root.querySelector('[data-scroll-qa-submit-bug]')?.addEventListener('click', submitBugReport);
