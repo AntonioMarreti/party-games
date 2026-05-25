@@ -72,6 +72,12 @@ function escapeProfileHtml(value) {
     }[char]));
 }
 
+function getSafeUserDisplayName(user, fallback = 'Игрок') {
+    const raw = user?.custom_name || user?.first_name || user?.username || fallback;
+    const name = String(raw ?? '').replace(/[\u0000-\u001F\u007F]/g, '').trim();
+    return escapeProfileHtml(name || fallback);
+}
+
 async function loadProfileDailyTasks() {
     const card = document.getElementById('profile-daily-card');
     const list = document.getElementById('profile-daily-list');
@@ -997,7 +1003,7 @@ async function openUserProfile(userId) {
                 <div class="d-flex align-items-center gap-3 mb-4 text-start">
                      ${typeof window.renderAvatar === 'function' ? window.renderAvatar(p, 'xl') : ''}
                      <div>
-                        <h4 class="fw-bold mb-0">${p.custom_name || p.first_name}</h4>
+                        <h4 class="fw-bold mb-0">${getSafeUserDisplayName(p)}</h4>
                         <div class="text-muted small">ID: ${p.id}</div>
                      </div>
                 </div>
@@ -1073,7 +1079,7 @@ function renderFriends(friends, requests) {
                 div.innerHTML = `
                     <div class="d-flex align-items-center gap-2">
                         ${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'sm') : ''}
-                        <div class="fw-bold">${req.custom_name || req.first_name}</div>
+                        <div class="fw-bold">${getSafeUserDisplayName(req)}</div>
                     </div>
                     <div>
                          <button class="btn btn-sm btn-success rounded-circle" onclick="acceptFriend(${req.id})"><i class="bi bi-check-lg"></i></button>
@@ -1101,7 +1107,7 @@ function renderFriends(friends, requests) {
                 <div class="d-flex align-items-center gap-2">
                      ${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}
                      <div>
-                        <div class="fw-bold">${f.custom_name || f.first_name}</div>
+                        <div class="fw-bold">${getSafeUserDisplayName(f)}</div>
                         <div style="font-size:10px; color: #888;">ID: ${f.id}</div>
                      </div>
                 </div>
@@ -1140,7 +1146,7 @@ async function searchFriendsAction() {
                 div.innerHTML = `
                     <div class="d-flex align-items-center gap-2">
                         ${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'sm') : ''}
-                        <div class="fw-bold">${u.custom_name || u.first_name}</div>
+                        <div class="fw-bold">${getSafeUserDisplayName(u)}</div>
                     </div>
                     <button class="btn btn-sm btn-primary rounded-circle" onclick="addFriend(${u.id})"><i class="bi bi-person-plus"></i></button>
                  `;
@@ -1246,7 +1252,7 @@ async function loadLeaderboardList(type = 'global') {
                 <div class="lb-rank ${rankClass}" style="min-width: 30px; text-align: center; font-size: ${index < 3 ? '24px' : '16px'}">${rankContent}</div>
                 <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'md') : ''}</div>
                 <div class="lb-info">
-                    <div class="lb-name">${u.custom_name || u.first_name}</div>
+                    <div class="lb-name">${getSafeUserDisplayName(u)}</div>
                     <div class="lb-detail">
                         <span class="level-pill">LVL ${typeof window.calculateLevel === 'function' ? window.calculateLevel(u.total_points_earned) : 1}</span>
                     </div>
@@ -1300,7 +1306,7 @@ async function loadFriendsList() {
                 div.innerHTML = `
                     <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}</div>
                     <div class="flex-grow-1">
-                        <div class="fw-bold">${f.custom_name || f.first_name}</div>
+                        <div class="fw-bold">${getSafeUserDisplayName(f)}</div>
                         <div class="small text-muted">Друг</div>
                     </div>
                     <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeFriend(${f.id}, event)">
@@ -1341,7 +1347,7 @@ async function loadFriendRequests() {
             div.innerHTML = `
                 <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'md') : ''}</div>
                 <div class="flex-grow-1">
-                    <div class="fw-bold">${req.custom_name || req.first_name}</div>
+                    <div class="fw-bold">${getSafeUserDisplayName(req)}</div>
                     <div class="small text-muted">Хочет добавить вас</div>
                 </div>
                 <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" onclick="acceptFriend(${req.id}, event)">

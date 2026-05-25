@@ -51,7 +51,7 @@ function action_search_users($pdo, $user, $data) {
             $query . '%'
         ]);
 
-        echo json_encode(['status' => 'ok', 'users' => $stmt->fetchAll()]);
+        echo json_encode(['status' => 'ok', 'users' => normalize_user_public_list($stmt->fetchAll())]);
     } catch (Exception $e) {
         TelegramLogger::logError('database', [
             'message' => $e->getMessage(),
@@ -200,7 +200,7 @@ function action_get_public_profile($pdo, $user, $data) {
 
     echo json_encode([
         'status' => 'ok',
-        'profile' => array_merge($targetUser, $stats),
+        'profile' => array_merge(normalize_user_public_fields($targetUser), $stats),
         'friend_status' => $friendStatus,
         'achievements' => $achievements
     ]);
@@ -320,7 +320,11 @@ function action_get_friends($pdo, $user, $data) {
         $stmt->execute([$user['id']]);
         $requests = $stmt->fetchAll();
         
-        echo json_encode(['status' => 'ok', 'friends' => $friends, 'requests' => $requests]);
+        echo json_encode([
+            'status' => 'ok',
+            'friends' => normalize_user_public_list($friends),
+            'requests' => normalize_user_public_list($requests)
+        ]);
         
     } catch (Exception $e) {
         TelegramLogger::logError('database', [

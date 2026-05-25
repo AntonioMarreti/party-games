@@ -2,7 +2,7 @@
 
 function action_update_profile($pdo, $user, $data)
 {
-    $name = trim($data['name'] ?? '');
+    $name = sanitize_public_text($data['name'] ?? '', 64);
     $avatar_config = $data['avatar_config'] ?? null; // JSON string or null
 
     // Handle File Upload (Blob) - Note: Global $_FILES access
@@ -15,9 +15,6 @@ function action_update_profile($pdo, $user, $data)
             $avatar_config = json_encode(['type' => 'image', 'src' => $base64]);
         }
     }
-
-    if (mb_strlen($name) > 64)
-        $name = mb_substr($name, 0, 64);
 
     $pdo->prepare("UPDATE users SET custom_name = ?, custom_avatar = ? WHERE id = ?")
         ->execute([$name ?: null, $avatar_config ?: null, $user['id']]);
@@ -72,7 +69,7 @@ function action_get_me($pdo, $user, $data)
 {
     // Return fresh user data
     // calculated columns or specific fields can be added here
-    echo json_encode(['status' => 'ok', 'user' => $user]);
+    echo json_encode(['status' => 'ok', 'user' => normalize_user_public_fields($user)]);
 }
 
 function action_get_favorites($pdo, $user, $data)

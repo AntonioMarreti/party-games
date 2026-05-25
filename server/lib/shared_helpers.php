@@ -67,6 +67,101 @@ function calculateXP($rank, $score)
     return $base + $rankBonus + $scoreBonus;
 }
 
+function sanitize_public_text($value, $maxLength = 64)
+{
+    $text = trim((string) ($value ?? ''));
+    $text = preg_replace('/[\x00-\x1F\x7F]/u', '', $text);
+    $text = preg_replace('/\s+/u', ' ', $text);
+    if ($text === '') {
+        return '';
+    }
+    return mb_substr($text, 0, $maxLength);
+}
+
+function sanitize_display_name($primary, $username = '', $firstName = '', $fallback = 'Игрок')
+{
+    $candidates = [$primary, $username, $firstName, $fallback];
+    foreach ($candidates as $candidate) {
+        $name = sanitize_public_text($candidate, 64);
+        if ($name !== '') {
+            return ltrim($name, '@') ?: $fallback;
+        }
+    }
+    return $fallback;
+}
+
+function sanitize_public_username($username)
+{
+    $username = ltrim(sanitize_public_text($username, 64), '@');
+    if ($username === '') {
+        return '';
+    }
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', $username)) {
+        return sanitize_public_text($username, 64);
+    }
+    return $username;
+}
+
+function sanitize_avatar_url($url)
+{
+    $url = trim((string) ($url ?? ''));
+    if ($url === '' || strlen($url) > 2048) {
+        return null;
+    }
+
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        return null;
+    }
+
+    $parts = parse_url($url);
+    $scheme = strtolower($parts['scheme'] ?? '');
+    if (!in_array($scheme, ['http', 'https'], true)) {
+        return null;
+    }
+
+    return $url;
+}
+
+function normalize_user_public_fields($user)
+{
+    if (!is_array($user)) {
+        return $user;
+    }
+
+    if (array_key_exists('username', $user)) {
+        $user['username'] = sanitize_public_username($user['username'] ?? '');
+    }
+    if (array_key_exists('first_name', $user)) {
+        $user['first_name'] = sanitize_display_name($user['first_name'] ?? '', $user['username'] ?? '', '', 'Игрок');
+    }
+    if (array_key_exists('last_name', $user)) {
+        $user['last_name'] = sanitize_public_text($user['last_name'] ?? '', 64);
+    }
+    if (array_key_exists('custom_name', $user)) {
+        $customName = sanitize_public_text($user['custom_name'] ?? '', 64);
+        $user['custom_name'] = $customName !== '' ? $customName : null;
+    }
+    if (array_key_exists('photo_url', $user)) {
+        $user['photo_url'] = sanitize_avatar_url($user['photo_url'] ?? '') ?: null;
+    }
+    if (array_key_exists('host_name', $user)) {
+        $user['host_name'] = sanitize_display_name($user['host_name'] ?? '', '', '', 'Хост');
+    }
+    if (array_key_exists('host_avatar', $user)) {
+        $user['host_avatar'] = sanitize_avatar_url($user['host_avatar'] ?? '') ?: null;
+    }
+
+    return $user;
+}
+
+function normalize_user_public_list($users)
+{
+    if (!is_array($users)) {
+        return [];
+    }
+    return array_map('normalize_user_public_fields', $users);
+}
+
 function createNotification($pdo, $userId, $type, $actorId = null, $relatedId = null)
 {
     try {

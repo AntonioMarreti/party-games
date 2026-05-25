@@ -1,6 +1,7 @@
 <?php
 // server/auth.php
 require_once 'config.php';
+require_once __DIR__ . '/lib/shared_helpers.php';
 
 const MAX_SESSIONS_PER_USER = 5;
 
@@ -81,8 +82,9 @@ function registerOrLoginUser($tg_user, $platform = 'web', $device = null)
     global $pdo;
 
     $telegram_id = $tg_user['id'];
-    $first_name = $tg_user['first_name'] ?? '';
-    $photo_url = $tg_user['photo_url'] ?? '';
+    $first_name = sanitize_display_name($tg_user['first_name'] ?? '', $tg_user['username'] ?? '', '', 'Игрок');
+    $username = sanitize_public_username($tg_user['username'] ?? '');
+    $photo_url = sanitize_avatar_url($tg_user['photo_url'] ?? '');
 
     if ($device === null) {
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -122,13 +124,13 @@ function registerOrLoginUser($tg_user, $platform = 'web', $device = null)
 
     if ($user) {
         // Update basic profile info
-        $pdo->prepare("UPDATE users SET first_name = ?, photo_url = ? WHERE id = ?")
-            ->execute([$first_name, $photo_url, $user['id']]);
+        $pdo->prepare("UPDATE users SET first_name = ?, username = ?, photo_url = ? WHERE id = ?")
+            ->execute([$first_name, $username ?: null, $photo_url, $user['id']]);
         $userId = $user['id'];
     } else {
         // New user
-        $pdo->prepare("INSERT INTO users (telegram_id, first_name, photo_url) VALUES (?, ?, ?)")
-            ->execute([$telegram_id, $first_name, $photo_url]);
+        $pdo->prepare("INSERT INTO users (telegram_id, first_name, username, photo_url) VALUES (?, ?, ?, ?)")
+            ->execute([$telegram_id, $first_name, $username ?: null, $photo_url]);
         $userId = $pdo->lastInsertId();
 
         // AUTO-INIT STATS
@@ -181,6 +183,7 @@ function getUserByToken($token)
 
     if ($user) {
         $user['is_admin'] = in_array((int) $user['telegram_id'], ADMIN_IDS);
+        $user = normalize_user_public_fields($user);
         // Update last_used for this session
         $pdo->prepare("UPDATE user_sessions SET last_used = NOW() WHERE id = ?")
             ->execute([$user['session_id']]);

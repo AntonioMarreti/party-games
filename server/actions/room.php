@@ -362,7 +362,7 @@ function action_get_state($pdo, $user, $data)
                     WHERE rp.room_id = ?
                     ORDER BY rp.id ASC");
     $stmt->execute([$room['id']]);
-    $players = $stmt->fetchAll();
+    $players = normalize_user_public_list($stmt->fetchAll());
 
     // Optimized Polling: Insert Notifications
     // We fetch unread notifications here to avoid separate polling request in game
@@ -542,7 +542,7 @@ function action_get_public_rooms($pdo, $user, $data)
         ORDER BY players_count DESC, host_last_active DESC, pr.id DESC
         LIMIT 20
     ");
-    $rooms = $stmt->fetchAll();
+    $rooms = normalize_user_public_list($stmt->fetchAll());
 
     echo json_encode(['status' => 'ok', 'rooms' => $rooms]);
 }
@@ -580,7 +580,7 @@ function action_get_local_rooms($pdo, $user, $data)
         LIMIT 10
     ");
     $stmt->execute([$ipHash]);
-    $rooms = $stmt->fetchAll();
+    $rooms = normalize_user_public_list($stmt->fetchAll());
 
     echo json_encode(['status' => 'ok', 'rooms' => $rooms]);
 }

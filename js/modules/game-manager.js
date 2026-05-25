@@ -247,13 +247,7 @@ const GameManager = {
         const el = document.createElement('div');
         el.className = 'floating-chat-bubble';
 
-        let avatarHtml = '';
-        const isUrl = producer.avatar && (producer.avatar.startsWith('http') || producer.avatar.includes('/'));
-        if (isUrl) {
-            avatarHtml = `<img src="${producer.avatar}" class="reaction-avatar-img">`;
-        } else {
-            avatarHtml = producer.avatar || '👤';
-        }
+        const avatarHtml = this.renderSafeReactionAvatar(producer.avatar);
 
         el.innerHTML = `
             <div class="chat-bubble-content">
@@ -294,13 +288,7 @@ const GameManager = {
         el.className = 'floating-emoji' + (isBurstMember ? ' burst-member' : '');
 
         if (producer) {
-            let avatarHtml = '';
-            const isUrl = producer.avatar && (producer.avatar.startsWith('http') || producer.avatar.includes('/'));
-            if (isUrl) {
-                avatarHtml = `<img src="${producer.avatar}" class="reaction-avatar-img">`;
-            } else {
-                avatarHtml = producer.avatar || '👤';
-            }
+            const avatarHtml = this.renderSafeReactionAvatar(producer.avatar);
 
             el.innerHTML = `
                 <div class="reaction-bubble">
@@ -335,6 +323,20 @@ const GameManager = {
 
         // Cleanup
         setTimeout(() => el.remove(), 4000);
+    },
+
+    renderSafeReactionAvatar(avatar) {
+        const value = String(avatar || '').trim();
+        try {
+            const url = new URL(value, window.location.href);
+            if (url.protocol === 'http:' || url.protocol === 'https:') {
+                const safeUrl = window.safeHTML ? window.safeHTML(url.href) : url.href;
+                return `<img src="${safeUrl}" class="reaction-avatar-img" onerror="this.remove();">`;
+            }
+        } catch (e) {
+            // plain emoji/text fallback
+        }
+        return window.safeHTML ? (window.safeHTML(value) || '👤') : (value || '👤');
     },
 
     showFloatingEmojiBurst(emoji, count, producer = null) {

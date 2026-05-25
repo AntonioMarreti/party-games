@@ -424,6 +424,7 @@ function action_get_leaderboard($pdo, $user, $data)
             $board = $stmt->fetchAll();
             foreach ($board as &$entry) {
                 $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0); // Note: verify if total_points_earned is selected
+                $entry = normalize_user_public_fields($entry);
             }
         } elseif ($type === 'friends') {
             // Get friends IDs first
@@ -457,6 +458,7 @@ function action_get_leaderboard($pdo, $user, $data)
             $board = $stmt->fetchAll();
             foreach ($board as &$entry) {
                 $entry['level'] = calculateLevel($entry['total_points_earned'] ?? 0);
+                $entry = normalize_user_public_fields($entry);
             }
         } else {
             $board = [];

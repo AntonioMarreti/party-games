@@ -9,6 +9,57 @@ if (!window.avatarDataMap) {
     window.avatarDataMap = {};
 }
 
+function escapeAvatarHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
+}
+
+function isSafeAvatarUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return false;
+    try {
+        const url = new URL(value, window.location.href);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (e) {
+        return false;
+    }
+}
+
+function getSafeAvatarUrl(value) {
+    if (!isSafeAvatarUrl(value)) return '';
+    return String(value).trim();
+}
+
+function isSafeAvatarImageSrc(value) {
+    const src = String(value || '').trim();
+    if (!src) return false;
+    if (getSafeAvatarUrl(src)) return true;
+    if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(src)) return true;
+    if (/^(?:server\/)?avatars\/[a-zA-Z0-9._/-]+$/.test(src)) return true;
+    return false;
+}
+
+function getSafeAvatarImageSrc(value) {
+    const src = String(value || '').trim();
+    return isSafeAvatarImageSrc(src) ? src : '';
+}
+
+function getFallbackName(user) {
+    const name = String(user?.custom_name || user?.first_name || user?.username || 'Игрок')
+        .replace(/[\u0000-\u001F\u007F]/g, '')
+        .trim();
+    return name || 'Игрок';
+}
+
+function getAvatarImg(src, style) {
+    const safeSrc = escapeAvatarHtml(src);
+    return `<img src="${safeSrc}" style="${style}" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=%D0%98%D0%B3%D1%80%D0%BE%D0%BA&background=random&size=128';">`;
+}
+
 /**
  * Renders an avatar (Circle or Square) based on user data
  * @param {Object} user User object
@@ -33,13 +84,15 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     let style = `width:${sizePx}px; height:${sizePx}px; border-radius:50%; object-fit:cover;`;
     if (isLink) {
         // Return just the style string for background-image (Legacy support)
-        if (user.photo_url && user.photo_url !== '🤖') {
-            return `background-image: url('${user.photo_url}')`;
+        const safePhotoUrl = getSafeAvatarUrl(user.photo_url);
+        if (safePhotoUrl && user.photo_url !== '🤖') {
+            return `background-image: url('${safePhotoUrl.replace(/'/g, "%27")}')`;
         } else if (user.custom_avatar) {
             try {
                 const cfg = JSON.parse(user.custom_avatar);
-                if (cfg.type !== 'emoji') {
-                    return `background-image: url('${cfg.src}')`;
+                const safeCfgSrc = getSafeAvatarImageSrc(cfg.src);
+                if (cfg.type !== 'emoji' && safeCfgSrc) {
+                    return `background-image: url('${safeCfgSrc.replace(/'/g, "%27")}')`;
                 }
             } catch (e) {
                 let path = user.custom_avatar;
@@ -47,7 +100,9 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
                     if (!path.startsWith('avatars/')) path = 'avatars/' + path;
                     path = 'server/' + path;
                 }
-                return `background-image: url('${path}')`;
+                if (getSafeAvatarImageSrc(path)) {
+                    return `background-image: url('${String(path).replace(/'/g, "%27")}')`;
+                }
             }
         }
         return `background-color: #bdc3c7;`;
@@ -64,10 +119,11 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
                 isEmoji = true;
-                emojiVal = cfg.value;
-                bgColor = cfg.bg || '#eee';
+                emojiVal = escapeAvatarHtml(cfg.value || '👤');
+                bgColor = /^#[0-9a-f]{3,8}$/i.test(cfg.bg || '') ? cfg.bg : '#eee';
             } else {
-                innerContent = `<img src="${cfg.src}" style="${style}">`;
+                const safeCfgSrc = getSafeAvatarImageSrc(cfg.src);
+                if (safeCfgSrc) innerContent = getAvatarImg(safeCfgSrc, style);
             }
         } catch (e) {
             // Legacy path string
@@ -76,19 +132,25 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
                 if (!path.startsWith('avatars/')) path = 'avatars/' + path;
                 path = 'server/' + path;
             }
-            innerContent = `<img src="${path}" style="${style}">`;
+            if (getSafeAvatarImageSrc(path)) {
+                innerContent = getAvatarImg(path, style);
+            }
         }
     }
     // 2. Photo URL (Telegram or External)
-    else if (user.photo_url && user.photo_url.includes('http')) {
-        innerContent = `<img src="${user.photo_url}" style="${style}">`;
+    else if (getSafeAvatarUrl(user.photo_url)) {
+        innerContent = getAvatarImg(getSafeAvatarUrl(user.photo_url), style);
     }
     // 3. Fallback (Initials or default)
     else {
         // Use UI Avatars or Emoji fallback
-        const name = user.first_name || 'U';
+        const name = getFallbackName(user);
         const src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=${sizePx * 2}`;
-        innerContent = `<img src="${src}" style="${style}">`;
+        innerContent = getAvatarImg(src, style);
+    }
+    if (!innerContent && !isEmoji) {
+        const src = `https://ui-avatars.com/api/?name=${encodeURIComponent(getFallbackName(user))}&background=random&size=${sizePx * 2}`;
+        innerContent = getAvatarImg(src, style);
     }
 
     // Render Container
@@ -142,15 +204,18 @@ export function openAvatarViewer(uidOrStr) {
     let content = '';
 
     // Check Photo
-    if (user.photo_url && user.photo_url !== '🤖') {
-        content = `<img src="${user.photo_url}" style="width:100%; height:100%; object-fit:cover;">`;
+    const viewerStyle = 'width:100%; height:100%; object-fit:cover;';
+    if (getSafeAvatarUrl(user.photo_url) && user.photo_url !== '🤖') {
+        content = getAvatarImg(getSafeAvatarUrl(user.photo_url), viewerStyle);
     } else if (user.custom_avatar) {
         try {
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
-                content = `<div style="width:100%; height:100%; background:${cfg.bg}; display:flex; align-items:center; justify-content:center; font-size:120px;">${cfg.value}</div>`;
+                const bg = /^#[0-9a-f]{3,8}$/i.test(cfg.bg || '') ? cfg.bg : '#eee';
+                content = `<div style="width:100%; height:100%; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:120px;">${escapeAvatarHtml(cfg.value || '👤')}</div>`;
             } else {
-                content = `<img src="${cfg.src}" style="width:100%; height:100%; object-fit:cover;">`;
+                const safeCfgSrc = getSafeAvatarImageSrc(cfg.src);
+                if (safeCfgSrc) content = getAvatarImg(safeCfgSrc, viewerStyle);
             }
         } catch (e) {
             // Drawn avatar path
@@ -159,13 +224,16 @@ export function openAvatarViewer(uidOrStr) {
                 if (!path.startsWith('avatars/')) path = 'avatars/' + path;
                 path = 'server/' + path;
             }
-            content = `<img src="${path}" style="width:100%; height:100%; object-fit:cover;">`;
+            if (getSafeAvatarImageSrc(path)) {
+                content = getAvatarImg(path, viewerStyle);
+            }
         }
-    } else {
+    }
+    if (!content) {
         // UI Avatar fallback
-        const name = user.first_name || 'U';
+        const name = getFallbackName(user);
         const src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=300`;
-        content = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">`;
+        content = getAvatarImg(src, viewerStyle);
     }
 
     container.innerHTML = content;
