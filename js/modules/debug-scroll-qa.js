@@ -384,6 +384,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                gap: 5px;
                 min-height: 34px;
                 cursor: pointer;
                 color: #4f46e5;
@@ -396,13 +397,32 @@
                 background: #f8fafc;
                 text-align: center;
             }
+            .scroll-qa-advanced-label {
+                line-height: 1;
+            }
+            .scroll-qa-advanced-chevron {
+                font-size: 14px;
+                line-height: 1;
+                transition: transform 0.18s ease;
+            }
+            .scroll-qa-advanced[open] .scroll-qa-advanced-chevron {
+                transform: rotate(180deg);
+            }
             .scroll-qa-advanced summary::-webkit-details-marker {
                 display: none;
             }
             .scroll-qa-advanced-body {
                 margin-top: 10px;
-                padding-top: 10px;
-                border-top: 1px solid rgba(148,163,184,0.18);
+                padding: 10px;
+                border: 1px solid rgba(148,163,184,0.18);
+                border-radius: 16px;
+                background: #fff;
+                box-shadow: 0 8px 22px rgba(15,23,42,0.05);
+                animation: scrollQaAdvancedIn 0.16s ease;
+            }
+            @keyframes scrollQaAdvancedIn {
+                from { opacity: 0; transform: translateY(-4px); }
+                to { opacity: 1; transform: translateY(0); }
             }
             .scroll-qa-segment {
                 display: grid;
@@ -1263,10 +1283,13 @@
                         <div class="scroll-qa-inline-actions">
                             <button class="scroll-qa-link-action" type="button" data-scroll-qa-copy-bug>Скопировать</button>
                             <details class="scroll-qa-advanced" data-scroll-qa-advanced>
-                                <summary>Дополнительно ↓</summary>
+                                <summary aria-expanded="false" aria-controls="scroll-qa-advanced-panel">
+                                    <span class="scroll-qa-advanced-label" data-scroll-qa-advanced-label>Дополнительно</span>
+                                    <i class="bi bi-chevron-down scroll-qa-advanced-chevron" aria-hidden="true"></i>
+                                </summary>
                             </details>
                         </div>
-                        <details class="scroll-qa-advanced" data-scroll-qa-advanced-panel>
+                        <details class="scroll-qa-advanced" id="scroll-qa-advanced-panel" data-scroll-qa-advanced-panel>
                             <summary style="display:none;">Дополнительно</summary>
                             <div class="scroll-qa-list scroll-qa-advanced-body" style="gap:10px;">
                                 <div class="scroll-qa-field">
@@ -1299,9 +1322,19 @@
         `;
         const advancedToggle = root.querySelector('[data-scroll-qa-advanced]');
         const advancedPanel = root.querySelector('[data-scroll-qa-advanced-panel]');
+        const advancedSummary = advancedToggle?.querySelector('summary');
+        const advancedLabel = root.querySelector('[data-scroll-qa-advanced-label]');
         advancedToggle?.addEventListener('toggle', () => {
             if (!advancedPanel) return;
-            advancedPanel.open = advancedToggle.open;
+            const isOpen = advancedToggle.open;
+            advancedPanel.open = isOpen;
+            if (advancedSummary) advancedSummary.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (advancedLabel) advancedLabel.textContent = isOpen ? 'Скрыть поля' : 'Дополнительно';
+            if (isOpen) {
+                setTimeout(() => {
+                    advancedPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 40);
+            }
         });
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
         root.querySelector('[data-scroll-qa-pick-element]')?.addEventListener('click', startElementPicker);
