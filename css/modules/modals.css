@@ -995,13 +995,16 @@ body.thermal-safe .lobby-modal .modal-content {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: 2px;
+    width: 100%;
+    gap: 0;
     overflow-x: auto;
-    padding: 4px;
+    overflow-y: hidden;
+    padding: 3px;
     margin: 0 0 9px;
     border: 1px solid rgba(108, 92, 231, 0.12);
-    border-radius: 17px;
+    border-radius: 18px;
     background: #f3f4f8;
+    box-sizing: border-box;
     scrollbar-width: none;
 }
 
@@ -1010,21 +1013,29 @@ body.thermal-safe .lobby-modal .modal-content {
 }
 
 .rewards-achievement-filter {
-    display: inline-flex;
+    -webkit-appearance: none;
+    appearance: none;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     flex: 1 1 0;
-    min-height: 32px;
+    min-width: 0;
+    height: 36px;
+    min-height: 36px;
     padding: 0 10px;
     border: 1px solid transparent;
-    border-radius: 13px;
+    border-radius: 14px;
     background: transparent;
     color: #68707d !important;
     font-size: 12px;
     font-weight: 800;
     line-height: 1;
+    letter-spacing: 0;
     text-align: center;
     white-space: nowrap;
+    vertical-align: middle;
+    box-sizing: border-box;
+    position: relative;
     transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
@@ -1032,7 +1043,10 @@ body.thermal-safe .lobby-modal .modal-content {
     border-color: rgba(108, 92, 231, 0.10);
     background: #fff;
     color: #4f46e5 !important;
-    box-shadow: 0 6px 14px rgba(45, 52, 54, 0.08);
+    z-index: 1;
+    box-shadow:
+        0 1px 2px rgba(16, 24, 40, 0.08),
+        0 2px 8px rgba(16, 24, 40, 0.06);
 }
 
 body.dark-mode .rewards-achievement-filters,
@@ -1051,7 +1065,9 @@ body.tg-dark-theme .rewards-achievement-filter.is-active {
     border-color: rgba(108, 92, 231, 0.10);
     background: #fff;
     color: #4f46e5 !important;
-    box-shadow: 0 6px 14px rgba(45, 52, 54, 0.08);
+    box-shadow:
+        0 1px 2px rgba(16, 24, 40, 0.08),
+        0 2px 8px rgba(16, 24, 40, 0.06);
 }
 
 .rewards-overview-note {
