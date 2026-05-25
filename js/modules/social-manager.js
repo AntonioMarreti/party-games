@@ -773,16 +773,20 @@ function renderRewardsFullAchievementsView() {
         : achievements.filter(item => String(item?.category || '') === rewardsAchievementFilter);
 
     detail.innerHTML = `
-        <div class="rewards-collection-summary">
-            <span>Получено: ${unlocked.length}</span>
-            <span>Всего доступно: ${achievements.length}</span>
-        </div>
-        ${renderRewardsAchievementFilters()}
-        ${filtered.length ? `
-            <div class="rewards-achievement-list">
-                ${filtered.map(renderRewardsAchievementRow).join('')}
+        <div class="rewards-collection-shell">
+            <div class="rewards-collection-summary">
+                <span>Получено: ${unlocked.length}</span>
+                <span>Всего доступно: ${achievements.length}</span>
             </div>
-        ` : '<div class="rewards-overview-empty">В этой категории пока нет наград</div>'}
+            ${renderRewardsAchievementFilters()}
+            <div class="rewards-collection-scroll">
+                ${filtered.length ? `
+                    <div class="rewards-achievement-list">
+                        ${filtered.map(renderRewardsAchievementRow).join('')}
+                    </div>
+                ` : '<div class="rewards-overview-empty rewards-collection-empty">В этой категории пока нет наград</div>'}
+            </div>
+        </div>
     `;
 }
 
@@ -838,6 +842,19 @@ function renderRewardsAchievementRow(achievement) {
 function setRewardsAchievementFilter(filter) {
     rewardsAchievementFilter = ['all', 'game', 'social', 'milestone'].includes(filter) ? filter : 'all';
     renderRewardsFullAchievementsView();
+}
+
+function resetRewardsView() {
+    rewardsView = 'overview';
+    rewardsAchievementFilter = 'all';
+    renderRewardsCurrentView();
+}
+
+function closeRewardsModal() {
+    resetRewardsView();
+    if (typeof window.closeModal === 'function') {
+        window.closeModal('modal-detailed-stats');
+    }
 }
 
 function renderRewardsCurrentView() {
@@ -1796,6 +1813,8 @@ window.SocialManager = {
     claimDailyTaskReward,
     setRewardsView,
     setRewardsAchievementFilter,
+    resetRewardsView,
+    closeRewardsModal,
 
     // NEW PROFILE LOGIC
     renderCurrentUser,
@@ -1824,6 +1843,8 @@ window.openDailyTasksModal = openDailyTasksModal;
 window.claimDailyTaskReward = claimDailyTaskReward;
 window.setRewardsView = setRewardsView;
 window.setRewardsAchievementFilter = setRewardsAchievementFilter;
+window.resetRewardsView = resetRewardsView;
+window.closeRewardsModal = closeRewardsModal;
 window.openDetailedStatsModal = openDetailedStatsModal;
 window.fetchUserStats = fetchUserStats;
 window.openUserProfile = openUserProfile;

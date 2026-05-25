@@ -51,7 +51,7 @@
             </button>
             <h5 class="fw-bold mb-0 text-main" id="rewards-modal-title" style="color: var(--text-main);">Задания и награды</h5>
             <button class="btn-close position-absolute top-50 end-0 translate-middle-y"
-                onclick="closeModal('modal-detailed-stats')" style="font-size: 0.8rem;"></button>
+                onclick="closeRewardsModal()" style="font-size: 0.8rem;"></button>
         </div>
 
         <div id="rewards-overview-view">
@@ -94,7 +94,7 @@
         <div id="rewards-detail-view" style="display:none;"></div>
 
         <button class="btn btn-primary w-100 mt-2 rounded-pill py-2 fw-bold shadow-sm"
-            onclick="closeModal('modal-detailed-stats')">Закрыть</button>
+            onclick="closeRewardsModal()">Закрыть</button>
     </div>
 </div>
 

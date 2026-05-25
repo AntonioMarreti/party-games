@@ -563,7 +563,16 @@ body.thermal-safe .lobby-modal .modal-content {
     width: 90%;
     max-height: min(86vh, 720px);
     padding: 15px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#rewards-overview-view,
+#rewards-detail-view {
+    min-height: 0;
     overflow-y: auto;
+    padding-right: 1px;
 }
 
 .rewards-modal-header {
@@ -955,18 +964,40 @@ body.thermal-safe .lobby-modal .modal-content {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 10px;
+    flex: 0 0 auto;
+    margin-bottom: 8px;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 800;
+}
+
+.rewards-collection-shell {
+    min-height: min(52vh, 430px);
+    display: flex;
+    flex-direction: column;
+}
+
+.rewards-collection-scroll {
+    min-height: 260px;
+    max-height: min(48vh, 360px);
+    overflow-y: auto;
+    padding: 2px 1px 12px 0;
+}
+
+.rewards-collection-empty {
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .rewards-achievement-filters {
     display: flex;
-    gap: 6px;
+    flex: 0 0 auto;
+    gap: 5px;
     overflow-x: auto;
-    padding-bottom: 8px;
-    margin-bottom: 2px;
+    padding: 1px 0 8px;
+    margin-bottom: 4px;
     scrollbar-width: none;
 }
 
@@ -976,14 +1007,15 @@ body.thermal-safe .lobby-modal .modal-content {
 
 .rewards-achievement-filter {
     flex: 0 0 auto;
-    min-height: 30px;
-    padding: 6px 10px;
+    min-height: 28px;
+    padding: 5px 10px;
     border: 1px solid var(--border-main);
     border-radius: 999px;
-    background: var(--app-surface, #fff);
+    background: color-mix(in srgb, var(--app-surface, #fff), transparent 8%);
     color: var(--text-muted) !important;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 900;
+    line-height: 1;
 }
 
 .rewards-achievement-filter.is-active {
