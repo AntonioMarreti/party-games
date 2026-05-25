@@ -82,7 +82,7 @@ function registerOrLoginUser($tg_user, $platform = 'web', $device = null)
     global $pdo;
 
     $telegram_id = $tg_user['id'];
-    $first_name = sanitize_display_name($tg_user['first_name'] ?? '', $tg_user['username'] ?? '', '', 'Игрок');
+    $incomingFirstName = sanitize_public_text($tg_user['first_name'] ?? '', 64);
     $username = sanitize_public_username($tg_user['username'] ?? '');
     $photo_url = sanitize_avatar_url($tg_user['photo_url'] ?? '');
 
@@ -123,11 +123,29 @@ function registerOrLoginUser($tg_user, $platform = 'web', $device = null)
     $user = $stmt->fetch();
 
     if ($user) {
-        // Update basic profile info
-        $pdo->prepare("UPDATE users SET first_name = ?, username = ?, photo_url = ? WHERE id = ?")
-            ->execute([$first_name, $username ?: null, $photo_url, $user['id']]);
+        // Update basic profile info without erasing existing optional fields when Telegram omits them.
+        $updates = [];
+        $params = [];
+        if ($incomingFirstName !== '') {
+            $updates[] = 'first_name = ?';
+            $params[] = sanitize_display_name($incomingFirstName, $username, $user['first_name'] ?? '', 'Игрок');
+        }
+        if ($username !== '') {
+            $updates[] = 'username = ?';
+            $params[] = $username;
+        }
+        if ($photo_url) {
+            $updates[] = 'photo_url = ?';
+            $params[] = $photo_url;
+        }
+        if ($updates) {
+            $params[] = $user['id'];
+            $pdo->prepare("UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?")
+                ->execute($params);
+        }
         $userId = $user['id'];
     } else {
+        $first_name = sanitize_display_name($incomingFirstName, $username, '', 'Игрок');
         // New user
         $pdo->prepare("INSERT INTO users (telegram_id, first_name, username, photo_url) VALUES (?, ?, ?, ?)")
             ->execute([$telegram_id, $first_name, $username ?: null, $photo_url]);

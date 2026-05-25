@@ -147,6 +147,7 @@ $chatId = $message['chat']['id'] ?? ($update['callback_query']['message']['chat'
 $text = $message['text'] ?? '';
 
 botWebhookLog('received', getBotWebhookLogData($update));
+syncTelegramUserFromBotUpdate($pdo, $update);
 
 // Логика команды /start
 if (isset($update['pre_checkout_query'])) {
@@ -212,6 +213,7 @@ if (strpos($text, '/start') === 0) {
             $tgUser = [
                 'id' => $message['from']['id'],
                 'first_name' => $message['from']['first_name'] ?? 'Guest',
+                'username' => $message['from']['username'] ?? '',
                 'photo_url' => '' // Фото через бота сложнее достать сразу
             ];
             $token = registerOrLoginUser($tgUser);
@@ -596,6 +598,63 @@ function sendTelegram($method, $data)
     $res = curl_exec($ch);
     curl_close($ch);
     return $res;
+}
+
+function syncTelegramUserFromBotUpdate($pdo, $update)
+{
+    $from = getBotUpdateFromUser($update);
+    $telegramId = $from['id'] ?? null;
+    if (!$telegramId) {
+        return;
+    }
+
+    $username = sanitize_public_username($from['username'] ?? '');
+    $firstName = sanitize_public_text($from['first_name'] ?? '', 64);
+    if ($username === '' && $firstName === '') {
+        return;
+    }
+
+    $updates = [];
+    $params = [];
+    if ($username !== '') {
+        $updates[] = 'username = ?';
+        $params[] = $username;
+    }
+    if ($firstName !== '') {
+        $updates[] = 'first_name = ?';
+        $params[] = sanitize_display_name($firstName, $username, '', 'Игрок');
+    }
+    if (!$updates) {
+        return;
+    }
+
+    $params[] = (string) $telegramId;
+    try {
+        $pdo->prepare("UPDATE users SET " . implode(', ', $updates) . " WHERE telegram_id = ?")
+            ->execute($params);
+    } catch (Throwable $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('bot_user_sync', [
+                'message' => $e->getMessage(),
+            ], [
+                'telegram_id' => $telegramId,
+            ]);
+        }
+    }
+}
+
+function getBotUpdateFromUser($update)
+{
+    if (isset($update['message']['from'])) {
+        return $update['message']['from'];
+    }
+    if (isset($update['callback_query']['from'])) {
+        return $update['callback_query']['from'];
+    }
+    if (isset($update['pre_checkout_query']['from'])) {
+        return $update['pre_checkout_query']['from'];
+    }
+    return [];
 }
 
 function getTesterCommandUsage()
