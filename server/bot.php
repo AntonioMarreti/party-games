@@ -269,6 +269,9 @@ if (strpos($cmd, '/help') === 0) {
     $msg = getSfEmoji('admin') . " <b>Панель управления (Admin)</b>\n\n";
     $msg .= getSfEmoji('stats') . " /stats — Общая статистика сервера\n";
     $msg .= getSfEmoji('users') . " /users — Последние регистрации\n";
+    $msg .= "👤 /user &lt;telegram_id|@username&gt; — Диагностика пользователя\n";
+    $msg .= "🧪 /tester_list — Список тестеров\n";
+    $msg .= "🏷 /build — Текущая сборка\n";
     $msg .= getSfEmoji('public') . " /public — Список публичных комнат\n";
     $msg .= "🧪 /tester &lt;telegram_id|@username&gt; — Статус тестера\n";
     $msg .= "✅ /tester_on &lt;telegram_id|@username&gt; — Включить тестера\n";
@@ -345,6 +348,86 @@ if (in_array($commandName, ['/tester', '/tester_on', '/tester_off'], true)) {
         }
         reply($chatId, getSfEmoji('error') . " Ошибка управления tester flag");
     }
+    exit;
+}
+
+// /user - Admin user diagnostics
+if ($commandName === '/user') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    $target = $commandParts[1] ?? '';
+    if ($target === '') {
+        reply($chatId, "Использование:\n/user 207737178\n/user @username");
+        exit;
+    }
+
+    try {
+        $resolved = findAdminTargetUser($pdo, $target);
+        if ($resolved['status'] === 'not_found') {
+            reply($chatId, "Пользователь не найден. Он должен сначала открыть Mini App.");
+            exit;
+        }
+        if ($resolved['status'] === 'multiple') {
+            reply($chatId, formatTesterCandidates($resolved['users']));
+            exit;
+        }
+
+        reply($chatId, formatAdminUserInfoReply($resolved['user']));
+    } catch (Throwable $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('admin', [
+                'message' => 'User diagnostics command failed',
+                'stack' => $e->getMessage()
+            ], [
+                'admin_telegram_id' => $message['from']['id'] ?? null,
+                'action' => '/user'
+            ]);
+        }
+        reply($chatId, getSfEmoji('error') . " Ошибка диагностики пользователя");
+    }
+    exit;
+}
+
+// /tester_list - Admin tester list
+if ($commandName === '/tester_list') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT id, telegram_id, username, first_name, is_tester FROM users WHERE is_tester = 1 ORDER BY id ASC LIMIT 50");
+        $testers = $stmt->fetchAll();
+        usort($testers, function ($a, $b) {
+            $adminCompare = (int) isBotAdminUser($b) <=> (int) isBotAdminUser($a);
+            if ($adminCompare !== 0) {
+                return $adminCompare;
+            }
+            return (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0);
+        });
+
+        reply($chatId, formatTesterListReply($testers));
+    } catch (Throwable $e) {
+        reply($chatId, getSfEmoji('error') . " Ошибка получения списка тестеров");
+    }
+    exit;
+}
+
+// /build - Admin app build diagnostics
+if ($commandName === '/build') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    $build = getAppBuildVersion();
+    $serverTime = date('c');
+    reply($chatId, "🏷 <b>Build</b>\n\n"
+        . "app_build: <b>" . htmlspecialchars($build) . "</b>\n"
+        . "server_time: <b>" . htmlspecialchars($serverTime) . "</b>");
     exit;
 }
 
@@ -525,6 +608,156 @@ function getTesterCommandUsage()
         . "Можно также: /tester 207737178 on|off|status";
 }
 
+function findAdminTargetUser($pdo, $target)
+{
+    $target = trim((string) $target);
+    if ($target === '') {
+        return ['status' => 'not_found'];
+    }
+
+    $columns = getAdminUserSelectColumns($pdo);
+
+    if (preg_match('/^\d+$/', $target)) {
+        $stmt = $pdo->prepare("SELECT $columns FROM users WHERE telegram_id = ? LIMIT 2");
+        $stmt->execute([$target]);
+        $users = $stmt->fetchAll();
+    } else {
+        $username = trim(ltrim($target, '@'));
+        if ($username === '') {
+            return ['status' => 'not_found'];
+        }
+
+        $stmt = $pdo->prepare("SELECT $columns FROM users WHERE LOWER(username) = LOWER(?) LIMIT 6");
+        $stmt->execute([$username]);
+        $users = $stmt->fetchAll();
+    }
+
+    if (!$users) {
+        return ['status' => 'not_found'];
+    }
+    if (count($users) > 1) {
+        return ['status' => 'multiple', 'users' => $users];
+    }
+    return ['status' => 'ok', 'user' => $users[0]];
+}
+
+function getAdminUserSelectColumns($pdo)
+{
+    $columns = ['id', 'telegram_id', 'username', 'first_name', 'is_tester'];
+    foreach (['created_at', 'updated_at', 'last_seen'] as $optionalColumn) {
+        if (botUserColumnExists($pdo, $optionalColumn)) {
+            $columns[] = $optionalColumn;
+        }
+    }
+    return implode(', ', $columns);
+}
+
+function botUserColumnExists($pdo, $column)
+{
+    static $cache = [];
+    if (array_key_exists($column, $cache)) {
+        return $cache[$column];
+    }
+
+    try {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM users LIKE ?");
+        $stmt->execute([$column]);
+        $cache[$column] = (bool) $stmt->fetch();
+    } catch (Throwable $e) {
+        $cache[$column] = false;
+    }
+
+    return $cache[$column];
+}
+
+function formatAdminUserInfoReply($user)
+{
+    $username = formatBotUsername($user['username'] ?? null);
+    $firstName = formatBotValue($user['first_name'] ?? null);
+    $createdAt = formatBotValue($user['created_at'] ?? null);
+    $updatedAt = formatBotValue($user['updated_at'] ?? ($user['last_seen'] ?? null));
+
+    $msg = "👤 <b>User</b>\n\n"
+        . "id: <b>" . htmlspecialchars((string) ($user['id'] ?? '—')) . "</b>\n"
+        . "telegram_id: <b>" . htmlspecialchars((string) ($user['telegram_id'] ?? '—')) . "</b>\n"
+        . "username: <b>" . htmlspecialchars($username) . "</b>\n"
+        . "first_name: <b>" . htmlspecialchars($firstName) . "</b>\n"
+        . "is_tester: <b>" . (int) ($user['is_tester'] ?? 0) . "</b>\n"
+        . "is_admin: <b>" . (isBotAdminUser($user) ? 1 : 0) . "</b>";
+
+    if ($createdAt !== '—') {
+        $msg .= "\ncreated_at: <b>" . htmlspecialchars($createdAt) . "</b>";
+    }
+    if ($updatedAt !== '—') {
+        $msg .= "\nlast_seen/updated_at: <b>" . htmlspecialchars($updatedAt) . "</b>";
+    }
+
+    return $msg;
+}
+
+function formatTesterListReply($testers)
+{
+    if (!$testers) {
+        return "🧪 Тестеров пока нет";
+    }
+
+    $msg = "🧪 <b>Testers: " . count($testers) . "</b>\n\n";
+    foreach ($testers as $index => $tester) {
+        $name = formatBotValue($tester['first_name'] ?? null);
+        if ($name === '—') {
+            $name = formatBotUsername($tester['username'] ?? null);
+        }
+        if ($name === '—') {
+            $name = 'Игрок';
+        }
+
+        $msg .= ($index + 1) . ". <b>" . htmlspecialchars($name) . "</b>\n"
+            . "id=" . htmlspecialchars((string) ($tester['id'] ?? '—'))
+            . " tg=" . htmlspecialchars((string) ($tester['telegram_id'] ?? '—'))
+            . " username=" . htmlspecialchars(formatBotUsername($tester['username'] ?? null))
+            . " admin=" . (isBotAdminUser($tester) ? 1 : 0) . "\n";
+    }
+
+    return $msg;
+}
+
+function getAppBuildVersion()
+{
+    $versionFile = __DIR__ . '/../layout/version.php';
+    if (!is_file($versionFile)) {
+        return '—';
+    }
+
+    $contents = @file_get_contents($versionFile);
+    if (is_string($contents) && preg_match('/\$v\s*=\s*[\'"]([^\'"]+)[\'"]/', $contents, $matches)) {
+        return $matches[1];
+    }
+
+    return '—';
+}
+
+function isBotAdminUser($user)
+{
+    $adminIds = defined('ADMIN_IDS') ? ADMIN_IDS : [];
+    $adminIds = array_map('intval', (array) $adminIds);
+    return in_array((int) ($user['telegram_id'] ?? 0), $adminIds, true);
+}
+
+function formatBotUsername($username)
+{
+    $username = trim((string) ($username ?? ''));
+    if ($username === '') {
+        return '—';
+    }
+    return '@' . ltrim($username, '@');
+}
+
+function formatBotValue($value)
+{
+    $value = trim((string) ($value ?? ''));
+    return $value !== '' ? $value : '—';
+}
+
 function findTesterTargetUser($pdo, $target)
 {
     $target = trim((string) $target);
@@ -563,8 +796,8 @@ function formatTesterCandidates($users)
     foreach ($users as $user) {
         $msg .= "• user_id=" . htmlspecialchars((string) ($user['id'] ?? '')) .
             ", telegram_id=" . htmlspecialchars((string) ($user['telegram_id'] ?? '')) .
-            ", @" . htmlspecialchars((string) ($user['username'] ?? '')) .
-            ", " . htmlspecialchars((string) ($user['first_name'] ?? '')) . "\n";
+            ", username=" . htmlspecialchars(formatBotUsername($user['username'] ?? null)) .
+            ", first_name=" . htmlspecialchars(formatBotValue($user['first_name'] ?? null)) . "\n";
     }
     return $msg;
 }
@@ -572,12 +805,12 @@ function formatTesterCandidates($users)
 function formatTesterStatusReply($user, $before, $after, $mode)
 {
     $title = $mode === 'status' ? 'Статус tester flag' : 'Tester flag обновлён';
-    $username = !empty($user['username']) ? '@' . $user['username'] : '—';
+    $username = formatBotUsername($user['username'] ?? null);
     return "🧪 <b>$title</b>\n\n"
         . "user_id: <b>" . htmlspecialchars((string) ($user['id'] ?? '')) . "</b>\n"
         . "telegram_id: <b>" . htmlspecialchars((string) ($user['telegram_id'] ?? '')) . "</b>\n"
         . "username: <b>" . htmlspecialchars($username) . "</b>\n"
-        . "first_name: <b>" . htmlspecialchars((string) ($user['first_name'] ?? '—')) . "</b>\n"
+        . "first_name: <b>" . htmlspecialchars(formatBotValue($user['first_name'] ?? null)) . "</b>\n"
         . "is_tester before: <b>$before</b>\n"
         . "is_tester after: <b>$after</b>";
 }
