@@ -62,83 +62,83 @@
         </section>
 
         <!-- Menu Actions (Grouped Glass Style) -->
-        <div class="settings-group mb-3">
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="openDetailedStatsModal()">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap text-primary me-3" style="width:32px; text-align:center;">
+        <div class="settings-group profile-menu-group mb-3">
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="openDetailedStatsModal()">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon">
                         <i class="bi bi-award fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="fw-bold" style="color: var(--text-main)">Задания и награды</span>
+                    <span class="profile-menu-title">Задания и награды</span>
                 </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
             <!-- Game History -->
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="openGameHistory()">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap text-primary me-3" style="width:32px; text-align:center;">
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="openGameHistory()">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon">
                         <i class="bi bi-clock-history fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="fw-bold" style="color: var(--text-main)">История игр</span>
+                    <span class="profile-menu-title">История игр</span>
                 </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
             <!-- Edit Profile -->
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="openProfileEditor()">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap text-primary me-3" style="width:32px; text-align:center;">
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="openProfileEditor()">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon">
                         <i class="bi bi-pencil-square fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="fw-bold" style="color: var(--text-main)">Редактировать
-                        профиль</span>
+                    <span class="profile-menu-title">Редактировать профиль</span>
                 </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
             <!-- Friends -->
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="openFriendsScreen()">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap me-3" style="width:32px; text-align:center; color: var(--primary-color);">
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="openFriendsScreen()">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon">
                         <i class="bi bi-people fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="fw-bold" style="color: var(--text-main)">Друзья</span>
+                    <span class="profile-menu-title">Друзья</span>
                     <span id="friends-count-badge" class="badge bg-danger rounded-pill ms-2"
                         style="display:none;">0</span>
                 </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
             <!-- Settings -->
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="openSettingsScreen()">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap me-3" style="width:32px; text-align:center; color: var(--primary-color);"><i
-                            class="bi bi-gear fs-5" aria-hidden="true"></i></div>
-                    <span class="fw-bold" style="color: var(--text-main)">Настройки</span>
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="openSettingsScreen()">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon">
+                        <i class="bi bi-gear fs-5" aria-hidden="true"></i>
+                    </div>
+                    <span class="profile-menu-title">Настройки</span>
                 </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
             <!-- Donate -->
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="showScreen('donate')">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap me-3" style="width:32px; text-align:center; color: #ff4757;">
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="showScreen('donate')">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon profile-menu-icon-donate">
                         <i class="bi bi-heart-fill fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="fw-bold" style="color: var(--text-main)">Поддержать проект</span>
+                    <span class="profile-menu-title">Поддержать проект</span>
                 </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 pe-2" aria-hidden="true"></i>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
         </div>
 
         <!-- Logout Group -->
-        <div class="settings-group mb-3" id="logout-menu-item-group" style="display:none;">
-            <button type="button" class="btn-unstyled settings-item clickable" onclick="logout()">
-                <div class="d-flex align-items-center">
-                    <div class="icon-wrap text-danger me-3" style="width:32px; text-align:center;">
+        <div class="settings-group profile-menu-group profile-menu-danger-group mb-3" id="logout-menu-item-group" style="display:none;">
+            <button type="button" class="btn-unstyled settings-item clickable profile-menu-row profile-menu-danger" onclick="logout()">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon profile-menu-icon-danger">
                         <i class="bi bi-box-arrow-left fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="fw-bold text-danger">Выйти</span>
+                    <span class="profile-menu-title">Выйти</span>
                 </div>
             </button>
         </div>
