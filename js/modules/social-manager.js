@@ -6,10 +6,12 @@
 // === STATE ===
 let cachedUserStats = null;
 let cachedDailyTasks = [];
+let cachedAllAchievements = null;
 let profileDailyExpanded = false;
 let profileDailyShowAll = false;
 let dailyTaskClaimInFlight = null;
 let rewardsView = 'overview';
+let rewardsAchievementFilter = 'all';
 
 // === USER PROFILES & STATS ===
 
@@ -660,6 +662,54 @@ function getUnlockedRewards(achievements) {
         : [];
 }
 
+function sortAchievementsForRewards(achievements) {
+    return (Array.isArray(achievements) ? achievements.slice() : []).sort((a, b) => {
+        const sortA = Number(a?.sort_order);
+        const sortB = Number(b?.sort_order);
+        const safeA = Number.isFinite(sortA) ? sortA : 100;
+        const safeB = Number.isFinite(sortB) ? sortB : 100;
+        if (safeA !== safeB) return safeA - safeB;
+        const idA = Number(a?.id);
+        const idB = Number(b?.id);
+        if (Number.isFinite(idA) && Number.isFinite(idB) && idA !== idB) return idA - idB;
+        return String(a?.code || '').localeCompare(String(b?.code || ''), 'ru');
+    });
+}
+
+function getAchievementCategoryLabel(category) {
+    const labels = {
+        game: 'Игры',
+        social: 'Социальные',
+        milestone: 'Прогресс'
+    };
+    return labels[String(category || '')] || 'Другое';
+}
+
+function getAchievementRarityLabel(rarity) {
+    const labels = {
+        common: 'Обычная',
+        uncommon: 'Необычная',
+        rare: 'Редкая'
+    };
+    return labels[String(rarity || '')] || 'Обычная';
+}
+
+async function ensureAllAchievementsLoaded(force = false) {
+    if (!force && Array.isArray(cachedAllAchievements)) return cachedAllAchievements;
+    if (typeof window.apiRequest !== 'function') {
+        cachedAllAchievements = [];
+        return cachedAllAchievements;
+    }
+
+    const res = await window.apiRequest({ action: 'get_achievements' });
+    if (res.status !== 'ok' || !Array.isArray(res.achievements)) {
+        throw new Error(res.message || 'Не удалось загрузить награды');
+    }
+
+    cachedAllAchievements = sortAchievementsForRewards(res.achievements);
+    return cachedAllAchievements;
+}
+
 function renderRewardsAchievementPreview(achievements) {
     const unlocked = getUnlockedRewards(achievements);
     if (!unlocked.length) {
@@ -706,9 +756,88 @@ function renderRewardsFullAchievementsView() {
     const detail = document.getElementById('rewards-detail-view');
     if (!detail) return;
 
-    const stats = cachedUserStats || {};
-    const achievements = Array.isArray(stats.achievements) ? stats.achievements : [];
-    detail.innerHTML = renderUnlockedRewards(achievements);
+    if (!Array.isArray(cachedAllAchievements)) {
+        detail.innerHTML = '<div class="rewards-overview-empty">Загружаем награды...</div>';
+        return;
+    }
+
+    const achievements = sortAchievementsForRewards(cachedAllAchievements || []);
+    if (!achievements.length) {
+        detail.innerHTML = '<div class="rewards-overview-empty">Награды скоро появятся</div>';
+        return;
+    }
+
+    const unlocked = getUnlockedRewards(achievements);
+    const filtered = rewardsAchievementFilter === 'all'
+        ? achievements
+        : achievements.filter(item => String(item?.category || '') === rewardsAchievementFilter);
+
+    detail.innerHTML = `
+        <div class="rewards-collection-summary">
+            <span>Получено: ${unlocked.length}</span>
+            <span>Всего доступно: ${achievements.length}</span>
+        </div>
+        ${renderRewardsAchievementFilters()}
+        ${filtered.length ? `
+            <div class="rewards-achievement-list">
+                ${filtered.map(renderRewardsAchievementRow).join('')}
+            </div>
+        ` : '<div class="rewards-overview-empty">В этой категории пока нет наград</div>'}
+    `;
+}
+
+function renderRewardsAchievementFilters() {
+    const filters = [
+        ['all', 'Все'],
+        ['game', 'Игры'],
+        ['social', 'Социальные'],
+        ['milestone', 'Прогресс']
+    ];
+
+    return `
+        <div class="rewards-achievement-filters" aria-label="Фильтр наград">
+            ${filters.map(([value, label]) => `
+                <button type="button"
+                    class="btn-unstyled rewards-achievement-filter ${rewardsAchievementFilter === value ? 'is-active' : ''}"
+                    onclick="setRewardsAchievementFilter('${value}')">
+                    ${label}
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderRewardsAchievementRow(achievement) {
+    const unlocked = !!achievement?.unlocked_at;
+    const name = escapeProfileHtml(achievement?.name || 'Награда');
+    const description = escapeProfileHtml(achievement?.description || '');
+    const date = escapeProfileHtml(formatAchievementDate(achievement?.unlocked_at));
+    const iconHtml = renderAchievementIconHtml(achievement, 'bi-award-fill');
+    const rarity = escapeProfileHtml(getAchievementRarityLabel(achievement?.rarity));
+    const category = escapeProfileHtml(getAchievementCategoryLabel(achievement?.category));
+
+    return `
+        <div class="rewards-achievement-row ${unlocked ? 'is-unlocked' : 'is-locked'}">
+            <div class="rewards-achievement-icon" aria-hidden="true">${iconHtml}</div>
+            <div class="rewards-achievement-copy">
+                <div class="rewards-achievement-title-line">
+                    <div class="rewards-achievement-name">${name}</div>
+                    ${unlocked ? '' : '<i class="bi bi-lock-fill rewards-achievement-lock" aria-hidden="true"></i>'}
+                </div>
+                ${description ? `<div class="rewards-achievement-desc">${description}</div>` : ''}
+                <div class="rewards-achievement-meta-line">
+                    <span class="rewards-achievement-rarity">${rarity}</span>
+                    <span>${category}</span>
+                    ${unlocked && date ? `<span>Получено ${date}</span>` : '<span>Не получено</span>'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function setRewardsAchievementFilter(filter) {
+    rewardsAchievementFilter = ['all', 'game', 'social', 'milestone'].includes(filter) ? filter : 'all';
+    renderRewardsFullAchievementsView();
 }
 
 function renderRewardsCurrentView() {
@@ -738,7 +867,21 @@ function renderRewardsCurrentView() {
 
 function setRewardsView(view) {
     rewardsView = ['daily', 'achievements'].includes(view) ? view : 'overview';
+    if (rewardsView === 'overview') {
+        rewardsAchievementFilter = 'all';
+    }
     renderRewardsCurrentView();
+    if (rewardsView === 'achievements') {
+        ensureAllAchievementsLoaded()
+            .then(() => {
+                if (rewardsView === 'achievements') renderRewardsCurrentView();
+            })
+            .catch(err => {
+                console.warn('Achievements Collection Error:', err);
+                const detail = document.getElementById('rewards-detail-view');
+                if (detail) detail.innerHTML = '<div class="rewards-overview-empty">Не удалось загрузить награды</div>';
+            });
+    }
 }
 
 async function openDetailedStatsModal() {
@@ -1652,6 +1795,7 @@ window.SocialManager = {
     openDailyTasksModal,
     claimDailyTaskReward,
     setRewardsView,
+    setRewardsAchievementFilter,
 
     // NEW PROFILE LOGIC
     renderCurrentUser,
@@ -1679,6 +1823,7 @@ window.claimProfileDailyTask = claimProfileDailyTask;
 window.openDailyTasksModal = openDailyTasksModal;
 window.claimDailyTaskReward = claimDailyTaskReward;
 window.setRewardsView = setRewardsView;
+window.setRewardsAchievementFilter = setRewardsAchievementFilter;
 window.openDetailedStatsModal = openDetailedStatsModal;
 window.fetchUserStats = fetchUserStats;
 window.openUserProfile = openUserProfile;
