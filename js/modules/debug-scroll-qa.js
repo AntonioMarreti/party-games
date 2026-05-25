@@ -13,6 +13,7 @@
     const BUTTON_DRAG_THRESHOLD = 6;
     const BUTTON_LONG_PRESS_MS = 550;
     const QA_EVENT_LIMIT = 15;
+    const MAX_COMPACT_QA_EVENTS = 6;
     let lastBugReportSentAt = 0;
     let selectedBugElement = null;
     let bugContextSnapshot = null;
@@ -2381,10 +2382,89 @@
 
     function formatQaEventTrail(events) {
         if (!Array.isArray(events) || !events.length) return '';
-        return events.slice(-QA_EVENT_LIMIT).map(event => {
-            const label = [event.type, event.screen, event.target].filter(Boolean).join(' | ');
-            return `${event.t || 'time?'} ${truncateText(label, 180)}`;
+        const compact = [];
+        events.forEach(event => {
+            if (isNoisyCompactQaEvent(event)) return;
+            const item = buildCompactQaEvent(event);
+            if (!item) return;
+            const previous = compact[compact.length - 1];
+            if (previous && previous.key === item.key) {
+                previous.count += 1;
+                previous.t = item.t;
+                return;
+            }
+            compact.push({ ...item, count: 1 });
+        });
+
+        return compact.slice(-MAX_COMPACT_QA_EVENTS).map(item => {
+            const count = item.count > 1 ? ` ×${item.count}` : '';
+            const parts = [`${item.t || 'time?'} ${item.type}${count}`];
+            if (item.screen) parts.push(item.screen);
+            if (item.target) parts.push(item.target);
+            return truncateText(parts.join(' | '), 140);
         }).join('\n');
+    }
+
+    function isNoisyCompactQaEvent(event) {
+        if (!event || !event.type) return true;
+        if (event.type === 'qa_loaded') return true;
+        const target = String(event.target || '').toLowerCase();
+        if (!target) return event.type === 'click';
+        if (target === 'body' || target === 'html') return true;
+        if (target.includes(`#${BUTTON_ID}`) || target.includes(`#${ROOT_ID}`)) return true;
+        return false;
+    }
+
+    function buildCompactQaEvent(event) {
+        const type = event.type || '';
+        const screen = truncateText(event.screen || '', 32);
+        const target = formatCompactQaEventTarget(event);
+        if (type === 'screenChanged') {
+            return {
+                t: event.t || '',
+                type,
+                screen: target || screen,
+                target: '',
+                key: [type, target || screen].join('|')
+            };
+        }
+        return {
+            t: event.t || '',
+            type,
+            screen,
+            target,
+            key: [type, screen, target].join('|')
+        };
+    }
+
+    function formatCompactQaEventTarget(event) {
+        const raw = String(event?.target || '').trim();
+        if (!raw) return '';
+        const quoted = raw.match(/"([^"]+)"/);
+        const text = quoted ? truncateText(quoted[1], 48) : '';
+        const selector = quoted ? raw.slice(0, quoted.index).trim() : raw;
+        const lowerSelector = selector.toLowerCase();
+        if (lowerSelector.includes('rewards-achievement-filter')) {
+            return text ? `filter "${text}"` : 'achievement filter';
+        }
+        if (lowerSelector.includes('rewards-preview-tile-nav')) {
+            return text ? `rewards nav "${text}"` : 'rewards nav';
+        }
+        if (lowerSelector.includes('profile-daily') || lowerSelector.includes('daily-profile')) {
+            return text ? `daily "${text}"` : 'daily tasks';
+        }
+        const shortSelector = shortenQaSelector(selector);
+        if (text) return `${shortSelector} "${text}"`;
+        return shortSelector;
+    }
+
+    function shortenQaSelector(selector) {
+        const value = String(selector || '').trim();
+        if (!value) return '';
+        const idMatch = value.match(/([a-z0-9_-]+)?#[a-zA-Z0-9_-]+/);
+        if (idMatch) return idMatch[0];
+        const last = value.split('>').map(part => part.trim()).filter(Boolean).pop() || value;
+        return truncateText(last.replace(/:nth-of-type\(\d+\)/g, ''), 64);
     }
 
     function truncateText(value, maxLength) {

@@ -568,6 +568,36 @@ body.thermal-safe .lobby-modal .modal-content {
     overflow: hidden;
 }
 
+body.dark-mode #modal-detailed-stats .rewards-overview-modal {
+    --text-main: rgba(248, 250, 252, 0.94);
+    --text-muted: rgba(203, 213, 225, 0.76);
+    --border-main: rgba(148, 163, 184, 0.20);
+    --app-bg: #111827;
+    --app-surface: #1f2937;
+    --app-surface-strong: #243244;
+    --app-muted-surface: #1a2433;
+    background: #111827;
+    color: var(--text-main);
+    border-color: rgba(148, 163, 184, 0.22);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+body.dark-mode #modal-detailed-stats .btn-close {
+    filter: invert(1) grayscale(1);
+    opacity: 0.78;
+}
+
+body.dark-mode #modal-detailed-stats .rewards-achievement-row.is-locked {
+    opacity: 0.76;
+}
+
+body.dark-mode #modal-detailed-stats .rewards-achievement-rarity,
+body.dark-mode #modal-detailed-stats .rewards-overview-chip {
+    border-color: rgba(167, 139, 250, 0.22);
+    background: rgba(139, 92, 246, 0.16);
+    color: rgba(221, 214, 254, 0.95);
+}
+
 #rewards-overview-view,
 #rewards-detail-view {
     min-height: 0;
@@ -1064,25 +1094,22 @@ body.thermal-safe .lobby-modal .modal-content {
         0 2px 8px rgba(16, 24, 40, 0.06);
 }
 
-body.dark-mode .rewards-achievement-filters,
-body.tg-dark-theme .rewards-achievement-filters {
-    border-color: rgba(108, 92, 231, 0.14);
-    background: #f3f4f8;
+body.dark-mode #modal-detailed-stats .rewards-achievement-filters {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(15, 23, 42, 0.44);
 }
 
-body.dark-mode .rewards-achievement-filter,
-body.tg-dark-theme .rewards-achievement-filter {
-    color: #68707d !important;
+body.dark-mode #modal-detailed-stats .rewards-achievement-filter {
+    color: rgba(203, 213, 225, 0.78) !important;
 }
 
-body.dark-mode .rewards-achievement-filter.is-active,
-body.tg-dark-theme .rewards-achievement-filter.is-active {
-    border-color: rgba(108, 92, 231, 0.10);
-    background: #fff;
-    color: #4f46e5 !important;
+body.dark-mode #modal-detailed-stats .rewards-achievement-filter.is-active {
+    border-color: rgba(167, 139, 250, 0.20);
+    background: rgba(248, 250, 252, 0.13);
+    color: rgba(237, 233, 254, 0.96) !important;
     box-shadow:
-        0 1px 2px rgba(16, 24, 40, 0.08),
-        0 2px 8px rgba(16, 24, 40, 0.06);
+        0 1px 2px rgba(0, 0, 0, 0.18),
+        0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 @media (max-width: 380px) {
