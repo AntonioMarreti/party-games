@@ -1029,3 +1029,300 @@ body.dark-mode .menu-btn-item i.bi-chevron-right {
     /* And .settings-group had padding 8px 16px. */
     padding: 0 16px;
 }
+
+/* === SETTINGS SCREEN POLISH === */
+#screen-settings .room-content-wrapper {
+    padding-bottom: calc(104px + var(--bottom-safe-area, 0px));
+}
+
+#screen-settings .settings-screen-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+#screen-settings .settings-back-btn {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color) !important;
+    background: color-mix(in srgb, var(--bg-card), var(--bg-app) 22%);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 62%);
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+#screen-settings h4 {
+    padding-left: 0;
+    margin-bottom: 0;
+    text-shadow: none;
+    color: var(--text-main);
+    line-height: 1.1;
+}
+
+#screen-settings .settings-screen-group {
+    margin-bottom: 16px !important;
+    padding: 12px 14px !important;
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--bg-card), var(--bg-app) 12%);
+    border-color: color-mix(in srgb, var(--border-glass), var(--text-main) 5%);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+#screen-settings .settings-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 22px;
+    margin-bottom: 8px;
+}
+
+#screen-settings .settings-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#screen-settings .settings-section-title i {
+    color: var(--primary-color);
+    font-size: 13px;
+    letter-spacing: 0;
+}
+
+#screen-settings .settings-accent-block {
+    padding: 8px 0 14px;
+}
+
+#screen-settings .settings-accent-title,
+#screen-settings .settings-row-title {
+    color: var(--text-main);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: 0;
+}
+
+#screen-settings .settings-accent-title {
+    margin-bottom: 10px;
+}
+
+#screen-settings .settings-row-title-warning {
+    color: color-mix(in srgb, var(--status-warning), var(--text-main) 28%);
+}
+
+#screen-settings .settings-row-subtitle {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+#screen-settings .settings-build-value {
+    font-weight: 700;
+}
+
+#screen-settings .settings-color-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 2px;
+}
+
+#screen-settings .color-option-btn {
+    width: 34px;
+    height: 34px;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+
+#screen-settings .color-option-btn.selected {
+    transform: scale(1.08);
+    box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--bg-card), transparent 8%),
+        0 0 0 5px var(--primary-color),
+        0 8px 18px color-mix(in srgb, var(--primary-color), transparent 72%);
+}
+
+#screen-settings .settings-item {
+    min-height: 58px;
+    gap: 14px;
+    padding: 13px 0;
+}
+
+#screen-settings .settings-item.pb-0 {
+    padding-bottom: 13px !important;
+}
+
+#screen-settings .settings-item:not(:last-child) {
+    border-bottom-color: color-mix(in srgb, var(--divider), transparent 18%);
+}
+
+#screen-settings .settings-item.border-0 {
+    border-bottom: 0 !important;
+}
+
+#screen-settings .settings-item.clickable {
+    min-height: 60px;
+    margin: 0 -10px;
+    width: calc(100% + 20px);
+    padding: 12px 10px;
+    border-radius: 16px;
+}
+
+#screen-settings .settings-item.clickable:hover,
+#screen-settings .settings-item.clickable:focus-visible {
+    background: color-mix(in srgb, var(--primary-color), transparent 92%);
+}
+
+#screen-settings .settings-item.clickable:active {
+    background: color-mix(in srgb, var(--primary-color), transparent 88%);
+}
+
+#screen-settings .settings-label-wrap {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#screen-settings .form-switch {
+    min-width: 52px;
+    justify-content: flex-end;
+}
+
+#screen-settings .settings-switch {
+    width: 46px !important;
+    height: 26px !important;
+    flex: 0 0 46px;
+    margin: 0 !important;
+    border: 1px solid color-mix(in srgb, var(--text-muted), transparent 68%) !important;
+    background-color: color-mix(in srgb, var(--text-muted), transparent 78%) !important;
+    background-size: 22px 22px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+#screen-settings .settings-switch:checked {
+    background-color: var(--primary-color) !important;
+    border-color: color-mix(in srgb, var(--primary-color), white 18%) !important;
+}
+
+#screen-settings .settings-switch:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 78%) !important;
+}
+
+#screen-settings .settings-row-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    border-radius: 14px;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color), transparent 88%);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 78%);
+}
+
+#screen-settings .settings-row-icon-debug {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.11);
+    border-color: rgba(124, 58, 237, 0.18);
+}
+
+#screen-settings .settings-row-icon-github {
+    color: #24292f;
+    background: #f6f8fa;
+    border-color: #d0d7de;
+}
+
+body.dark-mode #screen-settings .settings-screen-group,
+body.tg-dark-theme.dark-mode #screen-settings .settings-screen-group {
+    background: color-mix(in srgb, var(--bg-card), #ffffff 3%);
+    border-color: color-mix(in srgb, var(--border-glass), #ffffff 12%);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode #screen-settings .settings-back-btn,
+body.tg-dark-theme.dark-mode #screen-settings .settings-back-btn {
+    background: color-mix(in srgb, var(--bg-card), #ffffff 4%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 54%);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+body.dark-mode #screen-settings .settings-row-subtitle,
+body.tg-dark-theme.dark-mode #screen-settings .settings-row-subtitle,
+body.thermal-safe #screen-settings .settings-row-subtitle {
+    color: var(--text-muted) !important;
+    opacity: 1;
+}
+
+body.dark-mode #screen-settings .settings-section-title,
+body.tg-dark-theme.dark-mode #screen-settings .settings-section-title {
+    color: color-mix(in srgb, var(--text-muted), #ffffff 8%);
+}
+
+body.dark-mode #screen-settings .settings-switch,
+body.tg-dark-theme.dark-mode #screen-settings .settings-switch {
+    background-color: color-mix(in srgb, var(--text-muted), transparent 62%) !important;
+    border-color: color-mix(in srgb, var(--text-muted), transparent 48%) !important;
+}
+
+body.dark-mode #screen-settings .settings-switch:checked,
+body.tg-dark-theme.dark-mode #screen-settings .settings-switch:checked {
+    background-color: var(--primary-color) !important;
+    border-color: color-mix(in srgb, var(--primary-color), #ffffff 16%) !important;
+}
+
+body.dark-mode #screen-settings .settings-row-icon,
+body.tg-dark-theme.dark-mode #screen-settings .settings-row-icon {
+    background: color-mix(in srgb, var(--primary-color), transparent 84%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 68%);
+}
+
+body.dark-mode #screen-settings .settings-row-icon-github,
+body.tg-dark-theme.dark-mode #screen-settings .settings-row-icon-github {
+    color: #f8fafc;
+    background: rgba(248, 250, 252, 0.1);
+    border-color: rgba(248, 250, 252, 0.16);
+}
+
+body.thermal-safe #screen-settings .settings-screen-group {
+    background: var(--thermal-surface-bg) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
+}
+
+@media (max-width: 380px) {
+    #screen-settings .settings-screen-group {
+        padding: 11px 12px !important;
+    }
+
+    #screen-settings .settings-row-title {
+        font-size: 14px;
+    }
+
+    #screen-settings .settings-row-subtitle {
+        font-size: 12px;
+    }
+
+    #screen-settings .settings-color-row {
+        gap: 9px;
+    }
+
+    #screen-settings .color-option-btn {
+        width: 32px;
+        height: 32px;
+    }
+}

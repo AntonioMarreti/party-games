@@ -1,43 +1,46 @@
 <!-- Screen: Settings -->
 <div id="screen-settings" class="screen">
     <div class="room-content-wrapper">
-        <div class="d-flex align-items-center mb-4">
-            <button class="btn-back me-3" onclick="closeSettingsScreen()"
-                style="color: var(--primary-color) !important; background: var(--bg-card); border: 1px solid var(--primary-color);">
+        <div class="settings-screen-header">
+            <button class="btn-back settings-back-btn" onclick="closeSettingsScreen()" aria-label="Назад">
                 <i class="bi bi-chevron-left"></i>
             </button>
             <h4 class="fw-bold m-0">Настройки</h4>
         </div>
 
         <!-- 1. PERSONALIZATION CARD -->
-        <div class="settings-group mb-4 p-3">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
-                        class="bi bi-palette me-2"></i>Внешний вид</h6>
+        <div class="settings-group settings-screen-group mb-4">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-palette"></i>Внешний вид</h6>
             </div>
 
             <!-- Accent Color (Prominent) -->
-            <div class="mb-4">
-                <div class="fw-bold mb-2" style="font-size: 15px;">Цветовой акцент</div>
-                <div class="d-flex gap-3 justify-content-between px-1">
+            <div class="settings-accent-block">
+                <div class="settings-accent-title">Цветовой акцент</div>
+                <div class="settings-color-row">
                     <div class="color-option-btn selected" style="background: #6C5CE7;" data-color="#6C5CE7"
-                        onclick="applyAccentColor('#6C5CE7'); highlightColorBtn(this);"></div>
+                        onclick="applyAccentColor('#6C5CE7'); highlightColorBtn(this);" role="button"
+                        aria-label="Фиолетовый акцент"></div>
                     <div class="color-option-btn" style="background: #0984e3;" data-color="#0984e3"
-                        onclick="applyAccentColor('#0984e3'); highlightColorBtn(this);"></div>
+                        onclick="applyAccentColor('#0984e3'); highlightColorBtn(this);" role="button"
+                        aria-label="Синий акцент"></div>
                     <div class="color-option-btn" style="background: #fdcb6e;" data-color="#fdcb6e"
-                        onclick="applyAccentColor('#fdcb6e'); highlightColorBtn(this);"></div>
+                        onclick="applyAccentColor('#fdcb6e'); highlightColorBtn(this);" role="button"
+                        aria-label="Желтый акцент"></div>
                     <div class="color-option-btn" style="background: #00b894;" data-color="#00b894"
-                        onclick="applyAccentColor('#00b894'); highlightColorBtn(this);"></div>
+                        onclick="applyAccentColor('#00b894'); highlightColorBtn(this);" role="button"
+                        aria-label="Зеленый акцент"></div>
                     <div class="color-option-btn" style="background: #e17055;" data-color="#e17055"
-                        onclick="applyAccentColor('#e17055'); highlightColorBtn(this);"></div>
+                        onclick="applyAccentColor('#e17055'); highlightColorBtn(this);" role="button"
+                        aria-label="Оранжевый акцент"></div>
                 </div>
             </div>
 
             <!-- Visual Toggles -->
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Темная тема (Beta)</div>
-                    <div class="text-muted small">Всегда темный фон</div>
+                    <div class="settings-row-title">Темная тема</div>
+                    <div class="settings-row-subtitle">Темный интерфейс приложения</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-darkMode"
@@ -47,8 +50,8 @@
 
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Экономный фон</div>
-                    <div class="text-muted small">Без анимации градиента</div>
+                    <div class="settings-row-title">Экономный фон</div>
+                    <div class="settings-row-subtitle">Меньше фоновых эффектов</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-simpleBg"
@@ -58,8 +61,8 @@
 
             <div class="settings-item border-0 pb-0">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Крупный шрифт</div>
-                    <div class="text-muted small">Для удобства чтения</div>
+                    <div class="settings-row-title">Крупный шрифт</div>
+                    <div class="settings-row-subtitle">Для удобства чтения</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-largeFont"
@@ -69,16 +72,15 @@
         </div>
 
         <!-- 2. PERFORMANCE CARD -->
-        <div class="settings-group mb-4 p-3">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
-                        class="bi bi-lightning-charge me-2"></i>Производительность</h6>
+        <div class="settings-group settings-screen-group mb-4">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-lightning-charge"></i>Производительность</h6>
             </div>
 
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Без анимаций</div>
-                    <div class="text-muted small">Ускоряет работу</div>
+                    <div class="settings-row-title">Отключить анимации</div>
+                    <div class="settings-row-subtitle">Ускоряет работу на слабых устройствах</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-noAnimations"
@@ -88,8 +90,8 @@
 
             <div class="settings-item border-0 pb-0">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold text-danger">Режим охлаждения</div>
-                    <div class="text-muted small">Максимальная экономия</div>
+                    <div class="settings-row-title settings-row-title-warning">Режим охлаждения</div>
+                    <div class="settings-row-subtitle">Максимальная экономия ресурсов</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-thermalSafe"
@@ -99,15 +101,15 @@
         </div>
 
         <!-- 3. SYSTEM CARD -->
-        <div class="settings-group mb-4 p-3">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
-                        class="bi bi-sliders me-2"></i>Система</h6>
+        <div class="settings-group settings-screen-group mb-4">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-sliders"></i>Система</h6>
             </div>
 
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Вибрация (Haptics)</div>
+                    <div class="settings-row-title">Вибрация</div>
+                    <div class="settings-row-subtitle">Тактильный отклик в Telegram</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-haptics"
@@ -117,7 +119,8 @@
 
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Звуковые эффекты</div>
+                    <div class="settings-row-title">Звуковые эффекты</div>
+                    <div class="settings-row-subtitle">Звуки действий и игр</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-soundEnabled"
@@ -127,8 +130,8 @@
 
             <div class="settings-item border-0 pb-0">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Лидерборд</div>
-                    <div class="text-muted small">Показывать меня всем</div>
+                    <div class="settings-row-title">Лидерборд</div>
+                    <div class="settings-row-subtitle">Показывать меня в рейтинге</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -138,53 +141,50 @@
         </div>
 
         <!-- 3.5. SECURITY CARD -->
-        <div class="settings-group mb-4 p-3">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
-                        class="bi bi-shield-lock me-2"></i>Безопасность</h6>
+        <div class="settings-group settings-screen-group mb-4">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-shield-lock"></i>Безопасность</h6>
             </div>
 
             <div class="settings-item border-0 pb-0 clickable" id="sessions-settings-link"
                 onclick="window.showScreen('sessions'); if(window.SessionManager) window.SessionManager.loadSessions();">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Активные сеансы</div>
-                    <div class="text-muted small" id="sessions-count-hint">Загрузка...</div>
+                    <div class="settings-row-title">Активные сеансы</div>
+                    <div class="settings-row-subtitle" id="sessions-count-hint">Загрузка...</div>
                 </div>
-                <div class="menu-icon-wrap" style="background: var(--bg-glass); color: var(--primary-color);">
+                <div class="menu-icon-wrap settings-row-icon">
                     <i class="bi bi-phone-landscape"></i>
                 </div>
             </div>
         </div>
 
         <!-- QA / TESTER TOOLS -->
-        <div class="settings-group mb-4 p-3" id="qa-tools-settings-group" style="display:none;">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
-                        class="bi bi-tools me-2"></i>QA</h6>
+        <div class="settings-group settings-screen-group mb-4" id="qa-tools-settings-group" style="display:none;">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-tools"></i>QA</h6>
             </div>
 
             <div class="settings-item border-0 pb-0 clickable" onclick="window.ScrollQA && window.ScrollQA.openTools()">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">QA tools</div>
-                    <div class="text-muted small">Bug reporter, Scroll QA, Theme Contrast QA и debug info</div>
+                    <div class="settings-row-title">QA tools</div>
+                    <div class="settings-row-subtitle">Bug reporter, Scroll QA, Theme Contrast QA и debug info</div>
                 </div>
-                <div class="menu-icon-wrap" style="background: var(--bg-glass); color: var(--primary-color);">
+                <div class="menu-icon-wrap settings-row-icon settings-row-icon-debug">
                     <i class="bi bi-bug"></i>
                 </div>
             </div>
         </div>
 
 
-        <div class="settings-group mb-4 p-3">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="fw-bold m-0 text-uppercase small" style="color: var(--text-main); opacity: 0.7;"><i
-                        class="bi bi-info-circle me-2"></i>О приложении</h6>
+        <div class="settings-group settings-screen-group mb-4">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-info-circle"></i>О приложении</h6>
             </div>
 
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Уведомления</div>
-                    <div class="text-muted small">Приглашения в игру</div>
+                    <div class="settings-row-title">Уведомления</div>
+                    <div class="settings-row-subtitle">Приглашения в игру</div>
                 </div>
                 <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
                     <input class="form-check-input settings-switch ms-auto" type="checkbox"
@@ -195,8 +195,8 @@
 
             <div class="settings-item">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Версия</div>
-                    <div class="text-muted small fw-bold" id="app-version-display">Build Loading...
+                    <div class="settings-row-title">Версия</div>
+                    <div class="settings-row-subtitle settings-build-value" id="app-version-display">Build Loading...
                     </div>
                 </div>
             </div>
@@ -204,10 +204,10 @@
             <div class="settings-item clickable border-0 pb-0"
                 onclick="window.open('https://github.com/antoniomarreti/party-games', '_blank')">
                 <div class="settings-label-wrap">
-                    <div class="fw-bold">Open Source</div>
-                    <div class="text-muted small">Исходный код на GitHub</div>
+                    <div class="settings-row-title">Open Source</div>
+                    <div class="settings-row-subtitle">Исходный код на GitHub</div>
                 </div>
-                <div class="menu-icon-wrap" style="background: #f0f0f0; color: #333;">
+                <div class="menu-icon-wrap settings-row-icon settings-row-icon-github">
                     <i class="bi bi-github"></i>
                 </div>
             </div>
