@@ -994,13 +994,14 @@ body.thermal-safe .lobby-modal .modal-content {
 .rewards-achievement-filters {
     display: flex;
     flex: 0 0 auto;
+    align-items: center;
     gap: 2px;
     overflow-x: auto;
     padding: 4px;
     margin: 0 0 9px;
-    border: 1px solid color-mix(in srgb, var(--border-main), transparent 35%);
-    border-radius: 18px;
-    background: color-mix(in srgb, var(--app-muted-surface, #f3f0ff), var(--app-surface, #fff) 45%);
+    border: 1px solid rgba(108, 92, 231, 0.12);
+    border-radius: 17px;
+    background: #f3f4f8;
     scrollbar-width: none;
 }
 
@@ -1009,44 +1010,48 @@ body.thermal-safe .lobby-modal .modal-content {
 }
 
 .rewards-achievement-filter {
-    flex: 1 0 auto;
-    min-height: 30px;
-    padding: 7px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-height: 32px;
+    padding: 0 10px;
     border: 1px solid transparent;
-    border-radius: 14px;
+    border-radius: 13px;
     background: transparent;
-    color: var(--text-muted) !important;
+    color: #68707d !important;
     font-size: 12px;
     font-weight: 800;
     line-height: 1;
+    text-align: center;
     white-space: nowrap;
     transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .rewards-achievement-filter.is-active {
-    border-color: color-mix(in srgb, var(--border-main), transparent 45%);
-    background: var(--app-surface, #fff);
-    color: color-mix(in srgb, var(--primary-color), var(--text-main, #2d3436) 20%) !important;
+    border-color: rgba(108, 92, 231, 0.10);
+    background: #fff;
+    color: #4f46e5 !important;
     box-shadow: 0 6px 14px rgba(45, 52, 54, 0.08);
 }
 
 body.dark-mode .rewards-achievement-filters,
 body.tg-dark-theme .rewards-achievement-filters {
-    border-color: rgba(148, 163, 184, 0.18);
-    background: rgba(148, 163, 184, 0.12);
+    border-color: rgba(108, 92, 231, 0.14);
+    background: #f3f4f8;
 }
 
 body.dark-mode .rewards-achievement-filter,
 body.tg-dark-theme .rewards-achievement-filter {
-    color: rgba(226, 232, 240, 0.72) !important;
+    color: #68707d !important;
 }
 
 body.dark-mode .rewards-achievement-filter.is-active,
 body.tg-dark-theme .rewards-achievement-filter.is-active {
-    border-color: rgba(167, 139, 250, 0.22);
-    background: rgba(248, 250, 252, 0.12);
-    color: rgba(237, 233, 254, 0.96) !important;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+    border-color: rgba(108, 92, 231, 0.10);
+    background: #fff;
+    color: #4f46e5 !important;
+    box-shadow: 0 6px 14px rgba(45, 52, 54, 0.08);
 }
 
 .rewards-overview-note {
