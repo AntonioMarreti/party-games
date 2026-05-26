@@ -1144,46 +1144,55 @@
             <div class="scroll-qa-shell" role="dialog" aria-modal="true" aria-label="QA tools">
                 <div class="scroll-qa-header">
                     <div>
-                        <h2 class="scroll-qa-title">QA tools</h2>
-                        <div class="scroll-qa-subtitle">Видно тестерам/admin или при debug flags.</div>
+                        <h2 class="scroll-qa-title">Обратная связь</h2>
+                        <div class="scroll-qa-subtitle">Для тестеров: быстро отправить проблему с текущего экрана.</div>
                     </div>
                     <button class="scroll-qa-close" type="button" data-scroll-qa-close>×</button>
                 </div>
                 <div class="scroll-qa-body">
                     <div class="scroll-qa-card">
-                        <strong>Тестирование</strong>
-                        <div class="scroll-qa-muted" style="margin-top:4px;">Чат, баг-репорт и быстрый доступ к Scroll QA.</div>
+                        <strong>Что хотите сделать?</strong>
+                        <div class="scroll-qa-muted" style="margin-top:4px;">Лучший вариант для теста — описать баг или выбрать проблемный элемент на экране.</div>
                         <div style="display:grid;gap:8px;margin-top:12px;">
-                            <button class="scroll-qa-action" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
                             <button class="scroll-qa-action" type="button" data-scroll-qa-open-bug-report>Сообщить о баге</button>
-                            <button class="scroll-qa-action secondary" type="button" data-theme-qa-open>Theme Contrast QA</button>
-                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
-                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-codex>Скопировать prompt для Codex</button>
-                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-last>Скопировать последний репорт</button>
-                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-reset-pos>Сбросить позицию QA</button>
-                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-clear-flags>Очистить debug flags</button>
+                            <button class="scroll-qa-action secondary" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
                         </div>
                     </div>
                     <div class="scroll-qa-card">
-                        <strong>Android Scroll QA</strong>
-                        <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние: ${isEnabled() ? 'включено' : 'выключено'}</div>
-                        <div style="display:flex;gap:8px;margin-top:12px;">
-                            <button class="scroll-qa-action" type="button" data-scroll-qa-enable style="flex:1;">Открыть Scroll QA</button>
-                            <button class="scroll-qa-back" type="button" data-scroll-qa-disable style="min-width:96px;">Выключить</button>
-                        </div>
-                    </div>
-                    <div class="scroll-qa-card">
-                        <strong>Theme Contrast QA</strong>
-                        <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние debug flag: ${isThemeQaEnabled() ? 'включено' : 'выключено'}</div>
-                        <div style="display:flex;gap:8px;margin-top:12px;">
-                            <button class="scroll-qa-action" type="button" data-theme-qa-open style="flex:1;">Открыть Theme Contrast QA</button>
-                            <button class="scroll-qa-back" type="button" data-theme-qa-disable style="min-width:96px;">Выключить</button>
-                        </div>
-                    </div>
-                    <div class="scroll-qa-card">
-                        <strong>Debug info</strong>
-                        <pre style="white-space:pre-wrap;word-break:break-word;margin:10px 0 0;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#334155;">${escapeHtml(buildFullDebugInfoText(info))}</pre>
-                        <button class="scroll-qa-action" type="button" data-scroll-qa-copy style="margin-top:12px;">Скопировать debug info</button>
+                        <details class="scroll-qa-advanced">
+                            <summary>
+                                <span class="scroll-qa-advanced-label">Дополнительно</span>
+                                <i class="bi bi-chevron-down scroll-qa-advanced-chevron" aria-hidden="true"></i>
+                            </summary>
+                            <div class="scroll-qa-list scroll-qa-advanced-body" style="gap:10px;">
+                                <div>
+                                    <strong>Android Scroll QA</strong>
+                                    <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние: ${isEnabled() ? 'включено' : 'выключено'}</div>
+                                    <div style="display:flex;gap:8px;margin-top:10px;">
+                                        <button class="scroll-qa-action secondary" type="button" data-scroll-qa-enable style="flex:1;">Открыть Scroll QA</button>
+                                        <button class="scroll-qa-back" type="button" data-scroll-qa-disable style="min-width:96px;">Выключить</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong>Theme Contrast QA</strong>
+                                    <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние debug flag: ${isThemeQaEnabled() ? 'включено' : 'выключено'}</div>
+                                    <div style="display:flex;gap:8px;margin-top:10px;">
+                                        <button class="scroll-qa-action secondary" type="button" data-theme-qa-open style="flex:1;">Открыть Theme Contrast QA</button>
+                                        <button class="scroll-qa-back" type="button" data-theme-qa-disable style="min-width:96px;">Выключить</button>
+                                    </div>
+                                </div>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-codex>Скопировать prompt для Codex</button>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy-last>Скопировать последний репорт</button>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-reset-pos>Сбросить позицию QA</button>
+                                <button class="scroll-qa-action secondary" type="button" data-scroll-qa-clear-flags>Очистить debug flags</button>
+                                <div>
+                                    <strong>Debug info</strong>
+                                    <pre style="white-space:pre-wrap;word-break:break-word;margin:10px 0 0;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#334155;">${escapeHtml(buildFullDebugInfoText(info))}</pre>
+                                    <button class="scroll-qa-action secondary" type="button" data-scroll-qa-copy style="margin-top:12px;">Скопировать debug info</button>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -1250,30 +1259,30 @@
         }
         root.className = 'is-open';
         root.innerHTML = `
-            <div class="scroll-qa-shell" role="dialog" aria-modal="true" aria-label="Bug Report">
+            <div class="scroll-qa-shell" role="dialog" aria-modal="true" aria-label="Сообщить об ошибке">
                 <div class="scroll-qa-header">
                     <div>
-                        <h2 class="scroll-qa-title">Сообщить о баге</h2>
-                        <div class="scroll-qa-subtitle">Коротко опишите проблему. Технический контекст добавится автоматически.</div>
+                        <h2 class="scroll-qa-title">Сообщить об ошибке</h2>
+                        <div class="scroll-qa-subtitle">Опишите, что пошло не так. Информация об экране добавится автоматически.</div>
                     </div>
                     <button class="scroll-qa-close" type="button" data-scroll-qa-close>×</button>
                 </div>
                 <div class="scroll-qa-body">
                     <div class="scroll-qa-list">
                         <div class="scroll-qa-field">
-                            <label for="qa-bug-actual">Что не так? *</label>
-                            <textarea id="qa-bug-actual" required placeholder="Например: кнопка не нажимается, текст плохо видно, экран уехал">${escapeHtml(bugDraft.actual)}</textarea>
+                            <label for="qa-bug-actual">Что произошло? *</label>
+                            <textarea id="qa-bug-actual" required placeholder="Например: кнопка не нажимается, текст плохо видно, экран съехал">${escapeHtml(bugDraft.actual)}</textarea>
                         </div>
                         <div class="scroll-qa-field">
-                            <label for="qa-bug-expected">Как должно быть?</label>
-                            <textarea id="qa-bug-expected" placeholder="Как должно было работать">${escapeHtml(bugDraft.expected)}</textarea>
+                            <label for="qa-bug-expected">Что ожидали?</label>
+                            <textarea id="qa-bug-expected" placeholder="Как, по-вашему, должно было работать">${escapeHtml(bugDraft.expected)}</textarea>
                         </div>
                         <div class="scroll-qa-field">
-                            <label for="qa-bug-steps">Шаги / комментарий</label>
-                            <textarea id="qa-bug-steps" placeholder="Что нажали перед багом, как повторить, ссылка на скрин/видео">${escapeHtml(bugDraft.steps)}</textarea>
+                            <label for="qa-bug-steps">Шаги или комментарий</label>
+                            <textarea id="qa-bug-steps" placeholder="Что нажали перед проблемой, как повторить, ссылка на скрин или видео">${escapeHtml(bugDraft.steps)}</textarea>
                         </div>
                         <div>
-                            <div class="scroll-qa-muted" style="font-weight:800;margin-bottom:6px;">Проблемный элемент</div>
+                            <div class="scroll-qa-muted" style="font-weight:800;margin-bottom:6px;">Место на экране</div>
                             <div class="scroll-qa-element-summary" data-scroll-qa-element-summary>${escapeHtml(formatElementSummary(selectedBugElement) || 'Не выбран')}</div>
                         </div>
                         <div class="scroll-qa-inline-actions">
@@ -1529,8 +1538,8 @@
     async function submitBugReport() {
         updateBugDraftFromForm();
         if (!bugDraft.actual.trim()) {
-            if (window.showToast) window.showToast('Заполните поле “Что не так?”', 'warning');
-            else if (window.showAlert) window.showAlert('QA tools', 'Заполните поле “Что не так?”', 'warning');
+            if (window.showToast) window.showToast('Заполните поле “Что произошло?”', 'warning');
+            else if (window.showAlert) window.showAlert('QA tools', 'Заполните поле “Что произошло?”', 'warning');
             return;
         }
         const now = Date.now();
@@ -1548,8 +1557,11 @@
                 ? await window.apiRequest({ action: 'submit_qa_bug_report', report })
                 : null;
             if (res?.status === 'ok') {
-                if (window.showToast) window.showToast('Баг-репорт отправлен', 'success');
-                else if (window.showAlert) window.showAlert('QA tools', 'Баг-репорт отправлен', 'success');
+                const sentMessage = res.report_id
+                    ? `Баг-репорт отправлен #${res.report_id}`
+                    : 'Баг-репорт отправлен';
+                if (window.showToast) window.showToast(sentMessage, 'success');
+                else if (window.showAlert) window.showAlert('QA tools', sentMessage, 'success');
                 closePanel();
                 return;
             }

@@ -166,8 +166,8 @@
 
             <div class="settings-item border-0 pb-0 clickable" onclick="window.ScrollQA && window.ScrollQA.openTools()">
                 <div class="settings-label-wrap">
-                    <div class="settings-row-title">QA tools</div>
-                    <div class="settings-row-subtitle">Bug reporter, Scroll QA, Theme Contrast QA и debug info</div>
+                    <div class="settings-row-title">Сообщить об ошибке</div>
+                    <div class="settings-row-subtitle">Отправить баг, идею или проблему с экраном</div>
                 </div>
                 <div class="menu-icon-wrap settings-row-icon settings-row-icon-debug">
                     <i class="bi bi-bug"></i>
