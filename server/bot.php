@@ -257,14 +257,26 @@ if (strpos($text, '/start') === 0) {
     sendTelegram('sendMessage', $response);
 }
 
-// === ADMIN COMMANDS ===
+// === BOT COMMANDS ===
 $isAdmin = in_array($message['from']['id'], ADMIN_IDS);
 $cmd = trim($text);
 $commandParts = preg_split('/\s+/', trim($cmd));
 $commandName = strtolower(explode('@', $commandParts[0] ?? '')[0]);
 
-// /help, /help_admin - Список команд (только для админов)
-if (in_array($commandName, ['/help', '/help_admin'], true)) {
+// /bug, /report - Tester bug report instructions
+if (in_array($commandName, ['/bug', '/report'], true)) {
+    reply($chatId, getTesterBugHelpMessage());
+    exit;
+}
+
+// /help - Tester/user help
+if ($commandName === '/help') {
+    reply($chatId, getTesterHelpMessage());
+    exit;
+}
+
+// /help_admin - Список команд (только для админов)
+if ($commandName === '/help_admin') {
     if (!$isAdmin) {
         reply($chatId, getSfEmoji('error') . " Доступ запрещен");
         exit;
@@ -407,13 +419,8 @@ if ($commandName === '/tester_list') {
     exit;
 }
 
-// /build - Admin app build diagnostics
+// /build - Safe app build diagnostics
 if ($commandName === '/build') {
-    if (!$isAdmin) {
-        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
-        exit;
-    }
-
     $build = getAppBuildVersion();
     $serverTime = date('c');
     reply($chatId, "🏷 <b>Build</b>\n\n"
@@ -896,6 +903,41 @@ function getAppBuildVersion()
     }
 
     return '—';
+}
+
+function getTesterBugHelpMessage()
+{
+    return "🐞 <b>Как отправить баг</b>\n\n"
+        . "1. Открой приложение.\n"
+        . "2. Перейди в <b>Настройки → Сообщить об ошибке</b>.\n"
+        . "3. Опиши:\n"
+        . "— что не так;\n"
+        . "— как должно быть;\n"
+        . "— что ты делал перед багом.\n"
+        . "4. Если проблема с конкретным элементом — нажми <b>Выбрать элемент</b>.\n"
+        . "5. Отправь репорт.\n\n"
+        . "После отправки появится номер вроде:\n"
+        . "<b>Баг-репорт отправлен #12</b>\n\n"
+        . "Этот номер можно скинуть в чат, если хочешь обсудить баг.\n\n"
+        . "Если кнопки <b>Сообщить об ошибке</b> нет — напиши в чат, возможно тебе ещё не включили tester-доступ.";
+}
+
+function getTesterHelpMessage()
+{
+    return "🎮 <b>Party Games — памятка тестера</b>\n\n"
+        . "<b>Полезные команды:</b>\n"
+        . "🐞 /bug или /report — как отправить баг\n"
+        . "🏷 /build — текущая версия приложения\n"
+        . "❓ /help — эта памятка\n\n"
+        . "<b>Что особенно полезно проверять:</b>\n"
+        . "— непонятные экраны;\n"
+        . "— плохой контраст текста;\n"
+        . "— кнопки, которые не нажимаются;\n"
+        . "— странные отступы/перекрытия;\n"
+        . "— ошибки после игр;\n"
+        . "— проблемы в Telegram Desktop и на телефоне.\n\n"
+        . "Баги лучше отправлять через приложение:\n"
+        . "<b>Настройки → Сообщить об ошибке</b>";
 }
 
 function getAdminHelpMessage()
