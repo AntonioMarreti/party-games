@@ -274,6 +274,9 @@ if (strpos($cmd, '/help') === 0) {
     $msg .= "👤 /user &lt;telegram_id|@username&gt; — Диагностика пользователя\n";
     $msg .= "🧪 /tester_list — Список тестеров\n";
     $msg .= "🏷 /build — Текущая сборка\n";
+    $msg .= "🐞 /qa_last — Последние QA-репорты\n";
+    $msg .= "🐞 /qa &lt;id&gt; — Полный QA-репорт\n";
+    $msg .= "🐞 /qa_status &lt;id&gt; &lt;status&gt; [note] — Обновить QA-репорт\n";
     $msg .= getSfEmoji('public') . " /public — Список публичных комнат\n";
     $msg .= "🧪 /tester &lt;telegram_id|@username&gt; — Статус тестера\n";
     $msg .= "✅ /tester_on &lt;telegram_id|@username&gt; — Включить тестера\n";
@@ -430,6 +433,120 @@ if ($commandName === '/build') {
     reply($chatId, "🏷 <b>Build</b>\n\n"
         . "app_build: <b>" . htmlspecialchars($build) . "</b>\n"
         . "server_time: <b>" . htmlspecialchars($serverTime) . "</b>");
+    exit;
+}
+
+// /qa_help - QA reports command help
+if ($commandName === '/qa_help') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    reply($chatId, getQaCommandHelp());
+    exit;
+}
+
+// /qa_last - Recent QA bug reports
+if ($commandName === '/qa_last') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->query("
+            SELECT id, user_id, telegram_id, username, first_name, type, severity, screen, status, report_text, created_at
+            FROM qa_bug_reports
+            ORDER BY id DESC
+            LIMIT 5
+        ");
+        reply($chatId, formatQaLastReportsReply($stmt->fetchAll()));
+    } catch (Throwable $e) {
+        reply($chatId, getSfEmoji('error') . " Ошибка чтения QA-репортов");
+    }
+    exit;
+}
+
+// /qa <id> - QA bug report details
+if ($commandName === '/qa') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    $reportId = isset($commandParts[1]) ? (int) $commandParts[1] : 0;
+    if ($reportId <= 0) {
+        reply($chatId, "Использование:\n/qa 42");
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT id, user_id, telegram_id, username, first_name, is_tester, is_admin,
+                   type, severity, screen, report_text, status, admin_note, created_at, updated_at
+            FROM qa_bug_reports
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$reportId]);
+        $report = $stmt->fetch();
+        if (!$report) {
+            reply($chatId, "QA report #<b>" . htmlspecialchars((string) $reportId) . "</b> не найден");
+            exit;
+        }
+
+        reply($chatId, formatQaReportDetailsReply($report));
+    } catch (Throwable $e) {
+        reply($chatId, getSfEmoji('error') . " Ошибка чтения QA-репорта");
+    }
+    exit;
+}
+
+// /qa_status <id> <status> [note] - Update QA bug report status
+if ($commandName === '/qa_status') {
+    if (!$isAdmin) {
+        reply($chatId, getSfEmoji('error') . " Недостаточно прав");
+        exit;
+    }
+
+    $allowedStatuses = ['new', 'triaged', 'in_progress', 'fixed', 'duplicate', 'wontfix', 'need_info'];
+    if (!preg_match('/^\/qa_status(?:@\w+)?\s+(\d+)\s+([a-z_]+)(?:\s+([\s\S]+))?$/i', $cmd, $matches)) {
+        reply($chatId, "Использование:\n/qa_status 42 triaged Profile edit contrast issue\n\nСтатусы: " . implode(', ', $allowedStatuses));
+        exit;
+    }
+
+    $reportId = (int) $matches[1];
+    $status = strtolower($matches[2]);
+    $note = trim((string) ($matches[3] ?? ''));
+    if (!in_array($status, $allowedStatuses, true)) {
+        reply($chatId, "Недопустимый status: <b>" . htmlspecialchars($status) . "</b>\n\nСтатусы: " . implode(', ', $allowedStatuses));
+        exit;
+    }
+
+    try {
+        if ($note !== '') {
+            $stmt = $pdo->prepare("UPDATE qa_bug_reports SET status = ?, admin_note = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$status, botLimitText($note, 1000), $reportId]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE qa_bug_reports SET status = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$status, $reportId]);
+        }
+
+        if ($stmt->rowCount() <= 0) {
+            reply($chatId, "QA report #<b>" . htmlspecialchars((string) $reportId) . "</b> не найден или не изменён");
+            exit;
+        }
+
+        $msg = "QA report #<b>" . htmlspecialchars((string) $reportId) . "</b> updated\n"
+            . "status: <b>" . htmlspecialchars($status) . "</b>";
+        if ($note !== '') {
+            $msg .= "\nnote: " . htmlspecialchars(botLimitText($note, 600));
+        }
+        reply($chatId, $msg);
+    } catch (Throwable $e) {
+        reply($chatId, getSfEmoji('error') . " Ошибка обновления QA-репорта");
+    }
     exit;
 }
 
@@ -793,6 +910,154 @@ function getAppBuildVersion()
     }
 
     return '—';
+}
+
+function getQaCommandHelp()
+{
+    return "🐞 <b>QA reports</b>\n\n"
+        . "/qa_last — последние QA-репорты\n"
+        . "/qa &lt;id&gt; — подробный QA-репорт\n"
+        . "/qa_status &lt;id&gt; &lt;status&gt; [note] — обновить статус\n\n"
+        . "Статусы: new, triaged, in_progress, fixed, duplicate, wontfix, need_info";
+}
+
+function formatQaLastReportsReply($reports)
+{
+    if (!$reports) {
+        return "🐞 QA-репортов пока нет";
+    }
+
+    $msg = "🐞 <b>Последние QA reports</b>\n\n";
+    foreach ($reports as $report) {
+        $preview = botExtractQaReportSection($report['report_text'] ?? '', 'Что не так', ['Как должно быть', 'Шаги', 'Экран', 'Элемент', 'Контекст'], 220);
+        if ($preview === '—') {
+            $preview = botLimitText(preg_replace('/\s+/u', ' ', (string) ($report['report_text'] ?? '')), 220);
+        }
+
+        $msg .= "#<b>" . htmlspecialchars((string) ($report['id'] ?? '—')) . "</b> "
+            . htmlspecialchars(formatBotValue($report['severity'] ?? null)) . " "
+            . htmlspecialchars(formatBotValue($report['type'] ?? null)) . " "
+            . htmlspecialchars(formatBotValue($report['status'] ?? null)) . "\n"
+            . "screen: " . htmlspecialchars(formatBotValue($report['screen'] ?? null)) . "\n"
+            . "user: " . htmlspecialchars(formatQaReportUser($report)) . "\n"
+            . "created: " . htmlspecialchars(formatBotValue($report['created_at'] ?? null)) . "\n"
+            . "Что не так: " . htmlspecialchars($preview) . "\n\n";
+    }
+
+    return $msg;
+}
+
+function formatQaReportDetailsReply($report)
+{
+    $fullReport = (string) ($report['report_text'] ?? '');
+    $limitedReport = botLimitText($fullReport, 1800);
+    $isTruncated = botTextLength($fullReport) > botTextLength($limitedReport);
+
+    $msg = "🐞 <b>QA report #" . htmlspecialchars((string) ($report['id'] ?? '—')) . "</b>\n\n"
+        . "status: <b>" . htmlspecialchars(formatBotValue($report['status'] ?? null)) . "</b>\n"
+        . "type: <b>" . htmlspecialchars(formatBotValue($report['type'] ?? null)) . "</b>\n"
+        . "severity: <b>" . htmlspecialchars(formatBotValue($report['severity'] ?? null)) . "</b>\n"
+        . "screen: <b>" . htmlspecialchars(formatBotValue($report['screen'] ?? null)) . "</b>\n"
+        . "user_id: <b>" . htmlspecialchars(formatBotValue($report['user_id'] ?? null)) . "</b>\n"
+        . "telegram_id: <b>" . htmlspecialchars(formatBotValue($report['telegram_id'] ?? null)) . "</b>\n"
+        . "username: <b>" . htmlspecialchars(formatBotUsername($report['username'] ?? null)) . "</b>\n"
+        . "first_name: <b>" . htmlspecialchars(formatBotValue($report['first_name'] ?? null)) . "</b>\n"
+        . "is_tester: <b>" . (int) ($report['is_tester'] ?? 0) . "</b> "
+        . "is_admin: <b>" . (int) ($report['is_admin'] ?? 0) . "</b>\n"
+        . "created_at: <b>" . htmlspecialchars(formatBotValue($report['created_at'] ?? null)) . "</b>\n"
+        . "updated_at: <b>" . htmlspecialchars(formatBotValue($report['updated_at'] ?? null)) . "</b>";
+
+    if (formatBotValue($report['admin_note'] ?? null) !== '—') {
+        $msg .= "\nadmin_note: " . htmlspecialchars(botLimitText($report['admin_note'], 500));
+    }
+
+    $msg .= "\n\n<b>report_text:</b>\n<pre>"
+        . htmlspecialchars($limitedReport !== '' ? $limitedReport : '—')
+        . "</pre>";
+
+    if ($isTruncated) {
+        $msg .= "\nПолный текст хранится в БД: qa_bug_reports.id = #"
+            . htmlspecialchars((string) ($report['id'] ?? '—'));
+    }
+
+    return $msg;
+}
+
+function formatQaReportUser($report)
+{
+    $name = formatBotValue($report['first_name'] ?? null);
+    $username = formatBotUsername($report['username'] ?? null);
+    if ($name !== '—' && $username !== '—') {
+        return "$name / $username";
+    }
+    if ($name !== '—') {
+        return $name;
+    }
+    if ($username !== '—') {
+        return $username;
+    }
+    return 'user_id=' . formatBotValue($report['user_id'] ?? null);
+}
+
+function botExtractQaReportSection($report, $heading, $nextHeadings = [], $limit = 500)
+{
+    $lines = preg_split('/\R/u', (string) $report);
+    if (!is_array($lines)) {
+        return '—';
+    }
+
+    $target = $heading . ':';
+    $nextLookup = array_fill_keys(array_map(static fn($item) => $item . ':', $nextHeadings), true);
+    $collecting = false;
+    $collected = [];
+
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if (!$collecting && $trimmed === $target) {
+            $collecting = true;
+            continue;
+        }
+
+        if ($collecting && isset($nextLookup[$trimmed])) {
+            break;
+        }
+
+        if ($collecting) {
+            $collected[] = $line;
+        }
+    }
+
+    if (!$collecting) {
+        return '—';
+    }
+
+    $section = trim(preg_replace('/\s+/u', ' ', implode("\n", $collected)));
+    return $section !== '' ? botLimitText($section, $limit) : '—';
+}
+
+function botLimitText($value, $limit)
+{
+    $text = trim((string) ($value ?? ''));
+    if ($text === '') {
+        return '';
+    }
+
+    if (botTextLength($text) <= $limit) {
+        return $text;
+    }
+
+    $suffix = '…';
+    $sliceLimit = max(0, $limit - botTextLength($suffix));
+    $slice = function_exists('mb_substr')
+        ? mb_substr($text, 0, $sliceLimit, 'UTF-8')
+        : substr($text, 0, $sliceLimit);
+    return rtrim($slice) . $suffix;
+}
+
+function botTextLength($value)
+{
+    $text = (string) ($value ?? '');
+    return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
 }
 
 function isBotAdminUser($user)
