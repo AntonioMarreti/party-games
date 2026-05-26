@@ -1118,11 +1118,104 @@ function renderFriends(friends, requests) {
     }
 }
 
-async function searchFriendsAction() {
-    const input = document.getElementById('friend-search-input');
+let currentFriendsList = [];
+let friendsSearchDebounceTimer;
+let friendAddSearchDebounceTimer;
+
+function getFriendSearchableText(f) {
+    const parts = [f.custom_name, f.first_name, f.username, getSafeUserDisplayName(f)].filter(Boolean);
+    return parts.join(' ').toLowerCase();
+}
+
+function filterFriendListByQuery(query) {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return currentFriendsList;
+    return currentFriendsList.filter(f => getFriendSearchableText(f).includes(normalized));
+}
+
+function renderFriendList(friends, query = '') {
+    const listContainer = document.getElementById('friends-list-container');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
+    if (!currentFriendsList.length && !query) {
+        listContainer.innerHTML = '<div class="friend-empty-state"><i class="bi bi-people h1 d-block mb-2"></i>Пока нет друзей</div>';
+        return;
+    }
+
+    if (friends.length === 0) {
+        const message = query ? 'Среди друзей никого не найдено' : 'У вас пока нет друзей.';
+        listContainer.innerHTML = `<div class="friend-empty-state">${message}</div>`;
+        return;
+    }
+
+    friends.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'friend-user-row';
+        div.onclick = () => openUserProfile(f.id);
+        div.innerHTML = `
+            <div class="friend-user-avatar">${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}</div>
+            <div class="friend-user-main">
+                <div class="friend-user-name">${getSafeUserDisplayName(f)}</div>
+                <div class="friend-user-meta">Друг</div>
+            </div>
+            <div class="friend-user-action">
+                <button class="btn-unstyled friend-action-danger" onclick="removeFriend(${f.id}, event)" aria-label="Удалить друга">
+                    <i class="bi bi-person-dash"></i>
+                </button>
+            </div>
+        `;
+        listContainer.appendChild(div);
+    });
+}
+
+function debounceFilterFriends() {
+    clearTimeout(friendsSearchDebounceTimer);
+    friendsSearchDebounceTimer = setTimeout(filterFriendsAction, 250);
+}
+
+function filterFriendsAction() {
+    const input = document.getElementById('friends-search-input');
     const query = input ? input.value.trim() : '';
-    const resultsArea = document.getElementById('friends-search-results');
-    const list = document.getElementById('friends-search-list');
+    const filteredFriends = filterFriendListByQuery(query);
+    renderFriendList(filteredFriends, query);
+}
+
+function toggleFriendAddSearch() {
+    const block = document.getElementById('friend-add-search-block');
+    const btn = document.getElementById('friend-add-toggle-btn');
+    const wrapper = document.querySelector('.friend-add-card');
+    if (!block) return;
+    const isHidden = block.style.display === 'none' || block.style.display === '';
+    block.style.display = isHidden ? 'block' : 'none';
+    if (btn) {
+        btn.setAttribute('aria-expanded', String(isHidden));
+        btn.classList.toggle('open', isHidden);
+        const chevron = btn.querySelector('.friend-add-action-chevron');
+        if (chevron) chevron.className = `friend-add-action-chevron bi ${isHidden ? 'bi-chevron-up' : 'bi-chevron-down'}`;
+    }
+    if (wrapper) {
+        wrapper.classList.toggle('open', isHidden);
+    }
+    if (!isHidden) {
+        const results = document.getElementById('friend-add-search-results');
+        if (results) results.style.display = 'none';
+    } else {
+        const input = document.getElementById('friend-add-search-input');
+        if (input) input.focus();
+    }
+}
+
+function debounceSearchUsersToAdd() {
+    clearTimeout(friendAddSearchDebounceTimer);
+    friendAddSearchDebounceTimer = setTimeout(searchUsersToAddAction, 250);
+}
+
+async function searchUsersToAddAction() {
+    const input = document.getElementById('friend-add-search-input');
+    const query = input ? input.value.trim() : '';
+    const resultsArea = document.getElementById('friend-add-search-results');
+    const list = document.getElementById('friend-add-search-list');
 
     if (query.length < 2) {
         if (resultsArea) resultsArea.style.display = 'none';
@@ -1136,25 +1229,31 @@ async function searchFriendsAction() {
     if (res.status === 'ok') {
         if (list) {
             list.innerHTML = '';
-            if (res.users.length === 0) {
-                list.innerHTML = '<div class="text-muted small">Никого не найдено</div>';
+            if (!res.users || res.users.length === 0) {
+                list.innerHTML = '<div class="friend-add-empty-state">Новых пользователей не найдено</div>';
                 return;
             }
             res.users.forEach(u => {
                 const div = document.createElement('div');
-                div.className = 'd-flex align-items-center justify-content-between p-2 mb-1 bg-white rounded-3 shadow-sm';
+                div.className = 'friend-user-row friend-add-result-row';
                 div.innerHTML = `
-                    <div class="d-flex align-items-center gap-2">
-                        ${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'sm') : ''}
-                        <div class="fw-bold">${getSafeUserDisplayName(u)}</div>
+                    <div class="friend-user-avatar">${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'sm') : ''}</div>
+                    <div class="friend-user-main">
+                        <div class="friend-user-name">${getSafeUserDisplayName(u)}</div>
                     </div>
-                    <button class="btn btn-sm btn-primary rounded-circle" onclick="addFriend(${u.id})"><i class="bi bi-person-plus"></i></button>
+                    <div class="friend-user-action">
+                        <button class="btn-unstyled friend-action-add" onclick="addFriend(${u.id})" aria-label="Добавить друга">
+                            <i class="bi bi-person-plus"></i>
+                        </button>
+                    </div>
                  `;
                 list.appendChild(div);
             });
         }
     }
 }
+
+const searchFriendsAction = searchUsersToAddAction;
 
 async function addFriend(id, event) {
     if (event) {
@@ -1170,9 +1269,9 @@ async function addFriend(id, event) {
             profileBtn.className = 'btn btn-outline-secondary rounded-pill px-4 text-muted';
             profileBtn.innerHTML = '✓ Заявка отправлена';
         }
-        const searchInput = document.getElementById('friend-search-input');
+        const searchInput = document.getElementById('friend-add-search-input');
         if (searchInput) searchInput.value = '';
-        const searchResults = document.getElementById('friends-search-results');
+        const searchResults = document.getElementById('friend-add-search-results');
         if (searchResults) searchResults.style.display = 'none';
     } else {
         if (window.showAlert) window.showAlert('Внимание', res.message, 'warning');
@@ -1285,36 +1384,14 @@ async function loadFriendsList() {
     try {
         const container = document.getElementById('friends-list-container');
         if (!container) return;
-        container.style.display = 'block';
+        container.style.display = '';
 
         const res = await window.apiRequest({ action: 'get_friends' });
         if (res.status === 'ok') {
             container.innerHTML = '';
             const friends = res.friends || [];
-            if (friends.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted mt-4"><i class="bi bi-people h1 d-block mb-2"></i>Пока нет друзей</div>';
-                return;
-            }
-            friends.forEach(f => {
-                const div = document.createElement('div');
-                div.className = 'd-flex align-items-center mb-3 p-3 rounded-4';
-                div.style.background = 'rgba(255, 255, 255, 0.7)';
-                div.style.backdropFilter = 'blur(10px)';
-                div.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
-                div.onclick = () => openUserProfile(f.id);
-                div.style.cursor = 'pointer';
-                div.innerHTML = `
-                    <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}</div>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold">${getSafeUserDisplayName(f)}</div>
-                        <div class="small text-muted">Друг</div>
-                    </div>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeFriend(${f.id}, event)">
-                        <i class="bi bi-person-dash"></i>
-                    </button>
-                `;
-                container.appendChild(div);
-            });
+            currentFriendsList = friends;
+            renderFriendList(friends);
         } else {
             container.innerHTML = '<p class="text-center text-danger">Ошибка: ' + (res.message || 'Unknown') + '</p>';
         }
@@ -1338,21 +1415,19 @@ async function loadFriendRequests() {
         }
         requests.forEach(req => {
             const div = document.createElement('div');
-            div.className = 'd-flex align-items-center mb-3 p-3 rounded-4';
-            div.style.background = 'rgba(255, 255, 255, 0.7)';
-            div.style.backdropFilter = 'blur(10px)';
-            div.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)';
+            div.className = 'friend-user-row friend-request-row';
             div.onclick = () => openUserProfile(req.id);
-            div.style.cursor = 'pointer';
             div.innerHTML = `
-                <div class="me-3">${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'md') : ''}</div>
-                <div class="flex-grow-1">
-                    <div class="fw-bold">${getSafeUserDisplayName(req)}</div>
-                    <div class="small text-muted">Хочет добавить вас</div>
+                <div class="friend-user-avatar">${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'md') : ''}</div>
+                <div class="friend-user-main">
+                    <div class="friend-user-name">${getSafeUserDisplayName(req)}</div>
+                    <div class="friend-user-meta">Хочет добавить вас</div>
                 </div>
-                <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" onclick="acceptFriend(${req.id}, event)">
-                    Принять
-                </button>
+                <div class="friend-user-action">
+                    <button class="btn-unstyled friend-action-accept" onclick="acceptFriend(${req.id}, event)" aria-label="Принять заявку">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                </div>
             `;
             container.appendChild(div);
         });

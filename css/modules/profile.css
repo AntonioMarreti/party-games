@@ -362,6 +362,336 @@ body.dark-mode .stat-label {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Friends screen UI polish */
+#screen-friends .nav-pills .nav-link {
+    border-radius: 999px;
+    border: 1px solid transparent;
+    padding: 10px 18px;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+#screen-friends .nav-pills .nav-link.active {
+    color: var(--text-main);
+    background: var(--bg-card);
+    border-color: var(--border-glass);
+    box-shadow: var(--shadow-sm);
+}
+
+#screen-friends .nav-pills .nav-link:not(.active):hover {
+    background: color-mix(in srgb, var(--bg-secondary), var(--bg-card) 40%);
+}
+
+#screen-friends .friend-search-shell,
+#screen-friends .friend-add-section {
+    width: 100%;
+}
+
+#screen-friends .friend-search-input-wrap {
+    position: relative;
+}
+
+#screen-friends .friend-search-field {
+    border: 1px solid var(--divider);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    padding: 10px 44px 10px 14px;
+    min-height: 42px;
+    width: 100%;
+    color: var(--text-main);
+    outline: none;
+    font-size: 0.95rem;
+}
+
+#screen-friends .friend-search-field::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+#screen-friends .friend-search-field:focus {
+    box-shadow: inset 0 0 0 1px var(--primary-color);
+}
+
+#screen-friends .friend-search-button {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#screen-friends .friend-search-button:hover {
+    color: var(--text-main);
+}
+
+#screen-friends .friend-search-input-wrap-filter .friend-search-field {
+    padding: 10px 14px 10px 44px;
+}
+
+#screen-friends .friend-search-input-wrap-add .friend-search-field {
+    padding: 10px 44px 10px 14px;
+}
+
+#screen-friends .friend-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+#screen-friends .friends-view-wrapper {
+    padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px));
+}
+
+#screen-friends .friend-add-card {
+    width: 100%;
+    border: 1px solid var(--divider);
+    border-radius: 18px;
+    background: var(--bg-secondary);
+    box-shadow: none;
+    overflow: hidden;
+}
+
+#screen-friends .friend-add-card.open {
+    border-color: var(--border-main);
+    box-shadow: var(--shadow-sm);
+}
+
+#screen-friends .friend-add-action-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-main);
+    transition: background 0.2s ease, border-color 0.2s ease;
+    text-align: left;
+}
+
+#screen-friends .friend-add-action-row:hover {
+    background: color-mix(in srgb, var(--bg-secondary), var(--bg-card) 20%);
+}
+
+#screen-friends .friend-add-panel {
+    display: none;
+    padding: 0 14px 10px;
+}
+
+#screen-friends .friend-add-panel.open {
+    display: block;
+}
+
+#screen-friends .friend-add-action-icon {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+#screen-friends .friend-add-action-text {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+#screen-friends .friend-add-action-chevron {
+    color: var(--text-muted);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+#screen-friends .friend-add-results {
+    margin-top: 8px;
+    border-top: 1px solid var(--divider);
+    padding-top: 10px;
+}
+
+#screen-friends #friend-add-search-list,
+#screen-friends #friends-req-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#screen-friends .friend-add-heading {
+    display: none;
+}
+
+#screen-friends .friend-section-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-left: 0;
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+#screen-friends #friends-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin: 0;
+    padding: 0 0 18px;
+}
+
+#screen-friends .friend-user-row {
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 68px;
+    padding: 11px 13px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--border-glass), var(--text-main) 5%);
+    background: var(--bg-card);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+#screen-friends .friend-user-row:hover {
+    background: color-mix(in srgb, var(--bg-secondary), var(--bg-card) 16%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 78%);
+}
+
+#screen-friends .friend-user-row:active {
+    transform: translateY(1px);
+}
+
+#screen-friends .friend-user-avatar {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 18px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: var(--bg-secondary);
+}
+
+#screen-friends .friend-user-main {
+    flex: 1;
+    min-width: 0;
+}
+
+#screen-friends .friend-user-name {
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#screen-friends .friend-user-meta {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+#screen-friends .friend-user-action {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+#screen-friends .friend-action-danger,
+#screen-friends .friend-action-add,
+#screen-friends .friend-action-accept {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--divider);
+    background: transparent;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.2s, color 0.2s;
+}
+
+#screen-friends .friend-action-danger {
+    color: color-mix(in srgb, var(--status-error), var(--text-muted) 28%);
+    background: color-mix(in srgb, var(--status-error), transparent 94%);
+    border-color: color-mix(in srgb, var(--status-error), transparent 82%);
+}
+
+#screen-friends .friend-action-add {
+    color: var(--primary-color);
+    border-color: color-mix(in srgb, var(--primary-color), var(--divider) 70%);
+}
+
+#screen-friends .friend-action-accept {
+    color: var(--status-success, #00b894);
+    background: color-mix(in srgb, var(--status-success, #00b894), transparent 92%);
+    border-color: color-mix(in srgb, var(--status-success, #00b894), transparent 80%);
+}
+
+#screen-friends .friend-action-danger:hover,
+#screen-friends .friend-action-add:hover,
+#screen-friends .friend-action-accept:hover {
+    background: color-mix(in srgb, var(--text-main), var(--divider) 92%);
+    transform: scale(1.05);
+}
+
+body.dark-mode #screen-friends .friend-user-row,
+body.tg-dark-theme.dark-mode #screen-friends .friend-user-row {
+    background: color-mix(in srgb, var(--bg-card), #ffffff 3%);
+    border-color: color-mix(in srgb, var(--border-glass), #ffffff 12%);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+body.dark-mode #screen-friends .friend-action-danger,
+body.tg-dark-theme.dark-mode #screen-friends .friend-action-danger {
+    color: #fb7185;
+    background: rgba(251, 113, 133, 0.1);
+    border-color: rgba(251, 113, 133, 0.22);
+}
+
+.thermal-safe #screen-friends .friend-user-row {
+    background: var(--thermal-surface-bg) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
+}
+
+#screen-friends .friend-search-empty,
+#screen-friends .friend-empty-state,
+#screen-friends .friend-add-empty-state,
+#screen-friends .friend-request-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 18px 0;
+    font-size: 0.95rem;
+}
+
 .settings-item {
     display: flex;
     align-items: center;
