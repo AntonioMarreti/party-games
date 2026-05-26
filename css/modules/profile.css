@@ -395,6 +395,11 @@ body.dark-mode .stat-label {
     position: relative;
 }
 
+#screen-friends .friend-search-input-wrap-add {
+    --friend-search-icon-left: 14px;
+    --friend-search-icon-size: 20px;
+}
+
 #screen-friends .friend-search-field {
     box-sizing: border-box;
     display: block;
@@ -420,6 +425,12 @@ body.dark-mode .stat-label {
 #screen-friends .friend-search-field:focus {
     border-color: color-mix(in srgb, var(--primary-color), transparent 42%);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 86%);
+}
+
+#screen-friends .friend-search-input-wrap-add > #friend-add-search-input.friend-search-field {
+    box-sizing: border-box;
+    padding-left: 48px;
+    padding-right: 16px;
 }
 
 #screen-friends .friend-search-button {
