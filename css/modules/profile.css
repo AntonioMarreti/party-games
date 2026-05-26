@@ -396,12 +396,14 @@ body.dark-mode .stat-label {
     border: 1px solid var(--divider);
     border-radius: 999px;
     background: var(--bg-secondary);
-    padding: 10px 44px 10px 14px;
-    min-height: 42px;
+    padding: 10px 14px 10px 44px;
+    min-height: 44px;
     width: 100%;
     color: var(--text-main);
     outline: none;
-    font-size: 0.95rem;
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1.25;
 }
 
 #screen-friends .friend-search-field::placeholder {
@@ -410,7 +412,8 @@ body.dark-mode .stat-label {
 }
 
 #screen-friends .friend-search-field:focus {
-    box-shadow: inset 0 0 0 1px var(--primary-color);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 42%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 86%);
 }
 
 #screen-friends .friend-search-button {
@@ -431,14 +434,6 @@ body.dark-mode .stat-label {
 
 #screen-friends .friend-search-button:hover {
     color: var(--text-main);
-}
-
-#screen-friends .friend-search-input-wrap-filter .friend-search-field {
-    padding: 10px 14px 10px 44px;
-}
-
-#screen-friends .friend-search-input-wrap-add .friend-search-field {
-    padding: 10px 44px 10px 14px;
 }
 
 #screen-friends .friend-search-icon {

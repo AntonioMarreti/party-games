@@ -45,13 +45,12 @@
                     <div id="friend-add-search-block" class="friend-add-panel" style="display:none;">
                         <div class="friend-search-shell mb-3">
                             <div class="friend-search-input-wrap friend-search-input-wrap-add">
+                                <span class="friend-search-icon bi bi-search"></span>
                                 <input type="text" id="friend-add-search-input" class="friend-search-field"
                                     placeholder="Введите @username или имя"
                                     autocomplete="off"
+                                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); searchUsersToAddAction(); }"
                                     oninput="debounceSearchUsersToAdd()">
-                                <button type="button" class="friend-search-button" onclick="searchUsersToAddAction()" aria-label="Искать новых пользователей">
-                                    <i class="bi bi-search"></i>
-                                </button>
                             </div>
                         </div>
                         <div id="friend-add-search-results" class="friend-add-results" style="display:none;">
