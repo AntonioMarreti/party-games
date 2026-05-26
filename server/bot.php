@@ -149,6 +149,11 @@ $text = $message['text'] ?? '';
 botWebhookLog('received', getBotWebhookLogData($update));
 syncTelegramUserFromBotUpdate($pdo, $update);
 
+if (!empty($message['new_chat_members'])) {
+    handleTesterChatWelcome($chatId, $message['new_chat_members']);
+    exit;
+}
+
 // Логика команды /start
 if (isset($update['pre_checkout_query'])) {
     $pcq = $update['pre_checkout_query'];
@@ -767,6 +772,59 @@ function getBotUpdateFromUser($update)
     return [];
 }
 
+function handleTesterChatWelcome($chatId, $members)
+{
+    if (!isTesterChatAllowed($chatId)) {
+        return;
+    }
+
+    $members = is_array($members) ? $members : [];
+    if (!$members) {
+        return;
+    }
+
+    foreach ($members as $member) {
+        if (isBotSelfMember($member)) {
+            reply($chatId, "Бот подключён. /help — памятка тестера.");
+            return;
+        }
+    }
+
+    reply($chatId, getTesterChatWelcomeMessage());
+}
+
+function isTesterChatAllowed($chatId)
+{
+    $allowed = [];
+    if (defined('TESTER_CHAT_IDS')) {
+        $allowed = array_merge($allowed, (array) TESTER_CHAT_IDS);
+    }
+    if (defined('TESTER_CHAT_ID')) {
+        $allowed[] = TESTER_CHAT_ID;
+    }
+
+    $allowed = array_filter(array_map('strval', $allowed), static fn($id) => trim($id) !== '');
+    if (!$allowed) {
+        return false;
+    }
+
+    return in_array((string) $chatId, $allowed, true);
+}
+
+function isBotSelfMember($member)
+{
+    $botId = null;
+    if (defined('BOT_TOKEN') && preg_match('/^(\d+):/', BOT_TOKEN, $matches)) {
+        $botId = $matches[1];
+    }
+
+    if (!$botId) {
+        return false;
+    }
+
+    return (string) ($member['id'] ?? '') === (string) $botId;
+}
+
 function getTesterCommandUsage()
 {
     return "Использование:\n"
@@ -938,6 +996,19 @@ function getTesterHelpMessage()
         . "— проблемы в Telegram Desktop и на телефоне.\n\n"
         . "Баги лучше отправлять через приложение:\n"
         . "<b>Настройки → Сообщить об ошибке</b>";
+}
+
+function getTesterChatWelcomeMessage()
+{
+    return "Привет! Это чат тестеров Party Games 🎮\n\n"
+        . "Если заметишь баг или странный экран — лучше отправить репорт прямо из приложения:\n"
+        . "<b>Настройки → Сообщить об ошибке</b>\n\n"
+        . "После отправки появится номер репорта. Его можно скинуть сюда, если хочешь обсудить проблему.\n\n"
+        . "<b>Команды:</b>\n"
+        . "/bug — как отправить баг\n"
+        . "/build — текущая версия\n"
+        . "/help — памятка тестера\n\n"
+        . "Спасибо, что помогаешь тестировать 🙏";
 }
 
 function getAdminHelpMessage()

@@ -13,6 +13,9 @@ $db_pass = 'your_database_password';
 define('BOT_TOKEN', '123456789:ABCDefGhIjKlMnOpQrStUvWxYz');
 define('LOG_CHANNEL_ID', '-100xxxxxxxxxx'); // Optional: Channel for logs
 define('BOT_USERNAME', 'your_bot_username');
+define('TESTER_CHAT_IDS', [
+    '-100xxxxxxxxxx', // Optional: tester group chat ids for welcome messages
+]);
 
 // Telegram Login (OIDC) — from BotFather > Web Login
 define('TG_CLIENT_ID', 'your_bot_id');
