@@ -259,36 +259,22 @@ if (strpos($text, '/start') === 0) {
 
 // === ADMIN COMMANDS ===
 $isAdmin = in_array($message['from']['id'], ADMIN_IDS);
-
-// /help - Список команд (только для админов)
 $cmd = trim($text);
-if (strpos($cmd, '/help') === 0) {
+$commandParts = preg_split('/\s+/', trim($cmd));
+$commandName = strtolower(explode('@', $commandParts[0] ?? '')[0]);
+
+// /help, /help_admin - Список команд (только для админов)
+if (in_array($commandName, ['/help', '/help_admin'], true)) {
     if (!$isAdmin) {
         reply($chatId, getSfEmoji('error') . " Доступ запрещен");
         exit;
     }
 
-    $msg = getSfEmoji('admin') . " <b>Панель управления (Admin)</b>\n\n";
-    $msg .= getSfEmoji('stats') . " /stats — Общая статистика сервера\n";
-    $msg .= getSfEmoji('users') . " /users — Последние регистрации\n";
-    $msg .= "👤 /user &lt;telegram_id|@username&gt; — Диагностика пользователя\n";
-    $msg .= "🧪 /tester_list — Список тестеров\n";
-    $msg .= "🏷 /build — Текущая сборка\n";
-    $msg .= "🐞 /qa_last — Последние QA-репорты\n";
-    $msg .= "🐞 /qa &lt;id&gt; — Полный QA-репорт\n";
-    $msg .= "🐞 /qa_status &lt;id&gt; &lt;status&gt; [note] — Обновить QA-репорт\n";
-    $msg .= getSfEmoji('public') . " /public — Список публичных комнат\n";
-    $msg .= "🧪 /tester &lt;telegram_id|@username&gt; — Статус тестера\n";
-    $msg .= "✅ /tester_on &lt;telegram_id|@username&gt; — Включить тестера\n";
-    $msg .= "🚫 /tester_off &lt;telegram_id|@username&gt; — Выключить тестера\n";
-    $msg .= "❓ /help — Список всех команд";
-
-    reply($chatId, $msg);
+    reply($chatId, getAdminHelpMessage());
+    exit;
 }
 
 // /tester, /tester_on, /tester_off - Manage tester flag
-$commandParts = preg_split('/\s+/', trim($cmd));
-$commandName = strtolower(explode('@', $commandParts[0] ?? '')[0]);
 if (in_array($commandName, ['/tester', '/tester_on', '/tester_off'], true)) {
     if (!$isAdmin) {
         reply($chatId, getSfEmoji('error') . " Недостаточно прав");
@@ -910,6 +896,31 @@ function getAppBuildVersion()
     }
 
     return '—';
+}
+
+function getAdminHelpMessage()
+{
+    return getSfEmoji('admin') . " <b>Admin help</b>\n\n"
+        . "<b>Диагностика</b>\n"
+        . getSfEmoji('stats') . " /stats — общая статистика сервера\n"
+        . getSfEmoji('users') . " /users [limit] — последние регистрации\n"
+        . "👤 /user &lt;telegram_id|@username&gt; — карточка пользователя\n"
+        . "🏷 /build — текущая сборка и server_time\n"
+        . getSfEmoji('public') . " /public — публичные комнаты\n\n"
+        . "<b>Тестеры</b>\n"
+        . "🧪 /tester &lt;telegram_id|@username&gt; — статус tester flag\n"
+        . "✅ /tester_on &lt;telegram_id|@username&gt; — включить tester flag\n"
+        . "🚫 /tester_off &lt;telegram_id|@username&gt; — выключить tester flag\n"
+        . "🧪 /tester_list — список тестеров\n\n"
+        . "<b>QA reports</b>\n"
+        . "🐞 /qa_last — последние 5 QA-репортов\n"
+        . "🐞 /qa &lt;id&gt; — подробный QA-репорт\n"
+        . "🐞 /qa_status &lt;id&gt; &lt;status&gt; [note] — обновить статус\n"
+        . "🐞 /qa_help — краткая справка по QA-командам\n\n"
+        . "<b>Сервис</b>\n"
+        . "🛠 /repair или /db_repair — диагностика/ремонт БД\n"
+        . "⌨️ /clear — убрать reply keyboard\n"
+        . "❓ /help_admin — эта справка";
 }
 
 function getQaCommandHelp()
