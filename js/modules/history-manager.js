@@ -83,12 +83,15 @@ function formatHistoryDate(value) {
 }
 
 async function openGameHistory() {
-    setHistoryBackTarget('profile');
     if (window.switchTab) {
         window.switchTab('history', { source: 'profile' });
         return;
     }
-    if (window.showScreen) window.showScreen('history');
+
+    setHistoryBackTarget('profile');
+    if (window.showScreen) {
+        window.showScreen('history');
+    }
     updateHistoryBackButton();
     await loadGameHistory();
 }
