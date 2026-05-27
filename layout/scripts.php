@@ -382,20 +382,37 @@ if (!defined('TG_CLIENT_ID')) {
 
         const isMockWebApp = window.Telegram?.WebApp?.__PGB_MOCK === true;
         const hasInitData = !!(window.Telegram?.WebApp?.initData);
-        if (window.Telegram?.WebApp && (isMockWebApp || !hasInitData)) {
-            if (isMockWebApp) {
-                logAuthClientEvent('auth_ignored_empty_mock_initdata');
-            }
-            showBotFallbackAvailable('auth_ignored_empty_mock_initdata');
-            return;
-        }
-
         if (window.Telegram?.WebApp?.initData) {
             if (window.AuthManager?.loginTMA) {
                 if (loginLoading) loginLoading.style.display = 'block';
                 await window.AuthManager.loginTMA(window.Telegram.WebApp);
                 return;
             }
+        }
+
+        const urlInitData = window.AuthManager?.getTelegramInitDataFallback?.() || '';
+        if (urlInitData && window.AuthManager?.loginTMA) {
+            const urlStartParam = window.AuthManager?.getTelegramUrlStartParam?.(urlInitData) || '';
+            const urlPlatform = window.AuthManager?.getTelegramUrlPlatform?.() || 'unknown';
+            if (loginLoading) loginLoading.style.display = 'block';
+            await window.AuthManager.loginTMA({
+                initData: urlInitData,
+                initDataUnsafe: urlStartParam ? { start_param: urlStartParam } : {},
+                platform: urlPlatform,
+                __PGB_URL_HASH_FALLBACK: true
+            }, {
+                source: 'url_hash',
+                platform: urlPlatform
+            });
+            return;
+        }
+
+        if (window.Telegram?.WebApp && (isMockWebApp || !hasInitData)) {
+            if (isMockWebApp) {
+                logAuthClientEvent('auth_ignored_empty_mock_initdata');
+            }
+            showBotFallbackAvailable('auth_ignored_empty_mock_initdata');
+            return;
         }
 
         const telegramLogin = await waitForTelegramLogin(2000);

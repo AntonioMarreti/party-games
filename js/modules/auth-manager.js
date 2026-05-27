@@ -11,6 +11,91 @@ let globalUser = null;
 
 // === PUBLIC API ===
 
+function isRealTelegramWebApp(tg) {
+    return !!(tg && tg.__PGB_MOCK !== true);
+}
+
+function getHashParam(name) {
+    const rawHash = String(window.location.hash || '').replace(/^#/, '');
+    if (!rawHash) return '';
+
+    const prefix = `${name}=`;
+    if (name === 'tgWebAppData') {
+        const start = rawHash.indexOf(prefix);
+        if (start === -1) return '';
+
+        const valueStart = start + prefix.length;
+        const knownNextParams = [
+            '&tgWebAppVersion=',
+            '&tgWebAppPlatform=',
+            '&tgWebAppThemeParams=',
+            '&tgWebAppStartParam=',
+            '&tgWebAppBotInline=',
+            '&tgWebAppFullscreen=',
+            '&tgWebAppShowSettings='
+        ];
+        const end = knownNextParams
+            .map(param => rawHash.indexOf(param, valueStart))
+            .filter(index => index >= 0)
+            .sort((a, b) => a - b)[0] || rawHash.length;
+        try {
+            return decodeURIComponent(rawHash.slice(valueStart, end));
+        } catch (e) {
+            return '';
+        }
+    }
+
+    const parts = rawHash.split('&');
+    for (const part of parts) {
+        if (part.startsWith(prefix)) {
+            const rawValue = part.slice(prefix.length);
+            try {
+                return decodeURIComponent(rawValue);
+            } catch (e) {
+                return '';
+            }
+        }
+    }
+
+    return '';
+}
+
+function getStartParamFromInitData(initData) {
+    try {
+        return new URLSearchParams(initData || '').get('start_param') || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function getTelegramInitDataFallback() {
+    const tg = window.Telegram?.WebApp;
+    if (isRealTelegramWebApp(tg) && typeof tg.initData === 'string' && tg.initData.trim().length > 0) {
+        return tg.initData;
+    }
+
+    const initData = getHashParam('tgWebAppData');
+    if (!initData) return '';
+
+    if (typeof window.logAuthClientEvent === 'function') {
+        window.logAuthClientEvent('url_initdata_detected', {
+            detected: true,
+            length: initData.length,
+            platform: getHashParam('tgWebAppPlatform') || 'unknown'
+        });
+    }
+
+    return initData;
+}
+
+function getTelegramUrlStartParam(initData = '') {
+    return getHashParam('tgWebAppStartParam') || getStartParamFromInitData(initData);
+}
+
+function getTelegramUrlPlatform() {
+    return getHashParam('tgWebAppPlatform') || 'unknown';
+}
+
 async function initApp(tg) {
     let screenShown = false;
     try {
@@ -122,8 +207,17 @@ async function initApp(tg) {
     }
 }
 
-async function loginTMA(tg) {
+async function loginTMA(tg, context = {}) {
     if (window.apiRequest) {
+        const initData = typeof tg?.initData === 'string' ? tg.initData : '';
+        const source = context.source || (tg?.__PGB_URL_HASH_FALLBACK === true ? 'url_hash' : 'webapp');
+        if (!initData.trim()) {
+            if (typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('tma_login_failed', { status: 'missing_initdata', source });
+            }
+            return;
+        }
+
         const ua = navigator.userAgent || '';
         // Simple UA parsing for device name
         let device = 'Telegram';
@@ -134,9 +228,16 @@ async function loginTMA(tg) {
         else if (/Windows/.test(ua)) device = 'Windows · Telegram Desktop';
         else if (/Linux/.test(ua)) device = 'Linux · Telegram Desktop';
 
+        if (source === 'url_hash' && typeof window.logAuthClientEvent === 'function') {
+            window.logAuthClientEvent('url_initdata_login_attempt', {
+                length: initData.length,
+                platform: context.platform || 'unknown'
+            });
+        }
+
         const res = await window.apiRequest({
             action: 'login_tma',
-            initData: tg.initData,
+            initData,
             platform: 'tma',
             device,
         });
@@ -144,11 +245,28 @@ async function loginTMA(tg) {
             setAuthToken(res.token);
             if (typeof window.logAuthClientEvent === 'function') {
                 window.logAuthClientEvent('tma_login_success');
+                if (source === 'url_hash') {
+                    window.logAuthClientEvent('url_initdata_login_success', {
+                        platform: context.platform || 'unknown'
+                    });
+                }
             }
             initApp(tg);
         } else {
             if (typeof window.logAuthClientEvent === 'function') {
                 window.logAuthClientEvent('tma_login_failed', { status: res.status || 'error' });
+                if (source === 'url_hash') {
+                    window.logAuthClientEvent('url_initdata_login_failed', {
+                        status: res.status || 'error',
+                        platform: context.platform || 'unknown'
+                    });
+                }
+            }
+            if (source === 'url_hash') {
+                if (window.showScreen) window.showScreen('login');
+                if (typeof window.showBotFallbackAvailable === 'function') {
+                    window.showBotFallbackAvailable('auth_url_initdata_login_failed');
+                }
             }
             if (window.showAlert) window.showAlert('Ошибка авторизации', res.message, 'error');
         }
@@ -263,6 +381,9 @@ window.AuthManager = {
     loginTMA,
     logout,
     devLogin,
+    getTelegramInitDataFallback,
+    getTelegramUrlStartParam,
+    getTelegramUrlPlatform,
     setAuthToken,
     getAuthToken,
     setGlobalUser,
@@ -272,6 +393,9 @@ window.AuthManager = {
 // Global Aliases (for backward compatibility during migration)
 window.initApp = initApp;
 window.loginTMA = loginTMA;
+window.getTelegramInitDataFallback = getTelegramInitDataFallback;
+window.getTelegramUrlStartParam = getTelegramUrlStartParam;
+window.getTelegramUrlPlatform = getTelegramUrlPlatform;
 window.logout = logout;
 window.devLogin = devLogin;
 window.authToken = authToken; // Initial sync

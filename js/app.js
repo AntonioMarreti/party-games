@@ -63,6 +63,11 @@ function extractStartAppParam(tg) {
     const telegramParam = tg?.initDataUnsafe?.start_param;
     if (telegramParam) return String(telegramParam);
 
+    if (window.AuthManager?.getTelegramUrlStartParam) {
+        const urlStartParam = window.AuthManager.getTelegramUrlStartParam(window.AuthManager.getTelegramInitDataFallback?.() || '');
+        if (urlStartParam) return String(urlStartParam);
+    }
+
     try {
         const url = new URL(window.location.href);
         const queryParam = url.searchParams.get('startapp') || url.searchParams.get('start_param');
@@ -365,12 +370,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         tg = null;
     }
     const hasTmaInitData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
-    console.log('[Auth] token:', currentToken ? 'found' : 'missing', '| TMA initData:', hasTmaInitData ? 'present' : 'empty');
+    const urlInitData = !hasTmaInitData && window.AuthManager?.getTelegramInitDataFallback
+        ? window.AuthManager.getTelegramInitDataFallback()
+        : '';
+    const urlStartParam = urlInitData && window.AuthManager?.getTelegramUrlStartParam
+        ? window.AuthManager.getTelegramUrlStartParam(urlInitData)
+        : '';
+    const urlPlatform = urlInitData && window.AuthManager?.getTelegramUrlPlatform
+        ? window.AuthManager.getTelegramUrlPlatform()
+        : 'unknown';
+    const urlTg = urlInitData ? {
+        initData: urlInitData,
+        initDataUnsafe: urlStartParam ? { start_param: urlStartParam } : {},
+        platform: urlPlatform,
+        __PGB_URL_HASH_FALLBACK: true
+    } : null;
+    const authTg = hasTmaInitData ? tg : urlTg;
+    const hasAuthInitData = !!(authTg && typeof authTg.initData === 'string' && authTg.initData.trim().length > 0);
+    console.log('[Auth] token:', currentToken ? 'found' : 'missing', '| auth initData:', hasAuthInitData ? 'present' : 'empty');
 
     const loginStd = document.getElementById('login-methods-standard');
     const loginTma = document.getElementById('login-methods-tma');
     if (loginStd && loginTma) {
-        if (hasTmaInitData) {
+        if (hasAuthInitData) {
             loginStd.style.display = 'none';
             loginTma.style.display = 'block';
         } else {
@@ -382,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!currentToken && typeof resumePendingBotAuth === 'function') resumePendingBotAuth();
 
     const hasRealWebApp = !!tg && tg.__PGB_MOCK !== true;
-    if (!currentToken && !hasTmaInitData) {
+    if (!currentToken && !hasAuthInitData) {
         if (window.showScreen) window.showScreen('login');
         if (typeof showBotFallbackAvailable === 'function' && !hasRealWebApp) {
             showBotFallbackAvailable('auth_no_token_no_initdata_show_bot_fallback');
@@ -393,9 +415,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof window.logAuthClientEvent === 'function' && !tg) {
             window.logAuthClientEvent('auth_restore_without_webapp');
         }
-        if (window.AuthManager) await window.AuthManager.initApp(tg);
-    } else if (hasTmaInitData) {
-        if (window.AuthManager) await window.AuthManager.loginTMA(tg);
+        if (window.AuthManager) await window.AuthManager.initApp(authTg || tg);
+    } else if (hasAuthInitData) {
+        if (window.AuthManager) await window.AuthManager.loginTMA(authTg, urlTg ? {
+            source: 'url_hash',
+            platform: urlPlatform
+        } : {});
     } else {
         if (window.showScreen) window.showScreen('login');
     }
