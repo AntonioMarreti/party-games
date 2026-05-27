@@ -1556,7 +1556,11 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
 
 /* === SETTINGS SCREEN POLISH === */
 #screen-settings .room-content-wrapper {
-    padding-bottom: calc(104px + var(--bottom-safe-area, 0px));
+    padding-bottom: var(--app-bottom-nav-clearance);
+}
+
+#tab-profile > .content-wrapper {
+    padding-bottom: var(--app-bottom-nav-clearance) !important;
 }
 
 #screen-settings .settings-screen-header {
