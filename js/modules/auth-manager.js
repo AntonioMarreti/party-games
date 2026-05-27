@@ -96,6 +96,40 @@ function getTelegramUrlPlatform() {
     return getHashParam('tgWebAppPlatform') || 'unknown';
 }
 
+function getTelegramDeviceName() {
+    const ua = navigator.userAgent || '';
+    let device = 'Telegram';
+    if (/iPhone/.test(ua)) device = 'iPhone · Telegram';
+    else if (/iPad/.test(ua)) device = 'iPad · Telegram';
+    else if (/Android/.test(ua)) device = 'Android · Telegram';
+    else if (/Mac/.test(ua)) device = 'Mac · Telegram Desktop';
+    else if (/Windows/.test(ua)) device = 'Windows · Telegram Desktop';
+    else if (/Linux/.test(ua)) device = 'Linux · Telegram Desktop';
+    return device;
+}
+
+function updateSessionInfoBestEffort(device) {
+    if (!window.apiRequest) return;
+
+    window.apiRequest({
+        action: 'update_session_info',
+        platform: 'tma',
+        device
+    }, { timeoutMs: 4000 }).then((res) => {
+        if (res && res.status === 'error' && typeof window.logAuthClientEvent === 'function') {
+            window.logAuthClientEvent('update_session_info_best_effort_failed', {
+                is_timeout: !!res.is_timeout
+            });
+        }
+    }).catch((e) => {
+        if (typeof window.logAuthClientEvent === 'function') {
+            window.logAuthClientEvent('update_session_info_best_effort_exception', {
+                message: e?.name || 'error'
+            });
+        }
+    });
+}
+
 async function initApp(tg) {
     let screenShown = false;
     try {
@@ -112,6 +146,15 @@ async function initApp(tg) {
 
         // 1. Auth/Network Error -> Login (or auto re-login via TMA)
         if (!res || res.status === 'error' || res.status === 'auth_error') {
+            const hasSavedToken = !!(getAuthToken() || localStorage.getItem('pg_token'));
+            if (res && res.status === 'error' && res.is_timeout && hasSavedToken) {
+                if (typeof window.logAuthClientEvent === 'function') {
+                    window.logAuthClientEvent('auth_restore_get_state_timeout_continue');
+                }
+                if (window.showScreen) window.showScreen('lobby');
+                screenShown = true;
+                return;
+            }
             if (res && res.status === 'auth_error' && hasTmaData) {
                 // Token expired/invalidated (e.g. logged in from another device).
                 // Silently re-authenticate via Telegram instead of showing login screen.
@@ -134,15 +177,7 @@ async function initApp(tg) {
         //     (fixes migrated sessions that were labeled 'web'/'Перенесено из старой системы')
         const hasTmaCtx = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
         if (hasTmaCtx && window.apiRequest) {
-            const ua = navigator.userAgent || '';
-            let device = 'Telegram';
-            if (/iPhone/.test(ua)) device = 'iPhone · Telegram';
-            else if (/iPad/.test(ua)) device = 'iPad · Telegram';
-            else if (/Android/.test(ua)) device = 'Android · Telegram';
-            else if (/Mac/.test(ua)) device = 'Mac · Telegram Desktop';
-            else if (/Windows/.test(ua)) device = 'Windows · Telegram Desktop';
-            // Fire-and-forget — don't await so it doesn't slow down boot
-            window.apiRequest({ action: 'update_session_info', platform: 'tma', device });
+            updateSessionInfoBestEffort(getTelegramDeviceName());
         }
 
         // 2. Handle Start Params (Deep Links)
@@ -218,15 +253,7 @@ async function loginTMA(tg, context = {}) {
             return;
         }
 
-        const ua = navigator.userAgent || '';
-        // Simple UA parsing for device name
-        let device = 'Telegram';
-        if (/iPhone/.test(ua)) device = 'iPhone · Telegram';
-        else if (/iPad/.test(ua)) device = 'iPad · Telegram';
-        else if (/Android/.test(ua)) device = 'Android · Telegram';
-        else if (/Mac/.test(ua)) device = 'Mac · Telegram Desktop';
-        else if (/Windows/.test(ua)) device = 'Windows · Telegram Desktop';
-        else if (/Linux/.test(ua)) device = 'Linux · Telegram Desktop';
+        const device = getTelegramDeviceName();
 
         if (source === 'url_hash' && typeof window.logAuthClientEvent === 'function') {
             window.logAuthClientEvent('url_initdata_login_attempt', {

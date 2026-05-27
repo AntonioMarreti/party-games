@@ -20,10 +20,13 @@ function getApiTimeoutMs(action) {
         case 'get_public_rooms':
         case 'get_local_rooms':
         case 'get_scheduled_games':
-        case 'get_stats':
         case 'get_leaderboard':
         case 'get_history':
             return 30000;
+        case 'get_stats':
+            return 8000;
+        case 'update_session_info':
+            return 4000;
         case 'create_scheduled_game':
         case 'update_scheduled_game':
         case 'subscribe_scheduled_game':
@@ -34,6 +37,59 @@ function getApiTimeoutMs(action) {
         default:
             return 10000;
     }
+}
+
+function getHashParamFromRawHash(rawHash, name) {
+    const prefix = `${name}=`;
+    const part = String(rawHash || '').replace(/^#/, '').split('&').find(item => item.startsWith(prefix));
+    if (!part) return '';
+
+    try {
+        return decodeURIComponent(part.slice(prefix.length));
+    } catch (e) {
+        return '';
+    }
+}
+
+function getSafeLocationDiagnostics() {
+    const rawHash = String(window.location.hash || '');
+    const hasHash = rawHash.length > 0;
+    const hasTgWebAppData = rawHash.includes('tgWebAppData=');
+    let safeHashRoute = '';
+
+    if (hasHash) {
+        const route = rawHash.substring(1).split('?')[0].split('&')[0];
+        if (route && !route.includes('=') && !route.includes('tgWebApp')) {
+            safeHashRoute = `#${route}`;
+        } else if (hasTgWebAppData) {
+            safeHashRoute = '#telegram-launch';
+        }
+    }
+
+    return {
+        url_path: `${window.location.pathname}${safeHashRoute}`,
+        has_hash: hasHash,
+        has_tg_webapp_data: hasTgWebAppData,
+        telegram_platform: getHashParamFromRawHash(rawHash, 'tgWebAppPlatform') || window.Telegram?.WebApp?.platform || 'web'
+    };
+}
+
+function sanitizeLogContext(context = {}) {
+    const blocked = new Set(['href', 'hash', 'url', 'full_url', 'location', 'tgWebAppData', 'initData', 'signature', 'user']);
+    const safe = {};
+
+    for (const [key, value] of Object.entries(context || {})) {
+        if (blocked.has(key)) continue;
+        safe[key] = value;
+    }
+
+    return safe;
+}
+
+function sanitizeLogText(value) {
+    return String(value || '')
+        .replace(/tgWebAppData=[^\s#]+/g, 'tgWebAppData=[redacted]')
+        .replace(/([?&#])(hash|signature|user|initData)=([^&#\s]+)/g, '$1$2=[redacted]');
 }
 
 async function apiRequest(data, options = {}) {
@@ -141,13 +197,14 @@ async function apiRequest(data, options = {}) {
 }
 
 async function logClientError(message, stack = '', context = {}) {
+    const safeContext = sanitizeLogContext(context);
     const body = new FormData();
     body.append('action', 'log_client_error');
-    body.append('message', message);
-    body.append('stack', stack || new Error().stack);
+    body.append('message', sanitizeLogText(message));
+    body.append('stack', sanitizeLogText(stack || new Error().stack));
     body.append('context', JSON.stringify({
         ua: navigator.userAgent,
-        href: window.location.href,
+        ...getSafeLocationDiagnostics(),
         platform: window.Telegram?.WebApp?.platform || 'web',
         online: navigator.onLine,
         connection: navigator.connection ? { type: navigator.connection.effectiveType, rtt: navigator.connection.rtt } : 'unknown',
@@ -155,7 +212,7 @@ async function logClientError(message, stack = '', context = {}) {
             load: window.performance.timing.loadEventEnd - window.performance.timing.navigationStart,
             dom: window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart
         } : null,
-        ...context
+        ...safeContext
     }));
 
     try {
@@ -170,6 +227,7 @@ async function logClientError(message, stack = '', context = {}) {
 window.APIManager = {
     apiRequest,
     logClientError,
+    getSafeLocationDiagnostics,
     getAuthToken: () => authToken,
     setAuthToken: (t) => { authToken = t; localStorage.setItem('pg_token', t); },
     getServerTimeOffset: () => serverTimeOffset,
@@ -178,3 +236,4 @@ window.APIManager = {
 
 window.apiRequest = apiRequest;
 window.API_URL = API_URL;
+window.getSafeLocationDiagnostics = getSafeLocationDiagnostics;
