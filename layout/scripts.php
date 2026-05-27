@@ -110,7 +110,7 @@ if (!defined('TG_CLIENT_ID')) {
                 message: ev,
                 context: JSON.stringify({
                     event: ev,
-                    platform: window.Telegram?.WebApp?.platform || 'browser',
+                    platform: window.getTelegramPlatformFallback?.() || window.Telegram?.WebApp?.platform || 'browser',
                     has_tma_init_data: !!(window.Telegram?.WebApp?.initData),
                     ua: navigator.userAgent || '',
                     ...extra

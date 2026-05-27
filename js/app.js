@@ -84,26 +84,69 @@ function parseScheduledDeepLinkId(rawParam) {
     return match ? Number(match[1]) : 0;
 }
 
+function getTelegramHashParam(name) {
+    const rawHash = String(window.location.hash || '').replace(/^#/, '').replace(/\?/g, '&');
+    if (!rawHash) return '';
+
+    const prefix = `${name}=`;
+    const part = rawHash.split('&').find(item => item.startsWith(prefix));
+    if (!part) return '';
+
+    try {
+        return decodeURIComponent(part.slice(prefix.length));
+    } catch (e) {
+        return '';
+    }
+}
+
+function isRealTelegramWebApp(tg) {
+    return !!(tg && tg.__PGB_MOCK !== true);
+}
+
+function getTelegramPlatformFallback(tg = window.Telegram?.WebApp) {
+    if (isRealTelegramWebApp(tg) && tg.platform) {
+        return String(tg.platform);
+    }
+
+    const urlPlatform = getTelegramHashParam('tgWebAppPlatform');
+    if (urlPlatform) {
+        return urlPlatform;
+    }
+
+    return 'unknown';
+}
+
 function applyTelegramPlatformClass(tg) {
-    const platform = String(tg?.platform || 'browser').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'browser';
+    const platform = String(getTelegramPlatformFallback(tg)).toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'unknown';
     document.body.classList.forEach(className => {
         if (className.startsWith('tg-platform-')) {
             document.body.classList.remove(className);
         }
     });
+    document.documentElement.classList.forEach(className => {
+        if (className.startsWith('tg-platform-')) {
+            document.documentElement.classList.remove(className);
+        }
+    });
     document.body.classList.add(`tg-platform-${platform}`);
+    document.documentElement.classList.add(`tg-platform-${platform}`);
     document.documentElement.dataset.telegramPlatform = platform;
+    document.body.dataset.telegramPlatform = platform;
+
+    if (!isRealTelegramWebApp(tg) && getTelegramHashParam('tgWebAppPlatform') && typeof window.logAuthClientEvent === 'function') {
+        window.logAuthClientEvent('tma_platform_from_url', { platform });
+    }
 }
 
 function waitForTelegramWebApp(timeoutMs = 1500) {
-    if (window.Telegram?.WebApp) {
+    if (isRealTelegramWebApp(window.Telegram?.WebApp)) {
         return Promise.resolve(window.Telegram.WebApp);
     }
 
     return new Promise(resolve => {
         const started = Date.now();
         const timer = setInterval(() => {
-            if (window.Telegram?.WebApp) {
+            if (isRealTelegramWebApp(window.Telegram?.WebApp)) {
                 clearInterval(timer);
                 resolve(window.Telegram.WebApp);
                 return;
@@ -120,22 +163,86 @@ function waitForTelegramWebApp(timeoutMs = 1500) {
 }
 
 function updateTelegramViewportVars(tg) {
-    const platform = String(tg?.platform || '').toLowerCase();
-    if (platform !== 'android' || !window.visualViewport?.height) {
-        return;
-    }
+    const platform = String(getTelegramPlatformFallback(tg)).toLowerCase();
 
     const applyHeight = () => {
-        const height = Math.round(window.visualViewport.height);
+        const tmaHeight = isRealTelegramWebApp(tg) ? Number(tg.viewportStableHeight || tg.viewportHeight || 0) : 0;
+        const visualHeight = Number(window.visualViewport?.height || 0);
+        const height = Math.round(tmaHeight || visualHeight);
         if (height > 0) {
             document.documentElement.style.setProperty('--app-viewport-height', `${height}px`);
         }
     };
 
     applyHeight();
-    window.visualViewport.addEventListener('resize', applyHeight);
-    window.visualViewport.addEventListener('scroll', applyHeight);
+    if (window.visualViewport && (platform === 'android' || platform === 'ios')) {
+        window.visualViewport.addEventListener('resize', applyHeight);
+        window.visualViewport.addEventListener('scroll', applyHeight);
+    }
 }
+
+let telegramWebAppInitDone = false;
+let lateTelegramWebAppInitScheduled = false;
+
+function initTelegramWebAppShell(tg, context = 'startup') {
+    if (!isRealTelegramWebApp(tg)) return false;
+
+    try {
+        if (tg.expand) {
+            tg.expand();
+            if (context === 'late' && typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('tma_late_expand_called', { platform: getTelegramPlatformFallback(tg) });
+            }
+        }
+        if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
+            tg.requestFullscreen();
+        }
+
+        if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
+            tg.swipeBehavior.disableVertical();
+        } else if (tg.isVerticalSwipesEnabled !== undefined) {
+            tg.isVerticalSwipesEnabled = false;
+        }
+
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
+        if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+        if (tg.ready) tg.ready();
+        document.body.classList.toggle('tg-dark-theme', tg.colorScheme === 'dark');
+        applyTelegramPlatformClass(tg);
+        updateTelegramViewportVars(tg);
+        telegramWebAppInitDone = true;
+        return true;
+    } catch (e) {
+        console.warn("Telegram WebApp init failed", e);
+        return false;
+    }
+}
+
+function scheduleLateTelegramWebAppInit(timeoutMs = 5000) {
+    if (lateTelegramWebAppInitScheduled || telegramWebAppInitDone) return;
+    lateTelegramWebAppInitScheduled = true;
+
+    const started = Date.now();
+    const timer = setInterval(() => {
+        const tg = window.Telegram?.WebApp;
+        if (isRealTelegramWebApp(tg)) {
+            clearInterval(timer);
+            if (typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('tma_late_webapp_detected', { platform: getTelegramPlatformFallback(tg) });
+            }
+            if (initTelegramWebAppShell(tg, 'late') && typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('tma_late_init_done', { platform: getTelegramPlatformFallback(tg) });
+            }
+            return;
+        }
+
+        if (Date.now() - started >= timeoutMs) {
+            clearInterval(timer);
+        }
+    }, 250);
+}
+
+window.getTelegramPlatformFallback = getTelegramPlatformFallback;
 
 function routePendingScheduledDeepLink() {
     const scheduledGameId = Number(window.pendingScheduledGameDeepLinkId || 0);
@@ -288,28 +395,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!tg && typeof window.logAuthClientEvent === 'function') {
         window.logAuthClientEvent('auth_ui_ready_without_webapp');
     }
-    try {
-        if (!tg) throw new Error('Telegram WebApp unavailable');
-        if (tg.expand) tg.expand();
-        if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
-            tg.requestFullscreen();
-        }
-
-        // Swipe Behavior
-        if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
-            tg.swipeBehavior.disableVertical();
-        } else if (tg.isVerticalSwipesEnabled !== undefined) {
-            tg.isVerticalSwipesEnabled = false;
-        }
-
-        if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
-        if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
-        if (tg.ready) tg.ready();
-    } catch (e) {
+    if (tg) {
+        initTelegramWebAppShell(tg, 'startup');
+    } else {
         console.warn("Telegram WebApp not found");
         if (typeof window.logAuthClientEvent === 'function') {
             window.logAuthClientEvent('webapp_unavailable');
         }
+        scheduleLateTelegramWebAppInit();
     }
     applyTelegramPlatformClass(tg);
     updateTelegramViewportVars(tg);
