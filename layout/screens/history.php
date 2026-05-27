@@ -1,5 +1,9 @@
 <div id="screen-history" class="screen" style="display: none; height: 100vh; overflow-y: auto;">
     <div class="header-bg history-hero">
+        <button type="button" class="history-back-btn" onclick="goBackFromHistory()" aria-label="Назад в профиль">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            <span>Профиль</span>
+        </button>
         <div class="header-title">История игр</div>
         <div class="header-subtitle">Итоги партий и быстрый повтор</div>
     </div>

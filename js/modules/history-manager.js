@@ -29,6 +29,8 @@ const HISTORY_GAME_ICONS = {
     minesweeper_br: 'bi-patch-exclamation-fill text-secondary'
 };
 
+let historyBackTarget = 'profile';
+
 function escapeHistoryHtml(value) {
     const stringValue = String(value ?? '');
     return typeof window.safeHTML === 'function'
@@ -67,12 +69,29 @@ function formatHistoryDate(value) {
 }
 
 async function openGameHistory() {
+    historyBackTarget = 'profile';
     if (window.switchTab) {
         window.switchTab('history');
         return;
     }
     if (window.showScreen) window.showScreen('history');
     await loadGameHistory();
+}
+
+function goBackFromHistory() {
+    document.body.classList.remove('history-details-open');
+    const target = historyBackTarget || 'profile';
+
+    if (target === 'profile' && window.switchTab) {
+        window.switchTab('profile');
+        return;
+    }
+
+    if (window.switchTab) {
+        window.switchTab('profile');
+    } else if (window.showScreen) {
+        window.showScreen(target === 'lobby' ? 'lobby' : 'profile');
+    }
 }
 
 async function loadGameHistory() {
@@ -358,6 +377,7 @@ function replayHistoryGameFromSheet(event) {
 
 window.HistoryManager = {
     openGameHistory,
+    goBackFromHistory,
     loadGameHistory,
     openHistoryDetails,
     replayHistoryGame,
@@ -369,6 +389,7 @@ window.HistoryManager = {
 };
 
 window.openGameHistory = openGameHistory;
+window.goBackFromHistory = goBackFromHistory;
 window.loadGameHistory = loadGameHistory;
 window.openHistoryDetails = openHistoryDetails;
 window.replayHistoryGame = replayHistoryGame;

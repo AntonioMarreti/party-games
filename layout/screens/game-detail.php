@@ -6,10 +6,10 @@
     <div class="fixed-ui-layer position-absolute w-100 h-100"
         style="top:0; left:0; z-index: 100; pointer-events: none;">
         <!-- Close Button -->
-        <div class="position-absolute"
-            style="top: calc(44px + env(safe-area-inset-top)); right: 20px; pointer-events: auto;">
-            <button class="btn d-flex align-items-center justify-content-center shadow-lg"
-                onclick="window.showScreen('lobby')"
+        <div class="game-detail-close-wrap position-absolute">
+            <button id="game-detail-close-btn" class="btn d-flex align-items-center justify-content-center shadow-lg"
+                onclick="closeGameShowcase()"
+                aria-label="Назад"
                 style="width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.4); color:white; padding: 0; flex-shrink: 0; min-width: 40px;">
                 <i class="bi bi-x-lg" style="font-size: 18px; line-height: 1;"></i>
             </button>

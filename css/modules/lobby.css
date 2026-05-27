@@ -545,10 +545,41 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
 }
 
 .history-hero {
-    padding-top: calc(56px + env(safe-area-inset-top)) !important;
+    padding-top: calc(56px + var(--app-safe-top, env(safe-area-inset-top))) !important;
     padding-bottom: 74px !important;
     border-bottom-left-radius: 36px !important;
     border-bottom-right-radius: 36px !important;
+}
+
+.history-back-btn {
+    position: absolute;
+    top: calc(16px + var(--app-safe-top, env(safe-area-inset-top)));
+    left: 18px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 14px 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-on-accent);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.history-back-btn i {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.history-back-btn:active {
+    transform: scale(0.96);
 }
 
 .history-content {
@@ -2036,6 +2067,16 @@ body.dark-mode .lb-rank.top-3 {
 
 .btn-back-detail:active {
     transform: scale(0.92);
+}
+
+.game-detail-close-wrap {
+    top: calc(20px + var(--app-safe-top, env(safe-area-inset-top)));
+    right: 20px;
+    pointer-events: auto;
+}
+
+#game-detail-close-btn {
+    touch-action: manipulation;
 }
 
 .game-detail-icon-wrap {

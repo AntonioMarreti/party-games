@@ -10,6 +10,8 @@ const lastSourceShowTime = new Map(); // Track when we last showed a user's name
 let seenReactionIds = new Map(); // Prevent duplicate event processing (TTL based)
 const loadedGameScripts = new Set(); // Track loaded scripts to prevent duplicates
 let isStartGamePending = false;
+let gameShowcaseBackTarget = 'lobby';
+let gameShowcaseBackButtonHandler = null;
 
 // === DYNAMIC LOADING ===
 async function loadGameScript(gameType) {
@@ -917,9 +919,44 @@ function openGameCatalog(initialCategory = 'all') {
     if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'light');
 }
 
+function getGameShowcaseBackTarget() {
+    const catalog = document.getElementById('screen-game-catalog');
+    if (catalog?.classList.contains('active-screen')) return 'game-catalog';
+    return 'lobby';
+}
+
+function hideGameShowcaseBackButton() {
+    const tgBackButton = window.Telegram?.WebApp?.BackButton;
+    if (!tgBackButton) return;
+
+    if (gameShowcaseBackButtonHandler && typeof tgBackButton.offClick === 'function') {
+        tgBackButton.offClick(gameShowcaseBackButtonHandler);
+    }
+    gameShowcaseBackButtonHandler = null;
+    tgBackButton.hide();
+}
+
+function closeGameShowcase() {
+    hideGameShowcaseBackButton();
+
+    const target = gameShowcaseBackTarget || 'lobby';
+    if (target === 'game-catalog' && document.getElementById('screen-game-catalog')) {
+        window.showScreen('game-catalog');
+        return;
+    }
+
+    if (window.showScreen) window.showScreen('lobby');
+}
+
 function openGameShowcase(gameId) {
     const game = window.AVAILABLE_GAMES.find(g => g.id === gameId);
     if (!game) return;
+    gameShowcaseBackTarget = getGameShowcaseBackTarget();
+
+    const detailScreen = document.getElementById('screen-game-detail');
+    if (detailScreen) {
+        detailScreen.style.zIndex = '1000';
+    }
 
     // Elements
     const headerTitle = document.getElementById('game-detail-header-title');
@@ -1072,9 +1109,7 @@ function openGameShowcase(gameId) {
         }
 
         // 2. Clear Telegram BackButton
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
-            window.Telegram.WebApp.BackButton.hide();
-        }
+        hideGameShowcaseBackButton();
 
         // 3. Navigation
         if (window.switchTab) window.switchTab('home');
@@ -1102,11 +1137,12 @@ function openGameShowcase(gameId) {
     if (window.Telegram && window.Telegram.WebApp) {
         const tg = window.Telegram.WebApp;
         if (tg.BackButton) {
+            hideGameShowcaseBackButton();
+            gameShowcaseBackButtonHandler = () => {
+                closeGameShowcase();
+            };
             tg.BackButton.show();
-            tg.BackButton.onClick(() => {
-                window.showScreen('lobby');
-                tg.BackButton.hide();
-            });
+            tg.BackButton.onClick(gameShowcaseBackButtonHandler);
         }
     }
     window.showScreen('game-detail');
@@ -1213,6 +1249,7 @@ window.renderPopularGames = renderPopularGames;
 window.renderAllGames = renderAllGames;
 window.openGameCatalog = openGameCatalog;
 window.openGameShowcase = openGameShowcase;
+window.closeGameShowcase = closeGameShowcase;
 window.tryGameNow = tryGameNow;
 window.startGame = startGame;
 window.finishGameSession = finishGameSession;
