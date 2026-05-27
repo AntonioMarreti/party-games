@@ -152,7 +152,7 @@
                             </button>
                             <button
                                 class="btn btn-outline-danger rounded-circle p-2 d-flex align-items-center justify-content-center"
-                                style="width: 44px; height: 44px;" onclick="avatarEditor.clear()">
+                                style="width: 44px; height: 44px;" onclick="avatarEditor.clear(this)">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>

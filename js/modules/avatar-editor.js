@@ -12,6 +12,7 @@ class AvatarEditor {
         this.lastX = 0;
         this.lastY = 0;
         this.color = '#000000';
+        this.backgroundColor = '#FFFFFF';
         this.lineWidth = 5;
         this.mode = 'draw'; // 'draw' or 'erase'
 
@@ -49,9 +50,8 @@ class AvatarEditor {
         // Match CSS size
         this.resize();
 
-        // Initial fill white
-        this.ctx.fillStyle = "#FFFFFF";
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Initial opaque background
+        this.fillBackground();
 
         // Initial save
         this.saveState();
@@ -61,8 +61,8 @@ class AvatarEditor {
         // Make canvas square and responsive
         const rect = this.container.getBoundingClientRect();
         // Use shorter side to ensure square fits in container
-        const width = Math.floor(rect.width);
-        const height = Math.floor(rect.height);
+        const width = Math.ceil(rect.width);
+        const height = Math.ceil(rect.height);
 
         // Only resize if significantly different to avoid clearing on mobile scroll
         if (Math.abs(this.canvas.width - width) > 5 || Math.abs(this.canvas.height - height) > 5) {
@@ -97,8 +97,8 @@ class AvatarEditor {
 
         if (this.mode === 'erase') {
             this.ctx.globalCompositeOperation = 'source-over';
-            this.ctx.strokeStyle = '#FFFFFF';
-            this.ctx.lineWidth = 20;
+            this.ctx.strokeStyle = this.backgroundColor;
+            this.ctx.lineWidth = Math.max(8, Number(this.lineWidth) * 2);
         } else {
             this.ctx.globalCompositeOperation = 'source-over';
             this.ctx.strokeStyle = this.color;
@@ -148,14 +148,36 @@ class AvatarEditor {
 
     setEraser(element) {
         this.mode = 'erase';
-        document.querySelectorAll('.avatar-color-option').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('.btn-eraser').forEach(el => el.classList.remove('active'));
         if (element) element.classList.add('active');
     }
 
-    clear() {
-        this.ctx.fillStyle = "#FFFFFF";
+    setMode(mode, element) {
+        if (mode === 'erase') {
+            this.setEraser(element);
+            return;
+        }
+
+        this.mode = 'draw';
+        document.querySelectorAll('.btn-eraser').forEach(el => el.classList.remove('active'));
+    }
+
+    fillBackground() {
         this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.fillStyle = this.backgroundColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    clear(element) {
+        this.fillBackground();
+
+        if (element) {
+            element.classList.remove('active');
+            element.blur();
+        }
+        if (this.mode === 'erase') {
+            this.setMode('draw');
+        }
 
         this.saveState(); // Save the "cleared" state so we can undo it
     }
@@ -188,8 +210,7 @@ class AvatarEditor {
         img.onload = () => {
             this.ctx.globalCompositeOperation = 'source-over';
             // Fill white instead of clearing (avoids transparency)
-            this.ctx.fillStyle = "#FFFFFF";
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.fillBackground();
 
             // Draw image SCALED to fit current canvas size (fixes resizing gaps)
             this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
@@ -202,8 +223,7 @@ class AvatarEditor {
             this.restoreHistoryFromStep(this.step);
         } else {
             // White background default
-            this.ctx.fillStyle = "#FFFFFF";
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.fillBackground();
         }
     }
 
@@ -214,8 +234,7 @@ class AvatarEditor {
             img.onload = () => {
                 this.ctx.globalCompositeOperation = 'source-over';
                 // Clear/Fill White
-                this.ctx.fillStyle = "#FFFFFF";
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.fillBackground();
 
                 // Draw Scaled
                 this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
@@ -240,7 +259,7 @@ class AvatarEditor {
             const tCtx = tempCanvas.getContext('2d');
 
             // Fill white background (handling transparency from eraser)
-            tCtx.fillStyle = '#FFFFFF';
+            tCtx.fillStyle = this.backgroundColor;
             tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
             // Draw original canvas on top
