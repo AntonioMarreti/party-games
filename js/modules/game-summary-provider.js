@@ -207,6 +207,8 @@
         const winnerName = data.winner?.name || data.winner || '';
         const playAgainLabel = options.playAgainLabel || 'Играть еще раз';
         const playAgainAction = options.playAgainAction || 'play-again';
+        const roomActionLabel = options.roomActionLabel || '';
+        const roomAction = options.roomAction || 'return-to-room';
         const shareLabel = options.shareLabel || 'Поделиться в Telegram';
         const canShareStory = Boolean(window.Telegram?.WebApp?.shareToStory);
         const previewTitle = winnerName ? `Победитель: ${winnerName}` : (data.outcome || 'Итог партии');
@@ -243,6 +245,11 @@
                     <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(playAgainAction)}" data-game-id="${escapeHtml(data.gameId)}">
                         <i class="bi bi-arrow-repeat me-2"></i> ${escapeHtml(playAgainLabel)}
                     </button>
+                    ${roomActionLabel ? `
+                        <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(roomAction)}" data-game-id="${escapeHtml(data.gameId)}">
+                            <i class="bi bi-door-open me-2"></i> ${escapeHtml(roomActionLabel)}
+                        </button>
+                    ` : ''}
                     ${canShareStory ? `
                         <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="share-story" data-game-id="${escapeHtml(data.gameId)}">
                             <i class="bi bi-camera-fill me-2"></i> В историю
