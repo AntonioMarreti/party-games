@@ -18,6 +18,8 @@ body {
     --app-safe-bottom: env(safe-area-inset-bottom, 0px);
     --app-safe-top: var(--app-safe-top-base);
     --app-bottom-nav-clearance: calc(120px + var(--app-safe-bottom));
+    --desktop-app-shell-width: 480px;
+    --desktop-bottom-nav-width: 380px;
 }
 
 @supports (min-height: 100dvh) {
@@ -28,6 +30,24 @@ body {
 
 body.tg-platform-android.safe-top {
     --app-safe-top: calc(var(--app-safe-top-base) + 36px);
+}
+
+@media (min-width: 700px) {
+
+    body:not(.tg-platform-ios):not(.tg-platform-android) .device-wrapper {
+        width: 100%;
+        max-width: var(--desktop-app-shell-width);
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    body:not(.tg-platform-ios):not(.tg-platform-android) .bottom-nav {
+        width: min(90%, var(--desktop-bottom-nav-width));
+        max-width: var(--desktop-bottom-nav-width);
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
 }
 
 /* Wrapper */
