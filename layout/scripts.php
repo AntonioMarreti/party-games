@@ -63,6 +63,32 @@ if (!defined('TG_CLIENT_ID')) {
         return 'Telegram';
     }
 
+    function getAuthHashParam(name) {
+        const rawHash = String(window.location.hash || '').replace(/^#/, '').replace(/\?/g, '&');
+        if (!rawHash) return '';
+
+        const prefix = `${name}=`;
+        const part = rawHash.split('&').find(item => item.startsWith(prefix));
+        if (!part) return '';
+
+        try {
+            return decodeURIComponent(part.slice(prefix.length));
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function getAuthDiagnosticsPlatform() {
+        const webApp = window.Telegram?.WebApp;
+        if (webApp && webApp.__PGB_MOCK !== true && webApp.platform) {
+            return String(webApp.platform);
+        }
+
+        return window.getTelegramPlatformFallback?.()
+            || getAuthHashParam('tgWebAppPlatform')
+            || 'browser';
+    }
+
     function logAuthClientEvent(event, extra = {}) {
         try {
             // Normalize event name to avoid double "auth_" prefix
@@ -79,7 +105,10 @@ if (!defined('TG_CLIENT_ID')) {
                 'auth_bot_fallback_available',
                 'auth_ignored_empty_mock_initdata',
                 'auth_telegram_webapp_timeout_continue',
-                'auth_ui_ready_without_webapp'
+                'auth_ui_ready_without_webapp',
+                'auth_restore_without_webapp',
+                'auth_startup_api_call',
+                'auth_url_initdata_detected'
             ]);
 
             // Per-page dedupe and rate-limit (keyed by event + serialized extra)
@@ -110,10 +139,10 @@ if (!defined('TG_CLIENT_ID')) {
                 message: ev,
                 context: JSON.stringify({
                     event: ev,
-                    platform: window.getTelegramPlatformFallback?.() || window.Telegram?.WebApp?.platform || 'browser',
+                    ...extra,
+                    platform: getAuthDiagnosticsPlatform(),
                     has_tma_init_data: !!(window.Telegram?.WebApp?.initData),
-                    ua: navigator.userAgent || '',
-                    ...extra
+                    ua: navigator.userAgent || ''
                 })
             });
 
