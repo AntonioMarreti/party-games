@@ -790,25 +790,44 @@ function handleTesterChatWelcome($chatId, $members)
         }
     }
 
+    foreach ($members as $member) {
+        enableTesterAccessFromChat($GLOBALS['pdo'] ?? null, $member, $chatId);
+    }
+
     reply($chatId, getTesterChatWelcomeMessage());
 }
 
 function isTesterChatAllowed($chatId)
 {
-    $allowed = [];
-    if (defined('TESTER_CHAT_IDS')) {
-        $allowed = array_merge($allowed, (array) TESTER_CHAT_IDS);
-    }
-    if (defined('TESTER_CHAT_ID')) {
-        $allowed[] = TESTER_CHAT_ID;
-    }
-
-    $allowed = array_filter(array_map('strval', $allowed), static fn($id) => trim($id) !== '');
+    $allowed = getTesterChatAllowedIds();
     if (!$allowed) {
         return false;
     }
 
     return in_array((string) $chatId, $allowed, true);
+}
+
+function getTesterChatAllowedIds()
+{
+    $raw = [];
+    if (defined('TESTER_CHAT_IDS')) {
+        $raw = array_merge($raw, (array) TESTER_CHAT_IDS);
+    }
+    if (defined('TESTER_CHAT_ID')) {
+        $raw[] = TESTER_CHAT_ID;
+    }
+
+    $allowed = [];
+    foreach ($raw as $value) {
+        foreach (explode(',', (string) $value) as $id) {
+            $id = trim($id);
+            if ($id !== '') {
+                $allowed[] = $id;
+            }
+        }
+    }
+
+    return array_values(array_unique($allowed));
 }
 
 function isBotSelfMember($member)
@@ -823,6 +842,65 @@ function isBotSelfMember($member)
     }
 
     return (string) ($member['id'] ?? '') === (string) $botId;
+}
+
+function enableTesterAccessFromChat($pdo, $member, $chatId)
+{
+    if (!$pdo instanceof PDO || empty($member['id'])) {
+        return;
+    }
+
+    $telegramId = (string) $member['id'];
+    $username = sanitize_public_username($member['username'] ?? '');
+    $incomingFirstName = sanitize_public_text($member['first_name'] ?? '', 64);
+    $firstName = sanitize_display_name($incomingFirstName, $username, '', 'Игрок');
+
+    try {
+        $stmt = $pdo->prepare("SELECT id, username, first_name, is_tester FROM users WHERE telegram_id = ? LIMIT 1");
+        $stmt->execute([$telegramId]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            $updates = ['is_tester = 1'];
+            $params = [];
+            if ($username !== '') {
+                $updates[] = 'username = ?';
+                $params[] = $username;
+            }
+            if ($incomingFirstName !== '') {
+                $updates[] = 'first_name = ?';
+                $params[] = $firstName;
+            }
+            $params[] = (int) $user['id'];
+            $pdo->prepare("UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?")
+                ->execute($params);
+            $userId = (int) $user['id'];
+        } else {
+            $pdo->prepare("INSERT INTO users (telegram_id, first_name, username, photo_url, is_tester) VALUES (?, ?, ?, ?, 1)")
+                ->execute([$telegramId, $firstName, $username ?: null, '']);
+            $userId = (int) $pdo->lastInsertId();
+            $pdo->prepare("INSERT IGNORE INTO user_statistics (user_id) VALUES (?)")->execute([$userId]);
+        }
+
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logEvent('admin', 'tester_access_enabled_from_chat', [
+                'chat_id' => $chatId,
+                'user_id' => $userId,
+                'telegram_id' => $telegramId,
+                'username' => $username ?: null,
+                'first_name' => $incomingFirstName ?: null
+            ]);
+        }
+    } catch (Throwable $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('tester_chat_onboarding', [
+                'message' => $e->getMessage()
+            ], [
+                'telegram_id' => $telegramId,
+                'chat_id' => $chatId
+            ]);
+        }
+    }
 }
 
 function getTesterCommandUsage()
@@ -1001,6 +1079,7 @@ function getTesterHelpMessage()
 function getTesterChatWelcomeMessage()
 {
     return "Привет! Это чат тестеров Party Games 🎮\n\n"
+        . "Я включил тебе tester-доступ.\n\n"
         . "Если заметишь баг или странный экран — лучше отправить репорт прямо из приложения:\n"
         . "<b>Настройки → Сообщить об ошибке</b>\n\n"
         . "После отправки появится номер репорта. Его можно скинуть сюда, если хочешь обсудить проблему.\n\n"

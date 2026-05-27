@@ -16,6 +16,8 @@ define('BOT_USERNAME', 'your_bot_username');
 define('TESTER_CHAT_IDS', [
     '-100xxxxxxxxxx', // Optional: tester group chat ids for welcome messages
 ]);
+// Or use a comma-separated string:
+// define('TESTER_CHAT_IDS', '-100xxxxxxxxxx,-100yyyyyyyyyy');
 
 // Telegram Login (OIDC) — from BotFather > Web Login
 define('TG_CLIENT_ID', 'your_bot_id');
