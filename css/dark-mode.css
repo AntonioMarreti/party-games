@@ -35,6 +35,50 @@ body.dark-mode .custom-modal-content {
     box-shadow: var(--shadow-strong);
 }
 
+body.dark-mode .custom-modal-overlay .custom-modal-content h1,
+body.dark-mode .custom-modal-overlay .custom-modal-content h2,
+body.dark-mode .custom-modal-overlay .custom-modal-content h3,
+body.dark-mode .custom-modal-overlay .custom-modal-content h4,
+body.dark-mode .custom-modal-overlay .custom-modal-content h5,
+body.dark-mode .custom-modal-overlay .custom-modal-content h6,
+body.dark-mode .custom-modal-overlay .custom-modal-content p,
+body.dark-mode .custom-modal-overlay .custom-modal-content label,
+body.dark-mode .custom-modal-overlay .custom-modal-content span {
+    color: var(--text-main);
+}
+
+body.dark-mode .custom-modal-overlay .custom-modal-content .text-muted {
+    color: var(--text-muted) !important;
+}
+
+body.dark-mode .custom-modal-overlay .custom-modal-content .btn.btn-sm {
+    min-height: 36px;
+    color: var(--text-main);
+    border-color: color-mix(in srgb, var(--text-muted), transparent 45%);
+    background: color-mix(in srgb, var(--bg-secondary), transparent 8%);
+    line-height: 1.2;
+    white-space: normal;
+}
+
+body.dark-mode .custom-modal-overlay .custom-modal-content .btn.btn-sm i {
+    color: currentColor;
+    opacity: 1;
+}
+
+body.dark-mode .custom-modal-overlay .custom-modal-content .btn.btn-sm:hover,
+body.dark-mode .custom-modal-overlay .custom-modal-content .btn.btn-sm:focus,
+body.dark-mode .custom-modal-overlay .custom-modal-content .btn.btn-sm:active {
+    color: var(--text-on-accent);
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+}
+
+body.large-font .custom-modal-overlay .custom-modal-content .btn.btn-sm {
+    min-height: 42px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
 body.dark-mode .form-control {
     background-color: var(--bg-secondary);
     border-color: var(--border-glass);
