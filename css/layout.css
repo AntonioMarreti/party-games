@@ -12,11 +12,29 @@ body {
     width: 100%;
 }
 
+:root {
+    --app-viewport-height: 100vh;
+    --app-safe-top-base: env(safe-area-inset-top, 0px);
+    --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --app-safe-top: var(--app-safe-top-base);
+    --app-bottom-nav-clearance: calc(120px + var(--app-safe-bottom));
+}
+
+@supports (min-height: 100dvh) {
+    :root {
+        --app-viewport-height: 100dvh;
+    }
+}
+
+body.tg-platform-android.safe-top {
+    --app-safe-top: calc(var(--app-safe-top-base) + 36px);
+}
+
 /* Wrapper */
 .device-wrapper {
     /* Phone mockup styles handled in media query */
     width: 100%;
-    min-height: 100vh;
+    min-height: var(--app-viewport-height);
     display: flex;
     flex-direction: column;
     position: relative;
@@ -30,6 +48,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+    background: var(--bg-app);
 }
 
 .content-wrapper {
@@ -39,10 +58,10 @@ body {
 }
 
 .room-content-wrapper {
-    padding-top: calc(80px + env(safe-area-inset-top));
+    padding-top: calc(80px + var(--app-safe-top));
     padding-left: 24px;
     padding-right: 24px;
-    padding-bottom: 140px;
+    padding-bottom: var(--app-bottom-nav-clearance);
     min-height: 100%;
     display: flex;
     flex-direction: column;
@@ -50,8 +69,8 @@ body {
 
 /* Fix for Safe Area in game wrapper */
 .game-custom-wrapper {
-    padding-top: calc(80px + env(safe-area-inset-top));
-    padding-bottom: calc(120px + env(safe-area-inset-bottom)) !important;
+    padding-top: calc(80px + var(--app-safe-top));
+    padding-bottom: var(--app-bottom-nav-clearance) !important;
     min-height: 100%;
     display: flex;
     flex-direction: column;
@@ -61,7 +80,7 @@ body {
 .header-bg {
     background: var(--header-gradient);
     color: var(--text-on-accent);
-    padding-top: calc(40px + env(safe-area-inset-top));
+    padding-top: calc(40px + var(--app-safe-top));
     padding-bottom: 60px;
     padding-left: 24px;
     padding-right: 24px;
@@ -96,7 +115,7 @@ body {
     --bottom-nav-muted: rgba(40, 45, 55, 0.58);
     --bottom-nav-active: var(--primary-color);
     position: fixed;
-    bottom: 20px;
+    bottom: calc(20px + var(--app-safe-bottom));
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
@@ -114,7 +133,7 @@ body {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.10);
     border: 1px solid var(--bottom-nav-border);
     z-index: 10000;
-    margin-bottom: env(safe-area-inset-bottom);
+    margin-bottom: 0;
     opacity: 1;
 }
 
@@ -223,13 +242,29 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
 /* === SCREENS === */
 .screen {
     display: none;
-    min-height: 100%;
+    min-height: var(--app-viewport-height);
+    background: var(--bg-app);
+}
+
+#screen-lobby,
+#screen-lobby .tab-content,
+#screen-game,
+#game-area {
+    background: var(--bg-app);
+}
+
+#screen-lobby .tab-content {
+    min-height: var(--app-viewport-height);
+}
+
+#game-area {
+    min-height: var(--app-viewport-height);
 }
 
 .active-screen {
     display: block;
     animation: screenEnter 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-    height: 100%;
+    min-height: var(--app-viewport-height);
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
@@ -300,7 +335,7 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
 
 /* Isolated wrapper for Friends screen (Mobile Default) */
 .friends-view-wrapper {
-    padding-top: calc(80px + env(safe-area-inset-top)) !important;
+    padding-top: calc(80px + var(--app-safe-top)) !important;
     padding-left: 24px;
     padding-right: 24px;
     padding-bottom: 20px;
@@ -492,6 +527,7 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
         max-width: 480px !important;
         margin: 0 auto !important;
         overflow-x: hidden;
+        min-height: 100%;
     }
 }
 

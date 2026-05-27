@@ -79,6 +79,17 @@ function parseScheduledDeepLinkId(rawParam) {
     return match ? Number(match[1]) : 0;
 }
 
+function applyTelegramPlatformClass(tg) {
+    const platform = String(tg?.platform || 'browser').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'browser';
+    document.body.classList.forEach(className => {
+        if (className.startsWith('tg-platform-')) {
+            document.body.classList.remove(className);
+        }
+    });
+    document.body.classList.add(`tg-platform-${platform}`);
+    document.documentElement.dataset.telegramPlatform = platform;
+}
+
 function routePendingScheduledDeepLink() {
     const scheduledGameId = Number(window.pendingScheduledGameDeepLinkId || 0);
     if (!scheduledGameId) return;
@@ -247,6 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
         console.warn("Telegram WebApp not found");
     }
+    applyTelegramPlatformClass(tg);
 
     const startAppParam = extractStartAppParam(tg);
     const scheduledGameId = parseScheduledDeepLinkId(startAppParam);

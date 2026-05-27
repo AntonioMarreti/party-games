@@ -46,6 +46,11 @@
 #tab-home {
     background: var(--app-bg, #F8F9FD);
     color: var(--app-text, #2D3436);
+    min-height: var(--app-viewport-height, 100vh);
+}
+
+body.tg-platform-android.safe-top #tab-home .header-bg.home-hero {
+    padding-top: calc(44px + var(--app-safe-top));
 }
 
 .home-hero > .d-flex {
