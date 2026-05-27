@@ -62,7 +62,11 @@ async function apiRequest(data, options = {}) {
     }
 
     const controller = new AbortController();
-    const timeoutMs = options.timeoutMs ?? getApiTimeoutMs(data?.action);
+    let timeoutMs = options.timeoutMs ?? getApiTimeoutMs(data?.action);
+    // Make startup or anonymous public rooms load short and non-blocking
+    if (data?.action === 'get_public_rooms' && (options.startup === true || !authToken)) {
+        timeoutMs = Math.min(timeoutMs, 8000);
+    }
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {

@@ -673,7 +673,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => { if (window.loadPublicRooms) loadPublicRooms(); }, 1000);
+    setTimeout(() => {
+        try {
+            const storedToken = localStorage.getItem('pg_token');
+            const apiToken = (window.APIManager && typeof window.APIManager.getAuthToken === 'function') ? window.APIManager.getAuthToken() : null;
+            const hasToken = !!(storedToken || apiToken);
+            if (window.loadPublicRooms && hasToken) loadPublicRooms();
+        } catch (e) {
+            if (window.loadPublicRooms && localStorage.getItem('pg_token')) loadPublicRooms();
+        }
+    }, 1000);
 });
 
 // === DEBUG TOOLS ===

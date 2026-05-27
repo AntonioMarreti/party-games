@@ -65,11 +65,51 @@ if (!defined('TG_CLIENT_ID')) {
 
     function logAuthClientEvent(event, extra = {}) {
         try {
+            // Normalize event name to avoid double "auth_" prefix
+            let ev = String(event || '');
+            if (!ev.startsWith('auth_')) ev = 'auth_' + ev;
+
+            // Noisy diagnostic events (suppress remote reporting)
+            const noisy = new Set([
+                'auth_mock_webapp_detected_ignore_initdata',
+                'auth_mock_tma_detected',
+                'auth_telegram_login_initial_load_removed',
+                'auth_bot_fallback_ready_without_webapp',
+                'auth_bot_fallback_ready_without_real_telegram',
+                'auth_bot_fallback_available',
+                'auth_ignored_empty_mock_initdata',
+                'auth_telegram_webapp_timeout_continue',
+                'auth_ui_ready_without_webapp'
+            ]);
+
+            // Per-page dedupe and rate-limit (keyed by event + serialized extra)
+            window._authLoggedEvents = window._authLoggedEvents || new Set();
+            window._authEventTimestamps = window._authEventTimestamps || {};
+            const key = ev + '|' + (typeof extra === 'string' ? extra : JSON.stringify(extra || {}));
+            const now = Date.now();
+            const lastTs = window._authEventTimestamps[key] || 0;
+            const RATE_MS = 30 * 1000;
+
+            // If noisy, only log to console and skip remote reporting (rate-limited)
+            if (noisy.has(ev)) {
+                if (now - lastTs < RATE_MS) return;
+                window._authEventTimestamps[key] = now;
+                console.debug('[Auth][diag] suppressed remote log:', ev, extra);
+                return;
+            }
+
+            // For non-noisy events, dedupe identical events within page and rate-limit
+            if (window._authLoggedEvents.has(key) && (now - lastTs) < RATE_MS) {
+                return;
+            }
+            window._authEventTimestamps[key] = now;
+            window._authLoggedEvents.add(key);
+
             const body = getAuthFormData({
                 action: 'log_client_error',
-                message: 'auth_' + event,
+                message: ev,
                 context: JSON.stringify({
-                    event,
+                    event: ev,
                     platform: window.Telegram?.WebApp?.platform || 'browser',
                     has_tma_init_data: !!(window.Telegram?.WebApp?.initData),
                     ua: navigator.userAgent || '',
