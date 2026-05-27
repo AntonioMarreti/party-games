@@ -34,12 +34,12 @@
     <link rel="stylesheet" href="css/dark-mode.css?v=<?php echo $v; ?>">
 
     <!-- Telegram WebApp -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
     <script>
         // Immediate Theme Init to prevent "Flash of Default Color"
         (function () {
             try {
-                var tg = window.Telegram.WebApp;
+                var tg = window.Telegram && window.Telegram.WebApp;
                 if (!tg) return;
 
                 // 1. Background Color

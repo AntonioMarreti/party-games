@@ -9,7 +9,7 @@ if (!defined('TG_CLIENT_ID')) {
 <script src="libs/qrcode.min.js"></script>
 
 <!-- Telegram Login Library (OIDC) -->
-<script src="https://telegram.org/js/telegram-login.js" defer></script>
+<script src="https://telegram.org/js/telegram-login.js" async></script>
 
 <!-- Core Data & Config -->
 <script src="js/audio.js?v=<?php echo $v; ?>"></script>
@@ -82,6 +82,15 @@ if (!defined('TG_CLIENT_ID')) {
             console.warn('[Auth] log failed', e);
         }
     }
+
+    setTimeout(() => {
+        if (!window.Telegram?.WebApp) {
+            logAuthClientEvent('webapp_unavailable');
+        }
+        if (!window.Telegram?.Login) {
+            logAuthClientEvent('telegram_script_timeout', { script: 'telegram-login.js' });
+        }
+    }, 2500);
 
     function setBotAuthStatus(message, showCheckButton = false) {
         const statusEl = document.getElementById('bot-auth-status');
@@ -215,26 +224,73 @@ if (!defined('TG_CLIENT_ID')) {
         panel.style.display = (explicitDebug || localHost) ? 'block' : 'none';
     }
 
+    function waitForTelegramLogin(timeoutMs = 2000) {
+        if (window.Telegram?.Login?.auth) {
+            return Promise.resolve(window.Telegram.Login);
+        }
+
+        return new Promise(resolve => {
+            const started = Date.now();
+            const timer = setInterval(() => {
+                if (window.Telegram?.Login?.auth) {
+                    clearInterval(timer);
+                    resolve(window.Telegram.Login);
+                    return;
+                }
+                if (Date.now() - started >= timeoutMs) {
+                    clearInterval(timer);
+                    resolve(null);
+                }
+            }, 100);
+        });
+    }
+
+    function showBotFallbackAvailable(reason = '') {
+        logAuthClientEvent('bot_fallback_available', { reason });
+        setBotAuthStatus('Telegram Desktop не завершил вход. Попробуйте вход через бота.', false);
+    }
+
+    function openBotAuthUrl(url) {
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(url);
+            return;
+        }
+
+        const opened = window.open(url, '_blank', 'noopener');
+        if (!opened) {
+            window.location.href = url;
+        }
+    }
+
     // === NEW: Telegram Login (OIDC) ===
     async function loginViaTelegram() {
         const loginLoading = document.getElementById('login-loading');
-        // Check if Telegram.Login is available
-        if (!window.Telegram || !window.Telegram.Login) {
-            console.warn('Telegram.Login not available, falling back to bot login');
+
+        if (window.Telegram?.WebApp?.initData) {
+            if (window.AuthManager?.loginTMA) {
+                if (loginLoading) loginLoading.style.display = 'block';
+                await window.AuthManager.loginTMA(window.Telegram.WebApp);
+                return;
+            }
+        }
+
+        const telegramLogin = await waitForTelegramLogin(2000);
+        if (!telegramLogin) {
+            console.warn('Telegram.Login not available');
             logAuthClientEvent('telegram_login_unavailable');
-            loginViaBot();
+            showBotFallbackAvailable('telegram_login_unavailable');
             return;
         }
 
         try {
-            Telegram.Login.auth(
+            telegramLogin.auth(
                 { client_id: '<?php echo TG_CLIENT_ID; ?>', request_access: 'write' },
                 async (data) => {
                     if (!data) {
                         // User cancelled or error
                         console.log('Telegram Login: cancelled or failed');
                         logAuthClientEvent('telegram_login_cancelled');
-                        setBotAuthStatus('Вход через Telegram не завершился. Можно попробовать ещё раз или нажать «Войти через бота».');
+                        showBotFallbackAvailable('telegram_login_cancelled');
                         return;
                     }
 
@@ -283,11 +339,7 @@ if (!defined('TG_CLIENT_ID')) {
             if (res.status === 'ok') {
                 const pending = savePendingBotAuth(res.temp_code, res.bot_url);
                 logAuthClientEvent('bot_auth_started');
-                if (window.Telegram?.WebApp?.openTelegramLink) {
-                    window.Telegram.WebApp.openTelegramLink(res.bot_url);
-                } else {
-                    window.open(res.bot_url, '_blank');
-                }
+                openBotAuthUrl(res.bot_url);
                 startBotAuthPolling(pending);
 
             } else {

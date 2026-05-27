@@ -90,6 +90,27 @@ function applyTelegramPlatformClass(tg) {
     document.documentElement.dataset.telegramPlatform = platform;
 }
 
+function waitForTelegramWebApp(timeoutMs = 1500) {
+    if (window.Telegram?.WebApp) {
+        return Promise.resolve(window.Telegram.WebApp);
+    }
+
+    return new Promise(resolve => {
+        const started = Date.now();
+        const timer = setInterval(() => {
+            if (window.Telegram?.WebApp) {
+                clearInterval(timer);
+                resolve(window.Telegram.WebApp);
+                return;
+            }
+            if (Date.now() - started >= timeoutMs) {
+                clearInterval(timer);
+                resolve(null);
+            }
+        }, 100);
+    });
+}
+
 function updateTelegramViewportVars(tg) {
     const platform = String(tg?.platform || '').toLowerCase();
     if (platform !== 'android' || !window.visualViewport?.height) {
@@ -255,10 +276,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.ThemeManager && window.ThemeManager.loadSettings) window.ThemeManager.loadSettings();
     if (window.UIManager && window.UIManager.setupModalClosing) window.UIManager.setupModalClosing();
 
-    let tg;
+    let tg = await waitForTelegramWebApp(1500);
     try {
-        tg = window.Telegram.WebApp;
-        tg.expand();
+        if (!tg) throw new Error('Telegram WebApp unavailable');
+        if (tg.expand) tg.expand();
         if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
             tg.requestFullscreen();
         }
@@ -275,6 +296,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (tg.ready) tg.ready();
     } catch (e) {
         console.warn("Telegram WebApp not found");
+        if (typeof window.logAuthClientEvent === 'function') {
+            window.logAuthClientEvent('webapp_unavailable');
+        }
     }
     applyTelegramPlatformClass(tg);
     updateTelegramViewportVars(tg);
