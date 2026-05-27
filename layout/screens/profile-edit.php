@@ -294,7 +294,10 @@
             } else {
                 loader.close();
                 setTimeout(() => {
-                    showAlert('Ошибка генерации', res.message || 'Не удалось создать изображение', 'error');
+                    const fallbackMessage = 'Генерация временно недоступна. Можно нарисовать аватар вручную или загрузить фото.';
+                    const rawMessage = String(res?.message || '');
+                    const userMessage = rawMessage.startsWith('HF API Error') ? fallbackMessage : (rawMessage || fallbackMessage);
+                    showAlert('Ошибка генерации', userMessage, 'error');
                 }, 300);
             }
         } catch (e) {

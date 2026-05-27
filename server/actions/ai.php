@@ -55,8 +55,25 @@ function action_generate_content($pdo, $currentUser, $params)
                         TelegramLogger::logError('prompt_trans_fail', ['e' => $e->getMessage()]);
                 }
 
-                $imageUrl = AIService::generateImage($finalPrompt);
-                echo json_encode(['status' => 'ok', 'data' => ['url' => $imageUrl, 'prompt_used' => $finalPrompt]]);
+                try {
+                    $imageUrl = AIService::generateImage($finalPrompt);
+                    echo json_encode(['status' => 'ok', 'data' => ['url' => $imageUrl, 'prompt_used' => $finalPrompt]]);
+                } catch (Exception $e) {
+                    if (class_exists('TelegramLogger')) {
+                        TelegramLogger::logError('avatar_generation_failed', [
+                            'message' => $e->getMessage(),
+                            'provider' => 'huggingface'
+                        ], [
+                            'user_id' => $currentUser['id'] ?? null,
+                            'action' => 'generate_image'
+                        ]);
+                    }
+                    echo json_encode([
+                        'status' => 'error',
+                        'message' => 'Генерация временно недоступна. Можно нарисовать аватар вручную или загрузить фото.',
+                        'code' => 'avatar_generation_unavailable'
+                    ]);
+                }
                 return;
 
             case 'quiz_question':

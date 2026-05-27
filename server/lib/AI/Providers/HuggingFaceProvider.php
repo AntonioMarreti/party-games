@@ -6,7 +6,7 @@ require_once __DIR__ . '/../AIProvider.php';
 class HuggingFaceProvider implements AIProvider
 {
     private $apiKey;
-    private $imageModel = 'stabilityai/stable-diffusion-xl-base-1.0';
+    private $imageModel = 'black-forest-labs/FLUX.1-schnell';
     private $textModel = 'mistralai/Mistral-7B-Instruct-v0.2';
 
     public function __construct()
@@ -15,6 +15,9 @@ class HuggingFaceProvider implements AIProvider
             throw new Exception("Hugging Face API Key missing");
         }
         $this->apiKey = HUGGINGFACE_API_KEY;
+        if (defined('HUGGINGFACE_IMAGE_MODEL') && HUGGINGFACE_IMAGE_MODEL) {
+            $this->imageModel = HUGGINGFACE_IMAGE_MODEL;
+        }
     }
 
     public function text(array $messages, array $options = [])
@@ -53,7 +56,7 @@ class HuggingFaceProvider implements AIProvider
 
         if ($httpCode !== 200) {
             $error = json_decode($response, true);
-            throw new Exception("HF API Error ($httpCode): " . ($error['error'] ?? 'Unknown'));
+            throw new Exception("HF API Error ($httpCode) [{$this->imageModel}]: " . ($error['error'] ?? 'Unknown'));
         }
 
         // HF returns raw binary image data for image models
