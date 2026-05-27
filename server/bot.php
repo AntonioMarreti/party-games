@@ -228,6 +228,12 @@ if (strpos($text, '/start') === 0) {
             $stmt->execute([$tgUser['id'], $token, $tempCode]);
 
             if ($stmt->rowCount() > 0) {
+                if (class_exists('TelegramLogger')) {
+                    TelegramLogger::logEvent('auth', 'bot_auth_confirmed', [
+                        'telegram_id' => $tgUser['id'],
+                        'temp_code_prefix' => substr($tempCode, 0, 12)
+                    ]);
+                }
                 reply($chatId, getSfEmoji('success') . " <b>Авторизация успешна!</b>\n\nВернитесь в браузер, вы уже вошли в свой аккаунт.");
             } else {
                 reply($chatId, getSfEmoji('error') . " <b>Ошибка:</b> Сессия не найдена или уже истекла.");

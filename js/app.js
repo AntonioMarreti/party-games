@@ -308,6 +308,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             loginTma.style.display = 'none';
         }
     }
+    if (typeof updateDevLoginVisibility === 'function') updateDevLoginVisibility();
+    if (!currentToken && typeof resumePendingBotAuth === 'function') resumePendingBotAuth();
 
     if (currentToken) {
         if (window.AuthManager) await window.AuthManager.initApp(tg);

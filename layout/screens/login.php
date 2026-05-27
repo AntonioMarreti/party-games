@@ -25,6 +25,9 @@
                     style="background:none; border:none; color:rgba(255,255,255,0.4); font-size:13px; cursor:pointer; text-decoration:underline; width:100%;">
                     Не работает? Войти через бота
                 </button>
+
+                <div id="bot-auth-status" class="mt-3 text-white-50" style="display:none; font-size:12px; line-height:1.45;">
+                </div>
             </div>
 
             <!-- TMA Login (Hidden by default, shown via JS if initData present) -->
@@ -37,7 +40,7 @@
             </div>
 
             <!-- DEV LOGIN (REMOVE IN PRODUCTION) -->
-            <div class="mt-4">
+            <div id="dev-login-panel" class="mt-4" style="display:none;">
                 <div class="d-flex justify-content-center gap-2 mb-2">
                     <button class="btn btn-sm btn-outline-light text-white-50 p-1" onclick="devLogin(1)">Dev 1</button>
                     <button class="btn btn-sm btn-outline-light text-white-50 p-1" onclick="devLogin(2)">Dev 2</button>

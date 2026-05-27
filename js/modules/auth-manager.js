@@ -29,6 +29,9 @@ async function initApp(tg) {
                 await loginTMA(tg);
                 return;
             }
+            if (!hasTmaData && typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('telegram_initdata_missing');
+            }
             if (window.showScreen) window.showScreen('login');
             screenShown = true;
             return;
@@ -131,8 +134,14 @@ async function loginTMA(tg) {
         });
         if (res.status === 'ok') {
             setAuthToken(res.token);
+            if (typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('tma_login_success');
+            }
             initApp(tg);
         } else {
+            if (typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('tma_login_failed', { status: res.status || 'error' });
+            }
             if (window.showAlert) window.showAlert('Ошибка авторизации', res.message, 'error');
         }
     }

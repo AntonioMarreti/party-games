@@ -120,6 +120,12 @@ if ($action === 'poll_auth_session') {
         echo json_encode(['status' => 'ok', 'token' => $session['auth_token'], 'user' => $user]);
         // Опционально: удалить сессию после успеха
         $pdo->prepare("DELETE FROM auth_sessions WHERE id = ?")->execute([$session['id']]);
+    } elseif ($session) {
+        echo json_encode(['status' => 'pending']);
+    } elseif ($tempCode !== '') {
+        $expiredStmt = $pdo->prepare("SELECT id FROM auth_sessions WHERE temp_code = ? LIMIT 1");
+        $expiredStmt->execute([$tempCode]);
+        echo json_encode(['status' => $expiredStmt->fetch() ? 'expired' : 'pending']);
     } else {
         echo json_encode(['status' => 'pending']);
     }
