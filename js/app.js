@@ -105,6 +105,9 @@ function waitForTelegramWebApp(timeoutMs = 1500) {
             }
             if (Date.now() - started >= timeoutMs) {
                 clearInterval(timer);
+                if (typeof window.logAuthClientEvent === 'function') {
+                    window.logAuthClientEvent('telegram_webapp_timeout_continue');
+                }
                 resolve(null);
             }
         }, 100);
@@ -277,6 +280,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.UIManager && window.UIManager.setupModalClosing) window.UIManager.setupModalClosing();
 
     let tg = await waitForTelegramWebApp(1500);
+    if (!tg && typeof window.logAuthClientEvent === 'function') {
+        window.logAuthClientEvent('auth_ui_ready_without_webapp');
+    }
     try {
         if (!tg) throw new Error('Telegram WebApp unavailable');
         if (tg.expand) tg.expand();
@@ -344,11 +350,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         else currentToken = localStorage.getItem('pg_token');
     }
 
+    if (typeof currentToken === 'string') {
+        currentToken = currentToken.trim();
+    }
+
     // Sync back to AuthManager execution context if found
     if (currentToken && window.AuthManager && !window.AuthManager.getAuthToken()) {
         window.AuthManager.setAuthToken(currentToken);
     }
 
+    const isMockWebApp = !!(tg?.__PGB_MOCK === true);
+    if (isMockWebApp && typeof window.logAuthClientEvent === 'function') {
+        window.logAuthClientEvent('mock_webapp_detected_ignore_initdata');
+        tg = null;
+    }
     const hasTmaInitData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
     console.log('[Auth] token:', currentToken ? 'found' : 'missing', '| TMA initData:', hasTmaInitData ? 'present' : 'empty');
 
@@ -366,12 +381,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof updateDevLoginVisibility === 'function') updateDevLoginVisibility();
     if (!currentToken && typeof resumePendingBotAuth === 'function') resumePendingBotAuth();
 
+    const hasRealWebApp = !!tg && tg.__PGB_MOCK !== true;
+    if (!currentToken && !hasTmaInitData) {
+        if (window.showScreen) window.showScreen('login');
+        if (typeof showBotFallbackAvailable === 'function' && !hasRealWebApp) {
+            showBotFallbackAvailable('auth_no_token_no_initdata_show_bot_fallback');
+        }
+    }
+
     if (currentToken) {
+        if (typeof window.logAuthClientEvent === 'function' && !tg) {
+            window.logAuthClientEvent('auth_restore_without_webapp');
+        }
         if (window.AuthManager) await window.AuthManager.initApp(tg);
     } else if (hasTmaInitData) {
         if (window.AuthManager) await window.AuthManager.loginTMA(tg);
     } else {
-        showScreen('login');
+        if (window.showScreen) window.showScreen('login');
     }
 
     if (logoutGroup) {
@@ -442,13 +468,13 @@ window.addEventListener('tabChanged', (e) => {
     if (savedColor && window.ThemeManager) window.ThemeManager.applyAccentColor(savedColor);
 });
 
-window.checkState = async function () {
+window.checkState = async function (options = {}) {
     const isLeaving = window.RoomManager ? window.RoomManager.getIsLeavingProcess() : false;
     if (isLeaving || isCheckingState) return;
     isCheckingState = true;
 
     try {
-        const res = await apiRequest({ action: 'get_state' });
+        const res = await apiRequest({ action: 'get_state' }, { timeoutMs: options.timeoutMs, startup: options.startup });
 
         if (window.RoomManager && window.RoomManager.getIsLeavingProcess()) return;
 

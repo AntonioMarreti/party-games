@@ -17,11 +17,16 @@ async function initApp(tg) {
         const currentStartParam = tg?.initDataUnsafe?.start_param;
         console.log("Start Param:", currentStartParam);
 
-        const res = await window.checkState(); // checkState works via global/window for now
+        const isMockWebApp = tg?.__PGB_MOCK === true;
+        const hasTmaData = tg && !isMockWebApp && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
+        if (isMockWebApp && typeof window.logAuthClientEvent === 'function') {
+            window.logAuthClientEvent('mock_webapp_detected_ignore_initdata');
+        }
+
+        const res = await window.checkState({ timeoutMs: 8000, startup: true }); // checkState works via global/window for now
 
         // 1. Auth/Network Error -> Login (or auto re-login via TMA)
         if (!res || res.status === 'error' || res.status === 'auth_error') {
-            const hasTmaData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
             if (res && res.status === 'auth_error' && hasTmaData) {
                 // Token expired/invalidated (e.g. logged in from another device).
                 // Silently re-authenticate via Telegram instead of showing login screen.
@@ -31,6 +36,9 @@ async function initApp(tg) {
             }
             if (!hasTmaData && typeof window.logAuthClientEvent === 'function') {
                 window.logAuthClientEvent('telegram_initdata_missing');
+            }
+            if (typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('auth_startup_continue_after_api_failure');
             }
             if (window.showScreen) window.showScreen('login');
             screenShown = true;

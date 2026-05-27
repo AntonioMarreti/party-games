@@ -36,9 +36,13 @@ function getApiTimeoutMs(action) {
     }
 }
 
-async function apiRequest(data) {
+async function apiRequest(data, options = {}) {
     if (data && typeof data.action === 'string') {
         window.__lastApiAction = data.action;
+    }
+
+    if (options.startup && typeof window.logAuthClientEvent === 'function') {
+        window.logAuthClientEvent('auth_startup_api_call', { action: data?.action || 'unknown' });
     }
 
     let body;
@@ -58,7 +62,7 @@ async function apiRequest(data) {
     }
 
     const controller = new AbortController();
-    const timeoutMs = getApiTimeoutMs(data?.action);
+    const timeoutMs = options.timeoutMs ?? getApiTimeoutMs(data?.action);
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
@@ -110,6 +114,9 @@ async function apiRequest(data) {
                     window.logClientError("API Timeout", `Action: ${data?.action || 'unknown'}, Timeout: ${timeoutMs}ms`);
                 }
             }
+            if (options.startup && typeof window.logAuthClientEvent === 'function') {
+                window.logAuthClientEvent('auth_startup_api_timeout', { action: data?.action || 'unknown' });
+            }
         }
 
         let isSilent = false;
@@ -140,7 +147,7 @@ async function logClientError(message, stack = '', context = {}) {
         platform: window.Telegram?.WebApp?.platform || 'web',
         online: navigator.onLine,
         connection: navigator.connection ? { type: navigator.connection.effectiveType, rtt: navigator.connection.rtt } : 'unknown',
-        perf: window.performance ? { 
+        perf: window.performance ? {
             load: window.performance.timing.loadEventEnd - window.performance.timing.navigationStart,
             dom: window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart
         } : null,

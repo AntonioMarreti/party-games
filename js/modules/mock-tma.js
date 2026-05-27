@@ -10,6 +10,7 @@
     console.log("Creating Mock Telegram WebApp...");
 
     window.Telegram = window.Telegram || {};
+    window.Telegram.__PGB_MOCK = true;
 
     // Create a mock user
     const mockUser = {
@@ -112,7 +113,8 @@
             disableVertical: function () { console.log("[MockTMA] swipeBehavior.disableVertical()"); }
         },
 
-        isVersionAtLeast: function (ver) { return true; }
+        isVersionAtLeast: function (ver) { return true; },
+        __PGB_MOCK: true
     };
 
     // Mock Telegram.Login for browser dev (will trigger fallback to bot login)
@@ -127,6 +129,7 @@
             if (callback) callback(null);
         }
     };
+    window.Telegram.Login.__PGB_MOCK = true;
 
     if (isDev) {
         window.Telegram.WebApp.openInvoice = function (url, callback) {

@@ -8,8 +8,7 @@ if (!defined('TG_CLIENT_ID')) {
 <script src="libs/bootstrap.bundle.min.js"></script>
 <script src="libs/qrcode.min.js"></script>
 
-<!-- Telegram Login Library (OIDC) -->
-<script src="https://telegram.org/js/telegram-login.js" async></script>
+<!-- Telegram Login Library (OIDC) is loaded lazily on demand -->
 
 <!-- Core Data & Config -->
 <script src="js/audio.js?v=<?php echo $v; ?>"></script>
@@ -77,7 +76,12 @@ if (!defined('TG_CLIENT_ID')) {
                     ...extra
                 })
             });
-            fetch('server/api.php', { method: 'POST', body }).catch(() => { });
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            fetch('server/api.php', { method: 'POST', body, signal: controller.signal })
+                .catch(() => { })
+                .finally(() => clearTimeout(timeoutId));
         } catch (e) {
             console.warn('[Auth] log failed', e);
         }
@@ -87,10 +91,18 @@ if (!defined('TG_CLIENT_ID')) {
         if (!window.Telegram?.WebApp) {
             logAuthClientEvent('webapp_unavailable');
         }
-        if (!window.Telegram?.Login) {
-            logAuthClientEvent('telegram_script_timeout', { script: 'telegram-login.js' });
-        }
     }, 2500);
+
+    if (typeof window.logAuthClientEvent === 'function') {
+        window.addEventListener('load', () => {
+            if (!document.querySelector('script[src="https://telegram.org/js/telegram-login.js"]')) {
+                logAuthClientEvent('telegram_login_initial_load_removed');
+            }
+            if (window.Telegram?.__PGB_MOCK || window.Telegram?.WebApp?.__PGB_MOCK || window.Telegram?.Login?.__PGB_MOCK) {
+                logAuthClientEvent('mock_tma_detected');
+            }
+        });
+    }
 
     function setBotAuthStatus(message, showCheckButton = false) {
         const statusEl = document.getElementById('bot-auth-status');
@@ -224,34 +236,96 @@ if (!defined('TG_CLIENT_ID')) {
         panel.style.display = (explicitDebug || localHost) ? 'block' : 'none';
     }
 
-    function waitForTelegramLogin(timeoutMs = 2000) {
-        if (window.Telegram?.Login?.auth) {
+    let telegramLoginScriptPromise = null;
+
+    function isMockTelegramApi() {
+        return !!(window.Telegram?.__PGB_MOCK || window.Telegram?.WebApp?.__PGB_MOCK || window.Telegram?.Login?.__PGB_MOCK);
+    }
+
+    function hasValidTelegramLogin() {
+        return !!(window.Telegram?.Login && typeof window.Telegram.Login.auth === 'function' && window.Telegram.Login.__PGB_MOCK !== true);
+    }
+
+    function loadTelegramLoginScript(timeoutMs = 2000) {
+        if (hasValidTelegramLogin()) {
             return Promise.resolve(window.Telegram.Login);
         }
 
-        return new Promise(resolve => {
-            const started = Date.now();
-            const timer = setInterval(() => {
-                if (window.Telegram?.Login?.auth) {
-                    clearInterval(timer);
-                    resolve(window.Telegram.Login);
-                    return;
+        if (telegramLoginScriptPromise) {
+            return telegramLoginScriptPromise;
+        }
+
+        telegramLoginScriptPromise = new Promise(resolve => {
+            if (hasValidTelegramLogin()) {
+                resolve(window.Telegram.Login);
+                return;
+            }
+
+            logAuthClientEvent('telegram_login_lazy_load_started');
+
+            const existingScript = document.querySelector('script[src="https://telegram.org/js/telegram-login.js"]');
+            const script = existingScript || document.createElement('script');
+            let timer = null;
+            let resolved = false;
+
+            function cleanup(result) {
+                if (timer) clearTimeout(timer);
+                if (!resolved) {
+                    resolved = true;
+                    if (result) {
+                        logAuthClientEvent('telegram_login_lazy_load_success');
+                        resolve(window.Telegram?.Login && window.Telegram.Login.__PGB_MOCK !== true ? window.Telegram.Login : null);
+                    } else {
+                        logAuthClientEvent('telegram_login_lazy_load_timeout');
+                        telegramLoginScriptPromise = null;
+                        resolve(null);
+                    }
                 }
-                if (Date.now() - started >= timeoutMs) {
-                    clearInterval(timer);
-                    resolve(null);
-                }
-            }, 100);
+            }
+
+            script.async = true;
+            script.src = 'https://telegram.org/js/telegram-login.js';
+
+            script.addEventListener('load', () => cleanup(true));
+            script.addEventListener('error', () => cleanup(false));
+
+            timer = setTimeout(() => cleanup(false), timeoutMs);
+
+            if (!existingScript) {
+                document.head.appendChild(script);
+            }
         });
+
+        return telegramLoginScriptPromise;
+    }
+
+    function waitForTelegramLogin(timeoutMs = 2000) {
+        if (hasValidTelegramLogin()) {
+            return Promise.resolve(window.Telegram.Login);
+        }
+
+        if (window.Telegram?.Login?.__PGB_MOCK === true) {
+            logAuthClientEvent('auth_ignored_mock_telegram_login');
+        }
+
+        return loadTelegramLoginScript(timeoutMs);
     }
 
     function showBotFallbackAvailable(reason = '') {
+        const noRealWebApp = !window.Telegram?.WebApp || window.Telegram?.WebApp?.__PGB_MOCK || !window.Telegram?.WebApp?.openTelegramLink;
+        if (noRealWebApp) {
+            logAuthClientEvent('bot_fallback_ready_without_webapp', { reason });
+        }
+        if (!window.Telegram?.WebApp || window.Telegram?.WebApp?.__PGB_MOCK || window.Telegram?.Login?.__PGB_MOCK || !window.Telegram?.WebApp?.initData) {
+            logAuthClientEvent('bot_fallback_ready_without_real_telegram', { reason });
+        }
+
         logAuthClientEvent('bot_fallback_available', { reason });
         setBotAuthStatus('Telegram Desktop не завершил вход. Попробуйте вход через бота.', false);
     }
 
     function openBotAuthUrl(url) {
-        if (window.Telegram?.WebApp?.openTelegramLink) {
+        if (window.Telegram?.WebApp?.openTelegramLink && window.Telegram.WebApp.__PGB_MOCK !== true) {
             window.Telegram.WebApp.openTelegramLink(url);
             return;
         }
@@ -265,6 +339,16 @@ if (!defined('TG_CLIENT_ID')) {
     // === NEW: Telegram Login (OIDC) ===
     async function loginViaTelegram() {
         const loginLoading = document.getElementById('login-loading');
+
+        const isMockWebApp = window.Telegram?.WebApp?.__PGB_MOCK === true;
+        const hasInitData = !!(window.Telegram?.WebApp?.initData);
+        if (window.Telegram?.WebApp && (isMockWebApp || !hasInitData)) {
+            if (isMockWebApp) {
+                logAuthClientEvent('auth_ignored_empty_mock_initdata');
+            }
+            showBotFallbackAvailable('auth_ignored_empty_mock_initdata');
+            return;
+        }
 
         if (window.Telegram?.WebApp?.initData) {
             if (window.AuthManager?.loginTMA) {
