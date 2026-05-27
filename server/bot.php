@@ -280,6 +280,23 @@ if ($commandName === '/help') {
     exit;
 }
 
+// /tester_me - self-enable tester access inside allowlisted tester chat
+if ($commandName === '/tester_me') {
+    if (!isTesterChatAllowed($chatId)) {
+        reply($chatId, "Эта команда работает только в чате тестеров.");
+        exit;
+    }
+
+    if (empty($message['from']['id'])) {
+        reply($chatId, getSfEmoji('error') . " Не удалось определить пользователя.");
+        exit;
+    }
+
+    enableTesterAccessFromChat($pdo, $message['from'], $chatId);
+    reply($chatId, getSfEmoji('success') . " Tester-доступ включён. Если приложение уже открыто, перезапусти Mini App.");
+    exit;
+}
+
 // /help_admin - Список команд (только для админов)
 if ($commandName === '/help_admin') {
     if (!$isAdmin) {
@@ -1063,6 +1080,7 @@ function getTesterHelpMessage()
     return "🎮 <b>Party Games — памятка тестера</b>\n\n"
         . "<b>Полезные команды:</b>\n"
         . "🐞 /bug или /report — как отправить баг\n"
+        . "🧪 /tester_me — включить tester-доступ в чате тестеров\n"
         . "🏷 /build — текущая версия приложения\n"
         . "❓ /help — эта памятка\n\n"
         . "<b>Что особенно полезно проверять:</b>\n"
@@ -1085,6 +1103,7 @@ function getTesterChatWelcomeMessage()
         . "После отправки появится номер репорта. Его можно скинуть сюда, если хочешь обсудить проблему.\n\n"
         . "<b>Команды:</b>\n"
         . "/bug — как отправить баг\n"
+        . "/tester_me — включить tester-доступ\n"
         . "/build — текущая версия\n"
         . "/help — памятка тестера\n\n"
         . "Спасибо, что помогаешь тестировать 🙏";
