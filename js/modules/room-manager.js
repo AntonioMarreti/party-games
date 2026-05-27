@@ -1481,7 +1481,13 @@ async function openInviteModal() {
 
 async function sendToTelegram() {
     const botUsername = 'mpartygamebot'; // Replace with yours
-    const url = `https://t.me/${botUsername}?startgroup=room_${window.currentRoomId}`;
+    const roomCode = String(window.currentRoomCode || '').trim();
+    if (!roomCode) {
+        if (window.showAlert) window.showAlert('Ошибка', 'Не найден код комнаты', 'error');
+        return;
+    }
+
+    const url = `https://t.me/${botUsername}?startgroup=${encodeURIComponent(roomCode)}`;
 
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
         window.Telegram.WebApp.openTelegramLink(url);

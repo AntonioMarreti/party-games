@@ -220,6 +220,7 @@ if (strpos($text, '/start') === 0) {
     // Telegram присылает это как "/start ABCD"
     $parts = explode(' ', $text);
     $startParam = isset($parts[1]) ? $parts[1] : '';
+    $appStartParam = $startParam;
 
     // Формируем ссылку на Mini App
     // ЗАМЕНИ mpartygamebot на юзернейм своего бота
@@ -257,12 +258,13 @@ if (strpos($text, '/start') === 0) {
             exit;
         }
 
-        $appUrl .= "?startapp=" . $startParam;
+        $appStartParam = resolveRoomStartParam($pdo, $startParam);
+        $appUrl .= "?startapp=" . rawurlencode($appStartParam);
     }
 
     $responseText = "Привет! " . getSfEmoji('greeting') . "\n\nГотов к крутой вечеринке? Жми на кнопку ниже, чтобы создать комнату или войти к друзьям!";
     if (!empty($startParam)) {
-        $responseText = "Тебя пригласили в игру! " . getSfEmoji('game') . "\n\nЖми кнопку ниже, чтобы войти в комнату: **$startParam**";
+        $responseText = "Тебя пригласили в игру! " . getSfEmoji('game') . "\n\nЖми кнопку ниже, чтобы войти в комнату: <b>" . htmlspecialchars($appStartParam) . "</b>";
     }
 
     $response = [
@@ -282,6 +284,33 @@ if (strpos($text, '/start') === 0) {
     ];
 
     sendTelegram('sendMessage', $response);
+}
+
+function resolveRoomStartParam($pdo, $startParam)
+{
+    $startParam = trim((string) $startParam);
+    if (!preg_match('/^room_(\d+)$/i', $startParam, $matches)) {
+        return $startParam;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT room_code FROM rooms WHERE id = ? LIMIT 1");
+        $stmt->execute([(int) $matches[1]]);
+        $roomCode = $stmt->fetchColumn();
+        if (is_string($roomCode) && $roomCode !== '') {
+            return $roomCode;
+        }
+    } catch (Throwable $e) {
+        if (class_exists('TelegramLogger')) {
+            TelegramLogger::logError('bot_room_start_param_resolve', [
+                'message' => $e->getMessage(),
+            ], [
+                'start_param' => $startParam,
+            ]);
+        }
+    }
+
+    return $startParam;
 }
 
 // === BOT COMMANDS ===
