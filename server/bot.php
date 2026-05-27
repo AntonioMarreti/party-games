@@ -520,13 +520,16 @@ if ($commandName === '/qa_last') {
     }
 
     try {
-        $stmt = $pdo->query("
+        $limit = normalizeQaLastLimit($commandParts[1] ?? null);
+        $stmt = $pdo->prepare("
             SELECT id, user_id, telegram_id, username, first_name, type, severity, screen, status, report_text, created_at
             FROM qa_bug_reports
             ORDER BY id DESC
-            LIMIT 5
+            LIMIT ?
         ");
-        reply($chatId, formatQaLastReportsReply($stmt->fetchAll()));
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        reply($chatId, formatQaLastReportsReply($stmt->fetchAll(), $limit));
     } catch (Throwable $e) {
         reply($chatId, getSfEmoji('error') . " Ошибка чтения QA-репортов");
     }
@@ -1175,7 +1178,7 @@ function getAdminHelpMessage()
         . "<tg-emoji emoji-id=\"5807405618008433289\">➖</tg-emoji> /tester_off &lt;telegram_id|@username&gt; — выключить tester flag\n"
         . "<tg-emoji emoji-id=\"6026029580907715757\">📋</tg-emoji> /tester_list — список тестеров\n\n"
         . "<b>QA reports</b>\n"
-        . "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> /qa_last — последние 5 QA-репортов\n"
+        . "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> /qa_last [5|10] — последние QA-репорты\n"
         . "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> /qa &lt;id&gt; — подробный QA-репорт\n"
         . "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> /qa_status &lt;id&gt; &lt;status&gt; [note] — обновить статус\n"
         . "<tg-emoji emoji-id=\"6021401276904905698\">🛠</tg-emoji> /qa_help — краткая справка по QA-командам\n\n"
@@ -1188,19 +1191,28 @@ function getAdminHelpMessage()
 function getQaCommandHelp()
 {
     return "🐞 <b>QA reports</b>\n\n"
-        . "/qa_last — последние QA-репорты\n"
+        . "/qa_last [5|10] — последние QA-репорты\n"
         . "/qa &lt;id&gt; — подробный QA-репорт\n"
         . "/qa_status &lt;id&gt; &lt;status&gt; [note] — обновить статус\n\n"
         . "Статусы: new, triaged, in_progress, fixed, duplicate, wontfix, need_info";
 }
 
-function formatQaLastReportsReply($reports)
+function normalizeQaLastLimit($value)
+{
+    $limit = (int) ($value ?? 5);
+    if ($limit <= 0) {
+        return 5;
+    }
+    return min($limit, 10);
+}
+
+function formatQaLastReportsReply($reports, $limit = 5)
 {
     if (!$reports) {
         return "🐞 QA-репортов пока нет";
     }
 
-    $msg = "🐞 <b>Последние QA reports</b>\n\n";
+    $msg = "🐞 <b>Последние QA reports: " . (int) $limit . "</b>\n\n";
     foreach ($reports as $report) {
         $preview = botExtractQaReportSection($report['report_text'] ?? '', 'Что не так', ['Как должно быть', 'Шаги', 'Экран', 'Элемент', 'Контекст'], 220);
         if ($preview === '—') {
