@@ -316,6 +316,7 @@ if (in_array($commandName, ['/tester', '/tester_on', '/tester_off'], true)) {
     }
 
     $target = $commandParts[1] ?? '';
+    $replyTesterUser = null;
     $mode = 'status';
     if ($commandName === '/tester_on') {
         $mode = 'on';
@@ -325,12 +326,39 @@ if (in_array($commandName, ['/tester', '/tester_on', '/tester_off'], true)) {
         $mode = strtolower(trim($commandParts[2]));
     }
 
+    if ($target === '' && in_array($commandName, ['/tester', '/tester_on'], true) && !empty($message['reply_to_message']['from']['id'])) {
+        if (!isTesterChatAllowed($chatId)) {
+            reply($chatId, "Reply-режим /tester работает только в чате тестеров.");
+            exit;
+        }
+
+        $replyTesterUser = $message['reply_to_message']['from'];
+        $target = (string) $replyTesterUser['id'];
+        $mode = 'on';
+    }
+
     if ($target === '' || !in_array($mode, ['status', 'on', 'off'], true)) {
         reply($chatId, getTesterCommandUsage());
         exit;
     }
 
     try {
+        if ($replyTesterUser !== null) {
+            $beforeResolved = findTesterTargetUser($pdo, $target);
+            $before = $beforeResolved['status'] === 'ok' ? (int) ($beforeResolved['user']['is_tester'] ?? 0) : 0;
+
+            enableTesterAccessFromChat($pdo, $replyTesterUser, $chatId);
+
+            $resolved = findTesterTargetUser($pdo, $target);
+            if ($resolved['status'] !== 'ok') {
+                reply($chatId, getSfEmoji('error') . " Не удалось создать или найти пользователя.");
+                exit;
+            }
+
+            reply($chatId, formatTesterStatusReply($resolved['user'], $before, 1, 'on'));
+            exit;
+        }
+
         $resolved = findTesterTargetUser($pdo, $target);
         if ($resolved['status'] === 'not_found') {
             reply($chatId, "Пользователь не найден. Он должен сначала открыть Mini App.");
@@ -927,6 +955,7 @@ function getTesterCommandUsage()
         . "/tester_on 207737178\n"
         . "/tester_off 207737178\n"
         . "/tester @username\n\n"
+        . "В чате тестеров можно ответить на сообщение пользователя командой /tester\n\n"
         . "Можно также: /tester 207737178 on|off|status";
 }
 
