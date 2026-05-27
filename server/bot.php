@@ -98,6 +98,20 @@ function getBotWebhookLogData($update)
     ]);
 }
 
+function shouldLogBotWebhook($update, $chatId)
+{
+    try {
+        if (isTesterChatAllowed($chatId)) {
+            return false;
+        }
+    } catch (Throwable $e) {
+        // If config/helpers are broken, keep logging instead of hiding diagnostics.
+        return true;
+    }
+
+    return true;
+}
+
 register_shutdown_function(function () {
     $error = error_get_last();
     if (!$error) {
@@ -146,7 +160,9 @@ $message = $update['message'] ?? null;
 $chatId = $message['chat']['id'] ?? ($update['callback_query']['message']['chat']['id'] ?? 0);
 $text = $message['text'] ?? '';
 
-botWebhookLog('received', getBotWebhookLogData($update));
+if (shouldLogBotWebhook($update, $chatId)) {
+    botWebhookLog('received', getBotWebhookLogData($update));
+}
 syncTelegramUserFromBotUpdate($pdo, $update);
 
 if (!empty($message['new_chat_members'])) {
