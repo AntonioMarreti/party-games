@@ -29,7 +29,21 @@ const HISTORY_GAME_ICONS = {
     minesweeper_br: 'bi-patch-exclamation-fill text-secondary'
 };
 
-let historyBackTarget = 'profile';
+let historyBackTarget = null;
+
+function setHistoryBackTarget(target = null) {
+    historyBackTarget = target === 'profile' ? 'profile' : null;
+    updateHistoryBackButton();
+}
+
+function updateHistoryBackButton() {
+    const button = document.querySelector('#screen-history .history-back-btn');
+    if (!button) return;
+
+    const shouldShow = historyBackTarget === 'profile';
+    button.hidden = !shouldShow;
+    button.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+}
 
 function escapeHistoryHtml(value) {
     const stringValue = String(value ?? '');
@@ -69,12 +83,13 @@ function formatHistoryDate(value) {
 }
 
 async function openGameHistory() {
-    historyBackTarget = 'profile';
+    setHistoryBackTarget('profile');
     if (window.switchTab) {
-        window.switchTab('history');
+        window.switchTab('history', { source: 'profile' });
         return;
     }
     if (window.showScreen) window.showScreen('history');
+    updateHistoryBackButton();
     await loadGameHistory();
 }
 
@@ -378,6 +393,7 @@ function replayHistoryGameFromSheet(event) {
 window.HistoryManager = {
     openGameHistory,
     goBackFromHistory,
+    setHistoryBackTarget,
     loadGameHistory,
     openHistoryDetails,
     replayHistoryGame,
@@ -390,6 +406,7 @@ window.HistoryManager = {
 
 window.openGameHistory = openGameHistory;
 window.goBackFromHistory = goBackFromHistory;
+window.setHistoryBackTarget = setHistoryBackTarget;
 window.loadGameHistory = loadGameHistory;
 window.openHistoryDetails = openHistoryDetails;
 window.replayHistoryGame = replayHistoryGame;
@@ -400,6 +417,9 @@ window.replayHistoryGameFromSheet = replayHistoryGameFromSheet;
 
 window.addEventListener('screenChanged', (event) => {
     cleanupHistoryDetailsForScreen(event?.detail?.screenId || '');
+    if (event?.detail?.screenId === 'screen-history') {
+        updateHistoryBackButton();
+    }
 });
 
 window.addEventListener('tabChanged', (event) => {

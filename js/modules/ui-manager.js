@@ -209,8 +209,11 @@ const ROUTE_ACTIONS = {
     'leaderboard': 'openLeaderboardScreen'
 };
 
-function switchTab(tabId) {
+function switchTab(tabId, options = {}) {
     document.body.classList.remove('history-details-open');
+    if (tabId === 'history' && window.HistoryManager?.setHistoryBackTarget) {
+        window.HistoryManager.setHistoryBackTarget(options?.source === 'profile' ? 'profile' : null);
+    }
 
     // 1. Update visual state of tab buttons
     document.querySelectorAll('.nav-item').forEach(btn => {
