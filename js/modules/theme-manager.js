@@ -1,7 +1,7 @@
 /**
  * Theme Manager Module
  * Handles application theme, visual settings, and haptics.
- */
+*/
 
 const DEFAULT_SETTINGS = {
     noAnimations: false,
@@ -178,6 +178,7 @@ function syncUI() {
             });
         }, 100);
     }
+
 }
 
 function toggleSetting(key, value) {

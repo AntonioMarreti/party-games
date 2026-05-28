@@ -195,7 +195,11 @@ function initTelegramWebAppShell(tg, context = 'startup') {
             }
         }
         if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
-            tg.requestFullscreen();
+            try {
+                tg.requestFullscreen();
+            } catch (e) {
+                console.warn('requestFullscreen failed or was rejected', e);
+            }
         }
 
         if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
