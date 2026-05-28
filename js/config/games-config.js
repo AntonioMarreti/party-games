@@ -265,7 +265,7 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-grid-3x3',
         color: '#3498db',
         bgColor: '#ebf5fb',
-        promoImage: 'assets/promo/blockus.jpg',
+        promoImage: 'assets/promo/blockus_new.png',
         description: 'Легендарная абстрактная стратегия.',
         longDescription: `
             <p><strong>Blokus</strong> — это легендарная стратегия, где каждый миллиметр игрового поля на вес золота. В вашем распоряжении 21 фигура различной формы, и ваша задача — захватить как можно больше пространства, умело блокируя пути соперникам.</p>
