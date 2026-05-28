@@ -17,7 +17,7 @@ function getMinPlayersForGame(string $gameName): int
         'wordclash' => 1,
         'tictactoe' => 2,
         'spyfall' => 3,
-        'minesweeper_br' => 2,
+        'minesweeper_br' => 1,
         'backgammon_game' => 2,
     ];
 

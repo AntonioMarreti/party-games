@@ -644,8 +644,8 @@ const HOME_GAME_COPY = {
     },
     minesweeper_br: {
         description: 'Быстрый режим на внимательность',
-        players: '1 игрок',
-        time: '3-8 мин'
+        players: '1-8 игроков',
+        time: '5-15 мин'
     },
     spyfall: {
         description: 'Найди шпиона среди своих',

@@ -561,7 +561,7 @@ window.AVAILABLE_GAMES = [
                 <li><strong>Наказание за ошибки:</strong> Подрыв на мине отнимает очки и оглушает на 1 ход. Противники получат шанс вырваться вперёд!</li>
             </ul>
         `,
-        stats: { players: '2-8', time: '5-15 мин', difficulty: 'Высокая' },
+        stats: { players: '1-8', time: '5-15 мин', difficulty: 'Высокая' },
         rules: [
             { icon: 'bi-shield-check', text: 'Поле всегда решается чистой логикой' },
             { icon: 'bi-crosshair', text: 'Каждый клик — стратегическое решение' },
