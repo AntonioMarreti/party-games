@@ -376,12 +376,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tg_data_len: window.Telegram?.WebApp?.initData?.length || 0,
                     scripts: Array.from(document.scripts).map(s => s.src || 'inline').filter(s => s.includes('telegram') || s.includes('api-manager') || s.includes('auth-manager'))
                 };
-                window.logClientError("Splash Timeout (20s)", "App failed to load initial state within 20 seconds after DOMContentLoaded.", diag);
+                window.logClientError("Splash Timeout (35s)", "App failed to load initial state within 35 seconds after DOMContentLoaded.", diag);
             }
             if (window.showScreen) window.showScreen('login');
             if (window.showAlert) window.showAlert("Медленное соединение", "Приложение загружается дольше обычного. Попробуйте войти вручную.", "warning");
         }
-    }, 20000);
+    }, 35000);
 
     const AVAILABLE_GAMES = window.AVAILABLE_GAMES;
     if (AVAILABLE_GAMES && AVAILABLE_GAMES.length > 0) {

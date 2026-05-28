@@ -15,6 +15,8 @@ function getApiTimeoutMs(action) {
         case 'join_room':
         case 'generate_share_card':
             return 20000;
+        case 'login_tma':
+            return 20000;
         case 'get_state':
             return 15000;
         case 'get_public_rooms':
@@ -187,6 +189,7 @@ async function apiRequest(data, options = {}) {
             if (data.action === 'get_public_rooms') isSilent = true;
             if (data.action === 'get_local_rooms') isSilent = true;
             if (data.action === 'get_stats') isSilent = true;
+            if (data.action === 'login_tma') isSilent = true;
         }
 
         if (!isSilent) {
