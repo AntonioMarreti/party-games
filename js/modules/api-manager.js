@@ -36,6 +36,8 @@ function getApiTimeoutMs(action) {
         case 'open_scheduled_game':
         case 'cancel_scheduled_game':
             return 15000;
+        case 'get_favorites':
+            return 15000;
         default:
             return 10000;
     }
@@ -190,6 +192,7 @@ async function apiRequest(data, options = {}) {
             if (data.action === 'get_local_rooms') isSilent = true;
             if (data.action === 'get_stats') isSilent = true;
             if (data.action === 'login_tma') isSilent = true;
+            if (data.action === 'get_favorites') isSilent = true;
         }
 
         if (!isSilent) {
