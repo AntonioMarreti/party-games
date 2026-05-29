@@ -66,7 +66,8 @@ function get_pdo_sqlstate(PDOException $e)
 
 function is_missing_table_error(PDOException $e)
 {
-    return get_pdo_sqlstate($e) === '42S02';
+    return get_pdo_sqlstate($e) === '42S02'
+        || (($e->errorInfo[1] ?? null) === 1146);
 }
 
 function is_duplicate_key_error(PDOException $e)
