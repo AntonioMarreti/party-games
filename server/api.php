@@ -1,7 +1,22 @@
 <?php
+$pgb_request_start = microtime(true);
+register_shutdown_function(function() use ($pgb_request_start) {
+    global $action, $currentUser, $userData;
+    if ($action === 'login_tma' || $action === 'get_state') {
+        $duration_ms = round((microtime(true) - $pgb_request_start) * 1000, 2);
+        $mem_kb = round(memory_get_peak_usage() / 1024, 2);
+        $userId = 'unknown';
+        if ($action === 'login_tma' && isset($userData) && is_array($userData) && isset($userData['id'])) {
+            $userId = 'tg_' . $userData['id'];
+        } elseif (isset($currentUser['id'])) {
+            $userId = $currentUser['id'];
+        }
+        error_log("API_TIMING: action={$action} duration={$duration_ms}ms memory={$mem_kb}kb user_id={$userId}");
+    }
+});
+
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
-
 require_once 'config.php';
 require_once 'auth.php';
 require_once 'lib/TelegramLogger.php';
