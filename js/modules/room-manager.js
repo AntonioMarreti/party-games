@@ -1808,7 +1808,16 @@ let _gameSelectorState = {
 let _lastLobbyState = null;
 
 // Initial Fetch of Favorites
+let _favoritesInFlight = null;
 async function _fetchFavorites() {
+    // Dedup concurrent calls: renderGameSelectorUI() fires this on every modal
+    // open, so without a guard several identical get_favorites can race.
+    if (_favoritesInFlight) return _favoritesInFlight;
+    _favoritesInFlight = _doFetchFavorites().finally(() => { _favoritesInFlight = null; });
+    return _favoritesInFlight;
+}
+
+async function _doFetchFavorites() {
     try {
         if (typeof window.apiRequest === 'function') {
             const res = await window.apiRequest({ action: 'get_favorites' });
