@@ -54,9 +54,24 @@ function ensure_user_favorites_table($pdo)
     )");
 }
 
+function get_pdo_sqlstate(PDOException $e)
+{
+    if (!empty($e->errorInfo[0])) {
+        return $e->errorInfo[0];
+    }
+
+    $code = $e->getCode();
+    return is_string($code) ? $code : null;
+}
+
 function is_missing_table_error(PDOException $e)
 {
-    return $e->getCode() === '42S02';
+    return get_pdo_sqlstate($e) === '42S02';
+}
+
+function is_duplicate_key_error(PDOException $e)
+{
+    return get_pdo_sqlstate($e) === '23000';
 }
 
 function action_toggle_like($pdo, $user, $data)
@@ -80,7 +95,11 @@ function action_toggle_like($pdo, $user, $data)
         $pdo->prepare("DELETE FROM user_favorites WHERE user_id = ? AND game_id = ?")->execute([$user['id'], $gameId]);
         echo json_encode(['status' => 'ok', 'is_liked' => false]);
     } else {
-        $pdo->prepare("INSERT INTO user_favorites (user_id, game_id) VALUES (?, ?)")->execute([$user['id'], $gameId]);
+        try {
+            $pdo->prepare("INSERT INTO user_favorites (user_id, game_id) VALUES (?, ?)")->execute([$user['id'], $gameId]);
+        } catch (PDOException $e) {
+            if (!is_duplicate_key_error($e)) throw $e;
+        }
         echo json_encode(['status' => 'ok', 'is_liked' => true]);
     }
 }
