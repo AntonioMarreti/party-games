@@ -522,9 +522,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.showScreen) window.showScreen('login');
     }
 
-    if (logoutGroup) {
-        const isTMA = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0;
-        logoutGroup.style.display = isTMA ? 'none' : 'block';
+    const tmaInfoGroup = document.getElementById('tma-account-info-group');
+    if (logoutGroup || tmaInfoGroup) {
+        const isRealTMA = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0);
+        const hashStr = window.location.hash || '';
+        const hasHashTma = hashStr.includes('tgWebAppData=') || hashStr.includes('tgWebAppPlatform=');
+
+        let isTMAFallback = false;
+        if (window.AuthManager && typeof window.AuthManager.getTelegramUrlPlatform === 'function') {
+            const plat = window.AuthManager.getTelegramUrlPlatform();
+            if (['tdesktop', 'ios', 'android'].includes(plat)) isTMAFallback = true;
+        }
+
+        const bodyCls = document.body.className || '';
+        const htmlCls = document.documentElement.className || '';
+        const hasTmaClass = bodyCls.includes('tg-platform-tdesktop') || bodyCls.includes('tg-platform-ios') || bodyCls.includes('tg-platform-android') ||
+                            htmlCls.includes('tg-platform-tdesktop') || htmlCls.includes('tg-platform-ios') || htmlCls.includes('tg-platform-android');
+
+        const isTMA = isRealTMA || hasHashTma || isTMAFallback || hasTmaClass || (typeof hasAuthInitData !== 'undefined' && hasAuthInitData);
+
+        if (logoutGroup) logoutGroup.style.display = isTMA ? 'none' : 'block';
+        if (tmaInfoGroup) {
+            tmaInfoGroup.style.display = isTMA ? 'block' : 'none';
+        }
     }
 
     if (window.pendingScheduledGameDeepLinkId && !window.pendingScheduledGameDeepLinkHandled) {
@@ -590,13 +610,16 @@ window.addEventListener('tabChanged', (e) => {
     if (savedColor && window.ThemeManager) window.ThemeManager.applyAccentColor(savedColor);
 });
 
+let checkStatePromise = null;
+
 window.checkState = async function (options = {}) {
     const isLeaving = window.RoomManager ? window.RoomManager.getIsLeavingProcess() : false;
-    if (isLeaving || isCheckingState) return;
-    isCheckingState = true;
+    if (isLeaving) return;
+    if (checkStatePromise) return checkStatePromise;
 
-    try {
-        const res = await apiRequest({ action: 'get_state' }, { timeoutMs: options.timeoutMs, startup: options.startup });
+    checkStatePromise = (async () => {
+        try {
+            const res = await apiRequest({ action: 'get_state' }, { timeoutMs: options.timeoutMs, startup: options.startup });
 
         if (window.RoomManager && window.RoomManager.getIsLeavingProcess()) return;
 
@@ -736,8 +759,10 @@ window.checkState = async function (options = {}) {
         }
         return res;
     } finally {
-        isCheckingState = false;
+        checkStatePromise = null;
     }
+    })();
+    return checkStatePromise;
 }
 
 // === DEBUG TOOLS ===

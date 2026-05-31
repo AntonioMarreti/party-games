@@ -131,7 +131,7 @@
             </button>
         </div>
 
-        <!-- Logout Group -->
+        <!-- Logout Group (Browser) -->
         <div class="settings-group profile-menu-group profile-menu-danger-group mb-3" id="logout-menu-item-group" style="display:none;">
             <button type="button" class="btn-unstyled settings-item clickable profile-menu-row profile-menu-danger" onclick="logout()">
                 <div class="profile-menu-main">
@@ -141,6 +141,21 @@
                     <span class="profile-menu-title">Выйти</span>
                 </div>
             </button>
+        </div>
+
+        <!-- TMA Account Info Group -->
+        <div class="settings-group profile-menu-group mb-3" id="tma-account-info-group" style="display:none;">
+            <div class="settings-item profile-menu-row" style="flex-direction: column; align-items: flex-start; cursor: default; padding: 16px 6px;">
+                <div class="profile-menu-main w-100 mb-1">
+                    <div class="profile-menu-icon" style="background: rgba(41, 169, 234, 0.1); color: #29a9ea;">
+                        <i class="bi bi-telegram fs-5" aria-hidden="true"></i>
+                    </div>
+                    <span class="profile-menu-title fw-bold">Вы вошли через Telegram</span>
+                </div>
+                <p class="text-muted mb-0" style="font-size: 0.85rem; line-height: 1.4; padding-left: 52px;">
+                    Аккаунт берётся из Telegram. Чтобы сменить аккаунт, переключите его в Telegram.
+                </p>
+            </div>
         </div>
 
         <div style="height: 100px;"></div>
