@@ -202,7 +202,26 @@ async function apiRequest(data, options = {}) {
     }
 }
 
+let _pgbErrorLogCache = new Map();
+
 async function logClientError(message, stack = '', context = {}) {
+    const msgLower = String(message).toLowerCase().trim();
+    if (msgLower === 'script error.' || msgLower === 'script error') {
+        const hasNoStack = !stack || stack === 'unknown:0:0';
+        const hasNoLine = !context.line && !context.column && !context.source_url;
+        if (hasNoStack && hasNoLine) {
+            return;
+        }
+    }
+
+    const dedupKey = `${message}|${stack}|${context.action || ''}|${context.current_screen || ''}`;
+    const now = Date.now();
+    const lastTime = _pgbErrorLogCache.get(dedupKey) || 0;
+    if (now - lastTime < 5000) {
+        return;
+    }
+    _pgbErrorLogCache.set(dedupKey, now);
+
     const safeContext = sanitizeLogContext(context);
     const body = new FormData();
     body.append('action', 'log_client_error');
@@ -214,9 +233,9 @@ async function logClientError(message, stack = '', context = {}) {
         platform: window.Telegram?.WebApp?.platform || 'web',
         online: navigator.onLine,
         connection: navigator.connection ? { type: navigator.connection.effectiveType, rtt: navigator.connection.rtt } : 'unknown',
-        perf: window.performance ? {
-            load: window.performance.timing.loadEventEnd - window.performance.timing.navigationStart,
-            dom: window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart
+        perf: (window.performance && window.performance.timing) ? {
+            load: window.performance.timing.loadEventEnd > 0 ? window.performance.timing.loadEventEnd - window.performance.timing.navigationStart : null,
+            dom: window.performance.timing.domContentLoadedEventEnd > 0 ? window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart : null
         } : null,
         ...safeContext
     }));
