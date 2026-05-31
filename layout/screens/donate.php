@@ -13,17 +13,14 @@
     <!-- Scrollable Content -->
     <div class="content-wrapper px-3 pt-4" style="padding-bottom: 120px;">
 
-        <div class="text-center mb-4 px-2">
-            <p class="text-muted small mb-0">Ваши звезды помогают оплачивать серверы и развивать проект.</p>
-        </div>
-
         <!-- Presets -->
-        <div class="settings-group mb-4 p-3 rounded-4 shadow-sm border-0 position-relative" style="background: var(--bg-content);">
-            <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
+        <div class="settings-group mb-3 p-3 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
+            <h6 class="fw-bold text-uppercase small mb-1 opacity-75 d-flex align-items-center">
                 <i class="bi bi-lightning-charge-fill me-2 text-primary"></i> Выберите сумму
             </h6>
-            <!-- pe-3 (padding-right) чтобы плавающий пузырь QA не перекрывал правую колонку -->
-            <div class="donation-grid pe-3" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
+            <p class="text-muted mb-3" style="font-size: 13px;">Звезды помогают оплачивать серверы и развивать игры.</p>
+
+            <div class="donation-grid" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
                 <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(10, this)">
                     <div class="preset-amount fs-5 fw-bold">10</div>
                 </div>
@@ -53,9 +50,9 @@
         </div>
 
         <!-- Custom Amount Input -->
-        <div class="settings-group mb-4 p-3 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
+        <div class="settings-group mb-3 p-3 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
             <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
-                <i class="bi bi-pencil-square me-2 text-primary"></i> Или введите свою
+                <i class="bi bi-pencil-square me-2 text-primary"></i> Своя сумма
             </h6>
 
             <div class="stepper-container d-flex align-items-center justify-content-between p-2 rounded-3"
@@ -83,7 +80,7 @@
             </div>
         </div>
 
-        <div class="text-center mt-4 mb-2">
+        <div class="text-center mt-3 mb-4">
             <div class="d-inline-flex align-items-center justify-content-center px-3 py-2 rounded-pill" style="background: rgba(var(--bs-primary-rgb), 0.05); border: 1px solid rgba(var(--bs-primary-rgb), 0.1);">
                 <i class="bi bi-shield-check text-primary opacity-75 me-2 fs-6"></i>
                 <small class="text-muted fw-medium" style="font-size: 12px;">Безопасная оплата через Telegram Stars</small>
