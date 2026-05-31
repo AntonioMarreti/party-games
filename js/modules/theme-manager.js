@@ -150,6 +150,10 @@ function syncUI() {
         }
     });
 
+    if (typeof updateDesktopFullscreenVisibility === 'function') {
+        updateDesktopFullscreenVisibility();
+    }
+
     // Sync Color Buttons
     const savedColor = localStorage.getItem('pgb_accent_color');
     if (savedColor) {
@@ -221,12 +225,29 @@ function triggerHaptic(type = 'impact', detail = 'light') {
     }
 }
 
+function updateDesktopFullscreenVisibility() {
+    const tdesktopSettingEl = document.getElementById('tdesktop-fullscreen-setting');
+    const tdesktopToggleEl = document.getElementById('setting-tdesktopFullscreen');
+    if (tdesktopSettingEl && tdesktopToggleEl) {
+        const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback() : '').toLowerCase();
+        const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
+
+        if (isDesktop) {
+            tdesktopSettingEl.style.display = '';
+            tdesktopToggleEl.checked = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled') === '1';
+        } else {
+            tdesktopSettingEl.style.display = 'none';
+        }
+    }
+}
+
 // Attach to window for global access
 window.ThemeManager = {
     loadSettings,
     applyAccentColor,
     toggleSetting,
     triggerHaptic,
+    updateDesktopFullscreenVisibility,
     get settings() { return appSettings; }
 };
 
@@ -234,6 +255,7 @@ window.ThemeManager = {
 window.applyAccentColor = applyAccentColor;
 window.toggleSetting = toggleSetting;
 window.triggerHaptic = triggerHaptic;
+window.updateDesktopFullscreenVisibility = updateDesktopFullscreenVisibility;
 window.highlightColorBtn = function (el) {
     document.querySelectorAll('.color-option-btn').forEach(btn => btn.classList.remove('selected'));
     if (el) el.classList.add('selected');

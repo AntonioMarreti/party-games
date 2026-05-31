@@ -108,7 +108,11 @@ if (!defined('TG_CLIENT_ID')) {
                 'auth_ui_ready_without_webapp',
                 'auth_restore_without_webapp',
                 'auth_startup_api_call',
-                'auth_url_initdata_detected'
+                'auth_url_initdata_detected',
+                'auth_tma_login_success',
+                'auth_url_initdata_login_success',
+                'auth_tma_platform_from_url',
+                'auth_webapp_unavailable'
             ]);
 
             // Per-page dedupe and rate-limit (keyed by event + serialized extra)

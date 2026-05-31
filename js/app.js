@@ -54,6 +54,7 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 // === CONFIGURATION ===
+window.__pgb_tma_marker_saved = window.location.hash.includes('tgWebAppData=') || window.location.hash.includes('tgWebAppPlatform=');
 let loadedGames = {};
 const APP_REPO = 'AntonioMarreti/party-games';
 window.pendingScheduledGameDeepLinkId = window.pendingScheduledGameDeepLinkId || null;
@@ -136,6 +137,10 @@ function applyTelegramPlatformClass(tg) {
     if (!isRealTelegramWebApp(tg) && getTelegramHashParam('tgWebAppPlatform') && typeof window.logAuthClientEvent === 'function') {
         window.logAuthClientEvent('tma_platform_from_url', { platform });
     }
+
+    if (typeof window.updateDesktopFullscreenVisibility === 'function') {
+        window.updateDesktopFullscreenVisibility();
+    }
 }
 
 function waitForTelegramWebApp(timeoutMs = 1500) {
@@ -184,6 +189,47 @@ function updateTelegramViewportVars(tg) {
 let telegramWebAppInitDone = false;
 let lateTelegramWebAppInitScheduled = false;
 
+let telegramDesktopFullscreenCloudSyncStarted = false;
+window.syncTelegramDesktopFullscreenCloud = function() {
+    if (telegramDesktopFullscreenCloudSyncStarted) return;
+
+    const tg = window.Telegram?.WebApp;
+    if (!tg || !tg.CloudStorage) return;
+
+    telegramDesktopFullscreenCloudSyncStarted = true;
+
+    try {
+        tg.CloudStorage.getItem('pgb_telegram_desktop_fullscreen_enabled', (err, val) => {
+            if (err) {
+                console.debug('[Fullscreen] CloudStorage getItem error', err);
+                return;
+            }
+            console.debug('[Fullscreen] CloudStorage getItem success', { value: val });
+
+            if (val === '1' || val === '0') {
+                const currentLocal = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled');
+                if (currentLocal !== val) {
+                    localStorage.setItem('pgb_telegram_desktop_fullscreen_enabled', val);
+                    console.debug('[Fullscreen] Updated local setting from CloudStorage', { value: val });
+
+                    const toggleEl = document.getElementById('setting-tdesktopFullscreen');
+                    if (toggleEl) toggleEl.checked = (val === '1');
+
+                    if (val === '1') {
+                        const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
+                        const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : false;
+                        if (isDesktop && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
+                            try { tg.requestFullscreen(); } catch (e) { console.debug('[Fullscreen] sync requestFullscreen error', e); }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.debug('[Fullscreen] CloudStorage get exception', e);
+    }
+};
+
 function initTelegramWebAppShell(tg, context = 'startup') {
     if (!isRealTelegramWebApp(tg)) return false;
 
@@ -196,7 +242,17 @@ function initTelegramWebAppShell(tg, context = 'startup') {
         }
         if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
             try {
-                tg.requestFullscreen();
+                const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
+                const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
+                const isFullscreenEnabled = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled') === '1';
+
+                console.debug('[Fullscreen] Reading setting', { key: 'pgb_telegram_desktop_fullscreen_enabled', value: localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled'), platform });
+
+                if (!isDesktop || isFullscreenEnabled) {
+                    tg.requestFullscreen();
+                } else {
+                    console.debug('[Fullscreen] Skip requestFullscreen', { reason: 'preference_disabled' });
+                }
             } catch (e) {
                 console.warn('requestFullscreen failed or was rejected', e);
             }
@@ -214,6 +270,11 @@ function initTelegramWebAppShell(tg, context = 'startup') {
         document.body.classList.toggle('tg-dark-theme', tg.colorScheme === 'dark');
         applyTelegramPlatformClass(tg);
         updateTelegramViewportVars(tg);
+
+        if (window.syncTelegramDesktopFullscreenCloud) {
+            window.syncTelegramDesktopFullscreenCloud();
+        }
+
         telegramWebAppInitDone = true;
         return true;
     } catch (e) {
@@ -248,6 +309,62 @@ function scheduleLateTelegramWebAppInit(timeoutMs = 5000) {
 
 window.getTelegramPlatformFallback = getTelegramPlatformFallback;
 
+window.isTelegramDesktopLikePlatform = function(platform) {
+    const p = String(platform).toLowerCase();
+    if (p === 'tdesktop' || p === 'macos' || p === 'mac') {
+        return true;
+    }
+
+    if (p === 'unknown') {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile = /iphone|ipad|ipod|android/i.test(ua);
+
+        if (!isMobile) {
+            const hasRealWebApp = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.__PGB_MOCK !== true);
+            const hasHashMarker = window.location.hash.includes('tgWebAppData=') || window.location.hash.includes('tgWebAppPlatform=');
+            const hasSavedMarker = window.__pgb_tma_marker_saved === true;
+            const hasBodyClass = document.body.classList.contains('tg-platform-tdesktop') ||
+                                 document.body.classList.contains('tg-platform-macos') ||
+                                 document.body.classList.contains('tg-platform-mac');
+
+            if (hasRealWebApp || hasHashMarker || hasSavedMarker || hasBodyClass) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+};
+
+window.toggleTdesktopFullscreen = function(enabled) {
+    const val = enabled ? '1' : '0';
+    localStorage.setItem('pgb_telegram_desktop_fullscreen_enabled', val);
+    console.debug('[Fullscreen] Writing setting', { key: 'pgb_telegram_desktop_fullscreen_enabled', value: val, platform: window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback() : 'unknown' });
+
+    const tg = window.Telegram?.WebApp;
+    if (tg && tg.CloudStorage) {
+        try {
+            tg.CloudStorage.setItem('pgb_telegram_desktop_fullscreen_enabled', val, (err, passed) => {
+                if (err) console.debug('[Fullscreen] CloudStorage setItem error', err);
+                else console.debug('[Fullscreen] CloudStorage setItem success', { value: val });
+            });
+        } catch (e) {
+            console.debug('[Fullscreen] CloudStorage set exception', e);
+        }
+    }
+
+    if (enabled) {
+        if (tg && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
+            try { tg.requestFullscreen(); } catch (e) { console.warn('requestFullscreen error', e); }
+        }
+    } else {
+        if (tg && typeof tg.exitFullscreen === 'function') {
+            try { tg.exitFullscreen(); } catch (e) { console.warn('exitFullscreen error', e); }
+        } else if (window.showAlert) {
+            window.showAlert("Информация", "Изменение применится при следующем открытии Mini App.", "info");
+        }
+    }
+};
 function routePendingScheduledDeepLink() {
     const scheduledGameId = Number(window.pendingScheduledGameDeepLinkId || 0);
     if (!scheduledGameId) return;

@@ -138,6 +138,17 @@
                         id="setting-privacyLeaderboard" onchange="toggleSetting('privacyLeaderboard', this.checked)">
                 </div>
             </div>
+
+            <div class="settings-item border-0 pb-0 mt-3" id="tdesktop-fullscreen-setting" style="display: none;">
+                <div class="settings-label-wrap">
+                    <div class="settings-row-title">Открывать на весь экран</div>
+                    <div class="settings-row-subtitle">Можно включить, если удобнее играть в полноэкранном режиме на компьютере.</div>
+                </div>
+                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                    <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-tdesktopFullscreen"
+                        onchange="window.toggleTdesktopFullscreen && window.toggleTdesktopFullscreen(this.checked)">
+                </div>
+            </div>
         </div>
 
         <!-- 3.5. SECURITY CARD -->
