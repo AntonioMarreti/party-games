@@ -203,8 +203,11 @@ function getUserByToken($token)
         $user['is_admin'] = in_array((int) $user['telegram_id'], ADMIN_IDS);
         $user = normalize_user_public_fields($user);
         // Update last_used for this session
-        $pdo->prepare("UPDATE user_sessions SET last_used = NOW() WHERE id = ?")
-            ->execute([$user['session_id']]);
+        $lastUsedTs = !empty($user['session_last_used']) ? strtotime($user['session_last_used']) : 0;
+        if (!$lastUsedTs || $lastUsedTs < time() - 300) {
+            $pdo->prepare("UPDATE user_sessions SET last_used = NOW() WHERE id = ?")
+                ->execute([$user['session_id']]);
+        }
     }
 
     return $user;
