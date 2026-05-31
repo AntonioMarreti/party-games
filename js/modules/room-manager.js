@@ -1808,7 +1808,17 @@ let _gameSelectorState = {
 let _lastLobbyState = null;
 
 // Initial Fetch of Favorites
+let _favoritesInFlight = null;
+let _favoriteToggleInFlight = new Set();
 async function _fetchFavorites() {
+    // Dedup concurrent calls: renderGameSelectorUI() fires this on every modal
+    // open, so without a guard several identical get_favorites can race.
+    if (_favoritesInFlight) return _favoritesInFlight;
+    _favoritesInFlight = _doFetchFavorites().finally(() => { _favoritesInFlight = null; });
+    return _favoritesInFlight;
+}
+
+async function _doFetchFavorites() {
     try {
         if (typeof window.apiRequest === 'function') {
             const res = await window.apiRequest({ action: 'get_favorites' });
@@ -2137,7 +2147,11 @@ function _refreshGameList(lobbyState) {
 
 // Make globally accessible for onClick
 window.toggleGameFavorite = async function (id, btn) {
+    if (_favoriteToggleInFlight.has(id)) return;
+    _favoriteToggleInFlight.add(id);
+
     let list = _gameSelectorState.favorites;
+    const prevList = [...list];
 
     // Optimistic Update
     if (list.includes(id)) {
@@ -2187,10 +2201,26 @@ window.toggleGameFavorite = async function (id, btn) {
     // API Call
     try {
         if (typeof window.apiRequest === 'function') {
-            await window.apiRequest({ action: 'toggle_like', game_id: id });
+            const res = await window.apiRequest({ action: 'toggle_like', game_id: id });
+            if (!res || res.status !== 'ok') throw new Error(res?.message || 'Like Error');
+            const nextList = _gameSelectorState.favorites.filter(x => x !== id);
+            if (res.is_liked) {
+                nextList.push(id);
+            }
+            _gameSelectorState.favorites = nextList;
+            window.userFavorites = nextList;
         }
     } catch (e) {
         console.error("Like Error", e);
-        // Revert on error? For now, simpler not to.
+        _gameSelectorState.favorites = prevList;
+        window.userFavorites = prevList;
+    } finally {
+        _favoriteToggleInFlight.delete(id);
+        if (_lastLobbyState) {
+            _refreshGameList(_lastLobbyState);
+        } else {
+            const activeBtn = document.querySelector('#game-cat-filters button.active');
+            if (activeBtn) activeBtn.click();
+        }
     }
 };

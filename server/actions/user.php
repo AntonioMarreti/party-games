@@ -36,9 +36,15 @@ function action_update_settings($pdo, $user, $data)
     echo json_encode(['status' => 'ok']);
 }
 
-function action_toggle_like($pdo, $user, $data)
+// Lazy migration safety net for user_favorites.
+// The table is normally created by migration 004_add_user_favorites. We only
+// run this DDL when a query reports the table is missing (SQLSTATE 42S02),
+// instead of on every request: on MySQL CREATE TABLE takes a metadata lock
+// even when the table already exists, which serializes concurrent requests
+// (e.g. the burst Telegram Desktop fires on startup) and can blow past the
+// client timeout.
+function ensure_user_favorites_table($pdo)
 {
-    // 0. Ensure Table Exists (Lazy Migration)
     $pdo->exec("CREATE TABLE IF NOT EXISTS user_favorites (
         user_id INT NOT NULL,
         game_id VARCHAR(32) NOT NULL,
@@ -46,21 +52,55 @@ function action_toggle_like($pdo, $user, $data)
         PRIMARY KEY (user_id, game_id),
         INDEX idx_user (user_id)
     )");
+}
 
+function get_pdo_sqlstate(PDOException $e)
+{
+    if (!empty($e->errorInfo[0])) {
+        return $e->errorInfo[0];
+    }
+
+    $code = $e->getCode();
+    return is_string($code) ? $code : null;
+}
+
+function is_missing_table_error(PDOException $e)
+{
+    return get_pdo_sqlstate($e) === '42S02'
+        || (($e->errorInfo[1] ?? null) === 1146);
+}
+
+function is_duplicate_key_error(PDOException $e)
+{
+    return get_pdo_sqlstate($e) === '23000';
+}
+
+function action_toggle_like($pdo, $user, $data)
+{
     $gameId = $data['game_id'] ?? '';
     if (!$gameId)
         sendError('No game_id');
 
-    // Check if already liked
-    $stmt = $pdo->prepare("SELECT 1 FROM user_favorites WHERE user_id = ? AND game_id = ?");
-    $stmt->execute([$user['id'], $gameId]);
+    try {
+        $stmt = $pdo->prepare("SELECT 1 FROM user_favorites WHERE user_id = ? AND game_id = ?");
+        $stmt->execute([$user['id'], $gameId]);
+    } catch (PDOException $e) {
+        if (!is_missing_table_error($e)) throw $e;
+        ensure_user_favorites_table($pdo);
+        $stmt = $pdo->prepare("SELECT 1 FROM user_favorites WHERE user_id = ? AND game_id = ?");
+        $stmt->execute([$user['id'], $gameId]);
+    }
     $exists = $stmt->fetchColumn();
 
     if ($exists) {
         $pdo->prepare("DELETE FROM user_favorites WHERE user_id = ? AND game_id = ?")->execute([$user['id'], $gameId]);
         echo json_encode(['status' => 'ok', 'is_liked' => false]);
     } else {
-        $pdo->prepare("INSERT INTO user_favorites (user_id, game_id) VALUES (?, ?)")->execute([$user['id'], $gameId]);
+        try {
+            $pdo->prepare("INSERT INTO user_favorites (user_id, game_id) VALUES (?, ?)")->execute([$user['id'], $gameId]);
+        } catch (PDOException $e) {
+            if (!is_duplicate_key_error($e)) throw $e;
+        }
         echo json_encode(['status' => 'ok', 'is_liked' => true]);
     }
 }
@@ -74,17 +114,16 @@ function action_get_me($pdo, $user, $data)
 
 function action_get_favorites($pdo, $user, $data)
 {
-    // 0. Ensure Table Exists (Lazy Migration)
-    $pdo->exec("CREATE TABLE IF NOT EXISTS user_favorites (
-        user_id INT NOT NULL,
-        game_id VARCHAR(32) NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (user_id, game_id),
-        INDEX idx_user (user_id)
-    )");
-
-    $stmt = $pdo->prepare("SELECT game_id FROM user_favorites WHERE user_id = ?");
-    $stmt->execute([$user['id']]);
+    try {
+        $stmt = $pdo->prepare("SELECT game_id FROM user_favorites WHERE user_id = ?");
+        $stmt->execute([$user['id']]);
+    } catch (PDOException $e) {
+        // Table missing (migration 004 not applied) -> create once, then retry.
+        if (!is_missing_table_error($e)) throw $e;
+        ensure_user_favorites_table($pdo);
+        $stmt = $pdo->prepare("SELECT game_id FROM user_favorites WHERE user_id = ?");
+        $stmt->execute([$user['id']]);
+    }
     $favorites = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     echo json_encode(['status' => 'ok', 'favorites' => $favorites]);
