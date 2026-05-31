@@ -11,85 +11,87 @@
     </div>
 
     <!-- Scrollable Content -->
-    <div class="content-wrapper pt-4" style="padding-bottom: 120px;">
+    <div class="content-wrapper px-3 pt-3" style="padding-bottom: 120px;">
 
-        <div class="settings-group mb-3 p-3">
-            <div class="d-flex align-items-center mb-3">
-                <div class="donation-icon-small me-3" style="font-size: 2rem;">💖</div>
-                <div>
-                    <h6 class="fw-bold mb-1">Спасибо за поддержку!</h6>
-                    <div class="text-muted small" style="line-height: 1.3;">Ваши звезды помогают нам оплачивать сервера
-                        и улучшать игры.</div>
-                </div>
+        <!-- Premium Banner -->
+        <div class="donate-banner text-center mb-4 p-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%); border: 1px solid rgba(var(--bs-primary-rgb), 0.15);">
+            <div class="mb-3">
+                <i class="bi bi-heart-fill text-primary" style="font-size: 2.5rem;"></i>
             </div>
+            <h5 class="fw-bold mb-2">Спасибо за поддержку!</h5>
+            <p class="mb-0 text-muted" style="font-size: 0.9rem; line-height: 1.4;">Ваши звезды помогают оплачивать серверы и развивать проект.</p>
         </div>
 
         <!-- Presets -->
-        <div class="settings-group mb-3 p-3">
-            <h6 class="fw-bold text-uppercase small mb-3 opacity-75"><i class="bi bi-grid-fill me-2"></i>Выберите сумму
+        <div class="settings-group mb-4 p-4 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
+            <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
+                <i class="bi bi-lightning-charge-fill me-2 text-primary"></i> Выберите сумму
             </h6>
-            <div class="donation-grid" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
-                <div class="donation-preset p-2" onclick="selectDonationPreset(10, this)">
-                    <div class="preset-amount fs-5">10</div>
+            <div class="donation-grid" style="grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(10, this)">
+                    <div class="preset-amount fs-5 fw-bold">10</div>
                 </div>
-                <div class="donation-preset p-2" onclick="selectDonationPreset(25, this)">
-                    <div class="preset-amount fs-5">25</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(25, this)">
+                    <div class="preset-amount fs-5 fw-bold">25</div>
                 </div>
-                <div class="donation-preset p-2" onclick="selectDonationPreset(50, this)">
-                    <div class="preset-amount fs-5">50</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(50, this)">
+                    <div class="preset-amount fs-5 fw-bold">50</div>
                 </div>
-                <div class="donation-preset p-2" onclick="selectDonationPreset(100, this)">
-                    <div class="preset-amount fs-5">100</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(100, this)">
+                    <div class="preset-amount fs-5 fw-bold">100</div>
                 </div>
                 <!-- Row 2 -->
-                <div class="donation-preset p-2" onclick="selectDonationPreset(250, this)">
-                    <div class="preset-amount fs-5">250</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(250, this)">
+                    <div class="preset-amount fs-5 fw-bold">250</div>
                 </div>
-                <div class="donation-preset p-2" onclick="selectDonationPreset(500, this)">
-                    <div class="preset-amount fs-5">500</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(500, this)">
+                    <div class="preset-amount fs-5 fw-bold">500</div>
                 </div>
-                <div class="donation-preset p-2" onclick="selectDonationPreset(1000, this)">
-                    <div class="preset-amount fs-5">1k</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(1000, this)">
+                    <div class="preset-amount fs-5 fw-bold">1k</div>
                 </div>
-                <div class="donation-preset p-2" onclick="selectDonationPreset(2500, this)">
-                    <div class="preset-amount fs-5">2.5k</div>
+                <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(2500, this)">
+                    <div class="preset-amount fs-5 fw-bold">2.5k</div>
                 </div>
             </div>
         </div>
 
         <!-- Custom Amount Input -->
-        <div class="settings-group mb-3 p-3">
-            <h6 class="fw-bold text-uppercase small mb-3 opacity-75"><i class="bi bi-pencil-square me-2"></i>Или введите
-                свою</h6>
+        <div class="settings-group mb-4 p-4 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
+            <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
+                <i class="bi bi-pencil-square me-2 text-primary"></i> Или введите свою
+            </h6>
 
-            <div class="stepper-container d-flex align-items-center justify-content-between p-1 rounded-4"
-                style="background: var(--bg-content); border: 1px solid var(--border-color); height: 60px;">
+            <div class="stepper-container d-flex align-items-center justify-content-between p-2 rounded-3"
+                style="background: var(--bg-app); border: 1px solid var(--border-color); height: 60px;">
 
                 <button class="btn btn-link text-decoration-none text-primary"
-                    style="width: 60px; height: 100%; display: flex; align-items: center; justify-content: center;"
+                    style="width: 46px; height: 100%; display: flex; align-items: center; justify-content: center;"
                     onclick="adjustDonation(-10)">
-                    <i class="bi bi-dash-lg" style="font-size: 1.5rem;"></i>
+                    <i class="bi bi-dash-lg" style="font-size: 1.2rem;"></i>
                 </button>
 
-                <div class="flex-grow-1 d-flex align-items-center justify-content-center position-relative h-100">
-                    <i class="bi bi-star-fill text-warning me-2" style="font-size: 1.2rem;"></i>
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center position-relative h-100 px-2">
+                    <i class="bi bi-star-fill text-primary opacity-75 me-2" style="font-size: 1.2rem;"></i>
                     <input type="number" id="custom-donation-input"
-                        class="form-control border-0 bg-transparent p-0 fw-bold text-center shadow-none" placeholder="0"
-                        value="50" style="font-size: 1.5rem; width: 100px; color: var(--text-main);"
+                        class="form-control border-0 bg-transparent p-0 fw-bolder text-center shadow-none" placeholder="0"
+                        value="50" style="font-size: 1.8rem; width: 100px; color: var(--text-main);"
                         onfocus="this.select()">
                 </div>
 
                 <button class="btn btn-link text-decoration-none text-primary"
-                    style="width: 60px; height: 100%; display: flex; align-items: center; justify-content: center;"
+                    style="width: 46px; height: 100%; display: flex; align-items: center; justify-content: center;"
                     onclick="adjustDonation(10)">
-                    <i class="bi bi-plus-lg" style="font-size: 1.5rem;"></i>
+                    <i class="bi bi-plus-lg" style="font-size: 1.2rem;"></i>
                 </button>
             </div>
         </div>
 
-        <div class="text-center mt-2">
-            <small class="text-muted opacity-50" style="font-size: 11px;">Платежи обрабатываются через Telegram
-                Stars.</small>
+        <div class="text-center mt-4 mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center px-3 py-2 rounded-pill" style="background: rgba(var(--bs-primary-rgb), 0.05); border: 1px solid rgba(var(--bs-primary-rgb), 0.1);">
+                <i class="bi bi-shield-check text-primary opacity-75 me-2 fs-6"></i>
+                <small class="text-muted fw-medium" style="font-size: 12px;">Безопасная оплата через Telegram Stars</small>
+            </div>
         </div>
     </div>
 
@@ -97,7 +99,7 @@
     <div class="fixed-bottom p-3"
         style="background: linear-gradient(to top, var(--bg-app) 80%, transparent); z-index: 1000;">
         <div class="container" style="max-width: 480px;">
-            <button class="donate-btn-lg clickable w-100 shadow-lg" onclick="processDonation()" style="margin: 0;">
+            <button class="donate-btn-lg clickable w-100 shadow-sm rounded-4 btn-primary" onclick="processDonation()" style="margin: 0; border: none; height: 56px; font-weight: 600; color: #fff; background-color: var(--bs-primary);">
                 <span id="donate-btn-text">Донат: 0 <i class="bi bi-star-fill"></i></span>
             </button>
         </div>
