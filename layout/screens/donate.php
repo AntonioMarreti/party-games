@@ -11,23 +11,19 @@
     </div>
 
     <!-- Scrollable Content -->
-    <div class="content-wrapper px-3 pt-3" style="padding-bottom: 120px;">
+    <div class="content-wrapper px-3 pt-4" style="padding-bottom: 120px;">
 
-        <!-- Premium Banner -->
-        <div class="donate-banner text-center mb-4 p-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%); border: 1px solid rgba(var(--bs-primary-rgb), 0.15);">
-            <div class="mb-3">
-                <i class="bi bi-heart-fill text-primary" style="font-size: 2.5rem;"></i>
-            </div>
-            <h5 class="fw-bold mb-2">Спасибо за поддержку!</h5>
-            <p class="mb-0 text-muted" style="font-size: 0.9rem; line-height: 1.4;">Ваши звезды помогают оплачивать серверы и развивать проект.</p>
+        <div class="text-center mb-4 px-2">
+            <p class="text-muted small mb-0">Ваши звезды помогают оплачивать серверы и развивать проект.</p>
         </div>
 
         <!-- Presets -->
-        <div class="settings-group mb-4 p-4 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
+        <div class="settings-group mb-4 p-3 rounded-4 shadow-sm border-0 position-relative" style="background: var(--bg-content);">
             <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
                 <i class="bi bi-lightning-charge-fill me-2 text-primary"></i> Выберите сумму
             </h6>
-            <div class="donation-grid" style="grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <!-- pe-3 (padding-right) чтобы плавающий пузырь QA не перекрывал правую колонку -->
+            <div class="donation-grid pe-3" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
                 <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(10, this)">
                     <div class="preset-amount fs-5 fw-bold">10</div>
                 </div>
@@ -57,7 +53,7 @@
         </div>
 
         <!-- Custom Amount Input -->
-        <div class="settings-group mb-4 p-4 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
+        <div class="settings-group mb-4 p-3 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
             <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
                 <i class="bi bi-pencil-square me-2 text-primary"></i> Или введите свою
             </h6>
@@ -100,7 +96,7 @@
         style="background: linear-gradient(to top, var(--bg-app) 80%, transparent); z-index: 1000;">
         <div class="container" style="max-width: 480px;">
             <button class="donate-btn-lg clickable w-100 shadow-sm rounded-4 btn-primary" onclick="processDonation()" style="margin: 0; border: none; height: 56px; font-weight: 600; color: #fff; background-color: var(--bs-primary);">
-                <span id="donate-btn-text">Донат: 0 <i class="bi bi-star-fill"></i></span>
+                <span id="donate-btn-text">Поддержать 0 <i class="bi bi-star-fill"></i></span>
             </button>
         </div>
     </div>
@@ -116,6 +112,16 @@
         z-index: 10999 !important;
         opacity: 0.8 !important;
         background-color: #000 !important;
+    }
+
+    /* Скрываем нативные стрелки у input type="number" */
+    #custom-donation-input::-webkit-outer-spin-button,
+    #custom-donation-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    #custom-donation-input[type=number] {
+        -moz-appearance: textfield;
     }
 </style>
 
@@ -174,7 +180,7 @@
         const btn = document.querySelector('.donate-btn-lg');
 
         if (currentDonationAmount > 0) {
-            btnText.innerHTML = `ПОЖЕРТВОВАТЬ ${currentDonationAmount} <i class="bi bi-star-fill"></i>`;
+            btnText.innerHTML = `Поддержать ${currentDonationAmount} <i class="bi bi-star-fill"></i>`;
             btn.style.opacity = '1';
             btn.style.pointerEvents = 'auto';
         } else {
