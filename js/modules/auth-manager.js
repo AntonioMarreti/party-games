@@ -278,7 +278,7 @@ async function loginTMA(tg, context = {}) {
                     });
                 }
             }
-            initApp(tg);
+            await initApp(tg);
         } else {
             if (typeof window.logAuthClientEvent === 'function') {
                 window.logAuthClientEvent('tma_login_failed', { status: res.status || 'error' });
@@ -300,7 +300,29 @@ async function loginTMA(tg, context = {}) {
     }
 }
 
+function closeTMA() {
+    if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.close === 'function') {
+        window.Telegram.WebApp.close();
+    }
+}
+
 function logout() {
+    const isRealTMA = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0);
+    const hashStr = window.location.hash || '';
+    const hasHashTma = hashStr.includes('tgWebAppData=') || hashStr.includes('tgWebAppPlatform=');
+    const bodyCls = document.body.className || '';
+    const htmlCls = document.documentElement.className || '';
+    const hasTmaClass = bodyCls.includes('tg-platform-tdesktop') || bodyCls.includes('tg-platform-ios') || bodyCls.includes('tg-platform-android') ||
+                        htmlCls.includes('tg-platform-tdesktop') || htmlCls.includes('tg-platform-ios') || htmlCls.includes('tg-platform-android');
+    const isTMA = isRealTMA || hasHashTma || hasTmaClass || (typeof hasAuthInitData !== 'undefined' && hasAuthInitData);
+
+    if (isTMA) {
+        if (window.showAlert) {
+            window.showAlert('Выход недоступен', 'Внутри Telegram нельзя выйти из аккаунта. Закройте Mini App.', 'info');
+        }
+        return;
+    }
+
     if (window.showConfirmation) {
         window.showConfirmation('Выход', 'Вы уверены, что хотите выйти?', async () => {
             // 1. Clear Token
@@ -427,3 +449,4 @@ window.logout = logout;
 window.devLogin = devLogin;
 window.authToken = authToken; // Initial sync
 window.globalUser = globalUser;
+window.closeTMA = closeTMA;
