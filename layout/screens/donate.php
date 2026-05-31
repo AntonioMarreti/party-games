@@ -15,10 +15,9 @@
 
         <!-- Presets -->
         <div class="settings-group mb-3 p-3 rounded-4 shadow-sm border-0" style="background: var(--bg-content);">
-            <h6 class="fw-bold text-uppercase small mb-1 opacity-75 d-flex align-items-center">
+            <h6 class="fw-bold text-uppercase small mb-3 opacity-75 d-flex align-items-center">
                 <i class="bi bi-lightning-charge-fill me-2 text-primary"></i> Выберите сумму
             </h6>
-            <p class="text-muted mb-3" style="font-size: 13px;">Звезды помогают оплачивать серверы и развивать игры.</p>
 
             <div class="donation-grid" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
                 <div class="donation-preset p-2 rounded-3 text-center" onclick="selectDonationPreset(10, this)">
