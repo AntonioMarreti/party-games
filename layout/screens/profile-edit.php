@@ -282,15 +282,23 @@
             loader.update(100, 'Загружаем...');
 
             if (res && res.status === 'ok' && res.data.url) {
-                // If we are calling this from the Tab (not editor), we need to OPEN the editor first.
-                if (document.getElementById('avatar-editor-overlay').style.display === 'none') {
-                    openAvatarEditor();
-                    await new Promise(r => setTimeout(r, 500));
-                }
+                // Two paths depending on whether the canvas editor is already open:
+                //
+                // A) Editor overlay is open (user clicked ⭐ from inside the draw editor):
+                //    Load image into canvas so the user can draw on top, then press "Готово".
+                //
+                // B) Editor overlay is closed (user clicked from the AI tab):
+                //    Store result directly in state via applyAIResult — no overlay opened.
+                const _overlay = document.getElementById('avatar-editor-overlay');
+                const _editorOpen = _overlay && _overlay.style.display !== 'none' && window.avatarEditor;
 
-                await avatarEditor.loadImageFromUrl(res.data.url);
+                if (_editorOpen) {
+                    await avatarEditor.loadImageFromUrl(res.data.url);
+                } else {
+                    window.SocialManager.applyAIResult(res.data.url);
+                }
                 if (window.ThemeManager) window.ThemeManager.triggerHaptic('notification', 'success');
-                setTimeout(() => loader.close(), 500); // Close after brief success show
+                loader.close();
             } else {
                 loader.close();
                 setTimeout(() => {

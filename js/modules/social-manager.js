@@ -1648,6 +1648,8 @@ function updatePreview() {
         configToShow = pendingEmoji;
     } else if (activeAvatarTab === 'photo' || activeAvatarTab === 'draw') {
         configToShow = pendingImage;
+    } else if (activeAvatarTab === 'ai') {
+        configToShow = pendingImage; // AI result stored here after applyAIResult()
     }
 
     if (configToShow && configToShow.type === 'image') {
@@ -1768,6 +1770,14 @@ async function saveDrawnAvatar() {
     }
 }
 
+// Stores AI-generated image result into pendingImage and updates the preview.
+// Called from profile-edit.php after a successful API response.
+// Does NOT open the canvas editor — keeps activeAvatarTab === 'ai' intact.
+function applyAIResult(dataUrl) {
+    pendingImage = { type: 'image', src: dataUrl };
+    updatePreview();
+    if (window.showToast) window.showToast('Готово! Нажмите «Сохранить»', 'success');
+}
 
 // ... (previous code)
 
@@ -1817,6 +1827,8 @@ async function saveProfile() {
         // Actually pendingEmoji is initialized in open.
     } else if (activeAvatarTab === 'photo' || activeAvatarTab === 'draw') {
         avatarToSave = pendingImage;
+    } else if (activeAvatarTab === 'ai') {
+        avatarToSave = pendingImage; // AI result stored here after applyAIResult()
     }
 
     if (avatarToSave) {
@@ -1903,6 +1915,7 @@ window.SocialManager = {
     openProfileEditor,
     handleAvatarUpload,
     saveDrawnAvatar,
+    applyAIResult,
     renderAchievements,
 
     // MISSING LOGIC ADDED
@@ -1957,6 +1970,7 @@ window.updateUserInfo = renderCurrentUser; // Alias for compat
 window.openProfileEditor = openProfileEditor;
 window.handleAvatarUpload = handleAvatarUpload;
 window.saveDrawnAvatar = saveDrawnAvatar;
+window.applyAIResult = applyAIResult;
 window.renderAchievements = renderAchievements;
 window.saveProfile = saveProfile;
 window.closeProfileEditor = closeProfileEditor;
