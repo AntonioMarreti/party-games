@@ -203,10 +203,15 @@ window.__pgbLogFs = function(event, tg, extra = {}) {
     const isLinuxWebkit = /linux/i.test(navigator.userAgent) && /webkit|safari/i.test(navigator.userAgent);
     const hasMarker = window.__pgb_tma_marker_saved === true || window.location.hash.includes('tgWebAppPlatform=');
 
-    if (event === 'fullscreen_debug_boot_probe') {
+    const isProbingEvent = event === 'fullscreen_debug_boot_probe_early' ||
+                           event === 'fullscreen_debug_boot_probe_delayed' ||
+                           event === 'fullscreen_outer_err';
+
+    if (isProbingEvent) {
         if (!isLinuxWebkit && !hasMarker) return;
-        if (window.__pgb_fs_boot_probed) return;
-        window.__pgb_fs_boot_probed = true;
+        window.__pgb_fs_probed_events = window.__pgb_fs_probed_events || new Set();
+        if (window.__pgb_fs_probed_events.has(event)) return;
+        window.__pgb_fs_probed_events.add(event);
     } else {
         if (prefVal !== '1' && !d) return;
     }
@@ -215,7 +220,8 @@ window.__pgbLogFs = function(event, tg, extra = {}) {
     window.logClientError("fullscreen_debug", `event: ${event}`, {
         event, pref: prefVal,
         platform_tg: tg ? tg.platform : undefined, platform_fb: p, is_desk: d,
-        has_req_fs: tg ? typeof tg.requestFullscreen : 'undefined', has_exp: tg ? typeof tg.expand : 'undefined',
+        has_webapp: !!tg, has_req_fs: tg ? typeof tg.requestFullscreen : 'undefined', has_exp: tg ? typeof tg.expand : 'undefined',
+        has_cloud_storage: tg ? typeof tg.CloudStorage : 'undefined', has_is_version_at_least: tg ? typeof tg.isVersionAtLeast : 'undefined',
         is_fs: tg ? tg.isFullscreen : undefined, vp_h: tg ? tg.viewportHeight : undefined, vp_sh: tg ? tg.viewportStableHeight : undefined,
         vis: document.visibilityState, ua: navigator.userAgent, ...extra
     });
@@ -274,15 +280,19 @@ window.syncTelegramDesktopFullscreenCloud = function() {
 function initTelegramWebAppShell(tg, context = 'startup') {
     if (!isRealTelegramWebApp(tg)) return false;
 
+    if (window.__pgbLogFs) {
+        window.__pgbLogFs('fullscreen_debug_boot_probe_early', tg, { context });
+        setTimeout(() => {
+            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_debug_boot_probe_delayed', tg, { context });
+        }, 1800);
+    }
+
     try {
         if (tg.expand) {
             tg.expand();
             if (context === 'late' && typeof window.logAuthClientEvent === 'function') {
                 window.logAuthClientEvent('tma_late_expand_called', { platform: getTelegramPlatformFallback(tg) });
             }
-        }
-        if (window.__pgbLogFs) {
-            window.__pgbLogFs('fullscreen_debug_boot_probe', tg, { note: 'boot_probe_linux_webkit_unknown' });
         }
 
         try {
