@@ -240,22 +240,68 @@ function initTelegramWebAppShell(tg, context = 'startup') {
                 window.logAuthClientEvent('tma_late_expand_called', { platform: getTelegramPlatformFallback(tg) });
             }
         }
-        if (tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
-            try {
-                const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
-                const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
-                const isFullscreenEnabled = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled') === '1';
+        if (typeof window.__pgb_fs_logged !== 'number') window.__pgb_fs_logged = 0;
+        const logFs = (event, extra = {}) => {
+            console.debug(`[Fullscreen Debug] ${event}`, extra);
+            if (window.__pgb_fs_logged >= 6 || typeof window.logClientError !== 'function') return;
 
-                console.debug('[Fullscreen] Reading setting', { key: 'pgb_telegram_desktop_fullscreen_enabled', value: localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled'), platform });
+            const prefVal = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled');
+            const p = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
+            const d = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(p) : (p === 'tdesktop' || p === 'macos' || p === 'mac');
 
+            if (prefVal !== '1' && !d) return;
+
+            window.__pgb_fs_logged++;
+            window.logClientError("fullscreen_debug", `event: ${event}`, {
+                event, pref: prefVal,
+                platform_tg: tg.platform, platform_fb: p, is_desk: d,
+                has_req_fs: typeof tg.requestFullscreen, has_exp: typeof tg.expand,
+                is_fs: tg.isFullscreen, vp_h: tg.viewportHeight, vp_sh: tg.viewportStableHeight,
+                vis: document.visibilityState, ua: navigator.userAgent, ...extra
+            });
+        };
+
+        try {
+            const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
+            const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
+            const isFullscreenEnabled = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled') === '1';
+
+            logFs('fullscreen_pref_read', { cond_allows: (!isDesktop || isFullscreenEnabled), isDesktop, isFullscreenEnabled, platform });
+
+            if (!tg.requestFullscreen) {
+                logFs('fullscreen_api_missing', { reason: 'api_missing' });
+            } else if (!tg.isVersionAtLeast || !tg.isVersionAtLeast('8.0')) {
+                logFs('fullscreen_api_missing', { reason: 'version_too_low' });
+            } else {
                 if (!isDesktop || isFullscreenEnabled) {
-                    tg.requestFullscreen();
+                    logFs('fullscreen_attempt_start');
+                    try {
+                        let res = tg.requestFullscreen();
+                        if (res instanceof Promise) {
+                            res.then(() => logFs('fullscreen_attempt_returned', { note: 'promise_resolved' }))
+                               .catch(e => logFs('fullscreen_attempt_failed', { err_msg: String(e) }));
+                        } else {
+                            logFs('fullscreen_attempt_returned', { note: 'sync_return' });
+                        }
+
+                        setTimeout(() => {
+                            logFs('fullscreen_after_attempt_state', {
+                                is_fs_now: tg.isFullscreen,
+                                vp_h_now: tg.viewportHeight,
+                                vp_sh_now: tg.viewportStableHeight
+                            });
+                        }, 400);
+
+                    } catch (e) {
+                        logFs('fullscreen_attempt_failed', { err_msg: String(e) });
+                        console.warn('requestFullscreen failed or was rejected', e);
+                    }
                 } else {
-                    console.debug('[Fullscreen] Skip requestFullscreen', { reason: 'preference_disabled' });
+                    logFs('fullscreen_attempt_skipped', { reason: 'desktop_pref_disabled' });
                 }
-            } catch (e) {
-                console.warn('requestFullscreen failed or was rejected', e);
             }
+        } catch (e) {
+            logFs('fullscreen_outer_err', { err_msg: String(e) });
         }
 
         if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
