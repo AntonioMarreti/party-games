@@ -88,10 +88,10 @@ function getFallbackName(user) {
     return name || 'Игрок';
 }
 
-function getAvatarImg(src, style, altText = 'Avatar') {
+function getAvatarImg(src, style, altText = 'Avatar', onerrorCode = "this.style.display='none';", extraAttrs = '') {
     const safeSrc = escapeAvatarHtml(src);
     const safeAlt = escapeAvatarHtml(altText);
-    return `<img src="${safeSrc}" alt="${safeAlt}" style="${style}" onerror="this.style.display='none';">`;
+    return `<img src="${safeSrc}" alt="${safeAlt}" style="${style}" onerror="${onerrorCode}" ${extraAttrs}>`;
 }
 
 /**
@@ -149,7 +149,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     let isEmoji = false;
     let emojiVal = '';
 
-    const imgStyle = `position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:1;`;
+    const imgStyle = `grid-area:1/1; width:100%; height:100%; object-fit:cover;`;
     const altName = getFallbackName(user);
 
     // 1. Custom Avatar (Prioritize over Telegram/Default photo)
@@ -190,16 +190,16 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
         return `
             <div class="avatar-circle" 
                  ${clickHandler}
-                 style="position:relative; width:${sizePx}px; height:${sizePx}px; background:${bgColor}; display:flex; align-items:center; justify-content:center; border-radius:50%; ${cursorStyle} overflow:hidden;">
-                <span style="font-size:${fontSize}px; line-height:1; z-index:1;">${emojiVal}</span>
+                 style="display:flex; align-items:center; justify-content:center; width:${sizePx}px; height:${sizePx}px; background:${bgColor}; border-radius:50%; ${cursorStyle} overflow:hidden;">
+                <span style="font-size:${fontSize}px; line-height:1;">${emojiVal}</span>
             </div>
         `;
     } else {
         const initials = escapeAvatarHtml(getUserInitials(user, sizeStr === 'sm'));
         const fontSize = sizeStr === 'sm' ? Math.floor(sizePx * 0.5) : Math.floor(sizePx * 0.45);
         return `
-            <div class="avatar-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; width:${sizePx}px; height:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
-                <span style="position:absolute; color:#fff; font-size:${fontSize}px; font-weight:700; user-select:none; text-shadow:0 1px 2px rgba(0,0,0,0.15);">${initials}</span>
+            <div class="avatar-wrapper" style="display:grid; place-items:center; width:${sizePx}px; height:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
+                <span style="grid-area:1/1; color:#fff; font-size:${fontSize}px; font-weight:700; user-select:none; text-shadow:0 1px 2px rgba(0,0,0,0.15);">${initials}</span>
                 ${innerContent}
             </div>
         `;
@@ -235,25 +235,26 @@ export function openAvatarViewer(uidOrStr) {
     const palette = AVATAR_PALETTES[seed % AVATAR_PALETTES.length];
     const initials = escapeAvatarHtml(getUserInitials(user));
 
-    // Gradient Fallback base
-    let baseHtml = `<div style="width:100%; height:100%; background:${palette}; display:flex; align-items:center; justify-content:center; position:relative;">
-        <span style="font-size:120px; color:#fff; font-weight:700; user-select:none; text-shadow:0 2px 10px rgba(0,0,0,0.2);">${initials}</span>`;
-
     // Check Photo
-    const viewerStyle = 'width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:1;';
+    const viewerStyle = 'width:100%; height:100%; object-fit:cover;';
     const altName = getFallbackName(user);
 
+    // Fallback error handler for viewer
+    const fallbackOnerror = `if(window.handleViewerAvatarError) window.handleViewerAvatarError(this)`;
+    const safeKey = escapeAvatarHtml(typeof uidOrStr === 'string' ? uidOrStr : JSON.stringify(uidOrStr));
+    const extraAttrs = `data-avatar-viewer-key="${safeKey}"`;
+
     if (getSafeAvatarUrl(user.photo_url) && user.photo_url !== '🤖') {
-        content = getAvatarImg(getSafeAvatarUrl(user.photo_url), viewerStyle, altName);
+        content = getAvatarImg(getSafeAvatarUrl(user.photo_url), viewerStyle, altName, fallbackOnerror, extraAttrs);
     } else if (user.custom_avatar) {
         try {
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
                 const bg = /^#[0-9a-f]{3,8}$/i.test(cfg.bg || '') ? cfg.bg : palette;
-                content = `<div style="width:100%; height:100%; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:120px; position:absolute; top:0; left:0; z-index:1;">${escapeAvatarHtml(cfg.value || '👤')}</div>`;
+                content = `<div style="width:100%; height:100%; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:120px;">${escapeAvatarHtml(cfg.value || '👤')}</div>`;
             } else {
                 const safeCfgSrc = getSafeAvatarImageSrc(cfg.src);
-                if (safeCfgSrc) content = getAvatarImg(safeCfgSrc, viewerStyle, altName);
+                if (safeCfgSrc) content = getAvatarImg(safeCfgSrc, viewerStyle, altName, fallbackOnerror, extraAttrs);
             }
         } catch (e) {
             // Drawn avatar path
@@ -263,12 +264,19 @@ export function openAvatarViewer(uidOrStr) {
                 path = 'server/' + path;
             }
             if (getSafeAvatarImageSrc(path)) {
-                content = getAvatarImg(path, viewerStyle, altName);
+                content = getAvatarImg(path, viewerStyle, altName, fallbackOnerror, extraAttrs);
             }
         }
     }
 
-    container.innerHTML = baseHtml + (content || '') + '</div>';
+    if (!content) {
+        // No image, render fallback directly
+        content = `<div style="width:100%; height:100%; background:${palette}; display:flex; align-items:center; justify-content:center;">
+            <span style="font-size:120px; color:#fff; font-weight:700; user-select:none; text-shadow:0 2px 10px rgba(0,0,0,0.2);">${initials}</span>
+        </div>`;
+    }
+
+    container.innerHTML = content;
 
     // Dependency: showModal is in app.js (global)
     if (window.showModal) {
@@ -278,6 +286,31 @@ export function openAvatarViewer(uidOrStr) {
     }
 }
 
+export function handleViewerAvatarError(imgEl) {
+    if (!imgEl) return;
+    const container = imgEl.parentElement;
+    if (!container) return;
+
+    const key = imgEl.dataset.avatarViewerKey;
+    if (!key) return;
+
+    let user;
+    if (window.avatarDataMap && window.avatarDataMap[key]) {
+        user = window.avatarDataMap[key];
+    } else {
+        try { user = JSON.parse(key); } catch (e) { return; }
+    }
+
+    const seed = getAvatarSeed(user);
+    const palette = AVATAR_PALETTES[seed % AVATAR_PALETTES.length];
+    const initials = escapeAvatarHtml(getUserInitials(user));
+
+    container.innerHTML = `<div style="width:100%; height:100%; background:${palette}; display:flex; align-items:center; justify-content:center;">
+        <span style="font-size:120px; color:#fff; font-weight:700; user-select:none; text-shadow:0 2px 10px rgba(0,0,0,0.2);">${initials}</span>
+    </div>`;
+}
+
 // === EXPOSE TO WINDOW (Legacy Bridge) ===
 window.renderAvatar = renderAvatar;
 window.openAvatarViewer = openAvatarViewer;
+window.handleViewerAvatarError = handleViewerAvatarError;
