@@ -34,7 +34,7 @@
     <link rel="stylesheet" href="css/dark-mode.css?v=<?php echo $v; ?>">
 
     <!-- Telegram WebApp -->
-    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
+    <script src="js/libs/telegram-web-app.js?v=<?php echo $v; ?>"></script>
     <script>
         // Immediate Theme Init to prevent "Flash of Default Color"
         (function () {

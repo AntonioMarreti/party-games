@@ -1,0 +1,6 @@
+{
+  "source": "https://telegram.org/js/telegram-web-app.js",
+  "updated_at": "2026-06-01T11:34:00Z",
+  "sha256": "bcc5e1ca219fbea9498e826e0f5648603582c7988ec8c3ce0b85c86a9eb6299c",
+  "reason": "Hosted locally because Telegram Desktop Linux/WebKit may hang when loading telegram.org SDK directly."
+}
