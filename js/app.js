@@ -190,6 +190,37 @@ let telegramWebAppInitDone = false;
 let lateTelegramWebAppInitScheduled = false;
 
 let telegramDesktopFullscreenCloudSyncStarted = false;
+
+if (typeof window.__pgb_fs_logged !== 'number') window.__pgb_fs_logged = 0;
+window.__pgbLogFs = function(event, tg, extra = {}) {
+    console.debug(`[Fullscreen Debug] ${event}`, extra);
+    if (window.__pgb_fs_logged >= 8 || typeof window.logClientError !== 'function') return;
+
+    const prefVal = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled');
+    const p = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg && tg.platform ? tg.platform : '')).toLowerCase();
+    const d = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(p) : (p === 'tdesktop' || p === 'macos' || p === 'mac');
+
+    const isLinuxWebkit = /linux/i.test(navigator.userAgent) && /webkit|safari/i.test(navigator.userAgent);
+    const hasMarker = window.__pgb_tma_marker_saved === true || window.location.hash.includes('tgWebAppPlatform=');
+
+    if (event === 'fullscreen_debug_boot_probe') {
+        if (!isLinuxWebkit && !hasMarker) return;
+        if (window.__pgb_fs_boot_probed) return;
+        window.__pgb_fs_boot_probed = true;
+    } else {
+        if (prefVal !== '1' && !d) return;
+    }
+
+    window.__pgb_fs_logged++;
+    window.logClientError("fullscreen_debug", `event: ${event}`, {
+        event, pref: prefVal,
+        platform_tg: tg ? tg.platform : undefined, platform_fb: p, is_desk: d,
+        has_req_fs: tg ? typeof tg.requestFullscreen : 'undefined', has_exp: tg ? typeof tg.expand : 'undefined',
+        is_fs: tg ? tg.isFullscreen : undefined, vp_h: tg ? tg.viewportHeight : undefined, vp_sh: tg ? tg.viewportStableHeight : undefined,
+        vis: document.visibilityState, ua: navigator.userAgent, ...extra
+    });
+};
+
 window.syncTelegramDesktopFullscreenCloud = function() {
     if (telegramDesktopFullscreenCloudSyncStarted) return;
 
@@ -218,8 +249,18 @@ window.syncTelegramDesktopFullscreenCloud = function() {
                     if (val === '1') {
                         const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
                         const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : false;
+
+                        if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_sync_cloud_retry_start', tg, { isDesktop, platform });
+
                         if (isDesktop && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
-                            try { tg.requestFullscreen(); } catch (e) { console.debug('[Fullscreen] sync requestFullscreen error', e); }
+                            try {
+                                tg.requestFullscreen();
+                                setTimeout(() => {
+                                    if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_sync_cloud_retry_after', tg, { is_fs_now: tg.isFullscreen });
+                                }, 500);
+                            } catch (e) {
+                                if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_sync_cloud_retry_err', tg, { err: String(e) });
+                            }
                         }
                     }
                 }
@@ -240,52 +281,35 @@ function initTelegramWebAppShell(tg, context = 'startup') {
                 window.logAuthClientEvent('tma_late_expand_called', { platform: getTelegramPlatformFallback(tg) });
             }
         }
-        if (typeof window.__pgb_fs_logged !== 'number') window.__pgb_fs_logged = 0;
-        const logFs = (event, extra = {}) => {
-            console.debug(`[Fullscreen Debug] ${event}`, extra);
-            if (window.__pgb_fs_logged >= 6 || typeof window.logClientError !== 'function') return;
-
-            const prefVal = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled');
-            const p = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
-            const d = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(p) : (p === 'tdesktop' || p === 'macos' || p === 'mac');
-
-            if (prefVal !== '1' && !d) return;
-
-            window.__pgb_fs_logged++;
-            window.logClientError("fullscreen_debug", `event: ${event}`, {
-                event, pref: prefVal,
-                platform_tg: tg.platform, platform_fb: p, is_desk: d,
-                has_req_fs: typeof tg.requestFullscreen, has_exp: typeof tg.expand,
-                is_fs: tg.isFullscreen, vp_h: tg.viewportHeight, vp_sh: tg.viewportStableHeight,
-                vis: document.visibilityState, ua: navigator.userAgent, ...extra
-            });
-        };
+        if (window.__pgbLogFs) {
+            window.__pgbLogFs('fullscreen_debug_boot_probe', tg, { note: 'boot_probe_linux_webkit_unknown' });
+        }
 
         try {
             const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
             const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
             const isFullscreenEnabled = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled') === '1';
 
-            logFs('fullscreen_pref_read', { cond_allows: (!isDesktop || isFullscreenEnabled), isDesktop, isFullscreenEnabled, platform });
+            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_pref_read', tg, { cond_allows: (!isDesktop || isFullscreenEnabled), isDesktop, isFullscreenEnabled, platform });
 
             if (!tg.requestFullscreen) {
-                logFs('fullscreen_api_missing', { reason: 'api_missing' });
+                if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_api_missing', tg, { reason: 'api_missing' });
             } else if (!tg.isVersionAtLeast || !tg.isVersionAtLeast('8.0')) {
-                logFs('fullscreen_api_missing', { reason: 'version_too_low' });
+                if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_api_missing', tg, { reason: 'version_too_low' });
             } else {
                 if (!isDesktop || isFullscreenEnabled) {
-                    logFs('fullscreen_attempt_start');
+                    if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_start', tg);
                     try {
                         let res = tg.requestFullscreen();
                         if (res instanceof Promise) {
-                            res.then(() => logFs('fullscreen_attempt_returned', { note: 'promise_resolved' }))
-                               .catch(e => logFs('fullscreen_attempt_failed', { err_msg: String(e) }));
+                            res.then(() => { if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_returned', tg, { note: 'promise_resolved' }); })
+                               .catch(e => { if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_failed', tg, { err_msg: String(e) }); });
                         } else {
-                            logFs('fullscreen_attempt_returned', { note: 'sync_return' });
+                            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_returned', tg, { note: 'sync_return' });
                         }
 
                         setTimeout(() => {
-                            logFs('fullscreen_after_attempt_state', {
+                            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_after_attempt_state', tg, {
                                 is_fs_now: tg.isFullscreen,
                                 vp_h_now: tg.viewportHeight,
                                 vp_sh_now: tg.viewportStableHeight
@@ -293,15 +317,15 @@ function initTelegramWebAppShell(tg, context = 'startup') {
                         }, 400);
 
                     } catch (e) {
-                        logFs('fullscreen_attempt_failed', { err_msg: String(e) });
+                        if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_failed', tg, { err_msg: String(e) });
                         console.warn('requestFullscreen failed or was rejected', e);
                     }
                 } else {
-                    logFs('fullscreen_attempt_skipped', { reason: 'desktop_pref_disabled' });
+                    if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_skipped', tg, { reason: 'desktop_pref_disabled' });
                 }
             }
         } catch (e) {
-            logFs('fullscreen_outer_err', { err_msg: String(e) });
+            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_outer_err', tg, { err_msg: String(e) });
         }
 
         if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
