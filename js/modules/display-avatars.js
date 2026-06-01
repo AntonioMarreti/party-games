@@ -113,7 +113,8 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     let sizePx = 40;
     if (sizeStr === 'sm') sizePx = 32;
     if (sizeStr === 'lg') sizePx = 64;
-    if (sizeStr === 'xl') sizePx = 100; // Profile
+    if (sizeStr === 'xl') sizePx = 100;
+    if (sizeStr === 'xxl') sizePx = 100; // Profile
 
     const seed = getAvatarSeed(user);
     const palette = AVATAR_PALETTES[seed % AVATAR_PALETTES.length];
