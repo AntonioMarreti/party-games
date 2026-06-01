@@ -143,7 +143,7 @@ function applyTelegramPlatformClass(tg) {
     }
 }
 
-function waitForTelegramWebApp(timeoutMs = 1500) {
+function waitForTelegramWebApp(timeoutMs = 3500) {
     if (isRealTelegramWebApp(window.Telegram?.WebApp)) {
         return Promise.resolve(window.Telegram.WebApp);
     }
@@ -159,7 +159,11 @@ function waitForTelegramWebApp(timeoutMs = 1500) {
             if (Date.now() - started >= timeoutMs) {
                 clearInterval(timer);
                 if (typeof window.logAuthClientEvent === 'function') {
-                    window.logAuthClientEvent('telegram_webapp_timeout_continue');
+                    window.logAuthClientEvent('telegram_webapp_timeout_continue', {
+                        has_proxy: !!window.TelegramWebviewProxy,
+                        has_game_proxy: !!window.TelegramGameProxy,
+                        timeout: timeoutMs
+                    });
                 }
                 resolve(null);
             }
@@ -592,9 +596,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.ThemeManager && window.ThemeManager.loadSettings) window.ThemeManager.loadSettings();
     if (window.UIManager && window.UIManager.setupModalClosing) window.UIManager.setupModalClosing();
 
-    let tg = await waitForTelegramWebApp(1500);
+    let tg = await waitForTelegramWebApp(3500);
     if (!tg && typeof window.logAuthClientEvent === 'function') {
-        window.logAuthClientEvent('auth_ui_ready_without_webapp');
+        window.logAuthClientEvent('auth_ui_ready_without_webapp', {
+            has_proxy: !!window.TelegramWebviewProxy,
+            has_game_proxy: !!window.TelegramGameProxy,
+            script_tag: !!document.querySelector('script[src*="telegram-web-app.js"]')
+        });
     }
     if (tg) {
         initTelegramWebAppShell(tg, 'startup');
