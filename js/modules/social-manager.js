@@ -1962,3 +1962,9 @@ window.saveProfile = saveProfile;
 window.closeProfileEditor = closeProfileEditor;
 window.selectEmoji = selectEmoji;
 window.selectColor = selectColor;
+// Close friend profile modal on backdrop click
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'userProfileModal') {
+        if (window.closeModal) window.closeModal('userProfileModal');
+    }
+});
