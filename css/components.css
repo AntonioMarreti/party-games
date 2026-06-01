@@ -921,6 +921,24 @@ body.dark-mode .badge-info {
     background: color-mix(in srgb, var(--status-error), white 84%);
 }
 
+/* Dark mode overrides for bright buttons */
+body.dark-mode .glass-btn-warning {
+    background: color-mix(in srgb, var(--status-warning), transparent 85%);
+    border-color: color-mix(in srgb, var(--status-warning), transparent 70%);
+    color: var(--status-warning);
+}
+body.dark-mode .glass-btn-warning:hover {
+    background: color-mix(in srgb, var(--status-warning), transparent 75%);
+}
+body.dark-mode .glass-btn-danger {
+    background: color-mix(in srgb, var(--status-error), transparent 85%);
+    border-color: color-mix(in srgb, var(--status-error), transparent 70%);
+    color: var(--status-error);
+}
+body.dark-mode .glass-btn-danger:hover {
+    background: color-mix(in srgb, var(--status-error), transparent 75%);
+}
+
 .glass-btn-primary {
     background: color-mix(in srgb, var(--status-info), transparent 85%);
     border-color: color-mix(in srgb, var(--status-info), transparent 70%);

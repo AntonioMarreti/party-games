@@ -1824,6 +1824,28 @@ body.dark-mode .player-score {
     color: var(--primary-color);
 }
 
+/* Dark mode overrides for badges */
+body.dark-mode .player-bot-badge--easy {
+    background: color-mix(in srgb, var(--status-success), transparent 85%);
+    border-color: color-mix(in srgb, var(--status-success), transparent 70%);
+    color: var(--status-success);
+}
+body.dark-mode .player-bot-badge--medium {
+    background: color-mix(in srgb, var(--status-warning), transparent 85%);
+    border-color: color-mix(in srgb, var(--status-warning), transparent 70%);
+    color: var(--status-warning);
+}
+body.dark-mode .player-bot-badge--hard {
+    background: color-mix(in srgb, var(--status-error), transparent 85%);
+    border-color: color-mix(in srgb, var(--status-error), transparent 70%);
+    color: var(--status-error);
+}
+body.dark-mode .player-bot-badge--ai {
+    background: color-mix(in srgb, var(--primary-color), transparent 85%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 70%);
+    color: var(--primary-color);
+}
+
 .host-crown {
     position: absolute;
     top: -12px;
