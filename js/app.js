@@ -158,13 +158,7 @@ function waitForTelegramWebApp(timeoutMs = 3500) {
             }
             if (Date.now() - started >= timeoutMs) {
                 clearInterval(timer);
-                if (typeof window.logAuthClientEvent === 'function') {
-                    window.logAuthClientEvent('telegram_webapp_timeout_continue', {
-                        has_proxy: !!window.TelegramWebviewProxy,
-                        has_game_proxy: !!window.TelegramGameProxy,
-                        timeout: timeoutMs
-                    });
-                }
+
                 resolve(null);
             }
         }, 100);
@@ -195,41 +189,7 @@ let lateTelegramWebAppInitScheduled = false;
 
 let telegramDesktopFullscreenCloudSyncStarted = false;
 
-if (typeof window.__pgb_fs_logged !== 'number') window.__pgb_fs_logged = 0;
-window.__pgbLogFs = function(event, tg, extra = {}) {
-    console.debug(`[Fullscreen Debug] ${event}`, extra);
-    if (window.__pgb_fs_logged >= 8 || typeof window.logClientError !== 'function') return;
 
-    const prefVal = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled');
-    const p = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg && tg.platform ? tg.platform : '')).toLowerCase();
-    const d = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(p) : (p === 'tdesktop' || p === 'macos' || p === 'mac');
-
-    const isLinuxWebkit = /linux/i.test(navigator.userAgent) && /webkit|safari/i.test(navigator.userAgent);
-    const hasMarker = window.__pgb_tma_marker_saved === true || window.location.hash.includes('tgWebAppPlatform=');
-
-    const isProbingEvent = event === 'fullscreen_debug_boot_probe_early' ||
-                           event === 'fullscreen_debug_boot_probe_delayed' ||
-                           event === 'fullscreen_outer_err';
-
-    if (isProbingEvent) {
-        if (!isLinuxWebkit && !hasMarker) return;
-        window.__pgb_fs_probed_events = window.__pgb_fs_probed_events || new Set();
-        if (window.__pgb_fs_probed_events.has(event)) return;
-        window.__pgb_fs_probed_events.add(event);
-    } else {
-        if (prefVal !== '1' && !d) return;
-    }
-
-    window.__pgb_fs_logged++;
-    window.logClientError("fullscreen_debug", `event: ${event}`, {
-        event, pref: prefVal,
-        platform_tg: tg ? tg.platform : undefined, platform_fb: p, is_desk: d,
-        has_webapp: !!tg, has_req_fs: tg ? typeof tg.requestFullscreen : 'undefined', has_exp: tg ? typeof tg.expand : 'undefined',
-        has_cloud_storage: tg ? typeof tg.CloudStorage : 'undefined', has_is_version_at_least: tg ? typeof tg.isVersionAtLeast : 'undefined',
-        is_fs: tg ? tg.isFullscreen : undefined, vp_h: tg ? tg.viewportHeight : undefined, vp_sh: tg ? tg.viewportStableHeight : undefined,
-        vis: document.visibilityState, ua: navigator.userAgent, ...extra
-    });
-};
 
 window.syncTelegramDesktopFullscreenCloud = function() {
     if (telegramDesktopFullscreenCloudSyncStarted) return;
@@ -260,16 +220,11 @@ window.syncTelegramDesktopFullscreenCloud = function() {
                         const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
                         const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : false;
 
-                        if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_sync_cloud_retry_start', tg, { isDesktop, platform });
-
                         if (isDesktop && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
                             try {
                                 tg.requestFullscreen();
-                                setTimeout(() => {
-                                    if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_sync_cloud_retry_after', tg, { is_fs_now: tg.isFullscreen });
-                                }, 500);
                             } catch (e) {
-                                if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_sync_cloud_retry_err', tg, { err: String(e) });
+                                console.warn('CloudStorage requestFullscreen err', e);
                             }
                         }
                     }
@@ -284,19 +239,12 @@ window.syncTelegramDesktopFullscreenCloud = function() {
 function initTelegramWebAppShell(tg, context = 'startup') {
     if (!isRealTelegramWebApp(tg)) return false;
 
-    if (window.__pgbLogFs) {
-        window.__pgbLogFs('fullscreen_debug_boot_probe_early', tg, { context });
-        setTimeout(() => {
-            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_debug_boot_probe_delayed', tg, { context });
-        }, 1800);
-    }
+
 
     try {
         if (tg.expand) {
             tg.expand();
-            if (context === 'late' && typeof window.logAuthClientEvent === 'function') {
-                window.logAuthClientEvent('tma_late_expand_called', { platform: getTelegramPlatformFallback(tg) });
-            }
+
         }
 
         try {
@@ -304,42 +252,23 @@ function initTelegramWebAppShell(tg, context = 'startup') {
             const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
             const isFullscreenEnabled = localStorage.getItem('pgb_telegram_desktop_fullscreen_enabled') === '1';
 
-            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_pref_read', tg, { cond_allows: (!isDesktop || isFullscreenEnabled), isDesktop, isFullscreenEnabled, platform });
-
             if (!tg.requestFullscreen) {
-                if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_api_missing', tg, { reason: 'api_missing' });
+                // api missing
             } else if (!tg.isVersionAtLeast || !tg.isVersionAtLeast('8.0')) {
-                if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_api_missing', tg, { reason: 'version_too_low' });
+                // version too low
             } else {
                 if (!isDesktop || isFullscreenEnabled) {
-                    if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_start', tg);
                     try {
                         let res = tg.requestFullscreen();
                         if (res instanceof Promise) {
-                            res.then(() => { if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_returned', tg, { note: 'promise_resolved' }); })
-                               .catch(e => { if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_failed', tg, { err_msg: String(e) }); });
-                        } else {
-                            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_returned', tg, { note: 'sync_return' });
+                            res.catch(e => console.warn('requestFullscreen rejected', e));
                         }
-
-                        setTimeout(() => {
-                            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_after_attempt_state', tg, {
-                                is_fs_now: tg.isFullscreen,
-                                vp_h_now: tg.viewportHeight,
-                                vp_sh_now: tg.viewportStableHeight
-                            });
-                        }, 400);
-
                     } catch (e) {
-                        if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_failed', tg, { err_msg: String(e) });
-                        console.warn('requestFullscreen failed or was rejected', e);
+                        console.warn('requestFullscreen failed', e);
                     }
-                } else {
-                    if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_attempt_skipped', tg, { reason: 'desktop_pref_disabled' });
                 }
             }
         } catch (e) {
-            if (window.__pgbLogFs) window.__pgbLogFs('fullscreen_outer_err', tg, { err_msg: String(e) });
         }
 
         if (tg.swipeBehavior && tg.swipeBehavior.disableVertical) {
@@ -376,12 +305,7 @@ function scheduleLateTelegramWebAppInit(timeoutMs = 5000) {
         const tg = window.Telegram?.WebApp;
         if (isRealTelegramWebApp(tg)) {
             clearInterval(timer);
-            if (typeof window.logAuthClientEvent === 'function') {
-                window.logAuthClientEvent('tma_late_webapp_detected', { platform: getTelegramPlatformFallback(tg) });
-            }
-            if (initTelegramWebAppShell(tg, 'late') && typeof window.logAuthClientEvent === 'function') {
-                window.logAuthClientEvent('tma_late_init_done', { platform: getTelegramPlatformFallback(tg) });
-            }
+            initTelegramWebAppShell(tg, 'late');
             return;
         }
 
@@ -597,20 +521,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.UIManager && window.UIManager.setupModalClosing) window.UIManager.setupModalClosing();
 
     let tg = await waitForTelegramWebApp(3500);
-    if (!tg && typeof window.logAuthClientEvent === 'function') {
-        window.logAuthClientEvent('auth_ui_ready_without_webapp', {
-            has_proxy: !!window.TelegramWebviewProxy,
-            has_game_proxy: !!window.TelegramGameProxy,
-            script_tag: !!document.querySelector('script[src*="telegram-web-app.js"]')
-        });
-    }
+
     if (tg) {
         initTelegramWebAppShell(tg, 'startup');
     } else {
         console.warn("Telegram WebApp not found");
-        if (typeof window.logAuthClientEvent === 'function') {
-            window.logAuthClientEvent('webapp_unavailable');
-        }
+
         scheduleLateTelegramWebAppInit();
     }
     applyTelegramPlatformClass(tg);
@@ -667,10 +583,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const isMockWebApp = !!(tg?.__PGB_MOCK === true);
-    if (isMockWebApp && typeof window.logAuthClientEvent === 'function') {
-        window.logAuthClientEvent('mock_webapp_detected_ignore_initdata');
-        tg = null;
-    }
+    if (isMockWebApp) tg = null;
     const hasTmaInitData = tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0;
     const urlInitData = !hasTmaInitData && window.AuthManager?.getTelegramInitDataFallback
         ? window.AuthManager.getTelegramInitDataFallback()
@@ -714,9 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (currentToken) {
-        if (typeof window.logAuthClientEvent === 'function' && !tg) {
-            window.logAuthClientEvent('auth_restore_without_webapp');
-        }
+
         if (window.AuthManager) await window.AuthManager.initApp(authTg || tg);
     } else if (hasAuthInitData) {
         if (window.AuthManager) await window.AuthManager.loginTMA(authTg, urlTg ? {

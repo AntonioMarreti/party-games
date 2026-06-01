@@ -77,13 +77,7 @@ function getTelegramInitDataFallback() {
     const initData = getHashParam('tgWebAppData');
     if (!initData) return '';
 
-    if (typeof window.logAuthClientEvent === 'function') {
-        window.logAuthClientEvent('url_initdata_detected', {
-            detected: true,
-            length: initData.length,
-            platform: getHashParam('tgWebAppPlatform') || 'unknown'
-        });
-    }
+
 
     return initData;
 }
@@ -115,19 +109,7 @@ function updateSessionInfoBestEffort(device) {
         action: 'update_session_info',
         platform: 'tma',
         device
-    }, { timeoutMs: 4000 }).then((res) => {
-        if (res && res.status === 'error' && typeof window.logAuthClientEvent === 'function') {
-            window.logAuthClientEvent('update_session_info_best_effort_failed', {
-                is_timeout: !!res.is_timeout
-            });
-        }
-    }).catch((e) => {
-        if (typeof window.logAuthClientEvent === 'function') {
-            window.logAuthClientEvent('update_session_info_best_effort_exception', {
-                message: e?.name || 'error'
-            });
-        }
-    });
+    }, { timeoutMs: 4000 }).catch((e) => { console.warn('update_session_info failed', e); });
 }
 
 async function initApp(tg) {
@@ -148,9 +130,7 @@ async function initApp(tg) {
         if (!res || res.status === 'error' || res.status === 'auth_error') {
             const hasSavedToken = !!(getAuthToken() || localStorage.getItem('pg_token'));
             if (res && res.status === 'error' && res.is_timeout && hasSavedToken) {
-                if (typeof window.logAuthClientEvent === 'function') {
-                    window.logAuthClientEvent('auth_restore_get_state_timeout_continue');
-                }
+
                 if (window.showScreen) window.showScreen('lobby');
                 screenShown = true;
                 return;
@@ -162,12 +142,7 @@ async function initApp(tg) {
                 await loginTMA(tg);
                 return;
             }
-            if (!hasTmaData && typeof window.logAuthClientEvent === 'function') {
-                window.logAuthClientEvent('telegram_initdata_missing');
-            }
-            if (typeof window.logAuthClientEvent === 'function') {
-                window.logAuthClientEvent('auth_startup_continue_after_api_failure');
-            }
+
             if (window.showScreen) window.showScreen('login');
             screenShown = true;
             return;
@@ -255,12 +230,7 @@ async function loginTMA(tg, context = {}) {
 
         const device = getTelegramDeviceName();
 
-        if (source === 'url_hash' && typeof window.logAuthClientEvent === 'function') {
-            window.logAuthClientEvent('url_initdata_login_attempt', {
-                length: initData.length,
-                platform: context.platform || 'unknown'
-            });
-        }
+
 
         const res = await window.apiRequest({
             action: 'login_tma',
@@ -270,14 +240,7 @@ async function loginTMA(tg, context = {}) {
         });
         if (res.status === 'ok') {
             setAuthToken(res.token);
-            if (typeof window.logAuthClientEvent === 'function') {
-                window.logAuthClientEvent('tma_login_success');
-                if (source === 'url_hash') {
-                    window.logAuthClientEvent('url_initdata_login_success', {
-                        platform: context.platform || 'unknown'
-                    });
-                }
-            }
+
             await initApp(tg);
         } else {
             if (typeof window.logAuthClientEvent === 'function') {
