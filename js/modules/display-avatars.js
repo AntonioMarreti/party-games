@@ -149,7 +149,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     let isEmoji = false;
     let emojiVal = '';
 
-    const imgStyle = `grid-area:1/1; width:100%; height:100%; object-fit:cover;`;
+    const imgStyle = `position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:50%;`;
     const altName = getFallbackName(user);
 
     // 1. Custom Avatar (Prioritize over Telegram/Default photo)
@@ -182,7 +182,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     }
 
     // Render Container
-    const clickHandler = disableClick ? '' : `onclick="event.stopPropagation(); openAvatarViewer('${tempUid}')"`;
+    const clickHandler = disableClick ? '' : `onclick="event.stopPropagation(); if(window.openAvatarViewer) window.openAvatarViewer('${tempUid}')"`;
     const cursorStyle = disableClick ? '' : 'cursor:pointer;';
 
     if (isEmoji) {
@@ -198,8 +198,8 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
         const initials = escapeAvatarHtml(getUserInitials(user, sizeStr === 'sm'));
         const fontSize = sizeStr === 'sm' ? Math.floor(sizePx * 0.5) : Math.floor(sizePx * 0.45);
         return `
-            <div class="avatar-wrapper" style="display:grid; place-items:center; width:${sizePx}px; height:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
-                <span style="grid-area:1/1; color:#fff; font-size:${fontSize}px; font-weight:700; user-select:none; text-shadow:0 1px 2px rgba(0,0,0,0.15);">${initials}</span>
+            <div class="avatar-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; width:${sizePx}px; height:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
+                <span style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:${fontSize}px; font-weight:700; user-select:none; text-shadow:0 1px 2px rgba(0,0,0,0.15); pointer-events:none;">${initials}</span>
                 ${innerContent}
             </div>
         `;
@@ -236,7 +236,7 @@ export function openAvatarViewer(uidOrStr) {
     const initials = escapeAvatarHtml(getUserInitials(user));
 
     // Check Photo
-    const viewerStyle = 'width:100%; height:100%; object-fit:cover;';
+    const viewerStyle = 'position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:50%;';
     const altName = getFallbackName(user);
 
     // Fallback error handler for viewer
