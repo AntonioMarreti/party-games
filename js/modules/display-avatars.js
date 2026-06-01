@@ -114,7 +114,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     if (sizeStr === 'sm') sizePx = 32;
     if (sizeStr === 'lg') sizePx = 64;
     if (sizeStr === 'xl') sizePx = 100;
-    if (sizeStr === 'xxl') sizePx = 100; // Profile
+    if (sizeStr === 'xxl') sizePx = 92; // Profile content area (100px - 2x4px borders)
 
     const seed = getAvatarSeed(user);
     const palette = AVATAR_PALETTES[seed % AVATAR_PALETTES.length];
