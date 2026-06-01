@@ -800,6 +800,40 @@ body.wordclash-active .game-custom-wrapper,
     -webkit-backdrop-filter: blur(10px);
 }
 
+/* === LIGHT THEME ADAPTATION (Fix for QA Report #21) === */
+/* a) Title / Header Text */
+body:not(.tg-dark-theme).wordclash-active h3.interactable {
+    color: var(--theme-text-color, #000000) !important;
+    text-shadow: none !important;
+}
+
+/* b) Input, Letter Slots, Empty Tiles, Virtual Keys */
+body:not(.tg-dark-theme).wordclash-active .wc-input,
+body:not(.tg-dark-theme).wordclash-active .wc-virtual-input,
+body:not(.tg-dark-theme).wordclash-active .wc-key,
+body:not(.tg-dark-theme).wordclash-active .wc-tile:not(.res-0):not(.res-1):not(.res-2) {
+    color: var(--theme-text-color, #000000) !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* c) Keyboard Interactions */
+body:not(.tg-dark-theme).wordclash-active .wc-key:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+}
+body:not(.tg-dark-theme).wordclash-active .wc-key:active {
+    background: rgba(0, 0, 0, 0.15) !important;
+}
+body:not(.tg-dark-theme).wordclash-active .wc-input::placeholder {
+    color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* d) Bottom Input Area Wrapper */
+body:not(.tg-dark-theme).wordclash-active .wc-input-area {
+    background: var(--theme-secondary-bg-color, #f3f3f3) !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .wc-waiting-msg i {
     font-size: 24px;
     animation: spin 2s linear infinite;
