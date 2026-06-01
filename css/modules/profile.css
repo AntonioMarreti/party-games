@@ -1854,3 +1854,10 @@ body.thermal-safe #screen-settings .settings-screen-group {
         height: 32px;
     }
 }
+
+/* === PROFILE EDIT SCREEN CONTRAST FIX (Targeted) === */
+#screen-profile-edit #tab-pane-ai .text-muted.opacity-50 {
+    color: var(--text-main) !important;
+    color: color-mix(in srgb, var(--text-muted), var(--text-main) 20%) !important;
+    opacity: 0.75 !important;
+}
