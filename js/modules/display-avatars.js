@@ -190,7 +190,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
         return `
             <div class="avatar-circle" 
                  ${clickHandler}
-                 style="display:flex; align-items:center; justify-content:center; width:${sizePx}px; height:${sizePx}px; background:${bgColor}; border-radius:50%; ${cursorStyle} overflow:hidden;">
+                 style="display:flex; align-items:center; justify-content:center; flex:0 0 ${sizePx}px; width:${sizePx}px; height:${sizePx}px; min-width:${sizePx}px; max-width:${sizePx}px; background:${bgColor}; border-radius:50%; ${cursorStyle} overflow:hidden;">
                 <span style="font-size:${fontSize}px; line-height:1;">${emojiVal}</span>
             </div>
         `;
@@ -198,7 +198,7 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
         const initials = escapeAvatarHtml(getUserInitials(user, sizeStr === 'sm'));
         const fontSize = sizeStr === 'sm' ? Math.floor(sizePx * 0.5) : Math.floor(sizePx * 0.45);
         return `
-            <div class="avatar-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; width:${sizePx}px; height:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
+            <div class="avatar-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; flex:0 0 ${sizePx}px; width:${sizePx}px; height:${sizePx}px; min-width:${sizePx}px; max-width:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
                 <span style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:${fontSize}px; font-weight:700; user-select:none; text-shadow:0 1px 2px rgba(0,0,0,0.15); pointer-events:none;">${initials}</span>
                 ${innerContent}
             </div>
