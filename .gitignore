@@ -16,3 +16,4 @@ server/config.php
 data/import/*
 !data/import/.gitkeep
 !data/import/README.md
+.env.deploy.local
