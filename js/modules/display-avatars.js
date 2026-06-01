@@ -228,6 +228,9 @@ export function openAvatarViewer(uidOrStr) {
     const container = document.getElementById('avatar-view-container');
     if (!container) return;
 
+    // Fix: Force container to be the absolute positioning context so img stays 300x300
+    container.style.position = 'relative';
+
     // Reuse getAvatarStyle logic but refined for full img
     let content = '';
 
@@ -244,9 +247,7 @@ export function openAvatarViewer(uidOrStr) {
     const safeKey = escapeAvatarHtml(typeof uidOrStr === 'string' ? uidOrStr : JSON.stringify(uidOrStr));
     const extraAttrs = `data-avatar-viewer-key="${safeKey}"`;
 
-    if (getSafeAvatarUrl(user.photo_url) && user.photo_url !== '🤖') {
-        content = getAvatarImg(getSafeAvatarUrl(user.photo_url), viewerStyle, altName, fallbackOnerror, extraAttrs);
-    } else if (user.custom_avatar) {
+    if (user.custom_avatar) {
         try {
             const cfg = JSON.parse(user.custom_avatar);
             if (cfg.type === 'emoji') {
@@ -267,6 +268,8 @@ export function openAvatarViewer(uidOrStr) {
                 content = getAvatarImg(path, viewerStyle, altName, fallbackOnerror, extraAttrs);
             }
         }
+    } else if (getSafeAvatarUrl(user.photo_url) && user.photo_url !== '🤖') {
+        content = getAvatarImg(getSafeAvatarUrl(user.photo_url), viewerStyle, altName, fallbackOnerror, extraAttrs);
     }
 
     if (!content) {
