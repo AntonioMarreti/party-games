@@ -577,6 +577,9 @@ function renderLibrary() {
         card.className = 'game-list-card d-flex align-items-center mb-2 p-3 bg-white shadow-sm';
         card.style.borderRadius = '20px';
 
+        const minPlayers = getCatalogMinPlayers(game);
+        const minPlayersLabel = minPlayers === 1 ? 'Мин. 1 игрок' : `Мин. ${minPlayers} игрока`;
+
         card.innerHTML = `
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white me-3" 
                  style="width: 50px; height: 50px; background: ${game.color || '#2E1A5B'}; font-size: 24px;">
@@ -584,7 +587,7 @@ function renderLibrary() {
             </div>
             <div class="flex-grow-1">
                 <h6 class="mb-0 fw-bold text-dark">${game.name}</h6>
-                <div class="text-muted small">Мин. 2 игрока</div>
+                <div class="text-muted small">${minPlayersLabel}</div>
             </div>
             <button class="btn btn-sm btn-light rounded-pill px-3 fw-bold text-primary" 
                     onclick="switchTab('home'); showScreen('lobby'); document.querySelector('[data-bs-target=\\'#createModal\\']').click();">
