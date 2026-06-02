@@ -677,6 +677,7 @@ function handleSwipeBack() {
     const leaderboardScreen = document.getElementById('screen-leaderboard');
     const profileEditScreen = document.getElementById('screen-profile-edit');
     const settingsScreen = document.getElementById('screen-settings');
+    const sessionsScreen = document.getElementById('screen-sessions');
 
     if (friendsScreen && friendsScreen.classList.contains('active-screen')) {
         if (window.showScreen) window.showScreen('lobby');
@@ -687,6 +688,8 @@ function handleSwipeBack() {
     } else if (settingsScreen && settingsScreen.classList.contains('active-screen')) {
         if (window.showScreen) window.showScreen('lobby');
         if (window.switchTab) window.switchTab('profile');
+    } else if (sessionsScreen && sessionsScreen.classList.contains('active-screen')) {
+        if (window.showScreen) window.showScreen('settings');
     }
 }
 

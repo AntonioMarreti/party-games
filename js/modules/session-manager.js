@@ -54,7 +54,7 @@ function renderSessionCard(session) {
 
     const revokeBtn = isCurrent
         ? '' // can't close current session
-        : `<button class="btn btn-sm btn-outline-danger session-revoke-btn" 
+        : `<button class="btn btn-sm btn-outline-danger session-revoke-btn"
                onclick="window.SessionManager.revokeSession(${session.id})"
                style="font-size: 12px; padding: 4px 12px; border-radius: 8px;">
                Закрыть
@@ -163,3 +163,35 @@ function escapeHtml(str) {
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 window.SessionManager = { loadSessions, revokeSession, revokeAll, updateTtl };
+
+// ─── Native Back Button Integration ───────────────────────────────────────────
+
+let sessionsBackButtonHandler = () => {
+    if (window.showScreen) window.showScreen('settings');
+};
+let sessionsBackButtonBound = false;
+
+window.addEventListener('screenChanged', (event) => {
+    const tg = window.Telegram?.WebApp;
+    if (!tg || !tg.BackButton) return;
+
+    if (event?.detail?.screenId === 'screen-sessions') {
+        tg.BackButton.show();
+        if (!sessionsBackButtonBound) {
+            tg.BackButton.onClick(sessionsBackButtonHandler);
+            sessionsBackButtonBound = true;
+        }
+    } else {
+        if (sessionsBackButtonBound) {
+            tg.BackButton.offClick(sessionsBackButtonHandler);
+            sessionsBackButtonBound = false;
+
+            // Safe hide: only hide for root screens where we know BackButton shouldn't be visible.
+            // This prevents hiding the button if a screen like game-detail explicitly opened and needs it.
+            const targetScreen = event?.detail?.screenId;
+            if (['screen-settings', 'screen-lobby', 'screen-profile'].includes(targetScreen)) {
+                tg.BackButton.hide();
+            }
+        }
+    }
+});
