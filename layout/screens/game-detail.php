@@ -16,7 +16,7 @@
         </div>
 
         <!-- Bottom Action Button (Navbar style) -->
-        <div class="position-absolute bottom-0 start-0 end-0 p-4 border-top"
+        <div class="game-detail-action-bar position-absolute bottom-0 start-0 end-0 p-4 border-top"
             style="background: var(--bg-glass-strong); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; border-bottom-left-radius: 44px; border-bottom-right-radius: 44px; overflow: hidden; border-color: var(--border-glass) !important;">
             <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg" id="btn-try-game-now"
                 style="border: none; font-size: 16px; background: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%); letter-spacing: 0.5px;">

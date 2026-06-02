@@ -32,6 +32,10 @@ body.tg-platform-android.safe-top {
     --app-safe-top: calc(var(--app-safe-top-base) + 36px);
 }
 
+body.tg-platform-android .game-detail-action-bar {
+    padding-bottom: calc(36px + env(safe-area-inset-bottom)) !important;
+}
+
 @media (min-width: 700px) {
 
     body:not(.tg-platform-ios):not(.tg-platform-android) .device-wrapper {
