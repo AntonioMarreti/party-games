@@ -119,7 +119,12 @@ window.PartyBattleUI = {
         <div class="d-flex flex-column h-100 pb-3" style="padding-top: calc(env(safe-area-inset-top) + 10px); background:
             radial-gradient(circle at top, rgba(var(--primary-rgb), 0.12), transparent 35%),
             linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%);">
-            <div class="px-3 pt-2">
+            <div class="px-3 pt-2 position-relative">
+                <button class="btn btn-link position-absolute start-0 top-0 ms-1 text-muted px-2"
+                        onclick="window.leaveRoom()"
+                        style="font-size: 1.4rem; z-index: 10; outline: none; box-shadow: none;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
                 <div class="text-center mb-3">
                     <div class="game-page-title fw-black mb-1" style="font-size:2.1rem; letter-spacing:-0.045em; line-height:0.98; background: var(--primary-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Party Battle</div>
                     <div class="game-page-subtitle text-uppercase fw-bold small" style="color:var(--text-muted); letter-spacing:0.18em; font-size:0.72rem;">Mix, Vote, Laugh</div>
@@ -162,12 +167,12 @@ window.PartyBattleUI = {
                         <button class="btn btn-outline-secondary flex-fill pb-round-btn rounded-4 ${selectedRounds === 7 ? 'active' : ''}" data-rounds="7" style="min-height:40px; font-weight:700; ${selectedRounds === 7 ? 'border-color: var(--primary-color); background: rgba(var(--primary-rgb), 0.1);' : ''}" onclick="PartyBattleUI.selectRounds(7)">7</button>
                         <button class="btn btn-outline-secondary flex-fill pb-round-btn rounded-4 ${selectedRounds === 10 ? 'active' : ''}" data-rounds="10" style="min-height:40px; font-weight:700; ${selectedRounds === 10 ? 'border-color: var(--primary-color); background: rgba(var(--primary-rgb), 0.1);' : ''}" onclick="PartyBattleUI.selectRounds(10)">10</button>
                     </div>
-                    <input type="number" id="pb-rounds-custom" class="form-control rounded-3 py-2 text-center" 
-                           style="background: var(--bg-main); border: 1px solid var(--border-glass); color: var(--text-main);" 
+                    <input type="number" id="pb-rounds-custom" class="form-control rounded-3 py-2 text-center"
+                           style="background: var(--bg-main); border: 1px solid var(--border-glass); color: var(--text-main);"
                            placeholder="Или введите количество..." min="1" max="20" value="${[3, 5, 7, 10].includes(selectedRounds) ? '' : selectedRounds}" oninput="PartyBattleUI.customRoundsInput()">
                     <input type="hidden" id="pb-rounds" value="${selectedRounds}">
                 </div>
-                
+
                 <div class="mb-3 rounded-4 p-3 shadow-sm" style="background: rgba(255,255,255,0.96); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
                     <label class="form-label fw-bold small text-muted text-uppercase mb-2" style="letter-spacing:0.14em; font-size:0.72rem;">Настройки колоды</label>
                     <div id="pb-selected-theme-preview" class="d-flex mb-3">
@@ -286,7 +291,7 @@ window.PartyBattleUI = {
                 <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.92rem;" onclick="PartyBattleUI.closeModesModal()">Применить</button>
             </div>
             </div>
-            
+
             <div id="pbThemeModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(17,20,36,0.46); backdrop-filter:blur(12px); align-items:flex-end; justify-content:center; opacity:0; transition: opacity 0.3s; padding: 16px;"
                 onclick="if(event.target===this) PartyBattleUI.closeThemeModal()">
                 <div class="p-3 rounded-4 w-100 shadow-lg animate__animated animate__fadeInUp" style="background: rgba(255,255,255,0.98); max-width: 500px; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 18px 48px rgba(17,20,36,0.16) !important;">
@@ -574,8 +579,15 @@ window.PartyBattleUI = {
         const roundText = gameState.view !== 'lobby' && gameState.view !== 'results'
             ? `Раунд ${gameState.current_round} из ${gameState.total_rounds}`
             : '';
+        const isHost = (window.APP_STATE?.room?.is_host) || false;
+
         return `
-            <div class="header-container px-3 ${compact ? 'pt-2 pb-1' : 'pt-2 pb-2'} text-center" style="background: transparent;">
+            <div class="header-container px-3 ${compact ? 'pt-2 pb-1' : 'pt-2 pb-2'} text-center position-relative z-3" style="background: transparent;">
+                <button class="btn btn-link position-absolute start-0 top-50 translate-middle-y text-muted px-3"
+                        onclick="${isHost ? "window.sendGameAction('back_to_lobby')" : "window.leaveRoom()"}"
+                        style="font-size: 1.4rem; outline: none; box-shadow: none;">
+                    <i class="bi ${isHost ? 'bi-chevron-left' : 'bi-box-arrow-right'}"></i>
+                </button>
                 ${roundText || modeMeta.label ? `
                     <div class="mx-auto ${compact ? 'mb-1' : 'mb-2'}" style="max-width: min(100%, ${compact ? '240px' : '260px'});">
                         ${roundText ? `<div class="fw-bold ${compact ? 'mb-0' : 'mb-1'}" style="color:#5a67ff; font-size: ${compact ? '0.84rem' : '0.92rem'}; line-height:1.1;">${roundText}</div>` : ''}
@@ -638,7 +650,7 @@ window.PartyBattleUI = {
 
         html += `
             <div class="badge rounded-pill mb-3 border shadow-sm px-3 py-1" style="font-size: 11px; background: rgba(90, 103, 255, 0.1); color: #5a67ff; border-color: rgba(90, 103, 255, 0.14) !important; letter-spacing:0.12em;">СИТУАЦИЯ</div>
-            <div class="p-3 mb-4 shadow-sm rounded-4 d-flex align-items-center justify-content-center text-center position-relative overflow-hidden" 
+            <div class="p-3 mb-4 shadow-sm rounded-4 d-flex align-items-center justify-content-center text-center position-relative overflow-hidden"
                  style="min-height: 132px; width: 100%; max-width: 600px; background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.08) !important; box-shadow: 0 12px 28px rgba(31, 38, 135, 0.04) !important; padding: ${gameState.displayPrompt.kind === 'image' ? '0 !important' : '1rem'}">
                 ${gameState.displayPrompt.kind === 'image' ? `
                     ${pb_renderPromptImage(imageUrl, 'w-100 h-100 object-fit-cover position-absolute top-0 start-0')}
@@ -714,7 +726,7 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column pb-3" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(var(--pb-keyboard-offset, 0px) + env(safe-area-inset-bottom) + ${footerHeight}px);">
                 ${this.renderHeader(gameState, { compact: true })}
-                
+
                 <div class="px-3 pt-2 pb-1 animate__animated animate__fadeInDown">
                     <div class="p-2 shadow-sm rounded-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.04)); border: 1px solid var(--border-glass); box-shadow: 0 12px 28px rgba(31, 38, 135, 0.04) !important;">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
@@ -845,7 +857,7 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 12px);">
                 ${this.renderHeader(gameState, { compact: true })}
-                
+
                 <div class="flex-grow-1 px-3 animate__animated animate__fadeIn">
                     <div class="p-3 mb-3 rounded-4 shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
                         <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
@@ -856,15 +868,15 @@ window.PartyBattleUI = {
                 ? `<div>${pb_renderPromptImage(situation, 'w-100 rounded-4 object-fit-cover shadow-sm mx-auto', 'max-width: 600px; max-height: 164px;')}</div>`
                 : `<div class="fw-bold mx-auto" style="color:var(--text-main); max-width: 680px; line-height:1.16; font-size: clamp(1rem, 4vw, 1.34rem);">${situation}</div>`}
                     </div>
-                    
+
                     ${hasVoted ? `
-                        <div class="p-3 mb-3 mx-auto rounded-4 shadow-sm animate__animated animate__pulse text-center" 
+                        <div class="p-3 mb-3 mx-auto rounded-4 shadow-sm animate__animated animate__pulse text-center"
                              style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.9), rgba(34, 197, 94, 0.9)); color: white; border: none; max-width: 240px;">
                             <div class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i> Голос принят!</div>
                             <div class="small opacity-75">Ждем остальных...</div>
                         </div>
                     ` : ''}
-                    
+
                     ${(gameState.roundFamily === 'creative_vote' && gameState.activeMode !== 'meme')
                 ? window.PartyBattleModes.renderJokeVoting(entries, hasVoted, myId)
                 : (gameState.roundFamily === 'bluff')
@@ -1064,7 +1076,7 @@ window.PartyBattleUI = {
                         </div>
                     ` : ''}
                 </div>
-                
+
                 <div class="px-3 mb-4 pb-2">
                     ${hasScores ? sortedIds.map((uid, index) => {
             const score = scores[uid];
@@ -1072,7 +1084,7 @@ window.PartyBattleUI = {
             const isWinner = index === 0;
             const isMe = String(uid) === myId;
             return `
-                            <div class="d-flex justify-content-between align-items-center p-3 mb-2 rounded-4 shadow-sm animate__animated animate__fadeInUp" 
+                            <div class="d-flex justify-content-between align-items-center p-3 mb-2 rounded-4 shadow-sm animate__animated animate__fadeInUp"
                                     style="background: ${isWinner ? 'linear-gradient(135deg, #4a58f5, #6f63ff)' : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03))'}; border: 1px solid ${isWinner ? 'rgba(90, 103, 255, 0.18)' : (isMe ? 'rgba(90, 103, 255, 0.3)' : 'rgba(90, 103, 255, 0.08)')}; color: ${isWinner ? 'white' : 'var(--text-main)'}; transition-delay: ${index * 0.08}s; box-shadow:${isWinner ? '0 16px 34px rgba(90, 103, 255, 0.18)' : '0 10px 24px rgba(31, 38, 135, 0.04)'};">
                                 <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:0;">
                                     <div class="fw-bold flex-shrink-0" style="color:${isWinner ? 'white' : 'var(--text-main)'}; width: 28px;">#${index + 1}</div>
