@@ -85,10 +85,14 @@ class GiphyProvider implements GifProviderInterface
         if (preg_match('#https?://(?:media\d*|media)\.giphy\.com/media/([^/]+)/#i', $url, $matches)) {
             $path = parse_url($url, PHP_URL_PATH) ?: '';
             $filename = basename($path);
+
+            $query = parse_url($url, PHP_URL_QUERY);
+            $queryString = $query ? '?' . $query : '';
+
             if ($filename !== '') {
-                return 'https://i.giphy.com/media/' . $matches[1] . '/' . $filename;
+                return 'https://i.giphy.com/media/' . $matches[1] . '/' . $filename . $queryString;
             }
-            return 'https://i.giphy.com/media/' . $matches[1] . '/giphy.gif';
+            return 'https://i.giphy.com/media/' . $matches[1] . '/giphy.gif' . $queryString;
         }
 
         return $url;
