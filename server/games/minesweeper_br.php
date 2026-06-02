@@ -95,9 +95,13 @@ function handleGameAction($pdo, $room, $user, $data)
     }
 
     // --- PLAYING PHASE ---
+    if ($state['status'] === 'finished') {
+        return ['status' => 'error', 'message' => 'Игра уже завершена'];
+    }
+
     $currentUid = $state['turnOrder'][$state['currentTurnIndex']];
     if ((string) $currentUid !== (string) $user['id']) {
-        throw new Exception("Not your turn");
+        return ['status' => 'error', 'message' => 'Сейчас не ваш ход'];
     }
 
     if ($action === 'reveal_cell') {
@@ -168,10 +172,10 @@ function handleGameAction($pdo, $room, $user, $data)
     if ($action === 'chord') {
         $idx = (int) $data['index'];
         if (!isset($state['revealed'][$idx]))
-            throw new Exception("Cell not revealed");
+            return ['status' => 'error', 'message' => 'Клетка еще не открыта'];
         $val = $state['grid'][$idx];
         if ($val <= 0)
-            throw new Exception("Cannot chord here");
+            return ['status' => 'error', 'message' => 'Здесь нельзя использовать аккорд'];
 
         $neighbors = getNeighbors($idx, $state['boardSize'][0], $state['boardSize'][1]);
         $flagCount = 0;
