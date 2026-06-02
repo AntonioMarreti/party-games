@@ -3,27 +3,12 @@
     <div class="room-content-wrapper">
 
         <!-- Шапка комнаты с меню -->
-        <div class="d-flex justify-content-center mb-3 position-relative">
-            <div class="dropdown">
-                <button class="btn room-header-dropdown-btn" type="button" data-bs-toggle="dropdown"
-                    aria-expanded="false">
-                    Комната <i class="bi bi-chevron-down ms-1" style="font-size: 10px; opacity: 0.6;"
-                        aria-hidden="true"></i>
-                </button>
-                <ul class="dropdown-menu border-0 shadow-lg rounded-4 p-2 mt-2" style="min-width: 200px;">
-                    <li>
-                        <button
-                            class="dropdown-item text-danger fw-bold rounded-3 py-2 d-flex align-items-center justify-content-center"
-                            onclick="leaveRoom()">
-                            <i class="bi bi-box-arrow-right me-2"></i> Выйти из комнаты
-                        </button>
-                    </li>
-                </ul>
+        <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+            <div class="fw-black" style="font-size: 1.4rem; color: var(--text-main); letter-spacing: -0.02em;">
+                Комната
             </div>
-
-            <!-- Desktop Exit Button (Hidden on Mobile) -->
-            <button class="btn btn-danger-soft desktop-room-exit-btn ms-2" onclick="leaveRoom()" style="display: none;">
-                <i class="bi bi-box-arrow-right me-2"></i> Выйти
+            <button class="btn btn-outline-danger btn-sm rounded-pill fw-bold d-flex align-items-center" onclick="leaveRoom()" style="padding: 0.35rem 0.85rem; font-size: 0.85rem; border-color: rgba(220, 53, 69, 0.3); background: rgba(220, 53, 69, 0.05);">
+                <i class="bi bi-box-arrow-right me-1"></i> Выйти
             </button>
         </div>
 
