@@ -75,6 +75,19 @@ body.tg-platform-android .game-detail-action-bar {
     min-height: 0;
     height: 100%;
     background: var(--bg-app);
+    position: relative;
+}
+
+.device-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 140px;
+    background: linear-gradient(to top, var(--bg-app) 20%, transparent 100%);
+    pointer-events: none;
+    z-index: 10;
 }
 
 .content-wrapper {
