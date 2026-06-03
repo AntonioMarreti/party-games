@@ -75,19 +75,6 @@ body.tg-platform-android .game-detail-action-bar {
     min-height: 0;
     height: 100%;
     background: var(--bg-app);
-    position: relative;
-}
-
-.device-content::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 140px;
-    background: linear-gradient(to top, var(--bg-app) 20%, transparent 100%);
-    pointer-events: none;
-    z-index: 10;
 }
 
 .content-wrapper {
@@ -174,6 +161,19 @@ body.tg-platform-android .game-detail-action-bar {
     z-index: 10000;
     margin-bottom: 0;
     opacity: 1;
+}
+
+.bottom-nav::before {
+    content: '';
+    position: absolute;
+    bottom: calc(-20px - var(--app-safe-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    height: calc(140px + var(--app-safe-bottom));
+    background: linear-gradient(to top, var(--bg-app) 20%, transparent 100%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .bottom-nav .nav-item {

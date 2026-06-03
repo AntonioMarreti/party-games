@@ -1,3 +1,7 @@
+html {
+    background-color: var(--bg-app);
+}
+
 body {
     background-color: var(--bg-app);
     background-image:
@@ -10,8 +14,7 @@ body {
     font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
     color: var(--text-main);
     margin: 0;
-    padding-top: 0;
-    padding-bottom: calc(var(--nav-height) + 20px + var(--app-safe-bottom, env(safe-area-inset-bottom)));
+    padding: 0;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
