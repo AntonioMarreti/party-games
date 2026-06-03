@@ -151,14 +151,6 @@ body.tg-platform-android.safe-top #tab-home .header-bg.home-hero {
     isolation: isolate;
 }
 
-.home-flow::before {
-    content: '';
-    position: absolute;
-    inset: 35px 0 0;
-    z-index: -1;
-    background: var(--home-content-bg);
-    pointer-events: none;
-}
 
 .home-primary-cta {
     width: calc(100% - 12px);
