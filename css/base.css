@@ -204,3 +204,23 @@ body.thermal-safe {
         scroll-behavior: auto !important;
     }
 }
+
+/* === Bootstrap Telegram theme overrides === */
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--tg-theme-button-text-color, var(--theme-button-text-color, #fff)) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--tg-theme-button-text-color, var(--theme-button-text-color, #fff)) !important;
+    filter: brightness(0.96);
+}
