@@ -129,3 +129,64 @@ body.dark-mode .bunker-reveal-overlay {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
 }
+
+/* Fix #24-29: Lobby & History light elements in dark mode */
+body.dark-mode .public-room-card,
+body.tg-dark-theme .public-room-card,
+body.dark-mode .rooms-mode-switch,
+body.tg-dark-theme .rooms-mode-switch,
+body.dark-mode .scheduled-game-card,
+body.tg-dark-theme .scheduled-game-card,
+body.dark-mode .history-state-card,
+body.tg-dark-theme .history-state-card,
+body.dark-mode .history-game-card,
+body.tg-dark-theme .history-game-card {
+    background: var(--bg-card);
+    border-color: var(--border-glass);
+    color: var(--text-main);
+}
+
+body.dark-mode .history-details-sheet,
+body.tg-dark-theme .history-details-sheet {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+}
+
+body.dark-mode .history-result-card,
+body.tg-dark-theme .history-result-card,
+body.dark-mode .history-details-breakdown,
+body.tg-dark-theme .history-details-breakdown {
+    background: var(--bg-glass);
+    border-color: var(--border-glass);
+    color: var(--text-main);
+}
+
+body.dark-mode .history-details-breakdown-title,
+body.tg-dark-theme .history-details-breakdown-title {
+    background: var(--bg-glass-strong);
+    color: var(--text-main);
+}
+
+body.dark-mode .btn-light,
+body.tg-dark-theme .btn-light {
+    background-color: var(--bg-glass-strong) !important;
+    border-color: var(--border-glass) !important;
+    color: var(--text-main) !important;
+}
+
+body.dark-mode .btn-light:hover,
+body.tg-dark-theme .btn-light:hover,
+body.dark-mode .btn-light:focus,
+body.tg-dark-theme .btn-light:focus,
+body.dark-mode .btn-light:active,
+body.tg-dark-theme .btn-light:active {
+    background-color: var(--bg-glass) !important;
+    color: var(--text-main) !important;
+}
+
+/* Override thermal-safe forced #fff and dark text */
+body.dark-mode.thermal-safe .history-details-sheet,
+body.tg-dark-theme.thermal-safe .history-details-sheet {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+}
