@@ -798,6 +798,16 @@ body.large-font .text-muted.small {
     font-size: 0.95em !important;
 }
 
+/* Настройки и меню */
+body.large-font .settings-row-title,
+body.large-font .settings-section-title {
+    font-size: 17px !important;
+}
+
+body.large-font .settings-row-subtitle {
+    font-size: 14px !important;
+}
+
 /* === V1.2 "VIBE UPDATE" MODERN STYLES === */
 .profile-header-modern {
     background: var(--header-gradient);
