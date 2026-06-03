@@ -3,6 +3,7 @@
 
 // Cache for loaded words to avoid re-reading file on every check in the same request
 $wordCache = [];
+$targetCache = [];
 
 // Load words by length
 function loadWords($length = 5)
@@ -24,6 +25,33 @@ function loadWords($length = 5)
     }, $result);
 
     $wordCache[$length] = $result;
+    return $result;
+}
+
+// Load words used exclusively for picking the secret word
+function loadTargetWords($length = 5)
+{
+    global $targetCache;
+    if (isset($targetCache[$length]))
+        return $targetCache[$length];
+
+    $file = __DIR__ . '/../../words/russian_' . $length . '_targets.json';
+    if (!file_exists($file)) {
+        return loadWords($length); // Fallback
+    }
+    $words = json_decode(file_get_contents($file), true);
+    $result = is_array($words) ? $words : [];
+
+    // Normalize words just in case
+    $result = array_map(function ($w) {
+        return mb_strtolower(trim($w), 'UTF-8');
+    }, $result);
+
+    if (empty($result)) {
+        return loadWords($length);
+    }
+
+    $targetCache[$length] = $result;
     return $result;
 }
 
@@ -88,7 +116,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         // Only start game if 'start' flag is true
         if ($shouldStart) {
             // Load word list and select secret word
-            $words = loadWords($wordLength);
+            $words = loadTargetWords($wordLength);
             if (empty($words)) {
                 return ['error' => 'Word database not found'];
             }
@@ -113,7 +141,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         if ($state['phase'] !== 'intermission')
             return ['error' => 'Not in intermission'];
 
-        $words = loadWords($state['word_length']);
+        $words = loadTargetWords($state['word_length']);
         $state['current_round']++;
         $state['secret_word'] = $words[array_rand($words)];
         $state['history'] = [];
@@ -131,7 +159,7 @@ function handleGameAction($pdo, $room, $user, $postData)
             return ['error' => 'Only host can restart'];
 
         $wordLength = $state['word_length'] ?? 5;
-        $words = loadWords($wordLength);
+        $words = loadTargetWords($wordLength);
 
         $state['secret_word'] = $words[array_rand($words)];
         $state['current_round'] = ($state['current_round'] ?? 0) + 1;
