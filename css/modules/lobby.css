@@ -37,10 +37,12 @@
     padding-left: 4px;
 }
 
-.home-hero {
+.home-hero,
+body.thermal-safe .header-bg.home-hero {
     padding-bottom: 24px !important;
     border-bottom-left-radius: 36px !important;
     border-bottom-right-radius: 36px !important;
+    box-shadow: none !important;
 }
 
 #tab-home {
