@@ -149,6 +149,13 @@ if ($action === 'poll_auth_session') {
 
 // === DEV LOGIN (TEMPORARY - REMOVE IN PRODUCTION) ===
 if ($action === 'dev_login') {
+    $providedSecret = $_POST['dev_secret'] ?? '';
+    $expectedSecret = defined('DEV_LOGIN_SECRET') ? DEV_LOGIN_SECRET : (getenv('DEV_LOGIN_SECRET') ?: '');
+
+    if (!$expectedSecret || !hash_equals($expectedSecret, $providedSecret)) {
+        sendError('Dev login is disabled or invalid secret');
+    }
+
     try {
         $index = isset($_POST['index']) ? (int) $_POST['index'] : 1;
         if ($index < 1)

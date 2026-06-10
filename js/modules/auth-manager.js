@@ -316,11 +316,12 @@ function logout() {
     }
 }
 
-async function devLogin(index = 1) {
+async function devLogin(index = 1, secret = '') {
     try {
         const formData = new FormData();
         formData.append('action', 'dev_login');
         formData.append('index', index);
+        if (secret) formData.append('dev_secret', secret);
         // We need API_URL. Assuming it's global or we need to import it?
         // Ideally api-manager handles the fetch, but devLogin bypasses std apiRequest sometimes?
         // Re-using apiRequest is better if possible, but dev_login might be separate.

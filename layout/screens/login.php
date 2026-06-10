@@ -39,15 +39,7 @@
                 <p class="mt-3 text-white-50" style="font-size: 12px;">Похоже, возникла проблема с загрузкой данных Telegram.</p>
             </div>
 
-            <!-- DEV LOGIN (REMOVE IN PRODUCTION) -->
-            <div id="dev-login-panel" class="mt-4" style="display:none;">
-                <div class="d-flex justify-content-center gap-2 mb-2">
-                    <button class="btn btn-sm btn-outline-light text-white-50 p-1" onclick="devLogin(1)">Dev 1</button>
-                    <button class="btn btn-sm btn-outline-light text-white-50 p-1" onclick="devLogin(2)">Dev 2</button>
-                    <button class="btn btn-sm btn-outline-light text-white-50 p-1" onclick="devLogin(3)">Dev 3</button>
-                    <button class="btn btn-sm btn-outline-light text-white-50 p-1" onclick="devLogin(4)">Dev 4</button>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>
