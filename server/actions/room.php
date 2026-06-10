@@ -303,21 +303,15 @@ function action_remove_bot($pdo, $user, $data)
     $stmt->execute([$room['id'], $targetId]);
     $isBot = $stmt->fetchColumn();
 
-    // Verify it is a bot (Check flag OR negative ID OR name prefix for legacy cleanup)
-    $stmt = $pdo->prepare("SELECT is_bot, first_name FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT is_bot FROM users WHERE id = ?");
     $stmt->execute([$targetId]);
-    $u = $stmt->fetch();
+    $globalIsBot = $stmt->fetchColumn();
 
-    // Allow removal if: is_bot flag in room_players is 1 OR user ID < 0 OR user name starts with "Bot "
-    // Note: strpos returns 0 if found at start.
-    $name = $u['first_name'] ?? '';
-    if (!$isBot && $targetId > 0 && strpos($name, 'Bot ') !== 0) {
+    if (!$isBot && !$globalIsBot) {
         sendError('Target is not a bot');
     }
 
     $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?")->execute([$room['id'], $targetId]);
-    // Optionally delete shadow user to keep DB clean
-    $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$targetId]);
 
     logRoomLifecycle('bot_removed', [
         'room_id' => (int) $room['id'],
