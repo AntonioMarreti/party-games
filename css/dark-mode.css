@@ -190,3 +190,10 @@ body.tg-dark-theme.thermal-safe .history-details-sheet {
     background: var(--bg-card) !important;
     color: var(--text-main) !important;
 }
+
+/* Toasts */
+body.dark-mode .app-toast,
+body.tg-dark-theme .app-toast {
+    background: var(--bg-card);
+    border-color: rgba(255, 255, 255, 0.08);
+}
