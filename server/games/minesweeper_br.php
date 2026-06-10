@@ -196,6 +196,7 @@ function handleGameAction($pdo, $room, $user, $data)
                         // SOLO MODE: Instant Game Over on chord hit
                         if (count($state['turnOrder']) === 1) {
                             $state['status'] = 'finished';
+                            $state['history'][] = ['type' => 'mine_hit_solo', 'user_id' => $user['id'], 'index' => $n];
                             $hitMine = true;
                             break; 
                         } else {
