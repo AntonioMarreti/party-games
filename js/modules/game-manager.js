@@ -483,6 +483,8 @@ function renderReactionToolbar() {
                 if (!isPressed) return;
                 isPressed = false;
 
+                const isCancel = ev.type === 'mouseleave';
+
                 if (pressTimer) {
                     clearTimeout(pressTimer);
                     pressTimer = null;
@@ -492,7 +494,7 @@ function renderReactionToolbar() {
                     pressInterval = null;
                     btn.style.transform = '';
                     container.classList.remove('expanded');
-                } else if (!isHolding) {
+                } else if (!isHolding && !isCancel) {
                     // Just a regular tap
                     GameManager.triggerReaction(e);
                     container.classList.remove('expanded');
