@@ -405,6 +405,21 @@ function renderReactionToolbar() {
         container.id = 'reaction-container';
         container.className = 'reaction-floating-wrapper';
 
+        // Desktop Close Delay Logic (to cross the 12px gap safely)
+        let hoverTimeout = null;
+        container.addEventListener('mouseenter', () => {
+            if (window.matchMedia('(hover: hover)').matches) {
+                if (hoverTimeout) clearTimeout(hoverTimeout);
+            }
+        });
+        container.addEventListener('mouseleave', () => {
+            if (window.matchMedia('(hover: hover)').matches && container.classList.contains('expanded')) {
+                hoverTimeout = setTimeout(() => {
+                    container.classList.remove('expanded');
+                }, 250);
+            }
+        });
+
         // 1. Trigger Button
         const trigger = document.createElement('button');
         trigger.className = 'reaction-trigger';
@@ -444,11 +459,13 @@ function renderReactionToolbar() {
             let pressTimer = null;
             let pressInterval = null;
             let isHolding = false;
+            let isPressed = false; // Protection against accidental mouseleave triggers
 
             const startPress = (ev) => {
                 ev.preventDefault();
                 ev.stopPropagation();
                 isHolding = false;
+                isPressed = true;
 
                 pressTimer = setTimeout(() => {
                     isHolding = true;
@@ -462,6 +479,9 @@ function renderReactionToolbar() {
             const endPress = (ev) => {
                 ev.preventDefault();
                 ev.stopPropagation();
+
+                if (!isPressed) return;
+                isPressed = false;
 
                 if (pressTimer) {
                     clearTimeout(pressTimer);
