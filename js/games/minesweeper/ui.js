@@ -464,7 +464,7 @@ window.renderMsTutorialStep = function(container) {
             text: "Нажмите на <b>центр</b>. Это откроет безопасную зону и первые цифры."
         },
         {
-            cell: 7,
+            cell: 6,
             icon: '<i class="bi bi-info-circle"></i>',
             text: "Цифра <b>1</b> видит 8 клеток вокруг (зеленые). В этой зоне ровно 1 мина. Она здесь! Сначала переключитесь на <b>Флажок</b>",
             radar: [{ idx: 11, color: 'radar-1' }],

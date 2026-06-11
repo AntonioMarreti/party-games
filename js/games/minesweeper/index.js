@@ -4,15 +4,15 @@ window.startMsTutorial = function() {
     
     // Initial board for tutorial (5x5)
     // 0 0 0 0 0
-    // 0 1 m m 0  (7, 8 are mines)
-    // 0 1 2 2 1  (11=1, 12=2, 13=2, 14=1)
+    // 0 -1 0 -1 0  (6, 8 are mines)
+    // 0 1 2 1 0  (11=1, 12=2, 13=1)
     // 0 0 0 0 0
     // 0 0 0 0 0
     window._msTutorialData = {
         grid: [
             0, 0, 0, 0, 0,
-            0, 1, -1, -1, 0,
-            0, 1, 2, 2, 0,
+            0, -1, 0, -1, 0,
+            0, 1, 2, 1, 0,
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0
         ],
@@ -44,15 +44,15 @@ window.advanceMsTutorial = function(action, data) {
         window._msTutorialStep = 1;
         state.revealed[12] = 'player';
         state.revealed[11] = 'player'; // reveal nearby 1 for comparison
-    } else if (step === 1 && action === 'flag' && data.index === 7) {
+    } else if (step === 1 && action === 'flag' && data.index === 6) {
         window._msTutorialStep = 2;
-        state.flags[7] = 'player';
+        state.flags[6] = 'player';
     } else if (step === 2 && action === 'flag' && data.index === 8) {
         window._msTutorialStep = 3;
         state.flags[8] = 'player';
     } else if (step === 3 && action === 'chord' && data.index === 12) {
         window._msTutorialStep = 4;
-        [6, 13, 16, 17, 18].forEach(idx => state.revealed[idx] = 'player');
+        [7, 13, 16, 17, 18].forEach(idx => state.revealed[idx] = 'player');
     }
     
     render_minesweeper_br({
