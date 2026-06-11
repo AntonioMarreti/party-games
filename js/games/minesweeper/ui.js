@@ -136,6 +136,15 @@ function renderMsBoard(container, state, players, myId) {
     // Count flags placed
     const flagCount = Object.keys(state.flags || {}).length;
 
+    // Check if player might be stuck after using flags
+    const mineCount = Number(state.mineCount) || 0;
+    const totalCells = (rows * cols) || 0;
+    const unrevealedCount = totalCells - Object.keys(state.revealed || {}).length;
+    const isStuckWithFlags = state.status === 'playing' &&
+                             state.safeCellsRemaining > 0 &&
+                             flagCount > 0 &&
+                             (flagCount >= mineCount || flagCount === unrevealedCount);
+
     const isSolo = players.length === 1;
 
     // Board
@@ -179,6 +188,13 @@ function renderMsBoard(container, state, players, myId) {
                 <div class="ms-stat-label">Флаги</div>
             </div>
         </div>
+
+        <!-- Hint for unfinished game / wrong flags -->
+        ${isStuckWithFlags ? `
+        <div class="mb-3 p-2 rounded-3 text-center ms-hint-box" style="background: rgba(230, 126, 34, 0.1); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.2); font-size: 0.85rem; line-height: 1.35;">
+            <i class="bi bi-info-circle me-1"></i> Чтобы победить, откройте все безопасные клетки. Флажки помогают отмечать мины, но сами по себе не завершают игру. Если застряли — проверьте флажки.
+        </div>
+        ` : ''}
 
         <!-- Turn indicator -->
         ${!isSolo ? `
