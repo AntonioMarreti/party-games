@@ -583,10 +583,11 @@ window.PartyBattleUI = {
 
         return `
             <div class="header-container px-3 ${compact ? 'pt-2 pb-1' : 'pt-2 pb-2'} text-center position-relative z-3" style="background: transparent;">
-                <button class="btn btn-link position-absolute start-0 top-50 translate-middle-y text-muted px-3"
+                <button class="btn btn-link position-absolute start-0 top-50 translate-middle-y text-muted px-2 d-inline-flex align-items-center gap-1 text-decoration-none"
                         onclick="${isHost ? "window.sendGameAction('back_to_lobby')" : "window.leaveRoom()"}"
-                        style="font-size: 1.4rem; outline: none; box-shadow: none;">
+                        style="font-size: 0.86rem; font-weight: 700; line-height: 1; outline: none; box-shadow: none; min-height: 34px;">
                     <i class="bi ${isHost ? 'bi-chevron-left' : 'bi-box-arrow-right'}"></i>
+                    <span>Выйти</span>
                 </button>
                 ${roundText || modeMeta.label ? `
                     <div class="mx-auto ${compact ? 'mb-1' : 'mb-2'}" style="max-width: min(100%, ${compact ? '240px' : '260px'});">
