@@ -6,6 +6,9 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
     const isHost = res.is_host == 1;
     const currentTurnId = String(state.current_turn);
     const isMyTurn = currentTurnId === myId;
+    const isGameFinished = state.phase === 'finished' || !!state.winner;
+    const activeMiniBoard = state.active_mini_board;
+    const isAnyMiniBoardAllowed = activeMiniBoard === null || activeMiniBoard === -1;
 
     // Assign symbols based on join order
     const symbols = {};
@@ -47,13 +50,14 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
             <div class="ttt-u-info text-center mb-3">
                  <div class="ttt-u-badge ${badgeClass}">${statusText}</div>
                  <div class="small text-muted mt-2">Твой символ: <b>${mySymbol}</b></div>
+                 <div id="ttt-u-local-hint" class="small text-muted mt-1" aria-live="polite" style="min-height: 20px;"></div>
             </div>
 
             <div class="ttt-u-grid-macro">
                 ${state.boards.map((miniBoard, bIdx) => {
         const winner = state.mini_wins[bIdx];
-        const isActive = state.active_mini_board === bIdx || state.active_mini_board === -1 || state.active_mini_board === null;
-        const isFocus = state.active_mini_board === bIdx;
+        const isActive = activeMiniBoard === bIdx || isAnyMiniBoardAllowed;
+        const isFocus = activeMiniBoard === bIdx;
         const canPlayOnBoard = isActive && !winner;
 
         let boardClasses = ['ttt-u-mini-board'];
@@ -69,8 +73,31 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
                                 ${miniBoard.map((cell, cIdx) => {
             const cellClass = cell ? 'occupied' : 'empty';
             const symbolClass = cell ? 'symbol-' + cell.toLowerCase() : '';
+            const canMove = state.phase === 'playing'
+                && !isGameFinished
+                && isMyTurn
+                && !winner
+                && !cell
+                && (isAnyMiniBoardAllowed || activeMiniBoard === bIdx);
+            let blockedHint = '';
+            if (isGameFinished) {
+                blockedHint = 'Игра уже завершена';
+            } else if (state.phase !== 'playing') {
+                blockedHint = 'Сначала нажмите «Начать игру»';
+            } else if (!isMyTurn) {
+                blockedHint = 'Сейчас ход соперника';
+            } else if (winner) {
+                blockedHint = 'Это поле уже завершено';
+            } else if (cell) {
+                blockedHint = 'Клетка уже занята';
+            } else if (!isAnyMiniBoardAllowed && activeMiniBoard !== bIdx) {
+                blockedHint = 'Ходить нужно в подсвеченное поле';
+            }
+            const clickHandler = canMove
+                ? `window.makeUltimateMove(${bIdx}, ${cIdx})`
+                : `window.showUltimateHint('${blockedHint}')`;
             return `
-                                        <div class="ttt-u-cell ${cellClass}" onclick="window.makeUltimateMove(${bIdx}, ${cIdx})">
+                                        <div class="ttt-u-cell ${cellClass}" onclick="${clickHandler}">
                                             <span class="${symbolClass}">${cell || ''}</span>
                                         </div>
                                     `;
@@ -97,6 +124,20 @@ window.renderTicTacToeUltimateUI = function (wrapper, state, res) {
     `;
 };
 
+window.showUltimateHint = function (message) {
+    const hint = document.getElementById('ttt-u-local-hint');
+    const text = message || 'Ход сейчас недоступен';
+    if (hint) {
+        hint.textContent = text;
+        clearTimeout(window._tttUltimateHintTimer);
+        window._tttUltimateHintTimer = setTimeout(() => {
+            if (hint.textContent === text) hint.textContent = '';
+        }, 2200);
+        return;
+    }
+    if (window.showAlert) window.showAlert('Крестики-нолики Ultimate', text, 'info');
+};
+
 window.startUltimateGame = async function () {
     try {
         await window.apiRequest({ action: 'game_action', type: 'start_game' });
@@ -115,9 +156,14 @@ window.makeUltimateMove = async function (bIdx, cIdx) {
             board_index: bIdx,
             cell_index: cIdx
         });
+        if (!res || res.status !== 'ok') {
+            window.showUltimateHint(res?.message || 'Не удалось сделать ход');
+            return;
+        }
         if (window.checkState) window.checkState();
     } catch (e) {
         console.error(e);
+        window.showUltimateHint('Не удалось сделать ход');
     }
 };
 
