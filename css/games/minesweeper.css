@@ -349,46 +349,66 @@
 }
 
 /* ─── Dark mode refinements ─── */
-[data-theme="dark"] .ms-mode-control {
+[data-theme="dark"] .ms-mode-control,
+body.dark-mode .ms-mode-control,
+body.tg-dark-theme .ms-mode-control {
     background: rgba(120, 120, 128, 0.32);
 }
 
-[data-theme="dark"] .ms-mode-btn {
+[data-theme="dark"] .ms-mode-btn,
+body.dark-mode .ms-mode-btn,
+body.tg-dark-theme .ms-mode-btn {
     color: rgba(235, 235, 245, 0.5);
 }
 
-[data-theme="dark"] .ms-mode-btn.active {
+[data-theme="dark"] .ms-mode-btn.active,
+body.dark-mode .ms-mode-btn.active,
+body.tg-dark-theme .ms-mode-btn.active {
     background: rgba(255, 255, 255, 0.2);
     color: #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="dark"] .ms-mode-btn.active.flag-mode {
+[data-theme="dark"] .ms-mode-btn.active.flag-mode,
+body.dark-mode .ms-mode-btn.active.flag-mode,
+body.tg-dark-theme .ms-mode-btn.active.flag-mode {
     background: rgba(231, 76, 60, 0.3);
     color: #ff6b6b;
 }
 
-[data-theme="dark"] .ms-cell.val-1 {
+[data-theme="dark"] .ms-cell.val-1,
+body.dark-mode .ms-cell.val-1,
+body.tg-dark-theme .ms-cell.val-1 {
     color: #5b9bff;
 }
 
-[data-theme="dark"] .ms-cell.val-2 {
+[data-theme="dark"] .ms-cell.val-2,
+body.dark-mode .ms-cell.val-2,
+body.tg-dark-theme .ms-cell.val-2 {
     color: #5ec75e;
 }
 
-[data-theme="dark"] .ms-cell.val-3 {
+[data-theme="dark"] .ms-cell.val-3,
+body.dark-mode .ms-cell.val-3,
+body.tg-dark-theme .ms-cell.val-3 {
     color: #ff6b6b;
 }
 
-[data-theme="dark"] .ms-cell.val-4 {
+[data-theme="dark"] .ms-cell.val-4,
+body.dark-mode .ms-cell.val-4,
+body.tg-dark-theme .ms-cell.val-4 {
     color: #b68bff;
 }
 
-[data-theme="dark"] .ms-cell.val-5 {
+[data-theme="dark"] .ms-cell.val-5,
+body.dark-mode .ms-cell.val-5,
+body.tg-dark-theme .ms-cell.val-5 {
     color: #ffaa55;
 }
 
-[data-theme="dark"] .ms-cell.val-6 {
+[data-theme="dark"] .ms-cell.val-6,
+body.dark-mode .ms-cell.val-6,
+body.tg-dark-theme .ms-cell.val-6 {
     color: #66cccc;
 }
 
@@ -493,7 +513,9 @@
     100% { transform: scale(1); box-shadow: 0 0 0 2px #e8a838, 0 0 10px rgba(232, 168, 56, 0.5); }
 }
 
-[data-theme="dark"] .ms-tutorial-tooltip {
+[data-theme="dark"] .ms-tutorial-tooltip,
+body.dark-mode .ms-tutorial-tooltip,
+body.tg-dark-theme .ms-tutorial-tooltip {
     background: #3a3a3c;
     border-top-color: #3a3a3c;
 }
@@ -520,7 +542,9 @@
     border: 1px solid rgba(255,255,255,0.4);
 }
 
-[data-theme="dark"] .ms-results-overlay {
+[data-theme="dark"] .ms-results-overlay,
+body.dark-mode .ms-results-overlay,
+body.tg-dark-theme .ms-results-overlay {
     background: rgba(30,30,30, 0.82);
     border: 1px solid rgba(255,255,255,0.08);
 }
