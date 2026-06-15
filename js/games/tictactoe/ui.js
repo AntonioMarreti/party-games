@@ -6,6 +6,7 @@ window.renderTicTacToe = function (wrapper, state, res) {
     const isHost = res.is_host == 1;
     const currentTurnId = state.current_turn;
     const isMyTurn = currentTurnId === myId;
+    const isGameFinished = state.phase === 'finished' || !!state.winner;
 
     // Assign symbols locally (Join Order matches server)
     const symbols = {};
@@ -54,6 +55,7 @@ window.renderTicTacToe = function (wrapper, state, res) {
                 <div class="tictactoe-turn-badge ${badgeClass} mb-4">
                     ${statusText}
                 </div>
+                <div id="tictactoe-local-hint" class="small text-muted" aria-live="polite" style="min-height: 20px;"></div>
             </div>
 
             <div class="tictactoe-board-wrapper">
@@ -63,10 +65,24 @@ window.renderTicTacToe = function (wrapper, state, res) {
         const occupiedClass = cell ? 'occupied' : '';
         const winnerClass = isWinningCell ? 'winner' : '';
         const symbolClass = cell ? `tictactoe-symbol-${cell.toLowerCase()}` : '';
+        const canMove = state.phase === 'playing' && !isGameFinished && isMyTurn && !cell;
+        let blockedHint = '';
+        if (cell) {
+            blockedHint = 'Клетка уже занята';
+        } else if (isGameFinished) {
+            blockedHint = 'Игра уже завершена';
+        } else if (state.phase !== 'playing') {
+            blockedHint = 'Сначала нажмите «Начать игру»';
+        } else if (!isMyTurn) {
+            blockedHint = 'Сейчас ход соперника';
+        }
+        const clickHandler = canMove
+            ? `window.makeTicTacToeMove(${index})`
+            : `window.showTicTacToeHint('${blockedHint}')`;
 
         return `
                             <div class="tictactoe-cell ${occupiedClass} ${winnerClass}" 
-                                 onclick="window.makeTicTacToeMove(${index})">
+                                 onclick="${clickHandler}">
                                 <span class="${symbolClass}">${cell || ''}</span>
                             </div>
                         `;
@@ -102,6 +118,20 @@ window.renderTicTacToe = function (wrapper, state, res) {
     `;
 };
 
+window.showTicTacToeHint = function (message) {
+    const hint = document.getElementById('tictactoe-local-hint');
+    const text = message || 'Ход сейчас недоступен';
+    if (hint) {
+        hint.textContent = text;
+        clearTimeout(window._tttHintTimer);
+        window._tttHintTimer = setTimeout(() => {
+            if (hint.textContent === text) hint.textContent = '';
+        }, 2200);
+        return;
+    }
+    if (window.showAlert) window.showAlert('Крестики-нолики', text, 'info');
+};
+
 window.startTicTacToe = async function () {
     if (window.triggerHaptic) window.triggerHaptic('impact', 'medium');
     try {
@@ -123,9 +153,14 @@ window.makeTicTacToeMove = async function (index) {
             type: 'make_move',
             index: index
         });
+        if (!res || res.status !== 'ok') {
+            window.showTicTacToeHint(res?.message || 'Не удалось сделать ход');
+            return;
+        }
         if (window.checkState) window.checkState();
     } catch (e) {
         console.error("Move Error:", e);
+        window.showTicTacToeHint('Не удалось сделать ход');
     }
 };
 
