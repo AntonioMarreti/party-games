@@ -441,6 +441,19 @@ function action_get_state($pdo, $user, $data)
             unset($cards);
             $room['game_state'] = json_encode($state, JSON_UNESCAPED_UNICODE);
         }
+    } elseif ($gameType === 'wordclash' && !empty($room['game_state'])) {
+        $state = json_decode($room['game_state'], true);
+        if (is_array($state)) {
+            $phase = (string) ($state['phase'] ?? '');
+            $shouldRevealSecret = in_array($phase, ['intermission', 'game_over'], true)
+                || !empty($state['game_over']);
+
+            if (!$shouldRevealSecret) {
+                unset($state['secret_word']);
+            }
+
+            $room['game_state'] = json_encode($state, JSON_UNESCAPED_UNICODE);
+        }
     }
 
     echo json_encode([
