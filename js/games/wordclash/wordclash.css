@@ -106,10 +106,10 @@ body.wc-keyboard-active #wc-header {
     /* Increased side padding */
     padding-left: calc(24px + env(safe-area-inset-left, 0px));
     padding-right: calc(24px + env(safe-area-inset-right, 0px));
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
     flex: 0 0 auto;
     z-index: 20;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.16);
     position: relative;
 }
 
@@ -208,7 +208,7 @@ body.wc-keyboard-active #wc-header {
     flex-direction: column;
     gap: 6px;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
     padding-left: calc(clamp(6px, 2vw, 14px) + env(safe-area-inset-left, 0px));
     padding-right: calc(clamp(6px, 2vw, 14px) + env(safe-area-inset-right, 0px));
     /* Add padding for mobile home indicators */
@@ -290,9 +290,9 @@ body.wc-keyboard-active #wc-header {
 }
 
 .wc-check-btn {
-    width: calc(100% - (clamp(6px, 2vw, 14px) * 2));
+    width: calc(100% - (clamp(12px, 4vw, 24px) * 2));
     min-height: 44px;
-    margin: 10px auto 0;
+    margin: 12px auto 4px;
     border: 0;
     border-radius: 14px;
     background: var(--primary-color);
@@ -303,14 +303,14 @@ body.wc-keyboard-active #wc-header {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
     transition: background-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease;
     touch-action: manipulation;
 }
 
 .wc-check-btn:active {
     transform: translateY(1px) scale(0.99);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
 }
 
 .wc-check-btn:focus:not(:focus-visible) {
