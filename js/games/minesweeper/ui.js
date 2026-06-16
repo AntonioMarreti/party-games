@@ -3,6 +3,14 @@
 // Flag mode state (persists across re-renders)
 window._msFlagMode = window._msFlagMode || false;
 
+function markMsCellPending(cellEl) {
+    if (!cellEl || cellEl.classList.contains('revealed')) return;
+    cellEl.classList.add('ms-cell-pending');
+    window.setTimeout(() => {
+        if (cellEl.isConnected) cellEl.classList.remove('ms-cell-pending');
+    }, 900);
+}
+
 function render_minesweeper_br(res) {
     let state = res.room.game_state ? JSON.parse(res.room.game_state) : null;
     const container = document.getElementById('game-area');
@@ -254,12 +262,15 @@ function renderMsBoard(container, state, players, myId) {
 
             if (state.revealed[idx] !== undefined) {
                 // Chord on revealed number
+                markMsCellPending(el);
                 minesweeperChord(idx);
             } else if (window._msFlagMode) {
                 // Flag mode: toggle flag
+                markMsCellPending(el);
                 minesweeperToggleFlag(idx);
             } else if (!state.flags[idx]) {
                 // Normal mode: reveal
+                markMsCellPending(el);
                 minesweeperReveal(idx);
             }
         };
@@ -269,6 +280,7 @@ function renderMsBoard(container, state, players, myId) {
         el.ontouchstart = (e) => {
             if (!isMyTurn || state.revealed[idx] !== undefined) return;
             pressTimer = setTimeout(() => {
+                markMsCellPending(el);
                 minesweeperToggleFlag(idx);
                 pressTimer = null;
                 e.preventDefault();
@@ -280,6 +292,7 @@ function renderMsBoard(container, state, players, myId) {
         el.oncontextmenu = (e) => {
             e.preventDefault();
             if (isMyTurn && state.revealed[idx] === undefined) {
+                markMsCellPending(el);
                 minesweeperToggleFlag(idx);
             }
         };
