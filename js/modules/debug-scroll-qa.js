@@ -1241,6 +1241,36 @@
         }
     }
 
+    function releaseGameSelectorModalForQaReporter() {
+        try {
+            const modalEl = document.querySelector('#gameSelectorModal.modal.show');
+            if (!modalEl || !window.bootstrap?.Modal) return null;
+
+            const modal = window.bootstrap.Modal.getInstance(modalEl);
+            if (!modal) return null;
+
+            modal.hide();
+            return modalEl;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function focusBugReporterTextArea(modalEl = null) {
+        const focusInput = () => {
+            try {
+                document.getElementById('qa-bug-actual')?.focus({ preventScroll: true });
+            } catch (e) {
+                // noop
+            }
+        };
+
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', focusInput, { once: true });
+        }
+        window.setTimeout(focusInput, modalEl ? 160 : 0);
+    }
+
     function openBugReporter(options = {}) {
         if (!hasToolsAccess()) return;
         ensureStyles();
@@ -1251,6 +1281,7 @@
         if (options.resetContext || !bugContextSnapshot) {
             bugContextSnapshot = getDebugInfo(selectedBugElement);
         }
+        const releasedModalEl = releaseGameSelectorModalForQaReporter();
         let root = document.getElementById(ROOT_ID);
         if (!root) {
             root = document.createElement('div');
@@ -1356,6 +1387,7 @@
             input.addEventListener('input', updateBugDraftFromForm);
             input.addEventListener('change', updateBugDraftFromForm);
         });
+        focusBugReporterTextArea(releasedModalEl);
     }
 
     function updateBugDraftFromForm() {
