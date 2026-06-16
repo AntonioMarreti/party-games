@@ -402,9 +402,6 @@ function renderWordClash(res) {
                     </button>
                     <div id="wc-error-label" class="wc-error-label"></div>
                     <div class="wc-virtual-input">${'_'.repeat(wordLength)}</div>
-                    <button class="wc-send-btn shadow" onclick="window.submitWordClash(null)">
-                        <i class="bi bi-arrow-up-circle-fill"></i>
-                    </button>
                 </div>
                 <div class="wc-keyboard">
                     <div class="wc-kb-row">
@@ -420,6 +417,9 @@ function renderWordClash(res) {
                         </button>
                     </div>
                 </div>
+                <button class="wc-check-btn" onclick="window.submitWordClash(null)">
+                    ПРОВЕРИТЬ
+                </button>
             `;
             wrapper.appendChild(inputArea);
 
@@ -427,6 +427,7 @@ function renderWordClash(res) {
             document.querySelectorAll('.wc-key').forEach(btn => {
                 btn.addEventListener('click', handleKeyPress);
             });
+            updateKeyboardLetterStates(state);
         } else {
             // SYSTEM KEYBOARD MODE (Original)
             inputArea.innerHTML = `
@@ -454,6 +455,9 @@ function renderWordClash(res) {
             document.querySelectorAll('.wc-key').forEach(btn => {
                 btn.disabled = shouldDisable;
             });
+            const checkBtn = document.querySelector('.wc-check-btn');
+            if (checkBtn) checkBtn.disabled = shouldDisable;
+            updateKeyboardLetterStates(state);
         } else {
             const inp = document.getElementById('wc-input');
             const btn = document.querySelector('.wc-send-btn');
@@ -465,6 +469,43 @@ function renderWordClash(res) {
 
 // Virtual Input State
 let virtualWord = '';
+const WC_KEY_STATE_RANK = {
+    absent: 0,
+    present: 1,
+    correct: 2
+};
+
+function getKeyboardLetterStates(history) {
+    const states = {};
+    (history || []).forEach(entry => {
+        const word = String(entry.word || '').toUpperCase();
+        const pattern = Array.isArray(entry.pattern) ? entry.pattern : [];
+
+        word.split('').forEach((letter, index) => {
+            const value = Number(pattern[index]);
+            const nextState = value === 2 ? 'correct' : value === 1 ? 'present' : value === 0 ? 'absent' : '';
+            if (!nextState) return;
+
+            const currentState = states[letter];
+            if (!currentState || WC_KEY_STATE_RANK[nextState] > WC_KEY_STATE_RANK[currentState]) {
+                states[letter] = nextState;
+            }
+        });
+    });
+    return states;
+}
+
+function updateKeyboardLetterStates(state) {
+    const letterStates = getKeyboardLetterStates(state?.history);
+    document.querySelectorAll('.wc-key[data-key]').forEach(keyEl => {
+        const key = keyEl.dataset.key;
+        keyEl.classList.remove('is-absent', 'is-present', 'is-correct');
+        if (!key || key === 'BACK') return;
+
+        const letterState = letterStates[key.toUpperCase()];
+        if (letterState) keyEl.classList.add(`is-${letterState}`);
+    });
+}
 
 function handleKeyPress(e) {
     let key = e.currentTarget.dataset.key;
@@ -594,6 +635,8 @@ window.submitWordClash = async function (e) {
 
     // Disable keyboard during submit
     document.querySelectorAll('.wc-key').forEach(btn => btn.disabled = true);
+    const checkBtn = document.querySelector('.wc-check-btn');
+    if (checkBtn) checkBtn.disabled = true;
 
     try {
         let res = await window.sendGameAction('submit_guess', { word: word });
@@ -607,6 +650,7 @@ window.submitWordClash = async function (e) {
     } finally {
         // Re-enable keyboard
         document.querySelectorAll('.wc-key').forEach(btn => btn.disabled = false);
+        if (checkBtn) checkBtn.disabled = false;
     }
 };
 
