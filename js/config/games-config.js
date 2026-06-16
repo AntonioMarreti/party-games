@@ -446,6 +446,37 @@ window.AVAILABLE_GAMES = [
         files: ['js/games/wordclash/index.js', 'js/games/wordclash/ui.js', 'server/games/packs/wordclash/words.json']
     },
     {
+        id: 'wordclash_party',
+        category: 'party',
+        name: 'Загадай слово',
+        icon: 'bi-chat-square-text-fill',
+        color: '#10b981',
+        bgColor: 'rgba(16, 185, 129, 0.12)',
+        promoImage: 'assets/promo/wordclash.jpg',
+        description: 'Один игрок загадывает слово, остальные угадывают.',
+        longDescription: `
+            <p><strong>Загадай слово</strong> — командная версия Wordle для комнаты. В каждом раунде один ведущий выбирает слово из серверных вариантов, а остальные пытаются угадать его за 6 попыток.</p>
+            <p><strong>Как играется MVP:</strong></p>
+            <ul>
+                <li><strong>Ведущий:</strong> выбирает одно слово из предложенных вариантов. Эти варианты видны только ему.</li>
+                <li><strong>Отгадывающие:</strong> вводят слова той же длины и получают подсказки: зелёный — буква на месте, жёлтый — есть не там, серый — нет в слове.</li>
+                <li><strong>Раунды:</strong> после раскрытия слова ведущий меняется, очки суммируются до финала.</li>
+            </ul>
+        `,
+        stats: { players: '2-8', time: '5-15 мин', difficulty: 'Легкая' },
+        rules: [
+            { icon: 'bi-person-badge-fill', text: 'Один ведущий выбирает слово на раунд' },
+            { icon: 'bi-shield-lock-fill', text: 'Секрет и варианты скрыты от отгадывающих' },
+            { icon: 'bi-grid-3x3-gap-fill', text: '6 попыток и Wordle-like подсказки' },
+            { icon: 'bi-arrow-repeat', text: 'Следующий раунд передаёт роль ведущего дальше' }
+        ],
+        files: [
+            'js/games/wordclash_party/wordclash_party.css',
+            'js/games/wordclash_party/ui.js',
+            'js/games/wordclash_party/index.js'
+        ]
+    },
+    {
         id: 'tictactoe',
         category: 'strategy',
         name: 'Крестики-Нолики',

@@ -621,7 +621,7 @@ function renderLibrary() {
 }
 
 const HOME_GAME_RECOMMENDATIONS = {
-    company: ['bunker', 'partybattle', 'brainbattle', 'spyfall'],
+    company: ['bunker', 'partybattle', 'wordclash_party', 'brainbattle', 'spyfall'],
     duo: ['tictactoe_ultimate', 'tictactoe', 'blokus', 'wordclash', 'backgammon_game'],
     solo: ['brainbattle', 'minesweeper_br', 'wordclash']
 };
@@ -661,6 +661,11 @@ const HOME_GAME_COPY = {
         description: 'Словесная дуэль на скорость',
         players: '2 игрока',
         time: '5-10 мин'
+    },
+    wordclash_party: {
+        description: 'Один загадывает, остальные угадывают',
+        players: '2-8 игроков',
+        time: '5-15 мин'
     },
     backgammon_game: {
         description: 'Классическая партия на двоих',
