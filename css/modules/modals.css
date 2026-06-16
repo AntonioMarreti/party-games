@@ -130,6 +130,16 @@ body.modal-open {
     color: #6f7682 !important;
 }
 
+body.dark-mode #gameSelectorModal .game-list-content .text-dark,
+body.tg-dark-theme #gameSelectorModal .game-list-content .text-dark {
+    color: var(--text-main) !important;
+}
+
+body.dark-mode #gameSelectorModal .game-list-content .text-muted,
+body.tg-dark-theme #gameSelectorModal .game-list-content .text-muted {
+    color: var(--text-muted) !important;
+}
+
 .lobby-modal-form {
     width: 100%;
     max-width: 360px;

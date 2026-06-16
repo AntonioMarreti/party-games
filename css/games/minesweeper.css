@@ -549,6 +549,11 @@ body.tg-dark-theme .ms-results-overlay {
     border: 1px solid rgba(255,255,255,0.08);
 }
 
+body.dark-mode .ms-results-overlay .text-muted,
+body.tg-dark-theme .ms-results-overlay .text-muted {
+    color: var(--text-on-dark-muted) !important;
+}
+
 .ms-results-overlay.minimized {
     opacity: 0;
     pointer-events: none;
