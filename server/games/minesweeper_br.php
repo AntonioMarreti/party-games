@@ -23,6 +23,52 @@ function getInitialState()
     ];
 }
 
+function startMinesweeperRound($pdo, $room, &$state)
+{
+    if (!$room['is_host'])
+        throw new Exception("Only host can start");
+
+    // Re-fetch players to set turn order
+    $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? ORDER BY id ASC");
+    $stmt->execute([$room['id']]);
+    $uids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $state['turnOrder'] = $uids;
+    $state['status'] = 'playing';
+    $state['grid'] = null;
+    $state['revealed'] = [];
+    $state['flags'] = [];
+    $state['currentTurnIndex'] = 0;
+    $state['scores'] = array_fill_keys($uids, 0);
+    $state['stunned'] = array_fill_keys($uids, 0);
+    $state['history'] = [];
+    $state['started_at'] = time();
+    $state['stats_recorded'] = false;
+    unset($state['gameResults'], $state['winner'], $state['finished_at'], $state['result']);
+
+    // Board settings based on difficulty
+    $rows = 9;
+    $cols = 9;
+    $mines = 14; // Medium
+    if ($state['difficulty'] === 'easy') {
+        $rows = 8;
+        $cols = 8;
+        $mines = 10;
+    }
+    if ($state['difficulty'] === 'hard') {
+        $rows = 10;
+        $cols = 12;
+        $mines = 22;
+    }
+
+    $state['boardSize'] = [$rows, $cols];
+    $state['mineCount'] = $mines;
+    $state['safeCellsRemaining'] = ($rows * $cols) - $mines;
+
+    updateGameState($room['id'], $state);
+    return ['status' => 'ok', 'state' => $state];
+}
+
 function handleGameAction($pdo, $room, $user, $data)
 {
     $state = json_decode($room['game_state'], true);
@@ -40,6 +86,10 @@ function handleGameAction($pdo, $room, $user, $data)
         return ['status' => 'ok'];
     }
 
+    if ($action === 'start_game' && in_array((string) ($state['status'] ?? ''), ['setup', 'finished'], true)) {
+        return startMinesweeperRound($pdo, $room, $state);
+    }
+
     if ($state['status'] === 'setup') {
         if ($action === 'set_difficulty') {
             if (!$room['is_host'])
@@ -48,46 +98,6 @@ function handleGameAction($pdo, $room, $user, $data)
             if (!in_array($diff, ['easy', 'medium', 'hard']))
                 $diff = 'medium';
             $state['difficulty'] = $diff;
-            updateGameState($room['id'], $state);
-            return ['status' => 'ok', 'state' => $state];
-        }
-
-        if ($action === 'start_game') {
-            if (!$room['is_host'])
-                throw new Exception("Only host can start");
-
-            // Re-fetch players to set turn order
-            $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? ORDER BY id ASC");
-            $stmt->execute([$room['id']]);
-            $uids = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-            $state['turnOrder'] = $uids;
-            $state['status'] = 'playing';
-            $state['currentTurnIndex'] = 0;
-            $state['scores'] = array_fill_keys($uids, 0);
-            $state['stunned'] = array_fill_keys($uids, 0);
-            $state['started_at'] = time();
-            $state['stats_recorded'] = false;
-
-            // Board settings based on difficulty
-            $rows = 9;
-            $cols = 9;
-            $mines = 14; // Medium
-            if ($state['difficulty'] === 'easy') {
-                $rows = 8;
-                $cols = 8;
-                $mines = 10;
-            }
-            if ($state['difficulty'] === 'hard') {
-                $rows = 10;
-                $cols = 12;
-                $mines = 22;
-            }
-
-            $state['boardSize'] = [$rows, $cols];
-            $state['mineCount'] = $mines;
-            $state['safeCellsRemaining'] = ($rows * $cols) - $mines;
-
             updateGameState($room['id'], $state);
             return ['status' => 'ok', 'state' => $state];
         }
