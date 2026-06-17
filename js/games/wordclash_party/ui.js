@@ -127,26 +127,34 @@
 
     function renderGuessRow(res, userId, entry, length) {
         const player = getPlayer(res, userId);
-        const avatarUrl = playerAvatarUrl(player);
-        return `
-            <div class="wcp-guess-row" title="${esc(playerName(player))}">
+        const avatarHtml = window.renderAvatar
+            ? window.renderAvatar(player, 'sm', false, true)
+            : `
                 <div class="wcp-avatar" aria-hidden="true">
                     <span>${esc(playerInitial(player))}</span>
-                    ${avatarUrl ? `<img src="${esc(avatarUrl)}" alt="" onerror="this.remove()">` : ''}
+                    ${playerAvatarUrl(player) ? `<img src="${esc(playerAvatarUrl(player))}" alt="" onerror="this.remove()">` : ''}
                 </div>
+            `;
+        return `
+            <div class="wcp-guess-row" title="${esc(playerName(player))}">
+                ${avatarHtml}
                 ${renderTiles(entry.word, entry.pattern, length)}
             </div>
         `;
     }
 
     function renderLeaderMeta(leader) {
-        const avatarUrl = playerAvatarUrl(leader);
-        return `
-            <span class="wcp-meta-leader">
+        const avatarHtml = window.renderAvatar
+            ? window.renderAvatar(leader, 'sm', false, true)
+            : `
                 <span class="wcp-meta-avatar" aria-hidden="true">
                     <span>${esc(playerInitial(leader))}</span>
-                    ${avatarUrl ? `<img src="${esc(avatarUrl)}" alt="" onerror="this.remove()">` : ''}
+                    ${playerAvatarUrl(leader) ? `<img src="${esc(playerAvatarUrl(leader))}" alt="" onerror="this.remove()">` : ''}
                 </span>
+            `;
+        return `
+            <span class="wcp-meta-leader">
+                ${avatarHtml}
                 <b>${esc(playerName(leader))}</b>
             </span>
         `;
