@@ -240,15 +240,17 @@
         const disabledAttr = disabled ? 'disabled' : '';
         return `
             <div class="wcp-keyboard" aria-hidden="true">
-                ${LETTER_ROWS.map(row => `
+                ${LETTER_ROWS.map((row, rowIndex) => `
                     <div class="wcp-key-row">
                         ${row.map(letter => `<button type="button" class="wcp-key" ${disabledAttr} onclick="window.wcpAddLetter('${letter}')">${letter}</button>`).join('')}
+                        ${rowIndex === 2 ? `
+                            <button type="button" class="wcp-key wcp-key-wide" ${disabledAttr} onclick="window.wcpBackspace()">
+                                <i class="bi bi-backspace"></i>
+                            </button>
+                        ` : ''}
                     </div>
                 `).join('')}
-                <div class="wcp-action-row">
-                    <button type="button" class="wcp-key wcp-key-wide" ${disabledAttr} onclick="window.wcpBackspace()"><i class="bi bi-backspace"></i></button>
-                    <button type="button" class="wcp-submit-btn" ${disabledAttr} onclick="window.wcpSubmitGuess()">Проверить</button>
-                </div>
+                <button type="button" class="wcp-submit-btn" ${disabledAttr} onclick="window.wcpSubmitGuess()">Проверить</button>
             </div>
         `;
     }
