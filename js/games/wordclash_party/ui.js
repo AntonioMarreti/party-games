@@ -508,9 +508,13 @@
         const title = document.querySelector('#wcp-shell .wcp-title');
         const myId = String(res?.user?.id || '');
         const leaderId = String(state.leader_id || '');
-        const guesserPlaying = state.phase === 'playing' && myId !== leaderId;
+        const isPlaying = state.phase === 'playing';
+        const guesserPlaying = isPlaying && myId !== leaderId;
+        const leaderPlaying = isPlaying && myId === leaderId;
         if (shell) {
+            shell.classList.toggle('is-playing', isPlaying);
             shell.classList.toggle('is-guesser-playing', guesserPlaying);
+            shell.classList.toggle('is-leader-playing', leaderPlaying);
         }
         if (title) {
             title.textContent = guesserPlaying ? 'Отгадай слово' : 'Загадай слово';

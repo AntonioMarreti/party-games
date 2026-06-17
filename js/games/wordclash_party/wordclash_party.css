@@ -934,3 +934,90 @@ body.tg-dark-theme .wcp-result-row span {
         display: none !important;
     }
 }
+
+/* Wordclash-like dark surface for playing phase */
+
+/* Общий фон Shell */
+#wcp-shell.is-playing {
+    background: #1e2a3a !important;
+    color: #ffffff !important;
+}
+
+/* Topbar адаптация */
+#wcp-shell.is-playing .wcp-topbar {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+#wcp-shell.is-playing .wcp-title {
+    color: #ffffff !important;
+}
+#wcp-shell.is-playing .wcp-icon-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+#wcp-shell.is-playing .wcp-round-pill {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+/* --- ЭКРАН ОТГАДЫВАЮЩЕГО --- */
+#wcp-shell.is-guesser-playing .wcp-guesser-meta {
+    background: rgba(30, 42, 58, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+#wcp-shell.is-guesser-playing .wcp-meta-host {
+    color: #ffffff !important;
+}
+#wcp-shell.is-guesser-playing .wcp-guess-name {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Спокойный Current Input (сохраняем build 3295) */
+#wcp-shell.is-playing .wcp-current-wrap {
+    background: rgba(30, 42, 58, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+#wcp-shell.is-playing .wcp-current-cell {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+/* Плитки истории (не трогаем цветные стейты!) */
+#wcp-shell.is-playing .wcp-tile:not(.is-absent):not(.is-present):not(.is-correct) {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+/* Клавиатура */
+#wcp-shell.is-playing .wcp-key:not(.is-absent):not(.is-present):not(.is-correct) {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
+}
+#wcp-shell.is-playing .wcp-key:not(.is-absent):not(.is-present):not(.is-correct):active {
+    background: rgba(255, 255, 255, 0.26) !important;
+}
+
+/* --- ЭКРАН ВЕДУЩЕГО --- */
+#wcp-shell.is-leader-playing .wcp-panel {
+    background: rgba(30, 42, 58, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+#wcp-shell.is-leader-playing .wcp-panel-head h3,
+#wcp-shell.is-leader-playing .wcp-leader-board h3,
+#wcp-shell.is-leader-playing .wcp-progress-head span {
+    color: #ffffff !important;
+}
+#wcp-shell.is-leader-playing .wcp-panel-head p {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+#wcp-shell.is-leader-playing .wcp-progress-row {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+#wcp-shell.is-leader-playing .wcp-progress-empty {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
