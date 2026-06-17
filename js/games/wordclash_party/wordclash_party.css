@@ -1048,3 +1048,10 @@ body.tg-dark-theme .wcp-result-row span {
 #wcp-shell.is-dark-surface .wcp-progress-head b.is-out {
     color: #f87171 !important;
 }
+
+/* Fix spacing between scoreboard and subsequent actions/waiting blocks */
+#wcp-shell.is-dark-surface .wcp-scoreboard + .wcp-waiting,
+#wcp-shell.is-dark-surface .wcp-scoreboard + .wcp-primary-btn,
+#wcp-shell.is-dark-surface .wcp-scoreboard + .wcp-actions {
+    margin-top: 14px !important;
+}
