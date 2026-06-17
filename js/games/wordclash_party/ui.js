@@ -373,9 +373,16 @@
         content.innerHTML = `
             <section class="wcp-guesser-screen">
                 <div class="wcp-guesser-meta">
-                    <span>Ведущий: ${renderLeaderMeta(leader)}</span>
-                    <span>${wordLength} букв</span>
-                    <span>${guessed ? 'Слово угадано' : attemptsLeft > 0 ? `Осталось попыток: ${attemptsLeft}` : 'Попытки закончились'}</span>
+                    <div class="wcp-meta-item wcp-meta-host">
+                        <span class="wcp-meta-label">Ведущий</span>
+                        ${renderLeaderMeta(leader)}
+                    </div>
+                    <div class="wcp-meta-item wcp-meta-info">
+                        <span class="wcp-badge wcp-badge-length">${wordLength} букв</span>
+                        <span class="wcp-badge wcp-badge-attempts ${attemptsLeft <= 2 ? 'is-warning' : ''}">
+                            ${guessed ? 'Угадано' : attemptsLeft > 0 ? `Попыток: ${attemptsLeft}` : 'Выбыл'}
+                        </span>
+                    </div>
                 </div>
                 <div class="wcp-attempts-stream">
                     <div class="wcp-guess-history">
