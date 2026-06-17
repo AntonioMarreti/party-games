@@ -213,8 +213,17 @@
         content.innerHTML = `
             <section class="wcp-panel">
                 <div class="wcp-panel-head">
-                    <h3>Настройки MVP</h3>
-                    <p>Лучше от 3 игроков: один ведущий загадывает слово, остальные угадывают.</p>
+                    <h3>Настройки игры</h3>
+                    <p>Ведущий выбирает слово, остальные угадывают. После раунда ведущий меняется.</p>
+                </div>
+                <div class="wcp-rules-card">
+                    <div class="wcp-rules-title">Как играть</div>
+                    <div class="wcp-rules-line">Угадайте слово за 6 попыток.</div>
+                    <div class="wcp-color-legend">
+                        <div><span class="wcp-legend-box correct"></span> На месте</div>
+                        <div><span class="wcp-legend-box present"></span> Есть, но не там</div>
+                        <div><span class="wcp-legend-box absent"></span> Нет в слове</div>
+                    </div>
                 </div>
                 <div class="wcp-control-group">
                     <div class="wcp-label">Длина слова</div>

@@ -1123,3 +1123,49 @@ body.tg-dark-theme .wcp-result-row span {
 #wcp-shell.is-dark-surface .wcp-avatar {
     background: rgba(255, 255, 255, 0.1) !important;
 }
+
+/* Rules Card */
+.wcp-rules-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 12px;
+    margin: 12px 0 18px;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.wcp-rules-title {
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.wcp-rules-line {
+    font-size: 0.86rem;
+    line-height: 1.35;
+    margin-bottom: 10px;
+}
+
+.wcp-color-legend {
+    display: grid;
+    gap: 6px;
+    font-size: 0.84rem;
+}
+
+.wcp-color-legend div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wcp-legend-box {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex: 0 0 auto;
+}
+
+.wcp-legend-box.correct { background: #10b981; }
+.wcp-legend-box.present { background: #f59e0b; }
+.wcp-legend-box.absent { background: #334155; }
