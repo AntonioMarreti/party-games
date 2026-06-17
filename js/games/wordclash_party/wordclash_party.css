@@ -861,3 +861,32 @@ body.dark-mode .wcp-round-pill,
 body.tg-dark-theme .wcp-round-pill {
     color: #8ee39a;
 }
+
+/* Корректировка высоты вьюпорта для десктопного эмулятора */
+@media (min-width: 1024px) and (pointer: fine) {
+    #screen-game:has(#wcp-shell.is-guesser-playing) {
+        --app-viewport-height: calc(88vh - 24px) !important;
+    }
+}
+
+/* Принудительное затемнение внутренних строк и плашек в темных темах */
+body.dark-mode .wcp-progress-row,
+body.tg-dark-theme .wcp-progress-row,
+body.dark-mode .wcp-score-row,
+body.tg-dark-theme .wcp-score-row,
+body.dark-mode .wcp-result-row,
+body.tg-dark-theme .wcp-result-row,
+body.dark-mode .wcp-waiting,
+body.tg-dark-theme .wcp-waiting {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+}
+
+body.dark-mode .wcp-progress-head span,
+body.tg-dark-theme .wcp-progress-head span,
+body.dark-mode .wcp-score-row span,
+body.tg-dark-theme .wcp-score-row span,
+body.dark-mode .wcp-result-row span,
+body.tg-dark-theme .wcp-result-row span {
+    color: #f8fafc;
+}
