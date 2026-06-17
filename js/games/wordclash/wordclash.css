@@ -122,6 +122,7 @@ body.wc-keyboard-active #wc-header {
 /* Input Area */
 .wc-input-area {
     width: 100%;
+    box-sizing: border-box;
     background: rgba(30, 42, 58, 0.94);
     padding: 12px 24px;
     /* Increased side padding */
@@ -201,10 +202,15 @@ body.wc-keyboard-active #wc-header {
     gap: 10px;
     align-items: center;
     margin-bottom: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    padding-left: clamp(16px, 4vw, 24px);
+    padding-right: clamp(16px, 4vw, 24px);
 }
 
 .wc-virtual-input {
     flex: 1;
+    min-width: 0;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -312,9 +318,9 @@ body.wc-keyboard-active #wc-header {
 }
 
 .wc-check-btn {
-    width: calc(100% - (clamp(12px, 4vw, 24px) * 2));
+    width: calc(100% - (clamp(24px, 6vw, 40px) * 2));
     min-height: 42px;
-    margin: 10px auto 8px;
+    margin: 10px auto 24px;
     border: 0;
     border-radius: 14px;
     background: var(--primary-color);
