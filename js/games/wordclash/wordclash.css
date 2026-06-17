@@ -99,15 +99,18 @@ body.wc-keyboard-active #wc-header {
 }
 
 .wc-header-exit-btn {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
-    color: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    color: rgba(255, 255, 255, 0.8);
     font-size: 24px;
-    padding: 8px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s;
+    transition: all 0.2s;
     cursor: pointer;
 }
 
@@ -123,7 +126,7 @@ body.wc-keyboard-active #wc-header {
     /* Increased side padding */
     padding-left: calc(24px + env(safe-area-inset-left, 0px));
     padding-right: calc(24px + env(safe-area-inset-right, 0px));
-    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(34px + env(safe-area-inset-bottom, 12px));
     flex: 0 0 auto;
     z-index: 20;
     box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.16);
@@ -238,8 +241,8 @@ body.wc-keyboard-active #wc-header {
 }
 
 .wc-key {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 10px;
     color: white;
     font-size: clamp(13px, 3.7vw, 16px);
@@ -877,58 +880,6 @@ body.wordclash-active .game-custom-wrapper,
     -webkit-backdrop-filter: blur(10px);
 }
 
-/* === LIGHT THEME ADAPTATION (Fix for QA Report #21) === */
-/* a) Title / Header Text */
-body:not(.tg-dark-theme).wordclash-active h3.interactable {
-    color: var(--theme-text-color, #000000) !important;
-    text-shadow: none !important;
-}
-
-/* b) Input, Letter Slots, Empty Tiles, Virtual Keys */
-body:not(.tg-dark-theme).wordclash-active .wc-input,
-body:not(.tg-dark-theme).wordclash-active .wc-virtual-input,
-body:not(.tg-dark-theme).wordclash-active .wc-key,
-body:not(.tg-dark-theme).wordclash-active .wc-tile:not(.res-0):not(.res-1):not(.res-2) {
-    color: var(--theme-text-color, #000000) !important;
-    background: rgba(0, 0, 0, 0.06) !important;
-    border-color: rgba(0, 0, 0, 0.12) !important;
-}
-
-/* c) Keyboard Interactions */
-body:not(.tg-dark-theme).wordclash-active .wc-key:hover {
-    background: rgba(0, 0, 0, 0.1) !important;
-}
-body:not(.tg-dark-theme).wordclash-active .wc-key:active {
-    background: rgba(0, 0, 0, 0.15) !important;
-}
-body:not(.tg-dark-theme).wordclash-active .wc-key.is-absent {
-    color: #ffffff !important;
-    background: #6b7280 !important;
-    border-color: #6b7280 !important;
-}
-body:not(.tg-dark-theme).wordclash-active .wc-key.is-present {
-    color: #1f2933 !important;
-    background: #d6b447 !important;
-    border-color: #d6b447 !important;
-}
-body:not(.tg-dark-theme).wordclash-active .wc-key.is-correct {
-    color: #ffffff !important;
-    background: #4f9f5b !important;
-    border-color: #4f9f5b !important;
-}
-body:not(.tg-dark-theme).wordclash-active .wc-check-btn {
-    color: var(--theme-button-text-color, #ffffff);
-    background: var(--theme-button-color, var(--primary-color));
-}
-body:not(.tg-dark-theme).wordclash-active .wc-input::placeholder {
-    color: rgba(0, 0, 0, 0.4) !important;
-}
-
-/* d) Bottom Input Area Wrapper */
-body:not(.tg-dark-theme).wordclash-active .wc-input-area {
-    background: var(--theme-secondary-bg-color, #f3f3f3) !important;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
 
 .wc-waiting-msg i {
     font-size: 24px;
