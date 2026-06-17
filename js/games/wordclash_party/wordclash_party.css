@@ -937,8 +937,15 @@ body.tg-dark-theme .wcp-result-row span {
 
 /* Wordclash-like dark surface for playing, intermission, game_over phases */
 
+/* Общий фон контейнеров для закрытия белых зон на всю высоту */
+#screen-game:has(#wcp-shell.is-dark-surface),
+#screen-game:has(#wcp-shell.is-dark-surface) #game-area {
+    background: #1e2a3a !important;
+}
+
 /* Общий фон Shell */
 #wcp-shell.is-dark-surface {
+    min-height: 100% !important;
     background: #1e2a3a !important;
     color: #ffffff !important;
 }
