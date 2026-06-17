@@ -34,6 +34,11 @@
         return (res.players || []).find(player => String(player.id) === String(id));
     }
 
+    function playerInitial(player) {
+        const name = playerName(player).trim();
+        return (name[0] || '?').toUpperCase();
+    }
+
     function isHost(res) {
         return !!res.is_host || String(res?.room?.host_user_id) === String(res?.user?.id);
     }
@@ -114,6 +119,16 @@
             html += `<span class="wcp-tile ${cls}">${esc(letters[i] || '')}</span>`;
         }
         return `<div class="wcp-tiles">${html}</div>`;
+    }
+
+    function renderGuessRow(res, userId, entry, length) {
+        const player = getPlayer(res, userId);
+        return `
+            <div class="wcp-guess-row" title="${esc(playerName(player))}">
+                <div class="wcp-avatar" aria-hidden="true">${esc(playerInitial(player))}</div>
+                ${renderTiles(entry.word, entry.pattern, length)}
+            </div>
+        `;
     }
 
     function renderMeta(items) {
@@ -237,8 +252,8 @@
             const entries = guesses[id] || [];
             return `
                 <div class="wcp-guess-card">
-                    <div class="wcp-guess-name">${esc(playerName(player))}</div>
-                    ${entries.length ? entries.map(entry => renderTiles(entry.word, entry.pattern, length)).join('') : options.compactEmpty ? '' : '<div class="wcp-empty small">Нет попыток</div>'}
+                    ${options.showName === false ? '' : `<div class="wcp-guess-name">${esc(playerName(player))}</div>`}
+                    ${entries.length ? entries.map(entry => renderGuessRow(res, id, entry, length)).join('') : options.compactEmpty ? '' : '<div class="wcp-empty small">Нет попыток</div>'}
                 </div>
             `;
         }).join('');
@@ -270,7 +285,7 @@
                                 <span>${esc(playerName(player))}</span>
                                 <b class="${didGuess ? 'is-guessed' : isOut ? 'is-out' : ''}">${status}</b>
                             </div>
-                            ${last ? renderTiles(last.word, last.pattern, length) : '<div class="wcp-progress-empty">0 попыток</div>'}
+                            ${last ? renderGuessRow(res, id, last, length) : '<div class="wcp-progress-empty">0 попыток</div>'}
                         </div>
                     `;
                 }).join('')}
@@ -327,16 +342,18 @@
         }
 
         content.innerHTML = `
-            <section class="wcp-panel wcp-playing-panel wcp-guesser-panel">
+            <section class="wcp-play-surface wcp-guesser-surface">
                 ${renderMeta([
                     `Ведущий: <b>${esc(playerName(leader))}</b>`,
                     `${wordLength} букв`,
                     guessed ? 'Слово угадано' : attemptsLeft > 0 ? `Осталось попыток: ${attemptsLeft}` : 'Попытки закончились'
                 ])}
-                <div class="wcp-player-board wcp-guesser-board">
+                <div class="wcp-play-stream">
                     <div class="wcp-guess-history">
-                        ${renderGuessList(res, state, myId, { compactEmpty: true })}
+                        ${renderGuessList(res, state, myId, { compactEmpty: true, showName: false })}
                     </div>
+                </div>
+                <div class="wcp-input-area">
                     <div class="wcp-current-wrap">
                         ${renderCurrentGuess(wordLength, inputDisabled)}
                         <div class="wcp-current-counter" id="wcp-current-counter">${currentGuess.length}/${wordLength}</div>

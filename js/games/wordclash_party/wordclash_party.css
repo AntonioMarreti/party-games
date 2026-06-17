@@ -220,28 +220,42 @@
     padding-bottom: 10px;
 }
 
-.wcp-guesser-panel {
-    display: flex;
-    min-height: calc(100dvh - 154px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    flex-direction: column;
+.wcp-play-surface {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
 }
 
-.wcp-guesser-board {
+.wcp-guesser-surface {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.wcp-play-stream {
     display: flex;
-    flex: 1 1 auto;
     flex-direction: column;
-    min-height: 0;
+    gap: 10px;
+    min-height: 72px;
+    max-height: min(34dvh, 250px);
+    overflow-y: auto;
+    padding: 10px 2px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .wcp-guess-history:empty {
     display: none;
 }
 
-.wcp-guesser-board .wcp-guess-history {
-    flex: 0 1 auto;
+.wcp-guess-history {
+    display: grid;
+    gap: 8px;
 }
 
 .wcp-guess-card {
+    display: grid;
+    gap: 7px;
     margin-bottom: 8px;
     padding: 0;
     border-radius: 0;
@@ -255,6 +269,28 @@
     font-weight: 950;
 }
 
+.wcp-guess-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.wcp-avatar {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #1e2a3a;
+    color: #fff;
+    font-size: 0.86rem;
+    font-weight: 950;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.16);
+}
+
 .wcp-tiles,
 .wcp-current-word {
     display: flex;
@@ -264,20 +300,20 @@
 }
 
 .wcp-tiles {
-    margin-bottom: 5px;
+    margin-bottom: 0;
 }
 
 .wcp-tile,
 .wcp-current-cell {
-    width: clamp(36px, 11vw, 50px);
-    max-width: 50px;
+    width: clamp(38px, 11.5vw, 48px);
+    max-width: 48px;
     aspect-ratio: 1;
-    border-radius: 10px;
+    border-radius: 8px;
     display: grid;
     place-items: center;
-    font-weight: 950;
+    font-weight: 900;
     text-transform: uppercase;
-    font-size: clamp(19px, 5.6vw, 26px);
+    font-size: clamp(20px, 5.8vw, 26px);
 }
 
 .wcp-tile {
@@ -287,15 +323,11 @@
 }
 
 .wcp-current-wrap {
-    margin: 10px 0 10px;
+    margin: 0 0 10px;
     padding: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-}
-
-.wcp-guesser-board .wcp-current-wrap {
-    margin-top: auto;
 }
 
 .wcp-current-cell {
@@ -346,11 +378,7 @@
     gap: 6px;
     max-width: 100%;
     overflow: visible;
-    padding: 0 calc(clamp(2px, 1vw, 8px) + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(clamp(2px, 1vw, 8px) + env(safe-area-inset-left, 0px));
-}
-
-.wcp-guesser-board .wcp-keyboard {
-    padding-bottom: 0;
+    padding: 0 calc(clamp(6px, 2vw, 14px) + env(safe-area-inset-right, 0px)) 0 calc(clamp(6px, 2vw, 14px) + env(safe-area-inset-left, 0px));
 }
 
 .wcp-key-row {
@@ -417,7 +445,7 @@
 }
 
 .wcp-submit-btn {
-    width: calc(100% - (clamp(4px, 2vw, 14px) * 2));
+    width: calc(100% - (clamp(12px, 4vw, 24px) * 2));
     min-height: 44px;
     margin: 12px auto 0;
     border-radius: 14px;
@@ -427,6 +455,41 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     box-shadow: 0 6px 14px rgba(16, 185, 129, 0.24);
+}
+
+.wcp-input-area {
+    width: 100%;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px;
+    background: #1e2a3a;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+}
+
+.wcp-input-area .wcp-current-cell {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.wcp-input-area .wcp-current-cell.is-filled {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(142, 227, 154, 0.52);
+}
+
+.wcp-input-area .wcp-current-counter {
+    color: rgba(255, 255, 255, 0.58);
+}
+
+.wcp-input-area .wcp-key {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.wcp-input-area .wcp-submit-btn {
+    background: var(--primary-color, #10b981);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
 }
 
 .wcp-progress-list {
@@ -439,6 +502,22 @@
     padding: 10px;
     border-radius: 13px;
     background: var(--bg-secondary, #eef2f7);
+}
+
+.wcp-progress-row .wcp-guess-row {
+    justify-content: flex-start;
+}
+
+.wcp-progress-row .wcp-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.78rem;
+}
+
+.wcp-progress-row .wcp-tile {
+    width: clamp(30px, 8.5vw, 40px);
+    max-width: 40px;
+    font-size: clamp(16px, 4.6vw, 21px);
 }
 
 .wcp-progress-head {
