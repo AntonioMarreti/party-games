@@ -517,6 +517,23 @@
         const container = document.getElementById('game-area');
         if (!container) return;
 
+        if (isHost(res)) {
+            if (!window.wcpTickInterval) {
+                window.wcpTickInterval = setInterval(() => {
+                    if (document.getElementById('wcp-shell')) {
+                        window.sendGameAction('tick', {});
+                    } else {
+                        clearInterval(window.wcpTickInterval);
+                        window.wcpTickInterval = null;
+                    }
+                }, 3000);
+            }
+        } else if (window.wcpTickInterval) {
+            clearInterval(window.wcpTickInterval);
+            window.wcpTickInterval = null;
+        }
+
+
         window.lastWcpRes = res;
         const state = parseState(res);
         window.lastWcpState = state;

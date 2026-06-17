@@ -327,64 +327,66 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     if ($type === 'submit_guess') {
-        if (($state['phase'] ?? '') !== 'playing') {
-            return ['status' => 'error', 'message' => 'Раунд ещё не идёт'];
+        $guess = $postData['word'] ?? '';
+        $res = wcpApplyGuess($pdo, $room, $state, $userId, $guess);
+        if ($res['status'] !== 'ok') {
+            return $res;
         }
-        if ((string) ($state['leader_id'] ?? '') === $userId) {
-            return ['status' => 'error', 'message' => 'Ведущий не отгадывает'];
-        }
-        if (!empty($state['guessed'][$userId])) {
-            return ['status' => 'error', 'message' => 'Вы уже угадали слово'];
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    if ($type === 'tick') {
+        $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
+        $stmt->execute([$room['id']]);
+        $bots = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($bots)) {
+            return ['status' => 'ok'];
         }
 
-        $attempts = $state['guesses'][$userId] ?? [];
-        if (count($attempts) >= (int) ($state['attempt_limit'] ?? 6)) {
-            return ['status' => 'error', 'message' => 'Попытки закончились'];
-        }
+        $changed = false;
+        $phase = $state['phase'] ?? '';
 
-        $guess = wcpNormalizeWord($postData['word'] ?? '');
-        $wordLength = (int) ($state['word_length'] ?? 5);
-        if (mb_strlen($guess, 'UTF-8') !== $wordLength) {
-            return ['status' => 'error', 'message' => "Нужно слово из {$wordLength} букв"];
-        }
-        if (!in_array($guess, wcpLoadWords($wordLength), true)) {
-            return ['status' => 'error', 'message' => 'Такого слова нет в словаре'];
-        }
+        if ($phase === 'leader_choose' && in_array((string)($state['leader_id'] ?? ''), $bots)) {
+            if (!empty($state['candidate_words'][0])) {
+                $state['secret_word'] = $state['candidate_words'][0];
+                $state['phase'] = 'playing';
+                $state['round_start_time'] = time();
+                $state['guesses'] = [];
+                $state['candidate_words'] = [];
+                $state['rerolls'] = 0;
+                $state['bot_last_guess_at'] = [];
+                $changed = true;
+            }
+        } elseif ($phase === 'playing') {
+            foreach ($bots as $botId) {
+                if ($botId == ($state['leader_id'] ?? '')) continue;
+                if (!empty($state['guessed'][$botId])) continue;
 
-        foreach ($attempts as $entry) {
-            if (($entry['word'] ?? '') === $guess) {
-                return ['status' => 'error', 'message' => 'Это слово уже было'];
+                $attempts = $state['guesses'][$botId] ?? [];
+                if (count($attempts) >= (int)($state['attempt_limit'] ?? 6)) continue;
+
+                $lastGuess = $state['bot_last_guess_at'][$botId] ?? 0;
+                if (time() - $lastGuess < 5) continue;
+
+                $wordLength = (int)($state['word_length'] ?? 5);
+                $words = wcpLoadWords($wordLength);
+                if (!empty($words)) {
+                    $randomWord = $words[array_rand($words)];
+                    $res = wcpApplyGuess($pdo, $room, $state, $botId, $randomWord);
+                    if ($res['status'] === 'ok') {
+                        $state['bot_last_guess_at'][$botId] = time();
+                        $changed = true;
+                        break;
+                    }
+                }
             }
         }
 
-        $secret = (string) ($state['secret_word'] ?? '');
-        if ($secret === '') {
-            return ['status' => 'error', 'message' => 'Слово ещё не выбрано'];
+        if ($changed) {
+            updateGameState($room['id'], $state);
         }
-
-        $pattern = wcpPattern($secret, $guess);
-        $attemptNumber = count($attempts) + 1;
-        $isCorrect = $guess === $secret;
-        $scoreDelta = $isCorrect ? max(1, 7 - $attemptNumber) * 10 : 0;
-
-        $state['guesses'][$userId][] = [
-            'word' => $guess,
-            'pattern' => $pattern,
-            'attempt' => $attemptNumber,
-            'score_delta' => $scoreDelta,
-            'timestamp' => time()
-        ];
-
-        if (!isset($state['scores'][$userId])) {
-            $state['scores'][$userId] = 0;
-        }
-        if ($isCorrect) {
-            $state['scores'][$userId] += $scoreDelta;
-            $state['guessed'][$userId] = true;
-        }
-
-        wcpMaybeFinishRound($pdo, $room, $state);
-        updateGameState($room['id'], $state);
         return ['status' => 'ok'];
     }
 
@@ -414,4 +416,65 @@ if (!function_exists('mb_str_split')) {
     {
         return preg_split('/(?<!^)(?!$)/u', $string);
     }
+}
+
+function wcpApplyGuess($pdo, $room, &$state, $userId, $guess) {
+    if (($state['phase'] ?? '') !== 'playing') {
+        return ['status' => 'error', 'message' => 'Раунд ещё не идёт'];
+    }
+    if ((string) ($state['leader_id'] ?? '') === $userId) {
+        return ['status' => 'error', 'message' => 'Ведущий не отгадывает'];
+    }
+    if (!empty($state['guessed'][$userId])) {
+        return ['status' => 'error', 'message' => 'Вы уже угадали слово'];
+    }
+
+    $attempts = $state['guesses'][$userId] ?? [];
+    if (count($attempts) >= (int) ($state['attempt_limit'] ?? 6)) {
+        return ['status' => 'error', 'message' => 'Попытки закончились'];
+    }
+
+    $guess = wcpNormalizeWord($guess);
+    $wordLength = (int) ($state['word_length'] ?? 5);
+    if (mb_strlen($guess, 'UTF-8') !== $wordLength) {
+        return ['status' => 'error', 'message' => "Нужно слово из {$wordLength} букв"];
+    }
+    if (!in_array($guess, wcpLoadWords($wordLength), true)) {
+        return ['status' => 'error', 'message' => 'Такого слова нет в словаре'];
+    }
+
+    foreach ($attempts as $entry) {
+        if (($entry['word'] ?? '') === $guess) {
+            return ['status' => 'error', 'message' => 'Это слово уже было'];
+        }
+    }
+
+    $secret = (string) ($state['secret_word'] ?? '');
+    if ($secret === '') {
+        return ['status' => 'error', 'message' => 'Слово ещё не выбрано'];
+    }
+
+    $pattern = wcpPattern($secret, $guess);
+    $attemptNumber = count($attempts) + 1;
+    $isCorrect = $guess === $secret;
+    $scoreDelta = $isCorrect ? max(1, 7 - $attemptNumber) * 10 : 0;
+
+    $state['guesses'][$userId][] = [
+        'word' => $guess,
+        'pattern' => $pattern,
+        'attempt' => $attemptNumber,
+        'score_delta' => $scoreDelta,
+        'timestamp' => time()
+    ];
+
+    if (!isset($state['scores'][$userId])) {
+        $state['scores'][$userId] = 0;
+    }
+    if ($isCorrect) {
+        $state['scores'][$userId] += $scoreDelta;
+        $state['guessed'][$userId] = true;
+    }
+
+    wcpMaybeFinishRound($pdo, $room, $state);
+    return ['status' => 'ok'];
 }
