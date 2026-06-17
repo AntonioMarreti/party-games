@@ -116,6 +116,14 @@
         return `<div class="wcp-tiles">${html}</div>`;
     }
 
+    function renderMeta(items) {
+        return `
+            <div class="wcp-meta">
+                ${items.filter(Boolean).map(item => `<span>${item}</span>`).join('')}
+            </div>
+        `;
+    }
+
     function syncCurrentGuess(state, myId) {
         const guesses = state.guesses?.[myId] || [];
         const key = `${state.current_round || 0}:${myId}:${guesses.length}:${state.phase}:${state.guessed?.[myId] ? 1 : 0}`;
@@ -216,12 +224,12 @@
         `;
     }
 
-    function renderGuessList(res, state, userId = null) {
+    function renderGuessList(res, state, userId = null, options = {}) {
         const length = Number(state.word_length || 5);
         const guesses = state.guesses || {};
         const ids = userId ? [String(userId)] : Object.keys(guesses);
         if (ids.length === 0) {
-            return '<div class="wcp-empty">Пока нет попыток.</div>';
+            return options.compactEmpty ? '' : '<div class="wcp-empty">Пока нет попыток.</div>';
         }
 
         return ids.map(id => {
@@ -230,10 +238,44 @@
             return `
                 <div class="wcp-guess-card">
                     <div class="wcp-guess-name">${esc(playerName(player))}</div>
-                    ${entries.length ? entries.map(entry => renderTiles(entry.word, entry.pattern, length)).join('') : '<div class="wcp-empty small">Нет попыток</div>'}
+                    ${entries.length ? entries.map(entry => renderTiles(entry.word, entry.pattern, length)).join('') : options.compactEmpty ? '' : '<div class="wcp-empty small">Нет попыток</div>'}
                 </div>
             `;
         }).join('');
+    }
+
+    function renderLeaderProgress(res, state) {
+        const leaderId = String(state.leader_id || '');
+        const length = Number(state.word_length || 5);
+        const limit = Number(state.attempt_limit || 6);
+        const players = Array.isArray(state.players) && state.players.length ? state.players : (res.players || []).map(player => String(player.id));
+        const guesserIds = players.map(String).filter(id => id !== leaderId);
+
+        if (!guesserIds.length) {
+            return '<div class="wcp-empty">Нет игроков для отгадывания.</div>';
+        }
+
+        return `
+            <div class="wcp-progress-list">
+                ${guesserIds.map(id => {
+                    const player = getPlayer(res, id);
+                    const entries = state.guesses?.[id] || [];
+                    const didGuess = !!state.guessed?.[id];
+                    const isOut = !didGuess && entries.length >= limit;
+                    const last = entries[entries.length - 1];
+                    const status = didGuess ? 'угадал' : isOut ? 'выбыл' : `${entries.length}/${limit}`;
+                    return `
+                        <div class="wcp-progress-row">
+                            <div class="wcp-progress-head">
+                                <span>${esc(playerName(player))}</span>
+                                <b class="${didGuess ? 'is-guessed' : isOut ? 'is-out' : ''}">${status}</b>
+                            </div>
+                            ${last ? renderTiles(last.word, last.pattern, length) : '<div class="wcp-progress-empty">0 попыток</div>'}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
     function renderKeyboard(disabled = false) {
@@ -267,30 +309,40 @@
         const inputDisabled = guessed || attemptsLeft <= 0;
         syncCurrentGuess(state, myId);
 
-        content.innerHTML = `
-            <section class="wcp-panel">
-                <div class="wcp-status-strip">
-                    <span>Ведущий: <b>${esc(playerName(leader))}</b></span>
-                    <span>${Number(state.word_length || 5)} букв</span>
-                </div>
-                ${amLeader ? `
+        if (amLeader) {
+            content.innerHTML = `
+                <section class="wcp-panel wcp-playing-panel">
+                    ${renderMeta([
+                        `${wordLength} букв`,
+                        `Раунд ${Number(state.current_round || 0)}/${Number(state.round_count || 0)}`
+                    ])}
                     <div class="wcp-leader-board">
-                        <h3>Раунд идёт</h3>
-                        <p>Вы ведущий. Следите за попытками игроков, но не отгадывайте.</p>
-                        ${renderGuessList(res, state)}
+                        <h3>Вы ведущий</h3>
+                        <p>Следите за попытками игроков.</p>
+                        ${renderLeaderProgress(res, state)}
                     </div>
-                ` : `
-                    <div class="wcp-player-board">
-                        <div class="wcp-attempts">${guessed ? 'Слово угадано' : `Осталось попыток: ${attemptsLeft}`}</div>
-                        ${renderGuessList(res, state, myId)}
-                        <div class="wcp-current-wrap">
-                            ${renderCurrentGuess(wordLength, inputDisabled)}
-                            <div class="wcp-current-counter" id="wcp-current-counter">${currentGuess.length}/${wordLength}</div>
-                        </div>
-                        ${renderKeyboard(inputDisabled)}
+                </section>
+            `;
+            return;
+        }
+
+        content.innerHTML = `
+            <section class="wcp-panel wcp-playing-panel">
+                ${renderMeta([
+                    `Ведущий: <b>${esc(playerName(leader))}</b>`,
+                    `${wordLength} букв`,
+                    guessed ? 'Слово угадано' : attemptsLeft > 0 ? `Осталось попыток: ${attemptsLeft}` : 'Попытки закончились'
+                ])}
+                <div class="wcp-player-board">
+                    <div class="wcp-guess-history">
+                        ${renderGuessList(res, state, myId, { compactEmpty: true })}
                     </div>
-                `}
-                ${renderScoreboard(res, state)}
+                    <div class="wcp-current-wrap">
+                        ${renderCurrentGuess(wordLength, inputDisabled)}
+                        <div class="wcp-current-counter" id="wcp-current-counter">${currentGuess.length}/${wordLength}</div>
+                    </div>
+                    ${renderKeyboard(inputDisabled)}
+                </div>
             </section>
         `;
     }
