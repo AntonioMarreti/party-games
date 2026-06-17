@@ -4,6 +4,8 @@
         ['Ф', 'Ы', 'В', 'А', 'П', 'Р', 'О', 'Л', 'Д', 'Ж', 'Э'],
         ['Я', 'Ч', 'С', 'М', 'И', 'Т', 'Ь', 'Б', 'Ю']
     ];
+    let currentGuess = '';
+    let currentGuessKey = '';
 
     function parseState(res) {
         const raw = res?.game_state || res?.room?.game_state;
@@ -68,7 +70,6 @@
                         <i class="bi bi-door-open"></i>
                     </button>
                     <div>
-                        <div class="wcp-eyebrow">Wordclash Party</div>
                         <h2 class="wcp-title">Загадай слово</h2>
                     </div>
                     <div class="wcp-round-pill" id="wcp-round-pill"></div>
@@ -113,6 +114,44 @@
             html += `<span class="wcp-tile ${cls}">${esc(letters[i] || '')}</span>`;
         }
         return `<div class="wcp-tiles">${html}</div>`;
+    }
+
+    function syncCurrentGuess(state, myId) {
+        const guesses = state.guesses?.[myId] || [];
+        const key = `${state.current_round || 0}:${myId}:${guesses.length}:${state.phase}:${state.guessed?.[myId] ? 1 : 0}`;
+        if (currentGuessKey !== key) {
+            currentGuess = '';
+            currentGuessKey = key;
+        }
+        const length = Number(state.word_length || 5);
+        if (currentGuess.length > length) {
+            currentGuess = currentGuess.slice(0, length);
+        }
+    }
+
+    function renderCurrentGuess(length, disabled) {
+        let html = '';
+        const letters = currentGuess.toUpperCase().split('');
+        for (let i = 0; i < length; i++) {
+            html += `<span class="wcp-current-cell ${disabled ? 'is-disabled' : ''}">${esc(letters[i] || '')}</span>`;
+        }
+        return `<div class="wcp-current-word" id="wcp-current-word">${html}</div>`;
+    }
+
+    function updateCurrentGuessDisplay() {
+        const state = window.lastWcpState || {};
+        const length = Number(state.word_length || 5);
+        const wordEl = document.getElementById('wcp-current-word');
+        if (!wordEl) return;
+
+        const letters = currentGuess.toUpperCase().split('');
+        wordEl.querySelectorAll('.wcp-current-cell').forEach((cell, index) => {
+            cell.textContent = letters[index] || '';
+            cell.classList.toggle('is-filled', !!letters[index]);
+        });
+
+        const counter = document.getElementById('wcp-current-counter');
+        if (counter) counter.textContent = `${Math.min(currentGuess.length, length)}/${length}`;
     }
 
     function renderSetup(res, state, content) {
@@ -197,17 +236,18 @@
         }).join('');
     }
 
-    function renderKeyboard() {
+    function renderKeyboard(disabled = false) {
+        const disabledAttr = disabled ? 'disabled' : '';
         return `
             <div class="wcp-keyboard" aria-hidden="true">
                 ${LETTER_ROWS.map(row => `
                     <div class="wcp-key-row">
-                        ${row.map(letter => `<button type="button" class="wcp-key" onclick="window.wcpAddLetter('${letter}')">${letter}</button>`).join('')}
+                        ${row.map(letter => `<button type="button" class="wcp-key" ${disabledAttr} onclick="window.wcpAddLetter('${letter}')">${letter}</button>`).join('')}
                     </div>
                 `).join('')}
                 <div class="wcp-action-row">
-                    <button type="button" class="wcp-key wcp-key-wide" onclick="window.wcpBackspace()"><i class="bi bi-backspace"></i></button>
-                    <button type="button" class="wcp-submit-btn" onclick="window.wcpSubmitGuess()">Проверить</button>
+                    <button type="button" class="wcp-key wcp-key-wide" ${disabledAttr} onclick="window.wcpBackspace()"><i class="bi bi-backspace"></i></button>
+                    <button type="button" class="wcp-submit-btn" ${disabledAttr} onclick="window.wcpSubmitGuess()">Проверить</button>
                 </div>
             </div>
         `;
@@ -221,6 +261,9 @@
         const myGuesses = state.guesses?.[myId] || [];
         const guessed = !!state.guessed?.[myId];
         const attemptsLeft = Math.max(0, Number(state.attempt_limit || 6) - myGuesses.length);
+        const wordLength = Number(state.word_length || 5);
+        const inputDisabled = guessed || attemptsLeft <= 0;
+        syncCurrentGuess(state, myId);
 
         content.innerHTML = `
             <section class="wcp-panel">
@@ -238,10 +281,11 @@
                     <div class="wcp-player-board">
                         <div class="wcp-attempts">${guessed ? 'Слово угадано' : `Осталось попыток: ${attemptsLeft}`}</div>
                         ${renderGuessList(res, state, myId)}
-                        <div class="wcp-input-row">
-                            <input id="wcp-guess-input" class="wcp-input" maxlength="${Number(state.word_length || 5)}" placeholder="${'_'.repeat(Number(state.word_length || 5))}" onkeydown="if(event.key === 'Enter'){event.preventDefault();window.wcpSubmitGuess();}" ${guessed || attemptsLeft <= 0 ? 'disabled' : ''}>
+                        <div class="wcp-current-wrap">
+                            ${renderCurrentGuess(wordLength, inputDisabled)}
+                            <div class="wcp-current-counter" id="wcp-current-counter">${currentGuess.length}/${wordLength}</div>
                         </div>
-                        ${renderKeyboard()}
+                        ${renderKeyboard(inputDisabled)}
                     </div>
                 `}
                 ${renderScoreboard(res, state)}
@@ -347,25 +391,21 @@
     };
 
     window.wcpAddLetter = function (letter) {
-        const input = document.getElementById('wcp-guess-input');
-        if (!input || input.disabled) return;
-        const maxLength = Number(input.getAttribute('maxlength') || 5);
-        if (input.value.length < maxLength) {
-            input.value += String(letter || '').toLowerCase();
+        const state = window.lastWcpState || {};
+        const length = Number(state.word_length || 5);
+        if (currentGuess.length < length) {
+            currentGuess += String(letter || '').toLowerCase();
         }
-        input.focus();
+        updateCurrentGuessDisplay();
     };
 
     window.wcpBackspace = function () {
-        const input = document.getElementById('wcp-guess-input');
-        if (!input || input.disabled) return;
-        input.value = input.value.slice(0, -1);
-        input.focus();
+        currentGuess = currentGuess.slice(0, -1);
+        updateCurrentGuessDisplay();
     };
 
     window.wcpSubmitGuess = async function () {
-        const input = document.getElementById('wcp-guess-input');
-        const word = String(input?.value || '').trim().toLowerCase();
+        const word = String(currentGuess || '').trim().toLowerCase();
         const state = window.lastWcpState || {};
         const length = Number(state.word_length || 5);
         if (word.length !== length) {
@@ -373,6 +413,9 @@
             return;
         }
         const result = await sendPartyAction('submit_guess', { word });
-        if (result && result.status === 'ok' && input) input.value = '';
+        if (result && result.status === 'ok') {
+            currentGuess = '';
+            updateCurrentGuessDisplay();
+        }
     };
 })();

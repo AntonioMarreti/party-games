@@ -1,52 +1,60 @@
-/* Wordclash Party MVP */
+/* Wordclash Party */
 
 #wcp-shell {
     min-height: 100%;
-    padding: calc(18px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
-    background: var(--bg-app, #f7f8fb);
+    padding: calc(54px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 34%),
+        var(--bg-app, #f7f8fb);
     color: var(--text-main, #1f2937);
+    overflow-x: hidden;
 }
 
 .wcp-topbar {
     display: grid;
-    grid-template-columns: 44px 1fr auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
-    margin-bottom: 14px;
+    max-width: 720px;
+    margin: 0 auto 14px;
+    padding: 10px;
+    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.1));
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--bg-card, #fff) 88%, transparent);
+    box-shadow: var(--shadow-card, 0 8px 28px rgba(15, 23, 42, 0.08));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 .wcp-icon-btn {
     width: 44px;
     height: 44px;
-    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.12));
-    border-radius: 12px;
-    background: var(--bg-card, #ffffff);
-    color: var(--text-main, #1f2937);
+    border: 0;
+    border-radius: 16px;
+    background: rgba(255, 99, 99, 0.12);
+    color: #ff6363;
     display: grid;
     place-items: center;
-}
-
-.wcp-eyebrow {
-    color: var(--text-muted, #64748b);
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
+    font-size: 1.1rem;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .wcp-title {
     margin: 0;
-    font-size: 1.35rem;
-    font-weight: 900;
+    font-size: clamp(1.18rem, 5vw, 1.45rem);
+    font-weight: 950;
+    line-height: 1.05;
 }
 
 .wcp-round-pill {
     min-width: 52px;
     padding: 8px 10px;
     border-radius: 999px;
-    background: rgba(106, 170, 100, 0.14);
-    color: #3f8f49;
+    background: rgba(16, 185, 129, 0.14);
+    color: #078f62;
     text-align: center;
-    font-weight: 900;
+    font-weight: 950;
     font-size: 0.82rem;
 }
 
@@ -56,18 +64,19 @@
 }
 
 .wcp-panel {
-    background: var(--bg-card, #ffffff);
-    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.12));
-    border-radius: 18px;
+    background: color-mix(in srgb, var(--bg-card, #fff) 94%, transparent);
+    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.1));
+    border-radius: 22px;
     padding: 16px;
-    box-shadow: var(--shadow-card, 0 8px 28px rgba(15, 23, 42, 0.08));
+    box-shadow: var(--shadow-card, 0 10px 32px rgba(15, 23, 42, 0.08));
+    overflow: visible;
 }
 
 .wcp-panel-head h3,
 .wcp-leader-board h3 {
     margin: 0 0 6px;
-    font-size: 1.1rem;
-    font-weight: 900;
+    font-size: 1.08rem;
+    font-weight: 950;
 }
 
 .wcp-panel-head p,
@@ -75,7 +84,7 @@
     margin: 0 0 16px;
     color: var(--text-muted, #64748b);
     font-size: 0.92rem;
-    line-height: 1.4;
+    line-height: 1.38;
 }
 
 .wcp-control-group {
@@ -85,14 +94,14 @@
 .wcp-label {
     margin-bottom: 8px;
     color: var(--text-muted, #64748b);
-    font-size: 0.78rem;
-    font-weight: 900;
+    font-size: 0.76rem;
+    font-weight: 950;
     text-transform: uppercase;
 }
 
 .wcp-segments {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -103,20 +112,21 @@
 .wcp-submit-btn,
 .wcp-key {
     border: 0;
+    user-select: none;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 
 .wcp-segment {
     min-height: 42px;
-    border-radius: 12px;
+    border-radius: 13px;
     background: var(--bg-secondary, #eef2f7);
     color: var(--text-main, #1f2937);
-    font-weight: 900;
+    font-weight: 950;
 }
 
 .wcp-segment.is-active {
-    background: #6aaa64;
+    background: #10b981;
     color: #fff;
 }
 
@@ -124,14 +134,16 @@
 .wcp-secondary-btn {
     width: 100%;
     min-height: 48px;
-    border-radius: 14px;
-    font-weight: 900;
+    border-radius: 15px;
+    font-weight: 950;
     text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .wcp-primary-btn {
-    background: #6aaa64;
+    background: #10b981;
     color: #fff;
+    box-shadow: 0 8px 18px rgba(16, 185, 129, 0.22);
 }
 
 .wcp-secondary-btn {
@@ -146,12 +158,12 @@
 
 .wcp-waiting,
 .wcp-empty {
-    padding: 16px;
-    border-radius: 14px;
+    padding: 15px;
+    border-radius: 16px;
     background: var(--bg-secondary, #eef2f7);
     color: var(--text-muted, #64748b);
     text-align: center;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .wcp-empty.small {
@@ -165,13 +177,14 @@
 }
 
 .wcp-word-choice {
-    min-height: 52px;
-    border-radius: 14px;
-    background: rgba(106, 170, 100, 0.12);
-    color: #317d3c;
+    min-height: 54px;
+    border-radius: 16px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #078f62;
     font-size: 1.12rem;
     font-weight: 950;
     letter-spacing: 0.08em;
+    box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.14);
 }
 
 .wcp-status-strip,
@@ -185,41 +198,89 @@
 }
 
 .wcp-attempts {
-    font-weight: 900;
+    font-weight: 950;
+}
+
+.wcp-player-board,
+.wcp-leader-board {
+    min-width: 0;
 }
 
 .wcp-guess-card {
     margin-bottom: 12px;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: 16px;
     background: var(--bg-secondary, #eef2f7);
 }
 
 .wcp-guess-name {
     margin-bottom: 8px;
     color: var(--text-muted, #64748b);
-    font-size: 0.78rem;
-    font-weight: 900;
+    font-size: 0.76rem;
+    font-weight: 950;
+}
+
+.wcp-tiles,
+.wcp-current-word {
+    display: flex;
+    justify-content: center;
+    gap: clamp(4px, 1.4vw, 7px);
+    max-width: 100%;
 }
 
 .wcp-tiles {
-    display: flex;
-    gap: 5px;
     margin-bottom: 6px;
 }
 
-.wcp-tile {
-    width: clamp(34px, 10vw, 46px);
+.wcp-tile,
+.wcp-current-cell {
+    width: clamp(36px, 11vw, 50px);
+    max-width: 50px;
     aspect-ratio: 1;
-    border-radius: 8px;
-    background: var(--bg-card, #fff);
-    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.12));
-    color: var(--text-main, #1f2937);
+    border-radius: 10px;
     display: grid;
     place-items: center;
     font-weight: 950;
     text-transform: uppercase;
-    font-size: clamp(18px, 5vw, 24px);
+    font-size: clamp(19px, 5.6vw, 26px);
+}
+
+.wcp-tile {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.12));
+    color: var(--text-main, #1f2937);
+}
+
+.wcp-current-wrap {
+    margin: 14px 0 12px;
+    padding: 12px;
+    border-radius: 18px;
+    background: #1e2a3a;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+}
+
+.wcp-current-cell {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.wcp-current-cell.is-filled {
+    border-color: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.wcp-current-cell.is-disabled {
+    opacity: 0.58;
+}
+
+.wcp-current-counter {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.58);
+    text-align: center;
+    font-size: 0.76rem;
+    font-weight: 900;
 }
 
 .wcp-tile.is-absent {
@@ -240,65 +301,95 @@
     color: #fff;
 }
 
-.wcp-input-row {
-    margin: 14px 0 10px;
-}
-
-.wcp-input {
-    width: 100%;
-    min-height: 52px;
-    border: 1px solid var(--border-main, rgba(15, 23, 42, 0.12));
-    border-radius: 14px;
-    background: var(--bg-card, #fff);
-    color: var(--text-main, #1f2937);
-    text-align: center;
-    text-transform: uppercase;
-    font-size: 1.25rem;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-}
-
 .wcp-keyboard {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 7px;
+    max-width: 100%;
+    overflow: visible;
+    padding: 0 calc(clamp(2px, 1vw, 8px) + env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) calc(clamp(2px, 1vw, 8px) + env(safe-area-inset-left, 0px));
 }
 
 .wcp-key-row,
 .wcp-action-row {
     display: flex;
     justify-content: center;
-    gap: 5px;
+    gap: clamp(3px, 1vw, 6px);
 }
 
 .wcp-key {
     flex: 1;
     min-width: 0;
-    max-width: 42px;
-    height: clamp(36px, 10vw, 44px);
-    border-radius: 9px;
-    background: var(--bg-secondary, #eef2f7);
-    color: var(--text-main, #1f2937);
-    font-weight: 900;
-    font-size: clamp(13px, 3.6vw, 16px);
+    max-width: 39px;
+    height: clamp(38px, 10vw, 47px);
+    padding: 0;
+    border-radius: 11px;
+    background: #e8ebf1;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    color: #111827;
+    font-size: clamp(13px, 3.8vw, 17px);
+    font-weight: 950;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.16), inset 0 -2px 0 rgba(15, 23, 42, 0.08);
+    transition: background-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+.wcp-key:active,
+.wcp-submit-btn:active {
+    transform: translateY(1px) scale(0.985);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+.wcp-key:focus:not(:focus-visible),
+.wcp-submit-btn:focus:not(:focus-visible),
+.wcp-primary-btn:focus:not(:focus-visible),
+.wcp-secondary-btn:focus:not(:focus-visible),
+.wcp-word-choice:focus:not(:focus-visible),
+.wcp-segment:focus:not(:focus-visible),
+.wcp-icon-btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.wcp-key:focus-visible,
+.wcp-submit-btn:focus-visible,
+.wcp-primary-btn:focus-visible,
+.wcp-secondary-btn:focus-visible,
+.wcp-word-choice:focus-visible,
+.wcp-segment:focus-visible,
+.wcp-icon-btn:focus-visible {
+    outline: 2px solid rgba(16, 185, 129, 0.78);
+    outline-offset: 2px;
+}
+
+.wcp-key:disabled,
+.wcp-submit-btn:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
 }
 
 .wcp-key-wide {
-    max-width: 64px;
+    max-width: 66px;
+    flex: 1.6;
+    font-size: clamp(15px, 4vw, 19px);
 }
 
 .wcp-submit-btn {
     flex: 1;
-    max-width: 320px;
-    height: clamp(40px, 11vw, 48px);
-    border-radius: 12px;
-    background: var(--primary-color, #6c5ce7);
+    max-width: 340px;
+    height: clamp(44px, 12vw, 52px);
+    border-radius: 14px;
+    background: #10b981;
     color: #fff;
     font-weight: 950;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
+    box-shadow: 0 6px 14px rgba(16, 185, 129, 0.24);
 }
 
 .wcp-scoreboard {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
     gap: 8px;
     margin-top: 14px;
 }
@@ -309,25 +400,34 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: 13px;
     background: var(--bg-secondary, #eef2f7);
 }
 
+.wcp-score-row span,
+.wcp-result-row span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .wcp-score-row b {
-    color: #3f8f49;
+    color: #078f62;
 }
 
 .wcp-result-hero {
     margin-bottom: 14px;
     padding: 18px;
-    border-radius: 16px;
-    background: rgba(106, 170, 100, 0.12);
+    border-radius: 18px;
+    background: rgba(16, 185, 129, 0.12);
     text-align: center;
 }
 
 .wcp-secret {
-    color: #3f8f49;
+    color: #078f62;
     font-size: clamp(1.7rem, 9vw, 2.4rem);
     font-weight: 950;
     letter-spacing: 0.1em;
@@ -346,10 +446,10 @@
     z-index: 2500;
     padding: 12px 14px;
     border-radius: 14px;
-    background: rgba(17, 24, 39, 0.92);
+    background: rgba(17, 24, 39, 0.94);
     color: #fff;
     text-align: center;
-    font-weight: 800;
+    font-weight: 900;
     opacity: 0;
     transform: translateY(12px);
     pointer-events: none;
@@ -363,8 +463,26 @@
 
 body.dark-mode #wcp-shell,
 body.tg-dark-theme #wcp-shell {
-    background: var(--bg-app, #0f172a);
+    background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.14), transparent 34%),
+        var(--bg-app, #0f172a);
     color: var(--text-main, #f8fafc);
+}
+
+body.dark-mode .wcp-topbar,
+body.tg-dark-theme .wcp-topbar,
+body.dark-mode .wcp-panel,
+body.tg-dark-theme .wcp-panel {
+    background: rgba(15, 23, 42, 0.88);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .wcp-key,
+body.tg-dark-theme .wcp-key {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.24), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 body.dark-mode .wcp-word-choice,
@@ -372,6 +490,8 @@ body.tg-dark-theme .wcp-word-choice,
 body.dark-mode .wcp-secret,
 body.tg-dark-theme .wcp-secret,
 body.dark-mode .wcp-score-row b,
-body.tg-dark-theme .wcp-score-row b {
+body.tg-dark-theme .wcp-score-row b,
+body.dark-mode .wcp-round-pill,
+body.tg-dark-theme .wcp-round-pill {
     color: #8ee39a;
 }
