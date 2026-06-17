@@ -39,6 +39,10 @@
         return (name[0] || '?').toUpperCase();
     }
 
+    function playerAvatarUrl(player) {
+        return player?.photo_url || player?.avatar_url || player?.avatar || player?.photo || '';
+    }
+
     function isHost(res) {
         return !!res.is_host || String(res?.room?.host_user_id) === String(res?.user?.id);
     }
@@ -123,11 +127,28 @@
 
     function renderGuessRow(res, userId, entry, length) {
         const player = getPlayer(res, userId);
+        const avatarUrl = playerAvatarUrl(player);
         return `
             <div class="wcp-guess-row" title="${esc(playerName(player))}">
-                <div class="wcp-avatar" aria-hidden="true">${esc(playerInitial(player))}</div>
+                <div class="wcp-avatar" aria-hidden="true">
+                    <span>${esc(playerInitial(player))}</span>
+                    ${avatarUrl ? `<img src="${esc(avatarUrl)}" alt="" onerror="this.remove()">` : ''}
+                </div>
                 ${renderTiles(entry.word, entry.pattern, length)}
             </div>
+        `;
+    }
+
+    function renderLeaderMeta(leader) {
+        const avatarUrl = playerAvatarUrl(leader);
+        return `
+            <span class="wcp-meta-leader">
+                <span class="wcp-meta-avatar" aria-hidden="true">
+                    <span>${esc(playerInitial(leader))}</span>
+                    ${avatarUrl ? `<img src="${esc(avatarUrl)}" alt="" onerror="this.remove()">` : ''}
+                </span>
+                <b>${esc(playerName(leader))}</b>
+            </span>
         `;
     }
 
@@ -342,18 +363,18 @@
         }
 
         content.innerHTML = `
-            <section class="wcp-play-surface wcp-guesser-surface">
-                ${renderMeta([
-                    `Ведущий: <b>${esc(playerName(leader))}</b>`,
-                    `${wordLength} букв`,
-                    guessed ? 'Слово угадано' : attemptsLeft > 0 ? `Осталось попыток: ${attemptsLeft}` : 'Попытки закончились'
-                ])}
-                <div class="wcp-play-stream">
+            <section class="wcp-guesser-screen">
+                <div class="wcp-guesser-meta">
+                    <span>Ведущий: ${renderLeaderMeta(leader)}</span>
+                    <span>${wordLength} букв</span>
+                    <span>${guessed ? 'Слово угадано' : attemptsLeft > 0 ? `Осталось попыток: ${attemptsLeft}` : 'Попытки закончились'}</span>
+                </div>
+                <div class="wcp-attempts-stream">
                     <div class="wcp-guess-history">
                         ${renderGuessList(res, state, myId, { compactEmpty: true, showName: false })}
                     </div>
                 </div>
-                <div class="wcp-input-area">
+                <div class="wcp-bottom-input">
                     <div class="wcp-current-wrap">
                         ${renderCurrentGuess(wordLength, inputDisabled)}
                         <div class="wcp-current-counter" id="wcp-current-counter">${currentGuess.length}/${wordLength}</div>
@@ -362,6 +383,10 @@
                 </div>
             </section>
         `;
+        setTimeout(() => {
+            const stream = content.querySelector('.wcp-attempts-stream');
+            if (stream) stream.scrollTop = stream.scrollHeight;
+        }, 0);
     }
 
     function renderIntermission(res, state, content) {
@@ -425,10 +450,15 @@
         const content = renderShell(container);
         updateRoundPill(state);
         const shell = document.getElementById('wcp-shell');
+        const title = document.querySelector('#wcp-shell .wcp-title');
         const myId = String(res?.user?.id || '');
         const leaderId = String(state.leader_id || '');
+        const guesserPlaying = state.phase === 'playing' && myId !== leaderId;
         if (shell) {
-            shell.classList.toggle('is-guesser-playing', state.phase === 'playing' && myId !== leaderId);
+            shell.classList.toggle('is-guesser-playing', guesserPlaying);
+        }
+        if (title) {
+            title.textContent = guesserPlaying ? 'Отгадай слово' : 'Загадай слово';
         }
 
         if (state.phase === 'setup') renderSetup(res, state, content);
