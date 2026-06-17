@@ -481,10 +481,10 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
     user-select: none;
+    transition: none !important;
 }
 
 .wcp-current-cell.is-filled {
-    border-color: rgba(15, 23, 42, 0.45);
     background: rgba(15, 23, 42, 0.04);
 }
 
@@ -840,7 +840,6 @@ body.tg-dark-theme .wcp-current-cell {
 body.dark-mode .wcp-current-cell.is-filled,
 body.tg-dark-theme .wcp-current-cell.is-filled {
     background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.45);
 }
 
 body.dark-mode .wcp-meta b,
