@@ -140,6 +140,7 @@ function wcpStartLeaderChoice($pdo, $room, &$state, $resetScores = false)
     $state['round_started_at'] = null;
     $state['players'] = $players;
     $state['game_over'] = false;
+    $state['rerolls'] = 0;
 
     if ($resetScores || !isset($state['scores']) || !is_array($state['scores'])) {
         $state['scores'] = array_fill_keys($players, 0);
@@ -265,6 +266,42 @@ function handleGameAction($pdo, $room, $user, $postData)
             $state['current_round'] = 0;
         }
         return wcpStartLeaderChoice($pdo, $room, $state, true);
+    }
+
+    if ($type === 'reroll_candidates') {
+        if (($state['phase'] ?? '') !== 'leader_choose') {
+            return ['status' => 'error', 'message' => 'Сейчас нельзя обновить слова'];
+        }
+        if ((string) ($state['leader_id'] ?? '') !== $userId) {
+            return ['status' => 'error', 'message' => 'Слова обновляет только ведущий'];
+        }
+
+        $rerolls = (int) ($state['rerolls'] ?? 0);
+        $maxRerolls = 3;
+        if ($rerolls >= $maxRerolls) {
+            return ['status' => 'error', 'message' => 'Лимит обновлений исчерпан'];
+        }
+
+        $wordLength = (int) ($state['word_length'] ?? 5);
+        $currentCandidates = $state['candidate_words'] ?? [];
+
+        $words = wcpLoadTargetWords($wordLength);
+        if (!empty($words)) {
+            $filtered = array_values(array_diff($words, $currentCandidates));
+            if (count($filtered) >= 4) {
+                shuffle($filtered);
+                $candidates = array_slice($filtered, 0, 4);
+            } else {
+                $candidates = wcpBuildCandidateWords($wordLength, 4);
+            }
+        } else {
+            $candidates = wcpBuildCandidateWords($wordLength, 4);
+        }
+
+        $state['candidate_words'] = $candidates;
+        $state['rerolls'] = $rerolls + 1;
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
     }
 
     if ($type === 'choose_word') {

@@ -247,6 +247,9 @@
         const leader = getPlayer(res, leaderId);
         const amLeader = myId === leaderId;
         const candidates = Array.isArray(state.candidate_words) ? state.candidate_words : [];
+        const rerolls = Number(state.rerolls || 0);
+        const maxRerolls = 3;
+        const rerollsLeft = Math.max(0, maxRerolls - rerolls);
 
         content.innerHTML = `
             <section class="wcp-panel">
@@ -259,6 +262,11 @@
                         ${candidates.map(word => `
                             <button type="button" class="wcp-word-choice" onclick="window.wcpChooseWord('${esc(word)}')">${esc(String(word).toUpperCase())}</button>
                         `).join('')}
+                    </div>
+                    <div class="wcp-word-actions">
+                        <button type="button" class="wcp-secondary-btn" onclick="window.wcpRerollCandidates()" ${rerollsLeft <= 0 ? 'disabled' : ''}>
+                            <i class="bi bi-arrow-clockwise"></i> ${rerollsLeft > 0 ? `Обновить варианты · ${rerollsLeft} осталось` : 'Обновления закончились'}
+                        </button>
                     </div>
                 ` : `
                     <div class="wcp-waiting"><i class="bi bi-hourglass-split"></i> Скоро начнём раунд.</div>
@@ -545,6 +553,10 @@
 
     window.wcpChooseWord = function (word) {
         return sendPartyAction('choose_word', { word });
+    };
+
+    window.wcpRerollCandidates = function () {
+        return sendPartyAction('reroll_candidates');
     };
 
     window.wcpNextRound = function () {
