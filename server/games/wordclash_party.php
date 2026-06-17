@@ -371,7 +371,7 @@ function handleGameAction($pdo, $room, $user, $postData)
                 if (time() - $lastGuess < 5) continue;
 
                 $wordLength = (int)($state['word_length'] ?? 5);
-                $words = wcpLoadWords($wordLength);
+                $words = wcpLoadTargetWords($wordLength);
                 if (!empty($words)) {
                     $randomWord = $words[array_rand($words)];
                     $res = wcpApplyGuess($pdo, $room, $state, $botId, $randomWord);
