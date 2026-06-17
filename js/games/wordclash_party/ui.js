@@ -424,6 +424,12 @@
 
         const content = renderShell(container);
         updateRoundPill(state);
+        const shell = document.getElementById('wcp-shell');
+        const myId = String(res?.user?.id || '');
+        const leaderId = String(state.leader_id || '');
+        if (shell) {
+            shell.classList.toggle('is-guesser-playing', state.phase === 'playing' && myId !== leaderId);
+        }
 
         if (state.phase === 'setup') renderSetup(res, state, content);
         else if (state.phase === 'leader_choose') renderLeaderChoose(res, state, content);
