@@ -263,7 +263,6 @@
                 ` : `
                     <div class="wcp-waiting"><i class="bi bi-hourglass-split"></i> Скоро начнём раунд.</div>
                 `}
-                ${renderScoreboard(res, state)}
             </section>
         `;
     }
@@ -509,7 +508,7 @@
         const myId = String(res?.user?.id || '');
         const leaderId = String(state.leader_id || '');
         const isPlaying = state.phase === 'playing';
-        const isDarkSurface = ['playing', 'intermission', 'game_over'].includes(state.phase);
+        const isDarkSurface = ['leader_choose', 'playing', 'intermission', 'game_over'].includes(state.phase);
         const guesserPlaying = isPlaying && myId !== leaderId;
         const leaderPlaying = isPlaying && myId === leaderId;
         if (shell) {
