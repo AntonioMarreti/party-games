@@ -5,12 +5,13 @@
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    padding-bottom: 20px;
+    padding-bottom: 14px;
     width: 100%;
     max-width: 600px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
     gap: 12px;
     -webkit-overflow-scrolling: touch;
     margin-top: calc(80px + env(safe-area-inset-top));
@@ -121,15 +122,15 @@ body.wc-keyboard-active #wc-header {
 /* Input Area */
 .wc-input-area {
     width: 100%;
-    background: #1e2a3a;
+    background: rgba(30, 42, 58, 0.94);
     padding: 12px 24px;
     /* Increased side padding */
-    padding-left: calc(24px + env(safe-area-inset-left, 0px));
-    padding-right: calc(24px + env(safe-area-inset-right, 0px));
-    padding-bottom: calc(34px + env(safe-area-inset-bottom, 12px));
+    padding-left: calc(28px + env(safe-area-inset-left, 0px));
+    padding-right: calc(28px + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 12px));
     flex: 0 0 auto;
     z-index: 20;
-    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.16);
+    box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.12);
     position: relative;
 }
 
@@ -199,7 +200,7 @@ body.wc-keyboard-active #wc-header {
     display: flex;
     gap: 10px;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .wc-virtual-input {
@@ -208,43 +209,43 @@ body.wc-keyboard-active #wc-header {
     backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 14px;
-    padding: 10px;
+    padding: 8px 12px;
     text-align: center;
     font-size: 26px;
     font-weight: 700;
     letter-spacing: 5px;
     color: white;
-    min-height: 56px;
+    min-height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'SF Mono', 'Monaco', monospace;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
 }
 
 /* Custom Keyboard */
 .wc-keyboard {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     max-width: 100%;
     overflow: visible;
-    padding-left: calc(clamp(6px, 2vw, 14px) + env(safe-area-inset-left, 0px));
-    padding-right: calc(clamp(6px, 2vw, 14px) + env(safe-area-inset-right, 0px));
+    padding-left: calc(clamp(8px, 2.4vw, 16px) + env(safe-area-inset-left, 0px));
+    padding-right: calc(clamp(8px, 2.4vw, 16px) + env(safe-area-inset-right, 0px));
     /* Add padding for mobile home indicators */
 }
 
 .wc-kb-row {
     display: flex;
-    gap: clamp(3px, 1vw, 6px);
+    gap: clamp(4px, 1.2vw, 7px);
     justify-content: center;
 }
 
 .wc-key {
-    background: rgba(255, 255, 255, 0.25);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.20);
+    border: 1px solid rgba(255, 255, 255, 0.24);
     border-radius: 10px;
-    color: white;
+    color: #f8fafc;
     font-size: clamp(13px, 3.7vw, 16px);
     font-weight: 800;
     height: clamp(38px, 10vw, 46px);
@@ -292,27 +293,28 @@ body.wc-keyboard-active #wc-header {
 }
 
 .wc-key.is-absent {
-    background: #5f6670;
-    border-color: #5f6670;
-    color: #f5f7fb;
+    background: #2f3a48;
+    border-color: #2f3a48;
+    color: #7f8b9a;
+    box-shadow: none;
 }
 
 .wc-key.is-present {
-    background: #c9a93c;
-    border-color: #c9a93c;
-    color: #1f2933;
+    background: #d6b23f;
+    border-color: #d6b23f;
+    color: #172033;
 }
 
 .wc-key.is-correct {
-    background: #4f9f5b;
-    border-color: #4f9f5b;
+    background: #4faf61;
+    border-color: #4faf61;
     color: #ffffff;
 }
 
 .wc-check-btn {
     width: calc(100% - (clamp(12px, 4vw, 24px) * 2));
-    min-height: 44px;
-    margin: 12px auto 4px;
+    min-height: 42px;
+    margin: 10px auto 8px;
     border: 0;
     border-radius: 14px;
     background: var(--primary-color);
