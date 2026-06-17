@@ -484,10 +484,6 @@
     transition: none !important;
 }
 
-.wcp-current-cell.is-filled {
-    background: rgba(15, 23, 42, 0.04);
-}
-
 .wcp-current-cell.is-disabled {
     opacity: 0.58;
 }
@@ -836,12 +832,6 @@ body.tg-dark-theme .wcp-current-cell {
     border-color: rgba(255, 255, 255, 0.15);
     color: #f8fafc;
 }
-
-body.dark-mode .wcp-current-cell.is-filled,
-body.tg-dark-theme .wcp-current-cell.is-filled {
-    background: rgba(255, 255, 255, 0.12);
-}
-
 body.dark-mode .wcp-meta b,
 body.tg-dark-theme .wcp-meta b,
 body.dark-mode .wcp-progress-head span,
