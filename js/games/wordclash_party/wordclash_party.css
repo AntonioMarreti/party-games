@@ -1081,3 +1081,16 @@ body.tg-dark-theme .wcp-result-row span {
     border-color: #10b981 !important;
     color: #ffffff !important;
 }
+
+/* История попыток игрока */
+.wcp-player-history {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Фикс аватарок на тёмном фоне */
+#wcp-shell.is-dark-surface .wcp-avatar {
+    background: rgba(255, 255, 255, 0.1) !important;
+}

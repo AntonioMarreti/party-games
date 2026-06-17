@@ -305,7 +305,6 @@
                     const entries = state.guesses?.[id] || [];
                     const didGuess = !!state.guessed?.[id];
                     const isOut = !didGuess && entries.length >= limit;
-                    const last = entries[entries.length - 1];
                     const status = didGuess ? 'угадал' : isOut ? 'выбыл' : `${entries.length}/${limit}`;
                     return `
                         <div class="wcp-progress-row">
@@ -313,7 +312,12 @@
                                 <span>${esc(playerName(player))}</span>
                                 <b class="${didGuess ? 'is-guessed' : isOut ? 'is-out' : ''}">${status}</b>
                             </div>
-                            ${last ? renderGuessRow(res, id, last, length) : '<div class="wcp-progress-empty">0 попыток</div>'}
+                            <div class="wcp-player-history">
+                                ${entries.length > 0
+                                    ? entries.slice().reverse().map(entry => renderGuessRow(res, id, entry, length)).join('')
+                                    : '<div class="wcp-progress-empty">0 попыток</div>'
+                                }
+                            </div>
                         </div>
                     `;
                 }).join('')}
