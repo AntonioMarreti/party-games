@@ -327,13 +327,13 @@
         }
 
         content.innerHTML = `
-            <section class="wcp-panel wcp-playing-panel">
+            <section class="wcp-panel wcp-playing-panel wcp-guesser-panel">
                 ${renderMeta([
                     `Ведущий: <b>${esc(playerName(leader))}</b>`,
                     `${wordLength} букв`,
                     guessed ? 'Слово угадано' : attemptsLeft > 0 ? `Осталось попыток: ${attemptsLeft}` : 'Попытки закончились'
                 ])}
-                <div class="wcp-player-board">
+                <div class="wcp-player-board wcp-guesser-board">
                     <div class="wcp-guess-history">
                         ${renderGuessList(res, state, myId, { compactEmpty: true })}
                     </div>
