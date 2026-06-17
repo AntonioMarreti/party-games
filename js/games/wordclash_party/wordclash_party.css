@@ -935,28 +935,28 @@ body.tg-dark-theme .wcp-result-row span {
     }
 }
 
-/* Wordclash-like dark surface for playing phase */
+/* Wordclash-like dark surface for playing, intermission, game_over phases */
 
 /* Общий фон Shell */
-#wcp-shell.is-playing {
+#wcp-shell.is-dark-surface {
     background: #1e2a3a !important;
     color: #ffffff !important;
 }
 
 /* Topbar адаптация */
-#wcp-shell.is-playing .wcp-topbar {
+#wcp-shell.is-dark-surface .wcp-topbar {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
 }
-#wcp-shell.is-playing .wcp-title {
+#wcp-shell.is-dark-surface .wcp-title {
     color: #ffffff !important;
 }
-#wcp-shell.is-playing .wcp-icon-btn {
+#wcp-shell.is-dark-surface .wcp-icon-btn {
     background: rgba(255, 255, 255, 0.1) !important;
     color: #ffffff !important;
 }
-#wcp-shell.is-playing .wcp-round-pill {
+#wcp-shell.is-dark-surface .wcp-round-pill {
     background: rgba(255, 255, 255, 0.15) !important;
     color: #ffffff !important;
 }
@@ -974,50 +974,70 @@ body.tg-dark-theme .wcp-result-row span {
 }
 
 /* Спокойный Current Input (сохраняем build 3295) */
-#wcp-shell.is-playing .wcp-current-wrap {
+#wcp-shell.is-dark-surface .wcp-current-wrap {
     background: rgba(30, 42, 58, 0.95) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
-#wcp-shell.is-playing .wcp-current-cell {
+#wcp-shell.is-dark-surface .wcp-current-cell {
     background: rgba(255, 255, 255, 0.1) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: #ffffff !important;
 }
 
 /* Плитки истории (не трогаем цветные стейты!) */
-#wcp-shell.is-playing .wcp-tile:not(.is-absent):not(.is-present):not(.is-correct) {
+#wcp-shell.is-dark-surface .wcp-tile:not(.is-absent):not(.is-present):not(.is-correct) {
     background: rgba(255, 255, 255, 0.1) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: #ffffff !important;
 }
 
 /* Клавиатура */
-#wcp-shell.is-playing .wcp-key:not(.is-absent):not(.is-present):not(.is-correct) {
+#wcp-shell.is-dark-surface .wcp-key:not(.is-absent):not(.is-present):not(.is-correct) {
     background: rgba(255, 255, 255, 0.14) !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
     color: #ffffff !important;
 }
-#wcp-shell.is-playing .wcp-key:not(.is-absent):not(.is-present):not(.is-correct):active {
+#wcp-shell.is-dark-surface .wcp-key:not(.is-absent):not(.is-present):not(.is-correct):active {
     background: rgba(255, 255, 255, 0.26) !important;
 }
 
-/* --- ЭКРАН ВЕДУЩЕГО --- */
-#wcp-shell.is-leader-playing .wcp-panel {
+/* --- ПАНЕЛИ В ТЁМНОЙ ФАЗЕ (ВЕДУЩИЙ, INTERMISSION, GAME_OVER) --- */
+#wcp-shell.is-dark-surface .wcp-panel {
     background: rgba(30, 42, 58, 0.95) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     color: #ffffff !important;
 }
-#wcp-shell.is-leader-playing .wcp-panel-head h3,
-#wcp-shell.is-leader-playing .wcp-leader-board h3,
-#wcp-shell.is-leader-playing .wcp-progress-head span {
+#wcp-shell.is-dark-surface .wcp-panel-head h3,
+#wcp-shell.is-dark-surface .wcp-leader-board h3,
+#wcp-shell.is-dark-surface .wcp-progress-head span,
+#wcp-shell.is-dark-surface .wcp-score-row span,
+#wcp-shell.is-dark-surface .wcp-result-row span {
     color: #ffffff !important;
 }
-#wcp-shell.is-leader-playing .wcp-panel-head p {
+#wcp-shell.is-dark-surface .wcp-panel-head p,
+#wcp-shell.is-dark-surface .wcp-label {
     color: rgba(255, 255, 255, 0.7) !important;
 }
-#wcp-shell.is-leader-playing .wcp-progress-row {
+#wcp-shell.is-dark-surface .wcp-progress-row,
+#wcp-shell.is-dark-surface .wcp-score-row,
+#wcp-shell.is-dark-surface .wcp-result-row {
     background: rgba(255, 255, 255, 0.05) !important;
 }
-#wcp-shell.is-leader-playing .wcp-progress-empty {
+#wcp-shell.is-dark-surface .wcp-progress-empty,
+#wcp-shell.is-dark-surface .wcp-waiting {
     color: rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+#wcp-shell.is-dark-surface .wcp-secondary-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+#wcp-shell.is-dark-surface .wcp-secret,
+#wcp-shell.is-dark-surface .wcp-score-row b,
+#wcp-shell.is-dark-surface .wcp-progress-head b.is-guessed {
+    color: #8ee39a !important;
+}
+#wcp-shell.is-dark-surface .wcp-progress-head b.is-out {
+    color: #f87171 !important;
 }

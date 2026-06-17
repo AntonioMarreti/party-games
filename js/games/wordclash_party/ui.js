@@ -509,9 +509,11 @@
         const myId = String(res?.user?.id || '');
         const leaderId = String(state.leader_id || '');
         const isPlaying = state.phase === 'playing';
+        const isDarkSurface = ['playing', 'intermission', 'game_over'].includes(state.phase);
         const guesserPlaying = isPlaying && myId !== leaderId;
         const leaderPlaying = isPlaying && myId === leaderId;
         if (shell) {
+            shell.classList.toggle('is-dark-surface', isDarkSurface);
             shell.classList.toggle('is-playing', isPlaying);
             shell.classList.toggle('is-guesser-playing', guesserPlaying);
             shell.classList.toggle('is-leader-playing', leaderPlaying);
