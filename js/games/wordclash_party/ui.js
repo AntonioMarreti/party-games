@@ -503,6 +503,8 @@
         window.lastWcpRes = res;
         const state = parseState(res);
         window.lastWcpState = state;
+        window._wcpLastRes = res;
+        window._wcpLastState = state;
         window.selectedGameId = 'wordclash_party';
 
         const content = renderShell(container);
@@ -589,4 +591,41 @@
             updateCurrentGuessDisplay();
         }
     };
+
+    if (!window._wcpPhysicalKeyboardListenerAdded) {
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (!document.getElementById('wcp-shell')) return;
+
+            const state = window._wcpLastState;
+            const res = window._wcpLastRes;
+            if (!state || state.phase !== 'playing' || !res || !res.user) return;
+
+            const myId = String(res.user.id);
+            const leaderId = String(state.leader_id || '');
+            if (myId === leaderId) return;
+
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                if (window.wcpBackspace) window.wcpBackspace();
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (window.wcpSubmitGuess) window.wcpSubmitGuess();
+                return;
+            }
+
+            if (/^[а-яё]$/i.test(e.key)) {
+                e.preventDefault();
+                let letter = e.key.toUpperCase();
+                if (letter === 'Ё') letter = 'Е';
+                if (window.wcpAddLetter) window.wcpAddLetter(letter);
+            }
+        });
+        window._wcpPhysicalKeyboardListenerAdded = true;
+    }
 })();
