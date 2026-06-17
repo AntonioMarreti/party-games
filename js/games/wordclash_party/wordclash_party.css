@@ -480,8 +480,8 @@
 }
 
 .wcp-current-cell.is-filled {
-    border-color: #10b981;
-    background: color-mix(in srgb, var(--bg-card, #fff) 88%, rgba(16, 185, 129, 0.16));
+    border-color: rgba(15, 23, 42, 0.45);
+    background: rgba(15, 23, 42, 0.04);
 }
 
 .wcp-current-cell.is-disabled {
@@ -537,19 +537,37 @@
     height: clamp(38px, 10vw, 46px);
     padding: 0;
     border-radius: 10px;
-    background: #374151;
-    border: 1px solid rgba(17, 24, 39, 0.2);
-    color: #ffffff;
+    background: #d3d6da;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    color: #1a1a1b;
     font-size: clamp(13px, 3.7vw, 16px);
-    font-weight: 900;
+    font-weight: 800;
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     transition: background-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
 }
 
 .wcp-key:active {
-    background: #4b5563;
+    background: #bdc1c6;
+}
+
+.wcp-key.is-absent {
+    background: #5f6670;
+    border-color: #5f6670;
+    color: #f5f7fb;
+}
+
+.wcp-key.is-present {
+    background: #c9a93c;
+    border-color: #c9a93c;
+    color: #1f2933;
+}
+
+.wcp-key.is-correct {
+    background: #4f9f5b;
+    border-color: #4f9f5b;
+    color: #ffffff;
 }
 
 .wcp-key:active,
@@ -789,6 +807,18 @@ body.tg-dark-theme .wcp-panel {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+body.dark-mode .wcp-key,
+body.tg-dark-theme .wcp-key {
+    background: #565f6c;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+body.dark-mode .wcp-key:active,
+body.tg-dark-theme .wcp-key:active {
+    background: #6a7482;
+}
+
 body.dark-mode .wcp-current-wrap,
 body.tg-dark-theme .wcp-current-wrap {
     background: #1e293b;
@@ -805,8 +835,8 @@ body.tg-dark-theme .wcp-current-cell {
 
 body.dark-mode .wcp-current-cell.is-filled,
 body.tg-dark-theme .wcp-current-cell.is-filled {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: #10b981;
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.45);
 }
 
 body.dark-mode .wcp-meta b,

@@ -328,7 +328,7 @@
             <div class="wcp-keyboard" aria-hidden="true">
                 ${LETTER_ROWS.map((row, rowIndex) => `
                     <div class="wcp-key-row">
-                        ${row.map(letter => `<button type="button" class="wcp-key" ${disabledAttr} onclick="window.wcpAddLetter('${letter}')">${letter}</button>`).join('')}
+                        ${row.map(letter => `<button type="button" class="wcp-key" data-key="${letter}" ${disabledAttr} onclick="window.wcpAddLetter('${letter}')">${letter}</button>`).join('')}
                         ${rowIndex === 2 ? `
                             <button type="button" class="wcp-key wcp-key-wide" ${disabledAttr} onclick="window.wcpBackspace()">
                                 <i class="bi bi-backspace"></i>
@@ -339,6 +339,45 @@
                 <button type="button" class="wcp-submit-btn" ${disabledAttr} onclick="window.wcpSubmitGuess()">Проверить</button>
             </div>
         `;
+    }
+
+    const WCP_KEY_STATE_RANK = {
+        absent: 0,
+        present: 1,
+        correct: 2
+    };
+
+    function getKeyboardLetterStates(guesses) {
+        const states = {};
+        (guesses || []).forEach(entry => {
+            const word = String(entry.word || '').toUpperCase();
+            const pattern = Array.isArray(entry.pattern) ? entry.pattern : [];
+
+            word.split('').forEach((letter, index) => {
+                const value = Number(pattern[index]);
+                const nextState = value === 2 ? 'correct' : value === 1 ? 'present' : value === 0 ? 'absent' : '';
+                if (!nextState) return;
+
+                const currentState = states[letter];
+                if (!currentState || WCP_KEY_STATE_RANK[nextState] > WCP_KEY_STATE_RANK[currentState]) {
+                    states[letter] = nextState;
+                }
+            });
+        });
+        return states;
+    }
+
+    function updateKeyboardLetterStates(state, myId) {
+        const guesses = state.guesses?.[myId] || [];
+        const letterStates = getKeyboardLetterStates(guesses);
+        document.querySelectorAll('.wcp-key[data-key]').forEach(keyEl => {
+            const key = keyEl.dataset.key;
+            keyEl.classList.remove('is-absent', 'is-present', 'is-correct');
+            if (!key) return;
+
+            const letterState = letterStates[key.toUpperCase()];
+            if (letterState) keyEl.classList.add(`is-${letterState}`);
+        });
     }
 
     function renderPlaying(res, state, content) {
@@ -398,6 +437,7 @@
                 </div>
             </section>
         `;
+        updateKeyboardLetterStates(state, myId);
         setTimeout(() => {
             const stream = content.querySelector('.wcp-attempts-stream');
             if (stream) stream.scrollTop = stream.scrollHeight;
