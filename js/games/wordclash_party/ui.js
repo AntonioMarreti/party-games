@@ -508,7 +508,7 @@
         const myId = String(res?.user?.id || '');
         const leaderId = String(state.leader_id || '');
         const isPlaying = state.phase === 'playing';
-        const isDarkSurface = ['leader_choose', 'playing', 'intermission', 'game_over'].includes(state.phase);
+        const isDarkSurface = ['setup', 'leader_choose', 'playing', 'intermission', 'game_over'].includes(state.phase);
         const guesserPlaying = isPlaying && myId !== leaderId;
         const leaderPlaying = isPlaying && myId === leaderId;
         if (shell) {

@@ -1066,3 +1066,18 @@ body.tg-dark-theme .wcp-result-row span {
 #wcp-shell.is-dark-surface .wcp-word-choice:active {
     background: rgba(255, 255, 255, 0.2) !important;
 }
+
+/* Кнопки настроек на экране setup */
+#wcp-shell.is-dark-surface .wcp-segment {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+#wcp-shell.is-dark-surface .wcp-segment:active {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+#wcp-shell.is-dark-surface .wcp-segment.is-active {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+}
