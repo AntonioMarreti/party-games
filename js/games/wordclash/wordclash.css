@@ -98,6 +98,23 @@ body.wc-keyboard-active #wc-header {
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+.wc-header-exit-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 24px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+.wc-header-exit-btn:hover, .wc-header-exit-btn:active {
+    color: #ff6b6b;
+}
+
 /* Input Area */
 .wc-input-area {
     width: 100%;
@@ -186,9 +203,9 @@ body.wc-keyboard-active #wc-header {
     flex: 1;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(15px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 14px;
-    padding: 14px;
+    padding: 10px;
     text-align: center;
     font-size: 26px;
     font-weight: 700;
@@ -221,8 +238,8 @@ body.wc-keyboard-active #wc-header {
 }
 
 .wc-key {
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     color: white;
     font-size: clamp(13px, 3.7vw, 16px);

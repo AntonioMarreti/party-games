@@ -156,11 +156,11 @@ function renderWordClash(res) {
         header.style.right = '16px';
         header.style.padding = '16px'; // Uniform padding
         header.style.borderRadius = '32px';
-        header.style.background = 'var(--bg-glass-strong)'; // Match input area
-        header.style.backdropFilter = 'blur(20px)';
+        header.style.background = 'transparent'; // Match input area
+        header.style.backdropFilter = 'none';
         header.style.zIndex = '1000';
-        header.style.boxShadow = 'var(--shadow-main)';
-        header.style.border = 'var(--border-glass)';
+        header.style.boxShadow = 'none';
+        header.style.border = 'none';
         wrapper.appendChild(header);
     }
 
@@ -174,7 +174,11 @@ function renderWordClash(res) {
         header.innerHTML = `
             <div class="position-relative w-100 d-flex align-items-center justify-content-between">
                 <!-- Left side empty (Score removed) -->
-                <div class="text-start position-relative" style="z-index: 2; min-width: 80px;"></div>
+                <div class="text-start position-relative" style="z-index: 2; min-width: 80px;">
+                    <button class="wc-header-exit-btn" onclick="window.confirmExitGame()">
+                        <i class="bi bi-door-open-fill"></i>
+                    </button>
+                </div>
                 
                 <div class="position-absolute top-50 start-50 translate-middle text-center" style="width: 100%; pointer-events: auto; z-index: 1;">
                     <!-- Title centered perfectly -->
@@ -332,7 +336,7 @@ function renderWordClash(res) {
 
     // Initial Empty State
     if (currentHistoryLen === 0 && stream.children.length === 0) {
-        stream.innerHTML = '<div class="text-white-50 text-center mt-5 animate__animated animate__fadeIn">Начинаем! 👇</div>';
+        stream.innerHTML = '';
     }
     // Append New Items
     else if (currentHistoryLen > lastHistoryLen) {
@@ -397,9 +401,6 @@ function renderWordClash(res) {
             window.currentWordLength = wordLength; // Store for keyboard handler
             inputArea.innerHTML = `
                 <div class="wc-virtual-display-row" style="position: relative;">
-                    <button class="wc-exit-btn-mini shadow-sm" onclick="window.confirmExitGame()">
-                        <i class="bi bi-door-open-fill"></i>
-                    </button>
                     <div id="wc-error-label" class="wc-error-label"></div>
                     <div class="wc-virtual-input">${'_'.repeat(wordLength)}</div>
                 </div>
@@ -432,9 +433,6 @@ function renderWordClash(res) {
             // SYSTEM KEYBOARD MODE (Original)
             inputArea.innerHTML = `
                 <form id="wc-form" class="wc-input-group" autocomplete="off" onsubmit="window.submitWordClashSystem(event)">
-                    <button type="button" class="wc-exit-btn-mini shadow-sm" onclick="window.confirmExitGame()">
-                        <i class="bi bi-door-open-fill"></i>
-                    </button>
                     <div id="wc-error-label" class="wc-error-label"></div>
                     <input type="text" id="wc-input" class="wc-input" maxlength="5" placeholder="СЛОВО" ${state.game_over ? 'disabled' : ''}>
                     <button type="submit" class="wc-send-btn shadow" tabindex="-1" ${state.game_over ? 'disabled' : ''}><i class="bi bi-arrow-up-circle-fill"></i></button>
