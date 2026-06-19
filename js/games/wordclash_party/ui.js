@@ -624,9 +624,8 @@
                 btn.title = 'Жалоба отправлена';
                 btn.setAttribute('aria-label', 'Жалоба отправлена');
                 btn.classList.add('is-success');
-            } else if (window.showToast) {
-                window.showToast('Жалоба отправлена', 'success');
             }
+            showHint('Жалоба отправлена');
         } else if (btn) {
             btn.disabled = false;
         }
@@ -646,9 +645,8 @@
                     card.style.opacity = '0.5';
                     card.style.pointerEvents = 'none';
                 }
-            } else if (window.showToast) {
-                window.showToast('Слово добавлено в стоп-лист', 'success');
             }
+            showHint('Слово в стоп-листе, кандидат заменён');
         } else if (btn) {
             btn.disabled = false;
         }
