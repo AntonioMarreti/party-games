@@ -529,6 +529,30 @@ function handleGameAction($pdo, $room, $user, $postData)
                         ->execute([$normalizedWord]);
                 } catch (Throwable $e) {}
 
+                // Remove from current candidates if present
+                if (!empty($state['candidate_words'])) {
+                    $candidatesNorm = array_map('wcpNormalizeWord', $state['candidate_words']);
+                    $index = array_search($normalizedWord, $candidatesNorm, true);
+                    if ($index !== false) {
+                        array_splice($state['candidate_words'], $index, 1);
+
+                        $pool = wcpLoadTargetWords($wordLength);
+                        $filtered = [];
+                        $existingNorm = array_map('wcpNormalizeWord', $state['candidate_words']);
+                        $existingNorm[] = $normalizedWord;
+                        foreach ($pool as $w) {
+                            if (!in_array(wcpNormalizeWord($w), $existingNorm, true)) {
+                                $filtered[] = $w;
+                            }
+                        }
+                        if (!empty($filtered)) {
+                            shuffle($filtered);
+                            $state['candidate_words'][] = $filtered[0];
+                        }
+                        updateGameState($room['id'], $state);
+                    }
+                }
+
                 return ['status' => 'ok', 'blocked' => true];
             } catch (Throwable $e) {
                 return ['status' => 'error', 'message' => 'Ошибка блокировки'];
