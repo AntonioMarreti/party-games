@@ -278,8 +278,8 @@
                             <div class="wcp-word-card">
                                 <button type="button" class="wcp-word-choice" onclick="window.wcpChooseWord('${esc(word)}')">${esc(String(word).toUpperCase())}</button>
                                 ${isTester
-                                    ? `<button type="button" class="wcp-mod-btn wcp-mod-block" onclick="event.stopPropagation(); window.wcpBlockWord('${esc(word)}', this)" title="В стоп-лист"><i class="bi bi-slash-circle"></i> В стоп-лист</button>`
-                                    : `<button type="button" class="wcp-mod-btn wcp-mod-report" onclick="event.stopPropagation(); window.wcpReportWord('${esc(word)}', this)" title="Пожаловаться"><i class="bi bi-flag"></i> Пожаловаться</button>`
+                                    ? `<button type="button" class="wcp-mod-btn wcp-mod-block" onclick="event.stopPropagation(); window.wcpBlockWord('${esc(word)}', this)" title="В стоп-лист"><i class="bi bi-slash-circle"></i></button>`
+                                    : `<button type="button" class="wcp-mod-btn wcp-mod-report" onclick="event.stopPropagation(); window.wcpReportWord('${esc(word)}', this)" title="Пожаловаться"><i class="bi bi-flag"></i></button>`
                                 }
                             </div>
                         `).join('')}
@@ -620,7 +620,7 @@
         const result = await sendPartyAction('report_word', { word });
         if (result && result.status === 'ok') {
             if (btn) {
-                btn.innerHTML = '<i class="bi bi-check2"></i> Жалоба отправлена';
+                btn.innerHTML = '<i class="bi bi-check2"></i>';
                 btn.classList.add('is-success');
             } else if (window.showToast) {
                 window.showToast('Жалоба отправлена', 'success');
@@ -635,7 +635,7 @@
         const result = await sendPartyAction('block_word', { word });
         if (result && result.status === 'ok') {
             if (btn) {
-                btn.innerHTML = '<i class="bi bi-check2"></i> В стоп-листе';
+                btn.innerHTML = '<i class="bi bi-check2"></i>';
                 btn.classList.add('is-success');
                 const card = btn.closest('.wcp-word-card');
                 if (card) {

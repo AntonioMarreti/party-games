@@ -1225,24 +1225,27 @@ body.tg-dark-theme .wcp-result-row span {
 
 .wcp-word-card {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    gap: 10px;
     align-items: stretch;
 }
+.wcp-word-card .wcp-word-choice {
+    flex: 1;
+}
 .wcp-mod-btn {
-    background: var(--surface-2);
-    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
-    color: var(--text-muted);
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 6px;
+    flex: 0 0 auto;
+    width: 46px;
+    height: auto;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-muted, #94a3b8);
+    font-size: 1.1rem;
+    border-radius: 12px;
     cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    transition: all 0.2s;
+    padding: 0;
 }
 .wcp-mod-btn:hover:not(:disabled) {
     background: var(--surface-3);
