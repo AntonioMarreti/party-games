@@ -336,6 +336,31 @@ function handleGameAction($pdo, $room, $user, $postData)
         return ['status' => 'ok'];
     }
 
+    if ($type === 'leader_react') {
+        if ($userId != ($state['leader_id'] ?? '')) {
+            return ['status' => 'error', 'message' => 'Вы не ведущий'];
+        }
+
+        if (($state['phase'] ?? '') !== 'playing') {
+            return ['status' => 'error', 'message' => 'Не та фаза'];
+        }
+
+        $reaction = $postData['reaction'] ?? '';
+        $allowed = ['🔥', '😈', '👀', 'почти', 'мимо'];
+
+        if (!in_array($reaction, $allowed, true)) {
+            return ['status' => 'error', 'message' => 'Недоступная реакция'];
+        }
+
+        $state['leader_reaction'] = [
+            'text' => $reaction,
+            'ts' => time()
+        ];
+
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
     if ($type === 'tick') {
         $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
         $stmt->execute([$room['id']]);

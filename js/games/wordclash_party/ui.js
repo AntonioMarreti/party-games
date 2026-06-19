@@ -422,11 +422,23 @@
                     <div class="wcp-leader-board">
                         <h3>Вы ведущий</h3>
                         <p>Следите за попытками игроков.</p>
+                        <div class="wcp-leader-reactions" aria-label="Реакции ведущего">
+                            <button type="button" onclick="window.sendGameAction('leader_react', {reaction: '🔥'})">🔥</button>
+                            <button type="button" onclick="window.sendGameAction('leader_react', {reaction: '😈'})">😈</button>
+                            <button type="button" onclick="window.sendGameAction('leader_react', {reaction: '👀'})">👀</button>
+                            <button type="button" onclick="window.sendGameAction('leader_react', {reaction: 'почти'})">почти</button>
+                            <button type="button" onclick="window.sendGameAction('leader_react', {reaction: 'мимо'})">мимо</button>
+                        </div>
                         ${renderLeaderProgress(res, state)}
                     </div>
                 </section>
             `;
             return;
+        }
+
+        let reactionHtml = '';
+        if (state.leader_reaction && (Date.now() / 1000 - state.leader_reaction.ts < 5)) {
+            reactionHtml = `<div class="wcp-leader-reaction-toast">Ведущий: ${esc(state.leader_reaction.text)}</div>`;
         }
 
         content.innerHTML = `
@@ -449,6 +461,7 @@
                     </div>
                 </div>
                 <div class="wcp-bottom-input">
+                    ${reactionHtml}
                     <div class="wcp-current-wrap">
                         ${renderCurrentGuess(wordLength, inputDisabled)}
                         <div class="wcp-current-counter" id="wcp-current-counter">${currentGuess.length}/${wordLength}</div>
