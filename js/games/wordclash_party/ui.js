@@ -533,8 +533,11 @@
         if (isHost(res)) {
             if (!window.wcpTickInterval) {
                 window.wcpTickInterval = setInterval(() => {
-                    if (document.getElementById('wcp-shell')) {
-                        window.sendGameAction('tick', {});
+                    if (window.selectedGameId === 'wordclash_party' && document.getElementById('wcp-shell')) {
+                        // Используем apiRequest напрямую, чтобы избежать глобального showAlert на ошибки (например, десинхрон фаз)
+                        if (typeof window.apiRequest === 'function') {
+                            window.apiRequest({ action: 'game_action', type: 'tick' }).catch(() => {});
+                        }
                     } else {
                         clearInterval(window.wcpTickInterval);
                         window.wcpTickInterval = null;
