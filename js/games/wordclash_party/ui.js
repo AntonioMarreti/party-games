@@ -634,7 +634,11 @@
     };
 
     window.wcpPromptModeration = function(word) {
-        window.wcpModerationConfirmWord = word;
+        if (window.wcpModerationConfirmWord === word) {
+            window.wcpModerationConfirmWord = null;
+        } else {
+            window.wcpModerationConfirmWord = word;
+        }
         if (window.lastWcpRes) window.renderWordClashParty(window.lastWcpRes);
     };
 
