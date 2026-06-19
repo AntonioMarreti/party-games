@@ -274,15 +274,32 @@
                 </div>
                 ${amLeader ? `
                     <div class="wcp-candidates">
-                        ${candidates.map(word => `
-                            <div class="wcp-word-card">
-                                <button type="button" class="wcp-word-choice" onclick="window.wcpChooseWord('${esc(word)}')">${esc(String(word).toUpperCase())}</button>
-                                ${isTester
-                                    ? `<button type="button" class="wcp-mod-btn wcp-mod-block" onclick="event.stopPropagation(); window.wcpBlockWord('${esc(word)}', this)" title="В стоп-лист"><i class="bi bi-slash-circle"></i></button>`
-                                    : `<button type="button" class="wcp-mod-btn wcp-mod-report" onclick="event.stopPropagation(); window.wcpReportWord('${esc(word)}', this)" title="Пожаловаться"><i class="bi bi-flag"></i></button>`
-                                }
+                        ${candidates.map(word => {
+                            const isConfirming = window.wcpModerationConfirmWord === word;
+                            const isReported = window.wcpReportedWords?.[word];
+                            return `
+                            <div class="wcp-word-card-wrap">
+                                <div class="wcp-word-card">
+                                    <button type="button" class="wcp-word-choice" onclick="window.wcpChooseWord('${esc(word)}')">${esc(String(word).toUpperCase())}</button>
+                                    <button type="button" class="wcp-mod-btn ${isReported ? 'is-success' : ''}" onclick="event.stopPropagation(); window.wcpPromptModeration('${esc(word)}')">
+                                        <i class="bi ${isReported ? 'bi-check2' : 'bi-three-dots'}"></i>
+                                    </button>
+                                </div>
+                                ${isConfirming ? `
+                                <div class="wcp-mod-confirm" onclick="event.stopPropagation()">
+                                    <div class="wcp-mod-confirm-text">${isTester ? `Добавить «${esc(String(word).toUpperCase())}» в стоп-лист?` : `Пожаловаться на «${esc(String(word).toUpperCase())}»?`}</div>
+                                    <div class="wcp-mod-confirm-actions">
+                                        <button type="button" class="wcp-mod-confirm-btn cancel" onclick="window.wcpCancelModeration()">Отмена</button>
+                                        ${isTester
+                                            ? `<button type="button" class="wcp-mod-confirm-btn danger" onclick="window.wcpBlockWord('${esc(word)}', this)">В стоп-лист</button>`
+                                            : `<button type="button" class="wcp-mod-confirm-btn danger" onclick="window.wcpReportWord('${esc(word)}', this)">Пожаловаться</button>`
+                                        }
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                     <div class="wcp-word-actions">
                         <button type="button" class="wcp-secondary-btn" onclick="window.wcpRerollCandidates()" ${rerollsLeft <= 0 ? 'disabled' : ''}>
@@ -612,20 +629,32 @@
     };
 
     window.wcpRerollCandidates = function () {
+        window.wcpModerationConfirmWord = null;
         return sendPartyAction('reroll_candidates');
+    };
+
+    window.wcpPromptModeration = function(word) {
+        window.wcpModerationConfirmWord = word;
+        if (window.lastWcpRes) window.renderWordClashParty(window.lastWcpRes);
+    };
+
+    window.wcpCancelModeration = function() {
+        window.wcpModerationConfirmWord = null;
+        if (window.lastWcpRes) window.renderWordClashParty(window.lastWcpRes);
     };
 
     window.wcpReportWord = async function (word, btn) {
         if (btn) btn.disabled = true;
         const result = await sendPartyAction('report_word', { word });
         if (result && result.status === 'ok') {
+            window.wcpModerationConfirmWord = null;
+            window.wcpReportedWords = window.wcpReportedWords || {};
+            window.wcpReportedWords[word] = true;
             if (btn) {
                 btn.innerHTML = '<i class="bi bi-check2"></i>';
-                btn.title = 'Жалоба отправлена';
-                btn.setAttribute('aria-label', 'Жалоба отправлена');
-                btn.classList.add('is-success');
             }
             showHint('Жалоба отправлена');
+            if (window.lastWcpRes) window.renderWordClashParty(window.lastWcpRes);
         } else if (btn) {
             btn.disabled = false;
         }
@@ -633,24 +662,25 @@
 
     window.wcpBlockWord = async function (word, btn) {
         if (btn) btn.disabled = true;
+        const wrap = btn.closest('.wcp-word-card-wrap');
+        if (wrap) {
+            wrap.style.opacity = '0.5';
+            wrap.style.pointerEvents = 'none';
+        }
         const result = await sendPartyAction('block_word', { word });
         if (result && result.status === 'ok') {
+            window.wcpModerationConfirmWord = null;
             if (btn) {
                 btn.innerHTML = '<i class="bi bi-check2"></i>';
-                btn.title = 'Добавлено в стоп-лист';
-                btn.setAttribute('aria-label', 'Добавлено в стоп-лист');
-                btn.classList.add('is-success');
-                const card = btn.closest('.wcp-word-card');
-                if (card) {
-                    card.style.opacity = '0.5';
-                    card.style.pointerEvents = 'none';
-                    const mainBtn = card.querySelector('.wcp-word-choice');
-                    if (mainBtn) mainBtn.disabled = true;
-                }
             }
             showHint('Слово в стоп-листе, кандидат заменён');
-        } else if (btn) {
-            btn.disabled = false;
+            // Card will be replaced completely via state sync
+        } else {
+            if (btn) btn.disabled = false;
+            if (wrap) {
+                wrap.style.opacity = '';
+                wrap.style.pointerEvents = '';
+            }
         }
     };
 

@@ -1263,3 +1263,54 @@ body.tg-dark-theme .wcp-result-row span {
     opacity: 1 !important;
     box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25) !important;
 }
+
+.wcp-word-card-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.wcp-mod-confirm {
+    background: var(--surface-3);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.wcp-mod-confirm-text {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    text-align: center;
+}
+.wcp-mod-confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.wcp-mod-confirm-btn {
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.wcp-mod-confirm-btn.cancel {
+    background: transparent;
+    color: var(--text-main);
+    border-color: var(--border-light);
+}
+.wcp-mod-confirm-btn.danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.wcp-mod-confirm-btn:active {
+    transform: translateY(1px);
+}
+.wcp-mod-confirm-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
