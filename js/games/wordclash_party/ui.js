@@ -256,6 +256,9 @@
         const leader = getPlayer(res, leaderId);
         const amLeader = myId === leaderId;
         const candidates = Array.isArray(state.candidate_words) ? state.candidate_words : [];
+        if (window.wcpModerationConfirmWord && !candidates.includes(window.wcpModerationConfirmWord)) {
+            window.wcpModerationConfirmWord = null;
+        }
         const rerolls = Number(state.rerolls || 0);
         const maxRerolls = 3;
         const rerollsLeft = Math.max(0, maxRerolls - rerolls);
@@ -634,6 +637,7 @@
     };
 
     window.wcpPromptModeration = function(word) {
+        if (window.wcpReportedWords && window.wcpReportedWords[word]) return;
         if (window.wcpModerationConfirmWord === word) {
             window.wcpModerationConfirmWord = null;
         } else {
