@@ -46,7 +46,7 @@ function wcpIsPartyFriendlyTarget($word) {
 
 function wcpLoadTargetWords($length = 5)
 {
-    global $wcpTargetCache;
+    global $wcpTargetCache, $pdo;
     if (isset($wcpTargetCache[$length])) {
         return $wcpTargetCache[$length];
     }
@@ -60,15 +60,32 @@ function wcpLoadTargetWords($length = 5)
     $result = is_array($words) ? array_values(array_filter(array_map('wcpNormalizeWord', $words))) : [];
 
     $blacklistFile = __DIR__ . '/../../words/wordclash_target_blacklist.json';
+    $blocked = [];
     if (file_exists($blacklistFile)) {
         $blacklist = json_decode(file_get_contents($blacklistFile), true);
         if (is_array($blacklist) && !empty($blacklist)) {
             $blocked = array_flip(array_map('wcpNormalizeWord', $blacklist));
-            $result = array_values(array_filter($result, function ($word) use ($blocked) {
-                if (isset($blocked[$word])) return false;
-                return wcpIsPartyFriendlyTarget($word);
-            }));
         }
+    }
+
+    if (isset($pdo) && $pdo instanceof PDO) {
+        try {
+            $stmt = $pdo->prepare("SELECT normalized_word FROM wcp_dynamic_blacklist WHERE game_type = 'wordclash_party' AND word_length = ?");
+            $stmt->execute([$length]);
+            $dbBlocked = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($dbBlocked as $bWord) {
+                $blocked[$bWord] = true;
+            }
+        } catch (Throwable $e) {
+            // Fallback gracefully
+        }
+    }
+
+    if (!empty($blocked)) {
+        $result = array_values(array_filter($result, function ($word) use ($blocked) {
+            if (isset($blocked[$word])) return false;
+            return wcpIsPartyFriendlyTarget($word);
+        }));
     } else {
         $result = array_values(array_filter($result, function ($word) {
             return wcpIsPartyFriendlyTarget($word);
@@ -453,6 +470,70 @@ function handleGameAction($pdo, $room, $user, $postData)
                 ->execute([$room['id']]);
         }
         return ['status' => 'ok'];
+    }
+
+    if ($type === 'report_word' || $type === 'block_word') {
+        $word = $postData['word'] ?? '';
+        $normalizedWord = wcpNormalizeWord($word);
+        $reason = $postData['reason'] ?? 'bad_word';
+        $wordLength = mb_strlen($normalizedWord, 'UTF-8');
+
+        if (empty($normalizedWord)) {
+            return ['status' => 'error', 'message' => 'Пустое слово'];
+        }
+
+        // Validate that the word belongs to the current state
+        $isValidWord = false;
+        if ($normalizedWord === wcpNormalizeWord((string)($state['secret_word'] ?? ''))) {
+            $isValidWord = true;
+        } else {
+            $candidates = array_map('wcpNormalizeWord', $state['candidate_words'] ?? []);
+            if (in_array($normalizedWord, $candidates, true)) {
+                $isValidWord = true;
+            }
+        }
+
+        if (!$isValidWord) {
+            return ['status' => 'error', 'message' => 'Некорректное слово'];
+        }
+
+        if ($type === 'report_word') {
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO wcp_word_reports (word, normalized_word, game_type, word_length, reporter_user_id, room_id, reason, status)
+                    VALUES (?, ?, 'wordclash_party', ?, ?, ?, ?, 'pending')
+                    ON DUPLICATE KEY UPDATE reason = VALUES(reason)
+                ");
+                $stmt->execute([$word, $normalizedWord, $wordLength, $userId, $room['id'], mb_substr($reason, 0, 255)]);
+                return ['status' => 'ok', 'reported' => true];
+            } catch (Throwable $e) {
+                return ['status' => 'error', 'message' => 'Ошибка сохранения'];
+            }
+        }
+
+        if ($type === 'block_word') {
+            require_once __DIR__ . '/../actions/qa.php';
+            if (!qa_is_tester_or_admin($user)) {
+                return ['status' => 'error', 'message' => 'Нет прав'];
+            }
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT IGNORE INTO wcp_dynamic_blacklist (normalized_word, word, game_type, word_length, source, added_by, reason)
+                    VALUES (?, ?, 'wordclash_party', ?, 'tester', ?, ?)
+                ");
+                $stmt->execute([$normalizedWord, $word, $wordLength, $userId, mb_substr($reason, 0, 255)]);
+
+                // Optionally auto-approve reports for this word
+                try {
+                    $pdo->prepare("UPDATE wcp_word_reports SET status = 'approved' WHERE normalized_word = ? AND game_type = 'wordclash_party'")
+                        ->execute([$normalizedWord]);
+                } catch (Throwable $e) {}
+
+                return ['status' => 'ok', 'blocked' => true];
+            } catch (Throwable $e) {
+                return ['status' => 'error', 'message' => 'Ошибка блокировки'];
+            }
+        }
     }
 
     return ['status' => 'error', 'message' => 'Неизвестное действие'];

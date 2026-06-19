@@ -260,6 +260,12 @@
         const maxRerolls = 3;
         const rerollsLeft = Math.max(0, maxRerolls - rerolls);
 
+        const isTester = (typeof window.isTesterUser === 'function' && window.isTesterUser(res.user)) ||
+                         window.isTesterUser === true ||
+                         res.user?.is_tester === true ||
+                         res.user?.is_tester === 1 ||
+                         res.user?.is_tester === '1';
+
         content.innerHTML = `
             <section class="wcp-panel">
                 <div class="wcp-panel-head">
@@ -269,7 +275,13 @@
                 ${amLeader ? `
                     <div class="wcp-candidates">
                         ${candidates.map(word => `
-                            <button type="button" class="wcp-word-choice" onclick="window.wcpChooseWord('${esc(word)}')">${esc(String(word).toUpperCase())}</button>
+                            <div class="wcp-word-card">
+                                <button type="button" class="wcp-word-choice" onclick="window.wcpChooseWord('${esc(word)}')">${esc(String(word).toUpperCase())}</button>
+                                ${isTester
+                                    ? `<button type="button" class="wcp-mod-btn wcp-mod-block" onclick="event.stopPropagation(); window.wcpBlockWord('${esc(word)}', this)" title="В стоп-лист"><i class="bi bi-slash-circle"></i> В стоп-лист</button>`
+                                    : `<button type="button" class="wcp-mod-btn wcp-mod-report" onclick="event.stopPropagation(); window.wcpReportWord('${esc(word)}', this)" title="Пожаловаться"><i class="bi bi-flag"></i> Пожаловаться</button>`
+                                }
+                            </div>
                         `).join('')}
                     </div>
                     <div class="wcp-word-actions">
@@ -601,6 +613,41 @@
 
     window.wcpRerollCandidates = function () {
         return sendPartyAction('reroll_candidates');
+    };
+
+    window.wcpReportWord = async function (word, btn) {
+        if (btn) btn.disabled = true;
+        const result = await sendPartyAction('report_word', { word });
+        if (result && result.status === 'ok') {
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-check2"></i> Жалоба отправлена';
+                btn.classList.add('is-success');
+            } else if (window.showToast) {
+                window.showToast('Жалоба отправлена', 'success');
+            }
+        } else if (btn) {
+            btn.disabled = false;
+        }
+    };
+
+    window.wcpBlockWord = async function (word, btn) {
+        if (btn) btn.disabled = true;
+        const result = await sendPartyAction('block_word', { word });
+        if (result && result.status === 'ok') {
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-check2"></i> В стоп-листе';
+                btn.classList.add('is-success');
+                const card = btn.closest('.wcp-word-card');
+                if (card) {
+                    card.style.opacity = '0.5';
+                    card.style.pointerEvents = 'none';
+                }
+            } else if (window.showToast) {
+                window.showToast('Слово добавлено в стоп-лист', 'success');
+            }
+        } else if (btn) {
+            btn.disabled = false;
+        }
     };
 
     window.wcpNextRound = function () {

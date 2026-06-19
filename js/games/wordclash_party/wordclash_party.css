@@ -1222,3 +1222,38 @@ body.tg-dark-theme .wcp-result-row span {
 .wcp-leader-dock .wcp-leader-reactions {
     margin: 0;
 }
+
+.wcp-word-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
+}
+.wcp-mod-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.wcp-mod-btn:hover:not(:disabled) {
+    background: var(--surface-3);
+    color: var(--text-main);
+}
+.wcp-mod-btn.is-success {
+    color: var(--success-color, #4caf50);
+    border-color: var(--success-color, #4caf50);
+    background: rgba(76, 175, 80, 0.1);
+}
+.wcp-mod-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
