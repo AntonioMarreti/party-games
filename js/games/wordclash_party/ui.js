@@ -621,6 +621,8 @@
         if (result && result.status === 'ok') {
             if (btn) {
                 btn.innerHTML = '<i class="bi bi-check2"></i>';
+                btn.title = 'Жалоба отправлена';
+                btn.setAttribute('aria-label', 'Жалоба отправлена');
                 btn.classList.add('is-success');
             } else if (window.showToast) {
                 window.showToast('Жалоба отправлена', 'success');
@@ -636,6 +638,8 @@
         if (result && result.status === 'ok') {
             if (btn) {
                 btn.innerHTML = '<i class="bi bi-check2"></i>';
+                btn.title = 'Добавлено в стоп-лист';
+                btn.setAttribute('aria-label', 'Добавлено в стоп-лист');
                 btn.classList.add('is-success');
                 const card = btn.closest('.wcp-word-card');
                 if (card) {

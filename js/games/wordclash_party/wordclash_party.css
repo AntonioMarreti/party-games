@@ -1251,12 +1251,15 @@ body.tg-dark-theme .wcp-result-row span {
     background: var(--surface-3);
     color: var(--text-main);
 }
-.wcp-mod-btn.is-success {
-    color: var(--success-color, #4caf50);
-    border-color: var(--success-color, #4caf50);
-    background: rgba(76, 175, 80, 0.1);
-}
 .wcp-mod-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+.wcp-mod-btn.is-success,
+.wcp-mod-btn.is-success:disabled {
+    color: #ffffff !important;
+    border-color: #10b981 !important;
+    background: #10b981 !important;
+    opacity: 1 !important;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25) !important;
 }
