@@ -644,6 +644,8 @@
                 if (card) {
                     card.style.opacity = '0.5';
                     card.style.pointerEvents = 'none';
+                    const mainBtn = card.querySelector('.wcp-word-choice');
+                    if (mainBtn) mainBtn.disabled = true;
                 }
             }
             showHint('Слово в стоп-листе, кандидат заменён');
