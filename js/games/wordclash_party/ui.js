@@ -331,7 +331,7 @@
                             </div>
                             <div class="wcp-player-history">
                                 ${entries.length > 0
-                                    ? entries.slice().reverse().map(entry => renderGuessRow(res, id, entry, length)).join('')
+                                    ? entries.map(entry => renderGuessRow(res, id, entry, length)).join('')
                                     : '<div class="wcp-progress-empty">0 попыток</div>'
                                 }
                             </div>
@@ -414,14 +414,17 @@
 
         if (amLeader) {
             content.innerHTML = `
-                <section class="wcp-panel wcp-playing-panel">
+                <section class="wcp-panel wcp-playing-panel" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding-bottom: 0;">
                     ${renderMeta([
                         `${wordLength} букв`,
                         `Раунд ${Number(state.current_round || 0)}/${Number(state.round_count || 0)}`
                     ])}
-                    <div class="wcp-leader-board">
+                    <div class="wcp-leader-board" style="flex: 1 1 auto; overflow-y: auto; padding-bottom: 16px;">
                         <h3>Вы ведущий</h3>
                         <p>Следите за попытками игроков.</p>
+                        ${renderLeaderProgress(res, state)}
+                    </div>
+                    <div class="wcp-leader-dock">
                         <div class="wcp-leader-reactions" aria-label="Реакции ведущего">
                             <button type="button" onclick="window.sendGameAction('leader_react', {reaction: '🔥'})">🔥</button>
                             <button type="button" onclick="window.sendGameAction('leader_react', {reaction: '😈'})">😈</button>
@@ -429,7 +432,6 @@
                             <button type="button" onclick="window.sendGameAction('leader_react', {reaction: 'почти'})">почти</button>
                             <button type="button" onclick="window.sendGameAction('leader_react', {reaction: 'мимо'})">мимо</button>
                         </div>
-                        ${renderLeaderProgress(res, state)}
                     </div>
                 </section>
             `;

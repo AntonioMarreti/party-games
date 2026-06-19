@@ -27,6 +27,26 @@ function wcpLoadWords($length = 5)
     return $result;
 }
 
+function wcpIsPartyFriendlyTarget($word) {
+    // Basic structural checks to drop weird or potentially offensive target words
+    $word = mb_strtolower($word);
+
+    // 1. Obvious bad substrings that might have slipped through dictionaries
+    $badSubs = ['хуй', 'хуе', 'пизд', 'ебан', 'ебли', 'бляд', 'шлюх', 'сучк', 'суча', 'педик', 'пидор', 'хер', 'говн', 'дерьм', 'залуп', 'дроч', 'минет', 'жоп'];
+    foreach ($badSubs as $sub) {
+        if (mb_strpos($word, $sub) !== false) return false;
+    }
+
+    // 2. Too many consonants in a row (e.g. взбзд)
+    if (preg_match('/[бвгджзйклмнпрстфхцчшщ]{4,}/ui', $word)) return false;
+
+    // 3. Known overly obscure or scientific prefixes/suffixes
+    // Sometimes weird words end with -иум, -ырь (except few common ones), -ация in short words etc.
+    if (preg_match('/(фимоз|тупец|фатюй|шитик|чуви|чушп|чухан|шваль)/ui', $word)) return false;
+
+    return true;
+}
+
 function wcpLoadTargetWords($length = 5)
 {
     global $wcpTargetCache;
@@ -48,9 +68,14 @@ function wcpLoadTargetWords($length = 5)
         if (is_array($blacklist) && !empty($blacklist)) {
             $blocked = array_flip(array_map('wcpNormalizeWord', $blacklist));
             $result = array_values(array_filter($result, function ($word) use ($blocked) {
-                return !isset($blocked[$word]);
+                if (isset($blocked[$word])) return false;
+                return wcpIsPartyFriendlyTarget($word);
             }));
         }
+    } else {
+        $result = array_values(array_filter($result, function ($word) {
+            return wcpIsPartyFriendlyTarget($word);
+        }));
     }
 
     if (empty($result)) {

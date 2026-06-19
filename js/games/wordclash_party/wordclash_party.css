@@ -1209,3 +1209,16 @@ body.tg-dark-theme .wcp-result-row span {
     pointer-events: none;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
 }
+
+.wcp-leader-dock {
+    flex-shrink: 0;
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.wcp-leader-dock .wcp-leader-reactions {
+    margin: 0;
+}
