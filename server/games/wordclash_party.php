@@ -37,10 +37,7 @@ function wcpIsPartyFriendlyTarget($word) {
         if (mb_strpos($word, $sub) !== false) return false;
     }
 
-    // 2. Too many consonants in a row (e.g. взбзд)
-    if (preg_match('/[бвгджзйклмнпрстфхцчшщ]{4,}/ui', $word)) return false;
-
-    // 3. Known overly obscure or scientific prefixes/suffixes
+    // 2. Known overly obscure or scientific prefixes/suffixes
     // Sometimes weird words end with -иум, -ырь (except few common ones), -ация in short words etc.
     if (preg_match('/(фимоз|тупец|фатюй|шитик|чуви|чушп|чухан|шваль)/ui', $word)) return false;
 
