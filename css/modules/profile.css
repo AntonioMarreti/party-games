@@ -885,10 +885,28 @@ body.tg-dark-theme.dark-mode .theme-mode-option input:checked + .theme-mode-btn 
     font-weight: 600;
     color: var(--text-main);
     line-height: 1.12;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    min-width: 0;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+@media (max-width: 390px) {
+    .palette-grid {
+        gap: 8px;
+    }
+    .palette-tile {
+        padding: 8px;
+        gap: 8px;
+    }
+    .palette-preview {
+        width: 28px;
+        height: 24px;
+        flex: 0 0 28px;
+    }
+    .palette-name {
+        font-size: 15px;
+    }
 }
 
 /* Настройки и меню */
