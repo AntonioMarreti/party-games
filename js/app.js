@@ -555,12 +555,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const logoutGroup = document.getElementById('logout-menu-item-group');
     safeStyle('login-loading', 'display', 'none');
 
-    let savedColor;
-    if (window.StorageManager) savedColor = await window.StorageManager.get('pgb_accent_color');
-    else savedColor = localStorage.getItem('pgb_accent_color');
-
-    if (savedColor && window.ThemeManager) {
-        window.ThemeManager.applyAccentColor(savedColor);
+    // Apply theme state safely without breaking startup
+    if (window.ThemeManager && typeof window.ThemeManager.applyAccentColor === 'function') {
+        window.ThemeManager.applyAccentColor();
     }
 
     // Load Token
@@ -721,9 +718,10 @@ window.addEventListener('tabChanged', (e) => {
         }
     }
 
-    // Per user request, keep applying color to ensure header updates correctly.
-    const savedColor = localStorage.getItem('pgb_accent_color');
-    if (savedColor && window.ThemeManager) window.ThemeManager.applyAccentColor(savedColor);
+    // Per user request, keep applying theme state to ensure header updates correctly.
+    if (window.ThemeManager && typeof window.ThemeManager.applyAccentColor === 'function') {
+        window.ThemeManager.applyAccentColor();
+    }
 });
 
 let checkStatePromise = null;

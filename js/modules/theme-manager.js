@@ -95,6 +95,11 @@ function applyPalette(paletteId) {
     triggerHaptic('selection');
 }
 
+function applyAccentColor(color) {
+    console.warn("ThemeManager.applyAccentColor is deprecated. Legacy HEX ignored. Re-applying current preferences.");
+    applyThemeDOM();
+}
+
 function setThemePreference(preference) {
     if (!['system', 'light', 'dark'].includes(preference)) return;
     themePreferences.preference = preference;
@@ -282,6 +287,7 @@ function updateDesktopFullscreenVisibility() {
 window.ThemeManager = {
     loadSettings,
     applyPalette,
+    applyAccentColor,
     setThemePreference,
     toggleSetting,
     triggerHaptic,
