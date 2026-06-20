@@ -34,39 +34,39 @@
             </div>
 
             <!-- Palette Preset Selection -->
-            <div class="settings-palette-block mb-2">
-                <div class="settings-row-title mb-2">Цветовая палитра</div>
+            <div class="settings-palette-block mb-1">
+                <div class="settings-row-title mb-1">Цветовая палитра</div>
                 <div class="palette-grid">
                     <div class="palette-tile" data-palette="amber-sapphire" onclick="applyPalette('amber-sapphire'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #0F4C81 50%, #F59E0B 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#0F4C81;--palette-b:#F59E0B" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Янтарный сапфир</div>
                     </div>
                     <div class="palette-tile" data-palette="olive-sand" onclick="applyPalette('olive-sand'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #6B705C 50%, #A5A58D 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#6B705C;--palette-b:#A5A58D" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Оливковый песок</div>
                     </div>
                     <div class="palette-tile" data-palette="lavender-graphite" onclick="applyPalette('lavender-graphite'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #413F54 50%, #B19CD9 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#413F54;--palette-b:#B19CD9" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Лавандовый графит</div>
                     </div>
                     <div class="palette-tile" data-palette="burgundy-cream" onclick="applyPalette('burgundy-cream'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #722F37 50%, #EED9C4 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#722F37;--palette-b:#EED9C4" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Бордовый крем</div>
                     </div>
                     <div class="palette-tile" data-palette="jade-biscuit" onclick="applyPalette('jade-biscuit'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #3F8E83 50%, #FFDCA8 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#3F8E83;--palette-b:#FFDCA8" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Нефритовый бисквит</div>
                     </div>
                     <div class="palette-tile" data-palette="azure-quartz" onclick="applyPalette('azure-quartz'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #296D98 50%, #EAF3FA 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#296D98;--palette-b:#EAF3FA" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Лазурный кварц</div>
                     </div>
                     <div class="palette-tile" data-palette="graphite-lemon" onclick="applyPalette('graphite-lemon'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #1E1E1E 50%, #FFE788 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#1E1E1E;--palette-b:#FFE788" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Графитовый лимон</div>
                     </div>
                     <div class="palette-tile" data-palette="beige-olive" onclick="applyPalette('beige-olive'); highlightPaletteBtn(this);">
-                        <div class="palette-preview" style="background: linear-gradient(90deg, #424E2B 50%, #E5D9C6 50%);"></div>
+                        <span class="palette-preview" style="--palette-a:#424E2B;--palette-b:#E5D9C6" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
                         <div class="palette-name">Бежево-оливковая</div>
                     </div>
                 </div>
