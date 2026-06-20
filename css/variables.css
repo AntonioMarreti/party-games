@@ -30,6 +30,21 @@
     --radius-lg: 32px;
     --radius-md: 24px;
     --radius-sm: 16px;
+
+    /* Default Fallback (Amber Sapphire Light) */
+    --app-bg: #F4F6F9;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #f0f0f0;
+    --app-text: #1E293B;
+    --app-text-muted: #64748B;
+    --app-accent: #0F4C81;
+    --app-accent-hover: #0C3D67;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(15, 76, 129, 0.10);
+    --app-focus-ring: rgba(15, 76, 129, 0.40);
+    --app-header-bg: #F4F6F9;
+    --app-header-text: #1E293B;
 }
 
 /* === Palette Definitions === */
@@ -223,7 +238,9 @@ body {
 }
 
 /* Adjust gradients and shadows for dark mode aliases */
-body[data-theme="dark"], body.dark-mode {
+:root[data-theme="dark"],
+body[data-theme="dark"],
+body.dark-mode {
     --header-gradient: linear-gradient(135deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent), black 60%) 100%);
     --primary-gradient: linear-gradient(135deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent), black 60%) 100%);
 

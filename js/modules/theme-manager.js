@@ -46,35 +46,42 @@ function getResolvedTheme() {
 }
 
 function applyThemeDOM() {
+    const root = document.documentElement;
     const body = document.body;
     const resolvedTheme = getResolvedTheme();
 
-    body.setAttribute('data-theme-preference', themePreferences.preference);
-    body.setAttribute('data-theme', resolvedTheme);
-    body.setAttribute('data-palette', themePreferences.palette);
+    root.setAttribute('data-theme-preference', themePreferences.preference);
+    root.setAttribute('data-theme', resolvedTheme);
+    root.setAttribute('data-palette', themePreferences.palette);
 
-    // Compatibility aliases
-    body.classList.toggle('dark-mode', resolvedTheme === 'dark');
+    if (body) {
+        body.setAttribute('data-theme-preference', themePreferences.preference);
+        body.setAttribute('data-theme', resolvedTheme);
+        body.setAttribute('data-palette', themePreferences.palette);
 
-    // Update Telegram Header to use the new calm background token instead of bright accent
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.setHeaderColor) {
-        try {
-            // Get the computed background color from the token
-            const computedStyle = getComputedStyle(body);
-            let headerBg = computedStyle.getPropertyValue('--app-header-bg').trim();
-            let appBg = computedStyle.getPropertyValue('--app-bg').trim();
-            let colorToSet = headerBg || appBg || (resolvedTheme === 'dark' ? '#0f172a' : '#F8F9FD');
+        // Compatibility aliases
+        body.classList.toggle('dark-mode', resolvedTheme === 'dark');
 
-            // Telegram setHeaderColor requires hex. We might need to handle this if var resolves to non-hex,
-            // but Telegram WebApp often accepts some standard colors or we fallback to basic hex if error.
-            if (colorToSet.startsWith('#')) {
-                window.Telegram.WebApp.setHeaderColor(colorToSet);
-            } else {
-                // Default fallback if CSS variable is not a direct hex
-                window.Telegram.WebApp.setHeaderColor(resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9');
+        // Update Telegram Header to use the new calm background token instead of bright accent
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.setHeaderColor) {
+            try {
+                // Get the computed background color from the token
+                const computedStyle = getComputedStyle(root);
+                let headerBg = computedStyle.getPropertyValue('--app-header-bg').trim();
+                let appBg = computedStyle.getPropertyValue('--app-bg').trim();
+                let colorToSet = headerBg || appBg || (resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9');
+
+                // Telegram setHeaderColor requires hex. We might need to handle this if var resolves to non-hex,
+                // but Telegram WebApp often accepts some standard colors or we fallback to basic hex if error.
+                if (colorToSet.startsWith('#')) {
+                    window.Telegram.WebApp.setHeaderColor(colorToSet);
+                } else {
+                    // Default fallback if CSS variable is not a direct hex
+                    window.Telegram.WebApp.setHeaderColor(resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9');
+                }
+            } catch (e) {
+                console.error("Failed to set TG header color", e);
             }
-        } catch (e) {
-            console.error("Failed to set TG header color", e);
         }
     }
 }
