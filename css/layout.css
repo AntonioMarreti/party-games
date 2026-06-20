@@ -74,7 +74,7 @@ body.tg-platform-android .game-detail-action-bar {
     flex-direction: column;
     min-height: 0;
     height: 100%;
-    background: var(--bg-app);
+    background: var(--app-bg, var(--bg-app));
 }
 
 .content-wrapper {
@@ -91,6 +91,7 @@ body.tg-platform-android .game-detail-action-bar {
     min-height: 100%;
     display: flex;
     flex-direction: column;
+    background: var(--app-bg, var(--bg-app));
 }
 
 /* Fix for Safe Area in game wrapper */
@@ -283,14 +284,14 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
     display: none;
     height: 100%;
     min-height: 0;
-    background: var(--bg-app);
+    background: var(--app-bg, var(--bg-app));
 }
 
 #screen-lobby,
 #screen-lobby .tab-content,
 #screen-game,
 #game-area {
-    background: var(--bg-app);
+    background: var(--app-bg, var(--bg-app));
 }
 
 #screen-lobby .tab-content {
