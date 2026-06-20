@@ -827,7 +827,12 @@ body.large-font .text-muted.small {
     color: var(--app-text);
     box-shadow: 0 2px 5px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.1);
 }
-
+body.dark-mode .theme-mode-option input:checked + .theme-mode-btn,
+body.tg-dark-theme.dark-mode .theme-mode-option input:checked + .theme-mode-btn {
+    background: var(--app-surface-raised, var(--bg-card));
+    box-shadow: 0 0 0 1px var(--app-border, var(--border-main)), 0 2px 7px rgba(0, 0, 0, 0.28);
+    color: var(--app-text, var(--text-main));
+}
 /* Palette Grid */
 .palette-grid {
     display: grid;
@@ -1828,10 +1833,14 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
 }
 
 #screen-settings .settings-switch {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
     width: 44px !important;
     height: 26px !important;
     flex: 0 0 44px;
     margin: 0 !important;
+    align-self: center;
     border: none !important;
     background-color: rgba(120, 120, 128, 0.16) !important;
     background-image: none !important;
@@ -1847,8 +1856,9 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     border-radius: 50%;
     background: #FFFFFF;
     position: absolute;
-    top: 2px;
+    top: 50%;
     left: 2px;
+    transform: translateY(-50%);
     box-shadow: 0 2px 4px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
 }
@@ -1859,7 +1869,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
 }
 
 #screen-settings .settings-switch:checked::after {
-    transform: translateX(18px);
+    transform: translate(18px, -50%);
 }
 
 #screen-settings .settings-switch:focus-visible {
