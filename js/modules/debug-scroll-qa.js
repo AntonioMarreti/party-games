@@ -1173,12 +1173,42 @@
                                         <button class="scroll-qa-back" type="button" data-scroll-qa-disable style="min-width:96px;">Выключить</button>
                                     </div>
                                 </div>
-                                <div>
-                                    <strong>Theme Contrast QA</strong>
-                                    <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние debug flag: ${isThemeQaEnabled() ? 'включено' : 'выключено'}</div>
-                                    <div style="display:flex;gap:8px;margin-top:10px;">
-                                        <button class="scroll-qa-action secondary" type="button" data-theme-qa-open style="flex:1;">Открыть Theme Contrast QA</button>
-                                        <button class="scroll-qa-back" type="button" data-theme-qa-disable style="min-width:96px;">Выключить</button>
+                                <div class="scroll-qa-card" style="background:var(--app-surface, #fff);border:1px solid var(--border-main, #e2e8f0);border-radius:12px;padding:12px;font-size:13px;line-height:1.4;margin-top:12px;">
+                                    <div style="font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                                        Theme QA
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin-bottom:12px;">
+                                        <strong class="scroll-qa-muted">Pref:</strong> <span>${escapeHtml(document.documentElement.getAttribute('data-theme-preference') || 'auto')} &rarr; ${escapeHtml(document.documentElement.getAttribute('data-theme') || 'unknown')}</span>
+                                        <strong class="scroll-qa-muted">Palette:</strong> <span>${escapeHtml(getCompactThemeQaData().palette_label)} &middot; <span style="word-break:break-all;">${escapeHtml(document.documentElement.getAttribute('data-palette') || 'unknown')}</span></span>
+                                        <strong class="scroll-qa-muted">TG:</strong> <span>${escapeHtml(window.Telegram?.WebApp?.colorScheme || 'unknown')} &middot; ${escapeHtml(window.Telegram?.WebApp?.platform || 'web')}</span>
+                                        <strong class="scroll-qa-muted">View:</strong> <span>${window.innerWidth} &times; ${window.innerHeight} &middot; build ${escapeHtml(getAppBuildVersion())}</span>
+                                    </div>
+                                    <div style="background:var(--bg-secondary, #f8fafc);border-radius:8px;padding:8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;margin-bottom:12px;display:grid;gap:4px;">
+                                        <div style="display:flex;justify-content:space-between;"><span>bg</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_bg)}</strong></div>
+                                        <div style="display:flex;justify-content:space-between;"><span>surface</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_surface)}</strong></div>
+                                        <div style="display:flex;justify-content:space-between;"><span>text</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_text)}</strong></div>
+                                        <div style="display:flex;justify-content:space-between;"><span>accent</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_accent)}</strong></div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px;">
+                                        <button class="scroll-qa-action secondary" type="button" data-theme-qa-copy style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                                            <i class="bi bi-files" aria-hidden="true"></i> Скопировать Theme QA
+                                        </button>
+                                        <details class="scroll-qa-advanced">
+                                            <summary style="font-weight:600;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;">
+                                                <span class="scroll-qa-advanced-label"><i class="bi bi-list-check" aria-hidden="true"></i> Показать чек-лист</span>
+                                                <i class="bi bi-chevron-down scroll-qa-advanced-chevron" aria-hidden="true"></i>
+                                            </summary>
+                                            <ol style="margin:8px 0 0;padding-left:20px;font-size:12px;color:var(--text-muted, #64748b);display:flex;flex-direction:column;gap:4px;">
+                                                <li>Авто / Светлое / Тёмное переключаются корректно.</li>
+                                                <li>Палитра применяется без reload.</li>
+                                                <li>Настройки сохраняются после повторного открытия.</li>
+                                                <li>Проверены светлая и тёмная версии палитры.</li>
+                                                <li>Проверены Settings, Lobby, Profile, одна модалка и одна игра.</li>
+                                                <li>Тумблеры показывают понятный on/off state.</li>
+                                                <li>Текст и CTA не теряются на фоне.</li>
+                                                <li>Telegram header читаем и соответствует теме.</li>
+                                            </ol>
+                                        </details>
                                     </div>
                                 </div>
                                 <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
@@ -1200,14 +1230,7 @@
         root.querySelector('[data-scroll-qa-close]')?.addEventListener('click', closePanel);
         root.querySelector('[data-scroll-qa-chat]')?.addEventListener('click', openTesterChat);
         root.querySelector('[data-scroll-qa-open-bug-report]')?.addEventListener('click', () => openBugReporter({ resetContext: true }));
-        root.querySelectorAll('[data-theme-qa-open]').forEach(button => {
-            button.addEventListener('click', openThemeContrastQa);
-        });
-        root.querySelector('[data-theme-qa-disable]')?.addEventListener('click', () => {
-            disableThemeQa();
-            if (hasToolsAccess()) openTools();
-            else closePanel();
-        });
+        root.querySelector('[data-theme-qa-copy]')?.addEventListener('click', copyCompactThemeQa);
         root.querySelector('[data-scroll-qa-bug-report]')?.addEventListener('click', () => copyBugReport(info));
         root.querySelector('[data-scroll-qa-copy-codex]')?.addEventListener('click', () => copyCodexPrompt(buildCurrentBugReport()));
         root.querySelector('[data-scroll-qa-copy-last]')?.addEventListener('click', copyLastBugReport);
@@ -1698,543 +1721,64 @@
         document.getElementById(THEME_QA_SCREEN_ID)?.remove();
     }
 
-    function getThemeQaEnvironment() {
+    function getCompactThemeQaData() {
         const tg = window.Telegram?.WebApp;
-        const theme = sanitizeThemeParams(tg?.themeParams);
+        const html = document.documentElement;
+        const body = document.body;
+        const getVar = (name) => {
+            return window.getComputedStyle(html).getPropertyValue(name).trim() ||
+                   window.getComputedStyle(body).getPropertyValue(name).trim() || 'unknown';
+        };
+        const paletteId = html.getAttribute('data-palette') || 'unknown';
+        const labels = {
+            'amber-sapphire': 'Янтарный сапфир',
+            'olive-sand': 'Оливковый песок',
+            'lavender-graphite': 'Лавандовый графит',
+            'burgundy-cream': 'Бордовый крем',
+            'jade-biscuit': 'Нефритовый бисквит',
+            'azure-quartz': 'Лазурный кварц',
+            'graphite-lemon': 'Графитовый лимон',
+            'beige-olive': 'Бежево-оливковая'
+        };
+        const label = labels[paletteId] || paletteId;
+
         return {
-            telegram_platform: tg?.platform || 'web',
+            preference: html.getAttribute('data-theme-preference') || 'auto',
+            resolved_theme: html.getAttribute('data-theme') || 'unknown',
+            palette_id: paletteId,
+            palette_label: label,
             telegram_color_scheme: tg?.colorScheme || 'unknown',
-            theme_params: {
-                bg_color: theme?.bg_color || 'unknown',
-                secondary_bg_color: theme?.secondary_bg_color || 'unknown',
-                text_color: theme?.text_color || 'unknown',
-                hint_color: theme?.hint_color || 'unknown',
-                button_color: theme?.button_color || 'unknown',
-                button_text_color: theme?.button_text_color || 'unknown'
+            platform: tg?.platform || 'web',
+            viewport: `${window.innerWidth} × ${window.innerHeight}`,
+            html: {
+                classes: html.className,
+                data_theme: html.getAttribute('data-theme'),
+                data_theme_preference: html.getAttribute('data-theme-preference'),
+                data_palette: paletteId
             },
-            body_classes: document.body?.className || '',
-            html_classes: document.documentElement?.className || '',
-            thermal_safe: document.body?.classList.contains('thermal-safe') || false,
-            app_build: getAppBuildVersion()
-        };
-    }
-
-    function formatThemeQaEnvironment(env) {
-        return [
-            `telegram_platform=${env.telegram_platform}`,
-            `telegram_color_scheme=${env.telegram_color_scheme}`,
-            `theme_bg_color=${env.theme_params.bg_color}`,
-            `theme_secondary_bg_color=${env.theme_params.secondary_bg_color}`,
-            `theme_text_color=${env.theme_params.text_color}`,
-            `theme_hint_color=${env.theme_params.hint_color}`,
-            `theme_button_color=${env.theme_params.button_color}`,
-            `theme_button_text_color=${env.theme_params.button_text_color}`,
-            `body_classes=${env.body_classes || 'none'}`,
-            `html_classes=${env.html_classes || 'none'}`,
-            `thermal_safe=${env.thermal_safe ? 1 : 0}`,
-            `app_build=${env.app_build}`
-        ].join('\n');
-    }
-
-    function getThemeQaScenarios() {
-        const current = getCurrentThemeScenario();
-        return [
-            current,
-            {
-                id: 'tg-dark-app-dark-thermal',
-                title: 'Telegram dark + app dark-mode + thermal-safe',
-                note: 'Dark lobby surface: section text and inactive bottom nav must be muted-light, not dark.',
-                vars: {
-                    bg: '#0F172A',
-                    surface: '#1E293B',
-                    text: 'rgba(248,250,252,0.94)',
-                    muted: 'rgba(203,213,225,0.82)',
-                    link: '#A08CFF',
-                    border: 'rgba(148,163,184,0.26)',
-                    chipBg: 'rgba(15,23,42,0.28)',
-                    inputBg: '#1E293B',
-                    placeholder: 'rgba(203,213,225,0.62)',
-                    heroBg: '#6C5CE7',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.84)',
-                    modalBg: '#FFFFFF',
-                    modalText: '#2D3436',
-                    modalMuted: '#6F7682',
-                    primary: '#7C68F2',
-                    primaryText: '#FFFFFF',
-                    secondary: '#243044',
-                    danger: '#F87171',
-                    warning: '#FACC15',
-                    warningText: '#2B2100'
-                }
-            },
-            {
-                id: 'tg-dark-thermal-home-smoke',
-                title: 'Telegram dark + thermal-safe home-flow smoke',
-                note: 'Реальный lobby class smoke для .home-flow .section-title и .home-section-link.',
-                vars: {
-                    bg: '#281E2F',
-                    surface: '#FAFAFC',
-                    text: '#2D3436',
-                    muted: '#6F7682',
-                    link: '#6C5CE7',
-                    border: '#E4E0EA',
-                    chipBg: '#F4F3F8',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#858C99',
-                    heroBg: '#6C5CE7',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.84)',
-                    modalBg: '#FFFFFF',
-                    modalText: '#2D3436',
-                    modalMuted: '#6F7682',
-                    primary: '#6C5CE7',
-                    primaryText: '#FFFFFF',
-                    secondary: '#F2F0FF',
-                    danger: '#EF4444',
-                    warning: '#FBBF24',
-                    warningText: '#3F2B00'
-                }
-            },
-            {
-                id: 'light-surface',
-                title: 'Light app surface',
-                note: 'Светлый content/card surface, где текст должен быть тёмным.',
-                vars: {
-                    bg: '#F8F9FD',
-                    surface: '#FFFFFF',
-                    text: '#2D3436',
-                    muted: '#727783',
-                    link: '#6C5CE7',
-                    border: '#E7EAF2',
-                    chipBg: '#F3F5FA',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#8A92A3',
-                    heroBg: '#29224F',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.78)',
-                    modalBg: '#FFFFFF',
-                    modalText: '#1F2937',
-                    modalMuted: '#687386',
-                    primary: '#6C5CE7',
-                    primaryText: '#FFFFFF',
-                    secondary: '#F1F4FF',
-                    danger: '#EF4444',
-                    warning: '#FBBF24',
-                    warningText: '#3F2B00'
-                }
-            },
-            {
-                id: 'dark-hero',
-                title: 'Dark hero surface',
-                note: 'Тёмный header/hero, где допустим text-on-dark.',
-                vars: {
-                    bg: '#F7F8FC',
-                    surface: '#FFFFFF',
-                    text: '#202631',
-                    muted: '#667085',
-                    link: '#6958E8',
-                    border: '#E4E7EF',
-                    chipBg: '#F2F4F8',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#8790A1',
-                    heroBg: '#101827',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.74)',
-                    modalBg: '#FFFFFF',
-                    modalText: '#202631',
-                    modalMuted: '#667085',
-                    primary: '#6C5CE7',
-                    primaryText: '#FFFFFF',
-                    secondary: '#EEF2FF',
-                    danger: '#DC2626',
-                    warning: '#F59E0B',
-                    warningText: '#231A00'
-                }
-            },
-            {
-                id: 'purple-dark',
-                title: 'Telegram dark custom-like purple',
-                note: 'Purplenight-like Telegram colors with light content surfaces.',
-                vars: {
-                    bg: '#241B3D',
-                    surface: '#FBFAFF',
-                    text: '#211B31',
-                    muted: '#6F6880',
-                    link: '#7C5CFF',
-                    border: '#DDD8EA',
-                    chipBg: '#F2EFFB',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#8D86A1',
-                    heroBg: '#2B1B52',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.76)',
-                    modalBg: '#FFFCF7',
-                    modalText: '#241B2F',
-                    modalMuted: '#746B82',
-                    primary: '#7C5CFF',
-                    primaryText: '#FFFFFF',
-                    secondary: '#F1ECFF',
-                    danger: '#E54864',
-                    warning: '#F4B740',
-                    warningText: '#301F00'
-                }
-            },
-            {
-                id: 'teal-green',
-                title: 'Telegram green/teal custom-like',
-                note: 'Зелёно-бирюзовая тема Telegram, проверка muted/link.',
-                vars: {
-                    bg: '#E9F8F4',
-                    surface: '#FFFFFF',
-                    text: '#14302B',
-                    muted: '#58706A',
-                    link: '#0F8B78',
-                    border: '#CFE5DF',
-                    chipBg: '#F1FAF7',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#74918A',
-                    heroBg: '#075E56',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.78)',
-                    modalBg: '#FFFFFF',
-                    modalText: '#14302B',
-                    modalMuted: '#58706A',
-                    primary: '#0F8B78',
-                    primaryText: '#FFFFFF',
-                    secondary: '#DDF5EF',
-                    danger: '#D63D3D',
-                    warning: '#EAB308',
-                    warningText: '#2C2100'
-                }
-            },
-            {
-                id: 'warm-orange',
-                title: 'Warm/orange custom-like',
-                note: 'Тёплая тема: важно не потерять warning и muted.',
-                vars: {
-                    bg: '#FFF2E7',
-                    surface: '#FFFFFF',
-                    text: '#332418',
-                    muted: '#806B59',
-                    link: '#B45309',
-                    border: '#EAD6C5',
-                    chipBg: '#FFF7ED',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#9A8572',
-                    heroBg: '#803B12',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.78)',
-                    modalBg: '#FFFDF9',
-                    modalText: '#332418',
-                    modalMuted: '#806B59',
-                    primary: '#D97706',
-                    primaryText: '#FFFFFF',
-                    secondary: '#FFF1DC',
-                    danger: '#B91C1C',
-                    warning: '#FACC15',
-                    warningText: '#332400'
-                }
-            },
-            {
-                id: 'low-contrast-gray',
-                title: 'Low-contrast gray custom-like',
-                note: 'Специально грязный gray case, где слабый muted быстро пропадает.',
-                vars: {
-                    bg: '#DADADA',
-                    surface: '#E9E9E9',
-                    text: '#343434',
-                    muted: '#777777',
-                    link: '#4B5563',
-                    border: '#C8C8C8',
-                    chipBg: '#DEDEDE',
-                    inputBg: '#F0F0F0',
-                    placeholder: '#838383',
-                    heroBg: '#4A4A4A',
-                    heroText: '#FFFFFF',
-                    heroMuted: '#D6D6D6',
-                    modalBg: '#F3F3F3',
-                    modalText: '#303030',
-                    modalMuted: '#707070',
-                    primary: '#555B66',
-                    primaryText: '#FFFFFF',
-                    secondary: '#DDDDDD',
-                    danger: '#A33A3A',
-                    warning: '#D6A600',
-                    warningText: '#241F08'
-                }
-            },
-            {
-                id: 'thermal-safe',
-                title: 'Thermal-safe simulation',
-                note: 'Без glass/blur: surface остаётся читаемым, без white-on-white.',
-                vars: {
-                    bg: '#F6F7FA',
-                    surface: '#FFFFFF',
-                    text: '#20242D',
-                    muted: '#626B7A',
-                    link: '#5B4FD8',
-                    border: '#DDE2EC',
-                    chipBg: '#F1F3F8',
-                    inputBg: '#FFFFFF',
-                    placeholder: '#7D8796',
-                    heroBg: '#26324A',
-                    heroText: '#FFFFFF',
-                    heroMuted: 'rgba(255,255,255,0.78)',
-                    modalBg: '#FFFFFF',
-                    modalText: '#20242D',
-                    modalMuted: '#626B7A',
-                    primary: '#5B4FD8',
-                    primaryText: '#FFFFFF',
-                    secondary: '#EEF1FB',
-                    danger: '#D92D20',
-                    warning: '#F6C343',
-                    warningText: '#2B2100'
-                }
-            }
-        ];
-    }
-
-    function getCurrentThemeScenario() {
-        const styles = window.getComputedStyle(document.documentElement);
-        const bodyStyles = window.getComputedStyle(document.body);
-        const primary = readCssVar(styles, '--primary-color', '#6C5CE7');
-        const bg = readCssVar(styles, '--app-bg', bodyStyles.backgroundColor || '#F8F9FD');
-        const surface = readCssVar(styles, '--app-surface', readCssVar(styles, '--bg-secondary', '#FFFFFF'));
-        const text = readCssVar(styles, '--app-text', readCssVar(styles, '--text-main', '#2D3436'));
-        const muted = readCssVar(styles, '--app-text-muted', readCssVar(styles, '--text-muted', '#727783'));
-        return {
-            id: 'current-real',
-            title: 'Current real theme',
-            note: 'Реальные CSS variables текущего browser/Telegram окружения.',
-            vars: {
-                bg,
-                surface,
-                text,
-                muted,
-                link: primary,
-                border: readCssVar(styles, '--border-main', '#E7EAF2'),
-                chipBg: readCssVar(styles, '--bg-secondary', surface),
-                inputBg: surface,
-                placeholder: muted,
-                heroBg: primary,
-                heroText: '#FFFFFF',
-                heroMuted: 'rgba(255,255,255,0.78)',
-                modalBg: readCssVar(styles, '--modal-bg', '#FFFFFF'),
-                modalText: readCssVar(styles, '--modal-text', text),
-                modalMuted: readCssVar(styles, '--modal-muted', muted),
-                primary,
-                primaryText: readCssVar(styles, '--text-on-accent', '#FFFFFF'),
-                secondary: readCssVar(styles, '--bg-secondary', surface),
-                danger: readCssVar(styles, '--status-danger', '#EF4444'),
-                warning: readCssVar(styles, '--status-warning', '#F59E0B'),
-                warningText: '#2B2100'
+            body_classes: body?.className || '',
+            tokens: {
+                app_bg: getVar('--app-bg'),
+                app_surface: getVar('--app-surface'),
+                app_text: getVar('--app-text'),
+                app_accent: getVar('--app-accent')
             }
         };
     }
 
-    function readCssVar(styles, name, fallback) {
-        const value = styles.getPropertyValue(name).trim();
-        return value || fallback;
-    }
-
-    function renderThemeQaScenario(scenario) {
-        const vars = scenario.vars;
-        const style = [
-            `--qa-bg:${vars.bg}`,
-            `--qa-surface:${vars.surface}`,
-            `--qa-text:${vars.text}`,
-            `--qa-muted:${vars.muted}`,
-            `--qa-link:${vars.link}`,
-            `--qa-border:${vars.border}`,
-            `--qa-chip-bg:${vars.chipBg}`,
-            `--qa-input-bg:${vars.inputBg}`,
-            `--qa-placeholder:${vars.placeholder}`,
-            `--qa-hero-bg:${vars.heroBg}`,
-            `--qa-hero-text:${vars.heroText}`,
-            `--qa-hero-muted:${vars.heroMuted}`,
-            `--qa-modal-bg:${vars.modalBg}`,
-            `--qa-modal-text:${vars.modalText}`,
-            `--qa-modal-muted:${vars.modalMuted}`,
-            `--qa-primary:${vars.primary}`,
-            `--qa-primary-text:${vars.primaryText}`,
-            `--qa-secondary:${vars.secondary}`,
-            `--qa-danger:${vars.danger}`,
-            `--qa-warning:${vars.warning}`,
-            `--qa-warning-text:${vars.warningText}`
-        ].join(';');
-        return `
-            <section class="theme-qa-scenario" data-theme-qa-scenario="${escapeHtml(scenario.id)}" style="${escapeHtml(style)}">
-                <div class="theme-qa-scenario-head">
-                    <div>
-                        <div class="theme-qa-scenario-title">${escapeHtml(scenario.title)}</div>
-                        <div class="theme-qa-scenario-note">${escapeHtml(scenario.note)}</div>
-                    </div>
-                    <div class="theme-qa-score-list">${renderThemeQaScores(vars)}</div>
-                </div>
-                <div class="theme-qa-preview">
-                    <div class="theme-qa-hero">
-                        <div class="theme-qa-hero-title">Во что поиграем?</div>
-                        <div class="theme-qa-hero-subtitle">Быстрый старт, комнаты и рекомендации для компании.</div>
-                    </div>
-                    <div class="theme-qa-section-row">
-                        <div class="theme-qa-section-title">Рекомендуемые игры</div>
-                        <button class="theme-qa-link" type="button">Все игры</button>
-                    </div>
-                    <div class="theme-qa-card">
-                        <div class="theme-qa-card-title">BrainBattle</div>
-                        <div class="theme-qa-card-subtitle">Карточка на светлой content surface. Subtitle должен читаться.</div>
-                        <div class="theme-qa-chip-row">
-                            <span class="theme-qa-chip">3-8 игроков</span>
-                            <span class="theme-qa-badge">Новое</span>
-                            <button class="theme-qa-link" type="button">Подробнее</button>
-                        </div>
-                    </div>
-                    <input class="theme-qa-input" type="text" placeholder="Название комнаты или код" aria-label="QA input sample">
-                    <div class="theme-qa-button-row">
-                        <button class="theme-qa-btn primary" type="button">Primary</button>
-                        <button class="theme-qa-btn secondary" type="button">Secondary</button>
-                        <button class="theme-qa-btn danger" type="button">Danger</button>
-                        <button class="theme-qa-btn warning" type="button">Warning</button>
-                    </div>
-                    <div class="theme-qa-modal">
-                        <div class="theme-qa-modal-title">Modal surface</div>
-                        <div class="theme-qa-muted-text">Светлая модалка должна использовать modal text, а не text-on-dark.</div>
-                    </div>
-                    <div class="theme-qa-nav">
-                        <div class="theme-qa-nav-item active">Главная</div>
-                        <div class="theme-qa-nav-item">Игры</div>
-                        <div class="theme-qa-nav-item">Профиль</div>
-                    </div>
-                    <div class="theme-qa-lobby-smoke">
-                        <div class="theme-qa-lobby-smoke-label">Real lobby class smoke</div>
-                        <div class="content-wrapper home-flow pt-4">
-                            <section class="home-section">
-                                <div class="section-title">Хочу играть</div>
-                            </section>
-                            <div class="home-section-header">
-                                <div class="section-title mb-0">Рекомендуемые игры</div>
-                                <button class="btn-unstyled home-section-link" type="button">Все игры →</button>
-                            </div>
-                        </div>
-                        <div class="bottom-nav">
-                            <button class="nav-item active" type="button">
-                                <i class="bi bi-play-fill" aria-hidden="true"></i>
-                                <span>Играть</span>
-                            </button>
-                            <button class="nav-item" type="button">
-                                <i class="bi bi-people-fill" aria-hidden="true"></i>
-                                <span>Комнаты</span>
-                            </button>
-                            <button class="nav-item" type="button">
-                                <i class="bi bi-clock-fill" aria-hidden="true"></i>
-                                <span>История</span>
-                            </button>
-                            <button class="nav-item" type="button">
-                                <i class="bi bi-person-fill" aria-hidden="true"></i>
-                                <span>Профиль</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="theme-qa-muted-text">Small muted text: не должен исчезать на текущей поверхности.</div>
-                </div>
-            </section>
-        `;
-    }
-
-    function renderThemeQaScores(vars) {
-        const checks = [
-            ['surface', vars.text, vars.surface],
-            ['muted', vars.muted, vars.surface],
-            ['hero', vars.heroText, vars.heroBg],
-            ['modal', vars.modalText, vars.modalBg],
-            ['primary', vars.primaryText, vars.primary],
-            ['placeholder', vars.placeholder, vars.inputBg]
-        ];
-        return checks.map(([label, fg, bg]) => {
-            const result = contrastStatus(fg, bg);
-            return `<span class="theme-qa-score ${result.status}" title="${escapeHtml(result.title)}">${escapeHtml(label)} ${result.label}</span>`;
-        }).join('');
-    }
-
-    function contrastStatus(foreground, background) {
-        const ratio = contrastRatio(foreground, background);
-        if (!Number.isFinite(ratio)) {
-            return { status: 'check', label: 'CHECK', title: 'Contrast cannot be computed for this color value' };
-        }
-        if (ratio >= 4.5) return { status: 'ok', label: 'OK', title: `Contrast ${ratio.toFixed(2)}` };
-        if (ratio >= 3) return { status: 'check', label: 'CHECK', title: `Contrast ${ratio.toFixed(2)}` };
-        return { status: 'risk', label: 'RISK', title: `Contrast ${ratio.toFixed(2)}` };
-    }
-
-    function contrastRatio(foreground, background) {
-        const fg = parseColor(foreground);
-        const bg = parseColor(background);
-        if (!fg || !bg) return NaN;
-        const fgLum = relativeLuminance(blendAlpha(fg, bg));
-        const bgLum = relativeLuminance(bg);
-        const lighter = Math.max(fgLum, bgLum);
-        const darker = Math.min(fgLum, bgLum);
-        return (lighter + 0.05) / (darker + 0.05);
-    }
-
-    function parseColor(value) {
-        const text = String(value || '').trim();
-        if (!text || text.includes('gradient') || text.includes('var(') || text.includes('color-mix(')) return null;
-        const hex = text.match(/^#([0-9a-f]{3,8})$/i);
-        if (hex) return parseHexColor(hex[1]);
-        const rgb = text.match(/^rgba?\(([^)]+)\)$/i);
-        if (!rgb) return null;
-        const parts = rgb[1].split(',').map(part => part.trim());
-        if (parts.length < 3) return null;
-        return {
-            r: parseColorChannel(parts[0]),
-            g: parseColorChannel(parts[1]),
-            b: parseColorChannel(parts[2]),
-            a: parts[3] !== undefined ? parseFloat(parts[3]) : 1
+    function copyCompactThemeQa() {
+        const data = getCompactThemeQaData();
+        const text = JSON.stringify(data, null, 2);
+        const done = () => {
+            if (window.showToast) window.showToast('Theme QA скопирован');
+            else if (window.showAlert) window.showAlert('QA tools', 'Theme QA скопирован', 'success');
+            else alert('Theme QA скопирован');
         };
-    }
-
-    function parseHexColor(hex) {
-        let normalized = hex;
-        if (hex.length === 3 || hex.length === 4) {
-            normalized = hex.split('').map(char => char + char).join('');
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        } else {
+            fallbackCopy(text, done);
         }
-        const hasAlpha = normalized.length === 8;
-        const value = parseInt(normalized.slice(0, 6), 16);
-        if (!Number.isFinite(value)) return null;
-        return {
-            r: (value >> 16) & 255,
-            g: (value >> 8) & 255,
-            b: value & 255,
-            a: hasAlpha ? parseInt(normalized.slice(6, 8), 16) / 255 : 1
-        };
-    }
-
-    function parseColorChannel(value) {
-        if (String(value).endsWith('%')) {
-            return Math.round(Math.min(100, Math.max(0, parseFloat(value))) * 2.55);
-        }
-        return Math.min(255, Math.max(0, parseFloat(value)));
-    }
-
-    function blendAlpha(color, background) {
-        const alpha = Number.isFinite(color.a) ? color.a : 1;
-        if (alpha >= 1) return color;
-        return {
-            r: Math.round(color.r * alpha + background.r * (1 - alpha)),
-            g: Math.round(color.g * alpha + background.g * (1 - alpha)),
-            b: Math.round(color.b * alpha + background.b * (1 - alpha)),
-            a: 1
-        };
-    }
-
-    function relativeLuminance(color) {
-        const channels = [color.r, color.g, color.b].map(channel => {
-            const value = channel / 255;
-            return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
-        });
-        return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
     }
 
     function scenarioButton(id, title, description) {
@@ -2288,6 +1832,7 @@
             app_build: getAppBuildVersion(),
             debug_scroll_qa: isEnabled(),
             debug_theme_qa: isThemeQaEnabled(),
+            theme_qa: getCompactThemeQaData(),
             debug_bb_touch: safeLocalStorageGet('DEBUG_BB_TOUCH') === '1',
             active_screen: getActiveScreen(),
             active_tab: getActiveTabSummary(),
