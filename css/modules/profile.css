@@ -802,10 +802,8 @@ body.large-font .text-muted.small {
 .theme-mode-segment-control {
     display: flex;
     background: var(--bg-secondary);
-    border-radius: 999px;
-    padding: 4px;
-    border: 1px solid var(--border-main);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    border-radius: 12px;
+    padding: 3px;
 }
 .theme-mode-option {
     flex: 1;
@@ -819,15 +817,15 @@ body.large-font .text-muted.small {
 .theme-mode-btn {
     padding: 8px 0;
     font-size: 14px;
-    font-weight: 600;
-    color: var(--text-muted);
-    border-radius: 999px;
+    font-weight: 500;
+    color: var(--app-text-muted);
+    border-radius: 9px;
     transition: all 0.2s;
 }
 .theme-mode-option input:checked + .theme-mode-btn {
-    background: var(--bg-card);
-    color: var(--text-main);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background: var(--app-surface);
+    color: var(--app-text);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.1);
 }
 
 /* Palette Grid */
@@ -849,9 +847,8 @@ body.large-font .text-muted.small {
     min-width: 0;
 }
 .palette-tile.active {
-    box-shadow: inset 0 0 0 2px var(--app-accent);
+    border-color: var(--app-accent);
     background: var(--app-accent-soft);
-    border-color: transparent;
 }
 .palette-preview {
     width: 36px;
@@ -1813,23 +1810,42 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
 }
 
 #screen-settings .settings-switch {
-    width: 46px !important;
+    width: 44px !important;
     height: 26px !important;
-    flex: 0 0 46px;
+    flex: 0 0 44px;
     margin: 0 !important;
-    border: 1px solid color-mix(in srgb, var(--text-muted), transparent 68%) !important;
-    background-color: color-mix(in srgb, var(--text-muted), transparent 78%) !important;
-    background-size: 22px 22px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    border: none !important;
+    background-color: rgba(120, 120, 128, 0.16) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    position: relative;
+    cursor: pointer;
+}
+
+#screen-settings .settings-switch::after {
+    content: '';
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
 }
 
 #screen-settings .settings-switch:checked {
-    background-color: var(--primary-color) !important;
-    border-color: color-mix(in srgb, var(--primary-color), white 18%) !important;
+    background-color: var(--app-accent) !important;
+    border-color: transparent !important;
+}
+
+#screen-settings .settings-switch:checked::after {
+    transform: translateX(18px);
 }
 
 #screen-settings .settings-switch:focus-visible {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 78%) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent), transparent 78%) !important;
 }
 
 #screen-settings .settings-row-icon {
@@ -1886,14 +1902,12 @@ body.tg-dark-theme.dark-mode #screen-settings .settings-section-title {
 
 body.dark-mode #screen-settings .settings-switch,
 body.tg-dark-theme.dark-mode #screen-settings .settings-switch {
-    background-color: color-mix(in srgb, var(--text-muted), transparent 62%) !important;
-    border-color: color-mix(in srgb, var(--text-muted), transparent 48%) !important;
+    background-color: rgba(120, 120, 128, 0.32) !important;
 }
 
 body.dark-mode #screen-settings .settings-switch:checked,
 body.tg-dark-theme.dark-mode #screen-settings .settings-switch:checked {
-    background-color: var(--primary-color) !important;
-    border-color: color-mix(in srgb, var(--primary-color), #ffffff 16%) !important;
+    background-color: var(--app-accent) !important;
 }
 
 body.dark-mode #screen-settings .settings-row-icon,
