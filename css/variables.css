@@ -185,6 +185,142 @@
     --app-header-text: #FFF8F4;
 }
 
+/* Jade Biscuit - Light */
+:root[data-palette="jade-biscuit"]:not([data-theme="dark"]) {
+    --app-bg: #FFF9EE;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #F5E9D3;
+    --app-text: #1A2D2B;
+    --app-text-muted: #5C7471;
+    --app-accent: #2E6D64;
+    --app-accent-hover: #24574F;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(63, 142, 131, 0.12);
+    --app-focus-ring: rgba(63, 142, 131, 0.40);
+    --app-header-bg: #FFF9EE;
+    --app-header-text: #1A2D2B;
+}
+
+/* Jade Biscuit - Dark */
+:root[data-palette="jade-biscuit"][data-theme="dark"] {
+    --app-bg: #121817;
+    --app-surface: #1C2625;
+    --app-surface-raised: #263432;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-text: #F0F4F3;
+    --app-text-muted: #93A8A5;
+    --app-accent: #FFDCA8;
+    --app-accent-hover: #FFE9C4;
+    --app-accent-text: #402C10;
+    --app-accent-soft: rgba(255, 220, 168, 0.16);
+    --app-focus-ring: rgba(255, 220, 168, 0.40);
+    --app-header-bg: #121817;
+    --app-header-text: #F0F4F3;
+}
+
+/* Azure Quartz - Light */
+:root[data-palette="azure-quartz"]:not([data-theme="dark"]) {
+    --app-bg: #EAF3FA;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #D2E4F0;
+    --app-text: #1A2833;
+    --app-text-muted: #58748A;
+    --app-accent: #296D98;
+    --app-accent-hover: #1D4F70;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(41, 109, 152, 0.10);
+    --app-focus-ring: rgba(41, 109, 152, 0.40);
+    --app-header-bg: #EAF3FA;
+    --app-header-text: #1A2833;
+}
+
+/* Azure Quartz - Dark */
+:root[data-palette="azure-quartz"][data-theme="dark"] {
+    --app-bg: #0A1319;
+    --app-surface: #13222D;
+    --app-surface-raised: #1C3040;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-text: #EAF3FA;
+    --app-text-muted: #8BA6BC;
+    --app-accent: #78BEEB;
+    --app-accent-hover: #9DD0F5;
+    --app-accent-text: #082030;
+    --app-accent-soft: rgba(88, 164, 214, 0.16);
+    --app-focus-ring: rgba(88, 164, 214, 0.40);
+    --app-header-bg: #0A1319;
+    --app-header-text: #EAF3FA;
+}
+
+/* Graphite Lemon - Light */
+:root[data-palette="graphite-lemon"]:not([data-theme="dark"]) {
+    --app-bg: #FDFDF9;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #EEEEEE;
+    --app-text: #1E1E1E;
+    --app-text-muted: #666666;
+    --app-accent: #1E1E1E;
+    --app-accent-hover: #000000;
+    --app-accent-text: #FFE788;
+    --app-accent-soft: rgba(30, 30, 30, 0.08);
+    --app-focus-ring: rgba(30, 30, 30, 0.40);
+    --app-header-bg: #FDFDF9;
+    --app-header-text: #1E1E1E;
+}
+
+/* Graphite Lemon - Dark */
+:root[data-palette="graphite-lemon"][data-theme="dark"] {
+    --app-bg: #121212;
+    --app-surface: #1E1E1E;
+    --app-surface-raised: #2A2A2A;
+    --app-border: rgba(255, 255, 255, 0.1);
+    --app-text: #F5F5F5;
+    --app-text-muted: #999999;
+    --app-accent: #FFE788;
+    --app-accent-hover: #FFF0AD;
+    --app-accent-text: #1E1E1E;
+    --app-accent-soft: rgba(255, 231, 136, 0.15);
+    --app-focus-ring: rgba(255, 231, 136, 0.40);
+    --app-header-bg: #121212;
+    --app-header-text: #F5F5F5;
+}
+
+/* Beige Olive - Light */
+:root[data-palette="beige-olive"]:not([data-theme="dark"]) {
+    --app-bg: #E5D9C6;
+    --app-surface: #F4EFE6;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #D1C4AD;
+    --app-text: #2D3220;
+    --app-text-muted: #5C6646;
+    --app-accent: #424E2B;
+    --app-accent-hover: #313B1F;
+    --app-accent-text: #E5D9C6;
+    --app-accent-soft: rgba(66, 78, 43, 0.12);
+    --app-focus-ring: rgba(66, 78, 43, 0.40);
+    --app-header-bg: #E5D9C6;
+    --app-header-text: #2D3220;
+}
+
+/* Beige Olive - Dark */
+:root[data-palette="beige-olive"][data-theme="dark"] {
+    --app-bg: #1A1A18;
+    --app-surface: #252422;
+    --app-surface-raised: #303529;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-text: #E5D9C6;
+    --app-text-muted: #9AA087;
+    --app-accent: #8C9B6A;
+    --app-accent-hover: #A5B386;
+    --app-accent-text: #1D2213;
+    --app-accent-soft: rgba(140, 155, 106, 0.16);
+    --app-focus-ring: rgba(140, 155, 106, 0.40);
+    --app-header-bg: #1A1A18;
+    --app-header-text: #E5D9C6;
+}
+
 /* === Legacy Compatibility Aliases === */
 :root,
 body {
