@@ -14,37 +14,45 @@
                 <h6 class="settings-section-title"><i class="bi bi-palette"></i>Внешний вид</h6>
             </div>
 
-            <!-- Accent Color (Prominent) -->
-            <div class="settings-accent-block">
-                <div class="settings-accent-title">Цветовой акцент</div>
-                <div class="settings-color-row">
-                    <div class="color-option-btn selected" style="background: #6C5CE7;" data-color="#6C5CE7"
-                        onclick="applyAccentColor('#6C5CE7'); highlightColorBtn(this);" role="button"
-                        aria-label="Фиолетовый акцент"></div>
-                    <div class="color-option-btn" style="background: #0984e3;" data-color="#0984e3"
-                        onclick="applyAccentColor('#0984e3'); highlightColorBtn(this);" role="button"
-                        aria-label="Синий акцент"></div>
-                    <div class="color-option-btn" style="background: #fdcb6e;" data-color="#fdcb6e"
-                        onclick="applyAccentColor('#fdcb6e'); highlightColorBtn(this);" role="button"
-                        aria-label="Желтый акцент"></div>
-                    <div class="color-option-btn" style="background: #00b894;" data-color="#00b894"
-                        onclick="applyAccentColor('#00b894'); highlightColorBtn(this);" role="button"
-                        aria-label="Зеленый акцент"></div>
-                    <div class="color-option-btn" style="background: #e17055;" data-color="#e17055"
-                        onclick="applyAccentColor('#e17055'); highlightColorBtn(this);" role="button"
-                        aria-label="Оранжевый акцент"></div>
+            <!-- Theme Mode Selection -->
+            <div class="settings-theme-mode-block mb-3">
+                <div class="settings-row-title mb-2">Оформление</div>
+                <div class="theme-mode-segment-control">
+                    <label class="theme-mode-option">
+                        <input type="radio" name="themePreference" value="system" onchange="setThemePreference(this.value)">
+                        <div class="theme-mode-btn">Авто</div>
+                    </label>
+                    <label class="theme-mode-option">
+                        <input type="radio" name="themePreference" value="light" onchange="setThemePreference(this.value)">
+                        <div class="theme-mode-btn">Светлое</div>
+                    </label>
+                    <label class="theme-mode-option">
+                        <input type="radio" name="themePreference" value="dark" onchange="setThemePreference(this.value)">
+                        <div class="theme-mode-btn">Темное</div>
+                    </label>
                 </div>
             </div>
 
-            <!-- Visual Toggles -->
-            <div class="settings-item">
-                <div class="settings-label-wrap">
-                    <div class="settings-row-title">Темная тема</div>
-                    <div class="settings-row-subtitle">Темный интерфейс приложения</div>
-                </div>
-                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
-                    <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-darkMode"
-                        onchange="toggleSetting('darkMode', this.checked)">
+            <!-- Palette Preset Selection -->
+            <div class="settings-palette-block mb-2">
+                <div class="settings-row-title mb-2">Цветовая палитра</div>
+                <div class="palette-grid">
+                    <div class="palette-tile" data-palette="amber-sapphire" onclick="applyPalette('amber-sapphire'); highlightPaletteBtn(this);">
+                        <div class="palette-preview" style="background: linear-gradient(135deg, #0F4C81 0%, #0F4C81 50%, #F59E0B 50%, #F59E0B 100%);"></div>
+                        <div class="palette-name">Янтарный сапфир</div>
+                    </div>
+                    <div class="palette-tile" data-palette="olive-sand" onclick="applyPalette('olive-sand'); highlightPaletteBtn(this);">
+                        <div class="palette-preview" style="background: linear-gradient(135deg, #6B705C 0%, #6B705C 50%, #A5A58D 50%, #A5A58D 100%);"></div>
+                        <div class="palette-name">Оливковый песок</div>
+                    </div>
+                    <div class="palette-tile" data-palette="lavender-graphite" onclick="applyPalette('lavender-graphite'); highlightPaletteBtn(this);">
+                        <div class="palette-preview" style="background: linear-gradient(135deg, #413F54 0%, #413F54 50%, #B19CD9 50%, #B19CD9 100%);"></div>
+                        <div class="palette-name">Лавандовый графит</div>
+                    </div>
+                    <div class="palette-tile" data-palette="burgundy-cream" onclick="applyPalette('burgundy-cream'); highlightPaletteBtn(this);">
+                        <div class="palette-preview" style="background: linear-gradient(135deg, #722F37 0%, #722F37 50%, #EED9C4 50%, #EED9C4 100%);"></div>
+                        <div class="palette-name">Бордовый крем</div>
+                    </div>
                 </div>
             </div>
 

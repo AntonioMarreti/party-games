@@ -10,9 +10,14 @@ const DEFAULT_SETTINGS = {
     thermalSafe: false
 };
 
+const DEFAULT_THEME_PREFERENCES = {
+    preference: 'system', // system | light | dark
+    palette: 'amber-sapphire' // amber-sapphire | olive-sand | lavender-graphite | burgundy-cream
+};
+
 // Internal state
-let appSettings = Object.assign({}, DEFAULT_SETTINGS); // Initialize with defaults immediately
-// will be merged with storage in loadSettings()
+let appSettings = Object.assign({}, DEFAULT_SETTINGS);
+let themePreferences = Object.assign({}, DEFAULT_THEME_PREFERENCES);
 
 function getTelegramColorScheme() {
     try {
@@ -26,72 +31,73 @@ function syncTelegramThemeClass() {
     document.body.classList.toggle('tg-dark-theme', getTelegramColorScheme() === 'dark');
 }
 
-// === THEME MANAGEMENT ===
-// Internal function: Dynamic style injection to fix Safari/WebKit repaint bug
-function _updateThemeStyles(explicitColor = null) {
-    const root = document.documentElement;
-    const primary = explicitColor || root.style.getPropertyValue('--custom-primary') || '#6C5CE7';
+function getResolvedTheme() {
+    if (themePreferences.preference === 'light') return 'light';
+    if (themePreferences.preference === 'dark') return 'dark';
 
-    // We determine dark mode from body class, which is managed by applySettings()
-    const isDark = document.body.classList.contains('dark-mode');
-    const mixColor = isDark ? 'black' : 'white';
+    // System preference
+    const tgScheme = getTelegramColorScheme();
+    if (tgScheme) return tgScheme;
 
-    const headerBgGradient = `linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary}, ${mixColor} 20%) 100%)`;
-
-    document.querySelectorAll('.header-bg').forEach(el => {
-        el.style.setProperty('background', headerBgGradient, 'important');
-    });
-
-    let styleTag = document.getElementById('dynamic-theme-overrides');
-    if (!styleTag) {
-        styleTag = document.createElement('style');
-        styleTag.id = 'dynamic-theme-overrides';
-        document.head.appendChild(styleTag);
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
     }
-
-    styleTag.innerHTML = `
-        .text-primary, .spinner-border.text-primary, .game-card h4, .action-icon {
-            color: ${primary} !important;
-        }
-        .btn-primary, .btn-action {
-            background-color: ${primary} !important;
-            border-color: ${primary} !important;
-        }
-        .progress-bar {
-            background-color: ${primary} !important;
-        }
-    `;
+    return 'light';
 }
 
-// Public API
-function applyAccentColor(color) {
-    if (!color) return;
+function applyThemeDOM() {
+    const body = document.body;
+    const resolvedTheme = getResolvedTheme();
 
-    const root = document.documentElement;
-    root.style.setProperty('--custom-primary', color);
-    root.style.setProperty('--primary-color', color);
+    body.setAttribute('data-theme-preference', themePreferences.preference);
+    body.setAttribute('data-theme', resolvedTheme);
+    body.setAttribute('data-palette', themePreferences.palette);
 
-    const isDark = document.body.classList.contains('dark-mode');
-    const mixColor = isDark ? 'black' : 'white';
+    // Compatibility aliases
+    body.classList.toggle('dark-mode', resolvedTheme === 'dark');
 
-    root.style.setProperty('--header-gradient',
-        `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color}, ${mixColor} 20%) 100%)`);
-    root.style.setProperty('--primary-gradient',
-        `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color}, ${mixColor} 20%) 100%)`);
-
-    // Shadow updates
-    root.style.setProperty('--shadow-sm', `0 4px 15px color-mix(in srgb, ${color}, transparent 90%)`);
-    root.style.setProperty('--shadow-md', `0 10px 30px color-mix(in srgb, ${color}, transparent 85%)`);
-    root.style.setProperty('--shadow-lg', `0 20px 40px color-mix(in srgb, ${color}, transparent 80%)`);
-    root.style.setProperty('--shadow-primary', `0 10px 25px color-mix(in srgb, ${color}, transparent 60%)`);
-
-    localStorage.setItem('pgb_accent_color', color);
-    _updateThemeStyles(color);
-    triggerHaptic('selection');
-
+    // Update Telegram Header to use the new calm background token instead of bright accent
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.setHeaderColor) {
-        window.Telegram.WebApp.setHeaderColor(color);
+        try {
+            // Get the computed background color from the token
+            const computedStyle = getComputedStyle(body);
+            let headerBg = computedStyle.getPropertyValue('--app-header-bg').trim();
+            let appBg = computedStyle.getPropertyValue('--app-bg').trim();
+            let colorToSet = headerBg || appBg || (resolvedTheme === 'dark' ? '#0f172a' : '#F8F9FD');
+
+            // Telegram setHeaderColor requires hex. We might need to handle this if var resolves to non-hex,
+            // but Telegram WebApp often accepts some standard colors or we fallback to basic hex if error.
+            if (colorToSet.startsWith('#')) {
+                window.Telegram.WebApp.setHeaderColor(colorToSet);
+            } else {
+                // Default fallback if CSS variable is not a direct hex
+                window.Telegram.WebApp.setHeaderColor(resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9');
+            }
+        } catch (e) {
+            console.error("Failed to set TG header color", e);
+        }
     }
+}
+
+// Public API for Theme
+function applyPalette(paletteId) {
+    if (!paletteId) return;
+    themePreferences.palette = paletteId;
+    saveThemePreferences();
+    applyThemeDOM();
+    triggerHaptic('selection');
+}
+
+function setThemePreference(preference) {
+    if (!['system', 'light', 'dark'].includes(preference)) return;
+    themePreferences.preference = preference;
+    saveThemePreferences();
+    applyThemeDOM();
+    triggerHaptic('selection');
+}
+
+function saveThemePreferences() {
+    localStorage.setItem('pgb_theme_preferences', JSON.stringify(themePreferences));
 }
 
 // === SETTINGS MANAGEMENT ===
@@ -109,13 +115,53 @@ function loadSettings() {
         if (isIOS) appSettings.thermalSafe = true;
     }
 
+    // Load Theme Preferences
+    let storedTheme = null;
+    try {
+        storedTheme = JSON.parse(localStorage.getItem('pgb_theme_preferences'));
+    } catch (e) {}
+
+    if (storedTheme && storedTheme.preference && storedTheme.palette) {
+        themePreferences = { ...DEFAULT_THEME_PREFERENCES, ...storedTheme };
+    } else {
+        // Migrate legacy
+        let migratedPreference = 'system';
+        if (typeof stored.darkMode !== 'undefined') {
+            migratedPreference = stored.darkMode ? 'dark' : 'light';
+        }
+
+        // Legacy accent color was saved as hex, we map to default palette
+        const legacyAccent = localStorage.getItem('pgb_accent_color');
+        let migratedPalette = 'amber-sapphire'; // default fallback
+
+        themePreferences = {
+            preference: migratedPreference,
+            palette: migratedPalette
+        };
+        saveThemePreferences();
+    }
+
     applySettings();
     syncUI();
 
     try {
-        window.Telegram?.WebApp?.onEvent?.('themeChanged', syncTelegramThemeClass);
+        window.Telegram?.WebApp?.onEvent?.('themeChanged', () => {
+            syncTelegramThemeClass();
+            if (themePreferences.preference === 'system') {
+                applyThemeDOM();
+            }
+        });
     } catch (e) {
         // Theme event is optional outside Telegram.
+    }
+
+    // Listen for system theme changes if using system preference
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (themePreferences.preference === 'system') {
+                applyThemeDOM();
+            }
+        });
     }
 }
 
@@ -123,22 +169,17 @@ function applySettings() {
     const body = document.body;
 
     // Toggle Classes
-    body.classList.toggle('dark-mode', !!appSettings.darkMode);
     body.classList.toggle('no-animations', !!appSettings.noAnimations);
     body.classList.toggle('simple-bg', !!appSettings.simpleBg);
     body.classList.toggle('large-font', !!appSettings.largeFont);
     body.classList.toggle('thermal-safe', !!appSettings.thermalSafe);
     syncTelegramThemeClass();
 
-    // Refresh theme if dark mode changed (to update mix colors)
-    const savedColor = localStorage.getItem('pgb_accent_color');
-    if (savedColor) {
-        _updateThemeStyles(savedColor);
-    }
+    applyThemeDOM();
 }
 
 function syncUI() {
-    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe', 'darkMode'];
+    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe'];
     switches.forEach(key => {
         const el = document.getElementById('setting-' + key);
         if (el) {
@@ -154,39 +195,28 @@ function syncUI() {
         updateDesktopFullscreenVisibility();
     }
 
-    // Sync Color Buttons
-    const savedColor = localStorage.getItem('pgb_accent_color');
-    if (savedColor) {
-        setTimeout(() => {
-            const normalizedSavedColor = savedColor.toLowerCase().replace(/\s/g, '');
-            document.querySelectorAll('.color-option-btn').forEach(btn => {
-                btn.classList.remove('selected');
+    // Sync Theme Preferences UI
+    document.querySelectorAll('input[name="themePreference"]').forEach(radio => {
+        radio.checked = (radio.value === themePreferences.preference);
+    });
 
-                // First try data-color for absolute reliability
-                const dataColor = btn.getAttribute('data-color');
-                if (dataColor) {
-                    if (dataColor.toLowerCase().replace(/\s/g, '') === normalizedSavedColor) {
-                        btn.classList.add('selected');
-                    }
-                    return; // Skip reading style.background if we matched via data-color
-                }
-
-                // Fallback for older code that doesn't have data-color
-                const btnColor = btn.style.background || btn.style.backgroundColor;
-                if (!btnColor) return;
-
-                const normalizedBtnColor = btnColor.toLowerCase().replace(/\s/g, '');
-                if (normalizedBtnColor === normalizedSavedColor) {
-                    btn.classList.add('selected');
-                }
-            });
-        }, 100);
-    }
-
+    document.querySelectorAll('.palette-tile').forEach(tile => {
+        if (tile.getAttribute('data-palette') === themePreferences.palette) {
+            tile.classList.add('active');
+        } else {
+            tile.classList.remove('active');
+        }
+    });
 }
 
 function toggleSetting(key, value) {
     appSettings[key] = value;
+
+    // Clean up old darkMode legacy state if toggled from anywhere
+    if (key === 'darkMode') {
+        setThemePreference(value ? 'dark' : 'light');
+    }
+
     localStorage.setItem('pgb_settings', JSON.stringify(appSettings));
     applySettings();
     triggerHaptic('impact', 'medium');
@@ -244,21 +274,27 @@ function updateDesktopFullscreenVisibility() {
 // Attach to window for global access
 window.ThemeManager = {
     loadSettings,
-    applyAccentColor,
+    applyPalette,
+    setThemePreference,
     toggleSetting,
     triggerHaptic,
     updateDesktopFullscreenVisibility,
-    get settings() { return appSettings; }
+    get settings() { return appSettings; },
+    get theme() { return themePreferences; }
 };
 
-// Aliases for backward compatibility with existing inline HTML calls
-window.applyAccentColor = applyAccentColor;
+// Aliases for backward compatibility
+window.applyAccentColor = function(color) {
+    // If something legacy calls this, just log it. We don't support custom hex anymore.
+    console.warn("applyAccentColor is deprecated. Use applyPalette.");
+};
+window.applyPalette = applyPalette;
+window.setThemePreference = setThemePreference;
 window.toggleSetting = toggleSetting;
 window.triggerHaptic = triggerHaptic;
 window.updateDesktopFullscreenVisibility = updateDesktopFullscreenVisibility;
-window.highlightColorBtn = function (el) {
-    document.querySelectorAll('.color-option-btn').forEach(btn => btn.classList.remove('selected'));
-    if (el) el.classList.add('selected');
-};
 
-// Export nothing, this is a side-effect module that populates window
+window.highlightPaletteBtn = function (el) {
+    document.querySelectorAll('.palette-tile').forEach(btn => btn.classList.remove('active'));
+    if (el) el.classList.add('active');
+};

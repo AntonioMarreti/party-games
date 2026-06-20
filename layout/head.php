@@ -39,21 +39,52 @@
         // Immediate Theme Init to prevent "Flash of Default Color"
         (function () {
             try {
+                // 1. Read Preferences
+                var themePref = { preference: 'system', palette: 'amber-sapphire' };
+                try {
+                    var storedTheme = localStorage.getItem('pgb_theme_preferences');
+                    if (storedTheme) {
+                        var parsed = JSON.parse(storedTheme);
+                        if (parsed.preference && parsed.palette) themePref = parsed;
+                    } else {
+                        // Migrate
+                        var legacySettings = JSON.parse(localStorage.getItem('pgb_settings') || '{}');
+                        if (typeof legacySettings.darkMode !== 'undefined') {
+                            themePref.preference = legacySettings.darkMode ? 'dark' : 'light';
+                        }
+                    }
+                } catch(e) {}
+
+                // 2. Resolve Theme
+                var resolvedTheme = themePref.preference;
                 var tg = window.Telegram && window.Telegram.WebApp;
-                if (!tg) return;
 
-                // 1. Background Color
-                var settings = JSON.parse(localStorage.getItem('pgb_settings') || '{}');
-                var isDark = settings.darkMode || false;
-                var bg = isDark ? '#0f172a' : '#F8F9FD';
-                if (tg.setBackgroundColor) tg.setBackgroundColor(bg);
+                if (resolvedTheme === 'system') {
+                    if (tg && tg.colorScheme) {
+                        resolvedTheme = tg.colorScheme;
+                    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        resolvedTheme = 'dark';
+                    } else {
+                        resolvedTheme = 'light';
+                    }
+                }
 
-                // 2. Header Color (Accent)
-                var accent = localStorage.getItem('pgb_accent_color') || '#6C5CE7';
-                if (tg.setHeaderColor) tg.setHeaderColor(accent);
+                // 3. Apply DOM Attributes to DocumentElement (HTML) immediately
+                document.documentElement.setAttribute('data-theme-preference', themePref.preference);
+                document.documentElement.setAttribute('data-theme', resolvedTheme);
+                document.documentElement.setAttribute('data-palette', themePref.palette);
+                if (resolvedTheme === 'dark') {
+                    document.documentElement.classList.add('dark-mode');
+                }
 
-                // 3. Expand immediately
-                if (tg.expand) tg.expand();
+                // 4. Telegram early apply
+                if (tg) {
+                    var isDark = resolvedTheme === 'dark';
+                    var bg = isDark ? '#0b1120' : '#f4f6f9';
+                    if (tg.setBackgroundColor) tg.setBackgroundColor(bg);
+                    if (tg.setHeaderColor) tg.setHeaderColor(bg);
+                    if (tg.expand) tg.expand();
+                }
             } catch (e) { console.error('Early TG Init failed', e); }
         })();
     </script>

@@ -1,63 +1,17 @@
 :root {
     /* === Multi-Mode Theme Tokens === */
 
-    /* 1. Surfaces & Backgrounds */
-    --app-bg: #F8F9FD;
-    --app-surface: #ffffff;
-    --app-surface-card: rgba(255, 255, 255, 0.65);
-    --app-surface-glass: rgba(255, 255, 255, 0.75);
-    --app-surface-strong: rgba(255, 255, 255, 0.96);
-    --modal-surface-bg: rgba(255, 255, 255, 0.97);
-    --modal-surface-card: rgba(248, 249, 253, 0.92);
-    --modal-input-bg: #ffffff;
-    --modal-text: #2D3436;
-    --modal-text-muted: #6f7682;
-    --bg-app: var(--app-bg);
-    --bg-secondary: var(--app-surface);
-    --bg-card: var(--app-surface-card);
-    --bg-glass: var(--app-surface-glass);
-    --bg-glass-strong: var(--app-surface-strong);
-
-    /* 2. Typography */
-    --app-text: #2D3436;
-    --app-text-muted: #727783;
-    --text-main: var(--app-text);
-    --text-muted: var(--app-text-muted);
-    --text-on-accent: #FFFFFF;
-    --text-on-dark: rgba(255, 255, 255, 0.94);
-    --text-on-dark-muted: rgba(255, 255, 255, 0.74);
-    --link-on-dark: rgba(255, 255, 255, 0.92);
-
-    /* 3. Borders & Dividers */
-    --border-main: #f0f0f0;
-    --border-glass: rgba(255, 255, 255, 0.5);
-    --divider: rgba(0, 0, 0, 0.05);
-
-    /* 4. Brand & Accent (Synced with TG or Custom) */
-    --primary-color: #6C5CE7;
-    --accent-color: #00CEC9;
-
-    /* 5. Gradients & Dynamic Styles */
-    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
-    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), white 20%) 100%);
-
-    --shadow-main: 0 10px 30px color-mix(in srgb, var(--primary-color), transparent 85%);
-    --shadow-strong: 0 20px 40px color-mix(in srgb, var(--primary-color), transparent 80%);
-    --shadow-glow: 0 0 20px color-mix(in srgb, var(--primary-color), transparent 60%);
-
-    /* 6. Layout Constants */
-    --nav-height: 80px;
-    --radius-lg: 32px;
-    --radius-md: 24px;
-    --radius-sm: 16px;
-
     /* Brand Elements & Status (Buttons, Badges, Highlighting) */
     --status-success: #00b894;
     --status-error: #d63031;
     --status-warning: #fdcb6e;
     --status-info: #0984e3;
 
-    /* Specific Component Backgrounds (for Buttons, Avatars, etc to avoid hardcoding #hex) */
+    --status-success-alpha: color-mix(in srgb, var(--status-success), transparent 85%);
+    --status-error-alpha: color-mix(in srgb, var(--status-error), transparent 85%);
+    --status-warning-alpha: color-mix(in srgb, var(--status-warning), transparent 85%);
+    --status-info-alpha: color-mix(in srgb, var(--status-info), transparent 85%);
+
     --btn-success-bg: var(--status-success);
     --btn-success-text: #ffffff;
     --btn-danger-bg: var(--status-error);
@@ -67,56 +21,217 @@
     --btn-info-bg: var(--status-info);
     --btn-info-text: #ffffff;
 
-    --btn-back-bg: var(--bg-secondary);
-    --btn-back-text: var(--text-main);
-
-    /* Theming & Highlight tokens */
     --accent-gold: #FFD700;
     --accent-gold-text: #000000;
     --accent-gold-gradient: linear-gradient(45deg, #FFD700, #FFA500);
 
-    /* Dynamic UI Borders */
-    --border-color: #f0f0f0;
-
-    /* Telegram chrome colors are intentionally separate from app surfaces.
-       Some Telegram Desktop themes expose very dark/purple variables, so
-       internal cards/modals must keep stable app tokens for contrast. */
-    --tg-chrome-bg: var(--tg-theme-bg-color, #F8F9FD);
-    --tg-chrome-secondary-bg: var(--tg-theme-secondary-bg-color, #ffffff);
-    --bg-dark: #0f172a;
+    /* Layout Constants */
+    --nav-height: 80px;
+    --radius-lg: 32px;
+    --radius-md: 24px;
+    --radius-sm: 16px;
 }
 
-/* === DARK MODE OVERRIDES === */
-body.dark-mode {
-    /* Backgrounds - Premium Dark Slate/Telegram Mix */
-    --app-bg: #0f172a;
+/* === Palette Definitions === */
+
+/* Amber Sapphire - Light */
+:root[data-palette="amber-sapphire"]:not([data-theme="dark"]) {
+    --app-bg: #F4F6F9;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #f0f0f0;
+    --app-text: #1E293B;
+    --app-text-muted: #64748B;
+    --app-accent: #0F4C81;
+    --app-accent-hover: #0C3D67;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(15, 76, 129, 0.10);
+    --app-focus-ring: rgba(15, 76, 129, 0.40);
+    --app-header-bg: #F4F6F9;
+    --app-header-text: #1E293B;
+}
+
+/* Amber Sapphire - Dark */
+:root[data-palette="amber-sapphire"][data-theme="dark"] {
+    --app-bg: #0B1120;
+    --app-surface: #17253D;
+    --app-surface-raised: #21324E;
+    --app-border: rgba(255, 255, 255, 0.1);
+    --app-text: #F8FAFC;
+    --app-text-muted: #B6C2D1;
+    --app-accent: #F59E0B;
+    --app-accent-hover: #FBBF24;
+    --app-accent-text: #452000;
+    --app-accent-soft: rgba(245, 158, 11, 0.15);
+    --app-focus-ring: rgba(245, 158, 11, 0.40);
+    --app-header-bg: #0B1120;
+    --app-header-text: #F8FAFC;
+}
+
+/* Olive Sand - Light */
+:root[data-palette="olive-sand"]:not([data-theme="dark"]) {
+    --app-bg: #F7F6F2;
+    --app-surface: #FFFEFB;
+    --app-surface-raised: #FFFEFB;
+    --app-border: #E8E7E1;
+    --app-text: #31352B;
+    --app-text-muted: #6F7468;
+    --app-accent: #6B705C;
+    --app-accent-hover: #565B49;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(107, 112, 92, 0.12);
+    --app-focus-ring: rgba(107, 112, 92, 0.40);
+    --app-header-bg: #F7F6F2;
+    --app-header-text: #31352B;
+}
+
+/* Olive Sand - Dark */
+:root[data-palette="olive-sand"][data-theme="dark"] {
+    --app-bg: #1C1E1B;
+    --app-surface: #292C27;
+    --app-surface-raised: #343830;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-text: #F4F3EC;
+    --app-text-muted: #C8C8B9;
+    --app-accent: #A5A58D;
+    --app-accent-hover: #C2C2A8;
+    --app-accent-text: #1A1A1A;
+    --app-accent-soft: rgba(165, 165, 141, 0.16);
+    --app-focus-ring: rgba(165, 165, 141, 0.40);
+    --app-header-bg: #1C1E1B;
+    --app-header-text: #F4F3EC;
+}
+
+/* Lavender Graphite - Light */
+:root[data-palette="lavender-graphite"]:not([data-theme="dark"]) {
+    --app-bg: #F8F8FC;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #EAE9F0;
+    --app-text: #2B2937;
+    --app-text-muted: #706D80;
+    --app-accent: #413F54;
+    --app-accent-hover: #302E40;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(65, 63, 84, 0.10);
+    --app-focus-ring: rgba(65, 63, 84, 0.40);
+    --app-header-bg: #F8F8FC;
+    --app-header-text: #2B2937;
+}
+
+/* Lavender Graphite - Dark */
+:root[data-palette="lavender-graphite"][data-theme="dark"] {
+    --app-bg: #16161A;
+    --app-surface: #24242B;
+    --app-surface-raised: #303039;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-text: #F7F6FB;
+    --app-text-muted: #C5C1D1;
+    --app-accent: #B19CD9;
+    --app-accent-hover: #C9B8E8;
+    --app-accent-text: #17141F;
+    --app-accent-soft: rgba(177, 156, 217, 0.16);
+    --app-focus-ring: rgba(177, 156, 217, 0.40);
+    --app-header-bg: #16161A;
+    --app-header-text: #F7F6FB;
+}
+
+/* Burgundy Cream - Light */
+:root[data-palette="burgundy-cream"]:not([data-theme="dark"]) {
+    --app-bg: #FCFBF9;
+    --app-surface: #FFFFFF;
+    --app-surface-raised: #FFFFFF;
+    --app-border: #EFEBEA;
+    --app-text: #3B2026;
+    --app-text-muted: #7A6467;
+    --app-accent: #722F37;
+    --app-accent-hover: #5A222A;
+    --app-accent-text: #FFFFFF;
+    --app-accent-soft: rgba(114, 47, 55, 0.10);
+    --app-focus-ring: rgba(114, 47, 55, 0.40);
+    --app-header-bg: #FCFBF9;
+    --app-header-text: #3B2026;
+}
+
+/* Burgundy Cream - Dark */
+:root[data-palette="burgundy-cream"][data-theme="dark"] {
+    --app-bg: #1A1316;
+    --app-surface: #2A1D21;
+    --app-surface-raised: #37262B;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-text: #FFF8F4;
+    --app-text-muted: #D7C4BE;
+    --app-accent: #EED9C4;
+    --app-accent-hover: #F6E6D7;
+    --app-accent-text: #4A1523;
+    --app-accent-soft: rgba(238, 217, 196, 0.16);
+    --app-focus-ring: rgba(238, 217, 196, 0.40);
+    --app-header-bg: #1A1316;
+    --app-header-text: #FFF8F4;
+}
+
+/* === Legacy Compatibility Aliases === */
+:root,
+body {
+    /* Map old structure to new semantic tokens */
+    --primary-color: var(--app-accent);
+    --custom-primary: var(--app-accent);
+    --accent-color: var(--app-accent);
+
     --bg-app: var(--app-bg);
-    /* Deeper slate for better contrast */
-    --app-surface: #1e293b;
-    --app-surface-card: rgba(30, 41, 59, 0.7);
-    --app-surface-glass: rgba(15, 23, 42, 0.6);
-    --app-surface-strong: rgba(15, 23, 42, 0.9);
-    --modal-surface-bg: rgba(255, 255, 255, 0.97);
-    --modal-surface-card: rgba(248, 249, 253, 0.92);
-    --modal-input-bg: #ffffff;
-    --modal-text: #2D3436;
-    --modal-text-muted: #6f7682;
     --bg-secondary: var(--app-surface);
-    --bg-card: var(--app-surface-card);
-    --bg-glass: var(--app-surface-glass);
-    --bg-glass-strong: var(--app-surface-strong);
+    --bg-card: color-mix(in srgb, var(--app-surface), transparent 10%);
+    --bg-glass: color-mix(in srgb, var(--app-surface), transparent 30%);
+    --bg-glass-strong: color-mix(in srgb, var(--app-surface), transparent 5%);
     --bg-dark: #020617;
 
-    /* Text */
-    --app-text: #f1f5f9;
-    --app-text-muted: #94a3b8;
     --text-main: var(--app-text);
     --text-muted: var(--app-text-muted);
     --text-light: #ffffff;
-    --text-on-accent: #ffffff;
+    --text-on-accent: var(--app-accent-text);
     --text-on-dark: rgba(255, 255, 255, 0.94);
-    --text-on-dark-muted: rgba(255, 255, 255, 0.76);
-    --link-on-dark: rgba(255, 255, 255, 0.94);
+    --text-on-dark-muted: rgba(255, 255, 255, 0.74);
+    --link-on-dark: rgba(255, 255, 255, 0.92);
+
+    --border-main: var(--app-border);
+    --border-glass: color-mix(in srgb, var(--app-border), transparent 50%);
+    --divider: color-mix(in srgb, var(--app-text), transparent 90%);
+
+    --header-gradient: linear-gradient(135deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent), black 20%) 100%);
+    --primary-gradient: linear-gradient(135deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent), black 20%) 100%);
+
+    --shadow-sm: 0 4px 15px color-mix(in srgb, var(--app-accent), transparent 90%);
+    --shadow-md: 0 10px 30px color-mix(in srgb, var(--app-accent), transparent 85%);
+    --shadow-lg: 0 20px 40px color-mix(in srgb, var(--app-accent), transparent 80%);
+    --shadow-primary: 0 10px 25px color-mix(in srgb, var(--app-accent), transparent 60%);
+    --shadow-main: 0 10px 30px color-mix(in srgb, var(--app-accent), transparent 85%);
+    --shadow-strong: 0 20px 40px color-mix(in srgb, var(--app-accent), transparent 80%);
+    --shadow-glow: 0 0 20px color-mix(in srgb, var(--app-accent), transparent 60%);
+
+    --btn-back-bg: var(--bg-secondary);
+    --btn-back-text: var(--text-main);
+    --border-color: var(--app-border);
+
+    --modal-surface-bg: var(--app-surface);
+    --modal-surface-card: var(--app-bg);
+    --modal-input-bg: var(--app-surface);
+    --modal-text: var(--app-text);
+    --modal-text-muted: var(--app-text-muted);
+
+    --tg-chrome-bg: var(--tg-theme-bg-color, var(--app-bg));
+    --tg-chrome-secondary-bg: var(--tg-theme-secondary-bg-color, var(--app-surface));
+}
+
+/* Adjust gradients and shadows for dark mode aliases */
+body[data-theme="dark"], body.dark-mode {
+    --header-gradient: linear-gradient(135deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent), black 60%) 100%);
+    --primary-gradient: linear-gradient(135deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent), black 60%) 100%);
+
+    --shadow-main: 0 10px 40px rgba(0, 0, 0, 0.4);
+    --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 25px color-mix(in srgb, var(--app-accent), transparent 40%);
+
+    --accent-gold-gradient: linear-gradient(45deg, #FFD700, #b37400);
 
     /* Status Colors - slightly more vibrant for dark mode */
     --status-success: #00d1a0;
@@ -124,41 +239,13 @@ body.dark-mode {
     --status-warning: #ffeaa7;
     --status-info: #74b9ff;
 
-    --btn-success-bg: var(--status-success);
     --btn-success-text: #000000;
-    --btn-danger-bg: var(--status-error);
     --btn-danger-text: #ffffff;
-    --btn-warning-bg: var(--status-warning);
     --btn-warning-text: #000000;
-    --btn-info-bg: var(--status-info);
     --btn-info-text: #000000;
 
     --btn-back-bg: var(--bg-glass-strong);
     --btn-back-text: var(--text-main);
-
-    /* Theming & Highlight tokens */
-    --accent-gold: #FFD700;
-    --accent-gold-text: #000000;
-    --accent-gold-gradient: linear-gradient(45deg, #FFD700, #b37400);
-
-    --status-success-alpha: color-mix(in srgb, var(--status-success), transparent 85%);
-    --status-error-alpha: color-mix(in srgb, var(--status-error), transparent 85%);
-    --status-warning-alpha: color-mix(in srgb, var(--status-warning), transparent 85%);
-    --status-info-alpha: color-mix(in srgb, var(--status-info), transparent 85%);
-
-    /* Borders */
-    --border-main: rgba(255, 255, 255, 0.1);
-    --border-glass: rgba(255, 255, 255, 0.08);
-    --divider: rgba(255, 255, 255, 0.05);
-
-    /* Gradients */
-    --header-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 60%) 100%);
-    --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color), black 60%) 100%);
-
-    /* Shadows */
-    --shadow-main: 0 10px 40px rgba(0, 0, 0, 0.4);
-    --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 25px color-mix(in srgb, var(--primary-color), transparent 40%);
 }
 
 /* === THERMAL SAFE TOKEN OVERRIDES === */
@@ -170,44 +257,26 @@ body.thermal-safe {
     --shadow-main: 0 8px 22px rgba(31, 38, 135, 0.08);
     --shadow-strong: 0 14px 34px rgba(31, 38, 135, 0.12);
     --shadow-glow: 0 0 0 rgba(0, 0, 0, 0);
-    --thermal-surface-bg: #ffffff;
-    --thermal-surface-bg-strong: #ffffff;
-    --thermal-surface-muted: #f8f9fd;
-    --modal-surface-bg: rgba(255, 255, 255, 0.98);
-    --modal-surface-card: rgba(248, 249, 253, 0.96);
-    --modal-input-bg: #ffffff;
-    --modal-text: #252b2f;
-    --modal-text-muted: #6b7280;
+    --thermal-surface-bg: var(--app-surface);
+    --thermal-surface-bg-strong: var(--app-surface);
+    --thermal-surface-muted: var(--app-bg);
+    --modal-surface-bg: var(--app-surface);
+    --modal-surface-card: var(--app-bg);
+    --modal-input-bg: var(--app-surface);
+    --modal-text: var(--app-text);
+    --modal-text-muted: var(--app-text-muted);
     --thermal-overlay-bg: rgba(17, 20, 36, 0.42);
     --thermal-border: rgba(45, 52, 54, 0.08);
     --thermal-shadow-soft: 0 8px 20px rgba(31, 38, 135, 0.07);
     --thermal-shadow-card: 0 12px 28px rgba(31, 38, 135, 0.10);
 }
 
-body.dark-mode.thermal-safe {
-    --bg-app: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-card: #1e293b;
-    --bg-glass: #1e293b;
-    --bg-glass-strong: #1e293b;
-    --text-main: #f8fafc;
-    --text-muted: #cbd5e1;
-    --border-main: rgba(255, 255, 255, 0.14);
-    --border-glass: rgba(255, 255, 255, 0.14);
-    --thermal-surface-bg: #1e293b;
-    --thermal-surface-bg-strong: #243044;
-    --thermal-surface-muted: #162033;
-    --modal-surface-bg: rgba(255, 255, 255, 0.98);
-    --modal-surface-card: rgba(248, 249, 253, 0.96);
-    --modal-input-bg: #ffffff;
-    --modal-text: #252b2f;
-    --modal-text-muted: #6b7280;
+body[data-theme="dark"].thermal-safe, body.dark-mode.thermal-safe {
     --thermal-overlay-bg: rgba(2, 6, 23, 0.68);
     --thermal-border: rgba(255, 255, 255, 0.14);
     --thermal-shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.18);
     --thermal-shadow-card: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
-
 
 /* Hide Scrollbar Globally */
 ::-webkit-scrollbar {
