@@ -841,7 +841,7 @@
             }
         });
         if (openThemeQaFromUrl && hasToolsAccess()) {
-            setTimeout(openThemeContrastQa, 0);
+            setTimeout(openTools, 0);
         }
         initQaEventTrail();
         if (!isEnabled()) return;
@@ -1158,6 +1158,44 @@
                             <button class="scroll-qa-action secondary" type="button" data-scroll-qa-chat>Чат тестировщиков</button>
                         </div>
                     </div>
+                    <div class="scroll-qa-card" style="background:var(--app-surface-raised, #fff);border:1px solid var(--app-border, #e2e8f0);color:var(--app-text, #202631);border-radius:12px;padding:12px;font-size:13px;line-height:1.4;">
+                        <div style="font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                            Theme QA
+                        </div>
+                        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin-bottom:12px;">
+                            <strong style="color:var(--app-text-muted, #64748b);">Выбор:</strong> <span>${escapeHtml({'dark':'Тёмная','light':'Светлая','auto':'Авто'}[document.documentElement.getAttribute('data-theme-preference') || 'auto'] || 'Авто')}</span>
+                            <strong style="color:var(--app-text-muted, #64748b);">Сейчас:</strong> <span>${escapeHtml({'dark':'Тёмная','light':'Светлая'}[document.documentElement.getAttribute('data-theme')] || document.documentElement.getAttribute('data-theme') || 'unknown')}</span>
+                            <strong style="color:var(--app-text-muted, #64748b);">Палитра:</strong> <span>${escapeHtml(getCompactThemeQaData().palette_label)} &middot; <span style="word-break:break-all;">${escapeHtml(document.documentElement.getAttribute('data-palette') || 'unknown')}</span></span>
+                            <strong style="color:var(--app-text-muted, #64748b);">Telegram:</strong> <span>${escapeHtml({'dark':'Тёмная','light':'Светлая'}[window.Telegram?.WebApp?.colorScheme] || window.Telegram?.WebApp?.colorScheme || 'unknown')} &middot; ${escapeHtml(window.Telegram?.WebApp?.platform || 'web')}</span>
+                            <strong style="color:var(--app-text-muted, #64748b);">Экран:</strong> <span>${window.innerWidth} &times; ${window.innerHeight} &middot; build ${escapeHtml(getAppBuildVersion())}</span>
+                        </div>
+                        <div style="background:var(--app-surface, #f8fafc);border-radius:8px;padding:8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;margin-bottom:12px;display:grid;gap:4px;">
+                            <div style="display:flex;justify-content:space-between;"><span>bg</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_bg)}</strong></div>
+                            <div style="display:flex;justify-content:space-between;"><span>surface</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_surface)}</strong></div>
+                            <div style="display:flex;justify-content:space-between;"><span>text</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_text)}</strong></div>
+                            <div style="display:flex;justify-content:space-between;"><span>accent</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_accent)}</strong></div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px;">
+                            <button type="button" data-theme-qa-copy style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border-radius:8px;border:none;background:var(--app-accent, #6c5ce7);color:var(--app-accent-text, #fff);font-weight:600;font-size:13px;cursor:pointer;">
+                                <i class="bi bi-files" aria-hidden="true"></i> Скопировать Theme QA
+                            </button>
+                            <details style="width:100%;">
+                                <summary style="font-weight:500;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--app-border, #e2e8f0);background:var(--app-surface, #fff);color:var(--app-text, #202631);font-size:13px;">
+                                    <i class="bi bi-list-check" aria-hidden="true"></i> Показать чек-лист
+                                </summary>
+                                <ol style="margin:12px 0 0;padding-left:20px;font-size:12px;color:var(--app-text-muted, #64748b);display:flex;flex-direction:column;gap:6px;">
+                                    <li>Авто / Светлое / Тёмное переключаются корректно.</li>
+                                    <li>Палитра применяется без reload.</li>
+                                    <li>Настройки сохраняются после повторного открытия.</li>
+                                    <li>Проверены светлая и тёмная версии палитры.</li>
+                                    <li>Проверены Settings, Lobby, Profile, одна модалка и одна игра.</li>
+                                    <li>Тумблеры показывают понятный on/off state.</li>
+                                    <li>Текст и CTA не теряются на фоне.</li>
+                                    <li>Telegram header читаем и соответствует теме.</li>
+                                </ol>
+                            </details>
+                        </div>
+                    </div>
                     <div class="scroll-qa-card">
                         <details class="scroll-qa-advanced">
                             <summary>
@@ -1166,49 +1204,11 @@
                             </summary>
                             <div class="scroll-qa-list scroll-qa-advanced-body" style="gap:10px;">
                                 <div>
-                                    <strong>Android Scroll QA</strong>
+                                    <strong>Scroll QA</strong>
                                     <div class="scroll-qa-muted" style="margin-top:4px;">Текущее состояние: ${isEnabled() ? 'включено' : 'выключено'}</div>
                                     <div style="display:flex;gap:8px;margin-top:10px;">
                                         <button class="scroll-qa-action secondary" type="button" data-scroll-qa-enable style="flex:1;">Открыть Scroll QA</button>
                                         <button class="scroll-qa-back" type="button" data-scroll-qa-disable style="min-width:96px;">Выключить</button>
-                                    </div>
-                                </div>
-                                <div class="scroll-qa-card" style="background:var(--app-surface, #fff);border:1px solid var(--border-main, #e2e8f0);border-radius:12px;padding:12px;font-size:13px;line-height:1.4;margin-top:12px;">
-                                    <div style="font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                                        Theme QA
-                                    </div>
-                                    <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin-bottom:12px;">
-                                        <strong class="scroll-qa-muted">Pref:</strong> <span>${escapeHtml(document.documentElement.getAttribute('data-theme-preference') || 'auto')} &rarr; ${escapeHtml(document.documentElement.getAttribute('data-theme') || 'unknown')}</span>
-                                        <strong class="scroll-qa-muted">Palette:</strong> <span>${escapeHtml(getCompactThemeQaData().palette_label)} &middot; <span style="word-break:break-all;">${escapeHtml(document.documentElement.getAttribute('data-palette') || 'unknown')}</span></span>
-                                        <strong class="scroll-qa-muted">TG:</strong> <span>${escapeHtml(window.Telegram?.WebApp?.colorScheme || 'unknown')} &middot; ${escapeHtml(window.Telegram?.WebApp?.platform || 'web')}</span>
-                                        <strong class="scroll-qa-muted">View:</strong> <span>${window.innerWidth} &times; ${window.innerHeight} &middot; build ${escapeHtml(getAppBuildVersion())}</span>
-                                    </div>
-                                    <div style="background:var(--bg-secondary, #f8fafc);border-radius:8px;padding:8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;margin-bottom:12px;display:grid;gap:4px;">
-                                        <div style="display:flex;justify-content:space-between;"><span>bg</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_bg)}</strong></div>
-                                        <div style="display:flex;justify-content:space-between;"><span>surface</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_surface)}</strong></div>
-                                        <div style="display:flex;justify-content:space-between;"><span>text</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_text)}</strong></div>
-                                        <div style="display:flex;justify-content:space-between;"><span>accent</span> <strong>${escapeHtml(getCompactThemeQaData().tokens.app_accent)}</strong></div>
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px;">
-                                        <button class="scroll-qa-action secondary" type="button" data-theme-qa-copy style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                                            <i class="bi bi-files" aria-hidden="true"></i> Скопировать Theme QA
-                                        </button>
-                                        <details class="scroll-qa-advanced">
-                                            <summary style="font-weight:600;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;">
-                                                <span class="scroll-qa-advanced-label"><i class="bi bi-list-check" aria-hidden="true"></i> Показать чек-лист</span>
-                                                <i class="bi bi-chevron-down scroll-qa-advanced-chevron" aria-hidden="true"></i>
-                                            </summary>
-                                            <ol style="margin:8px 0 0;padding-left:20px;font-size:12px;color:var(--text-muted, #64748b);display:flex;flex-direction:column;gap:4px;">
-                                                <li>Авто / Светлое / Тёмное переключаются корректно.</li>
-                                                <li>Палитра применяется без reload.</li>
-                                                <li>Настройки сохраняются после повторного открытия.</li>
-                                                <li>Проверены светлая и тёмная версии палитры.</li>
-                                                <li>Проверены Settings, Lobby, Profile, одна модалка и одна игра.</li>
-                                                <li>Тумблеры показывают понятный on/off state.</li>
-                                                <li>Текст и CTA не теряются на фоне.</li>
-                                                <li>Telegram header читаем и соответствует теме.</li>
-                                            </ol>
-                                        </details>
                                     </div>
                                 </div>
                                 <button class="scroll-qa-action secondary" type="button" data-scroll-qa-bug-report>Скопировать баг-репорт</button>
@@ -1668,54 +1668,7 @@
         });
     }
 
-    function openThemeContrastQa() {
-        if (!hasToolsAccess()) return;
-        ensureStyles();
-        closePanel();
-        closeScenario();
-        closeThemeContrastQa();
 
-        const screen = document.createElement('div');
-        screen.id = THEME_QA_SCREEN_ID;
-        screen.className = 'scroll-qa-screen';
-        const env = getThemeQaEnvironment();
-        screen.innerHTML = `
-            <div class="scroll-qa-screen-header">
-                <div>
-                    <div class="scroll-qa-screen-title">Theme Contrast QA</div>
-                    <div class="scroll-qa-muted">Проверка текста по surface, без изменения глобальной темы.</div>
-                </div>
-                <button class="scroll-qa-back" type="button" data-theme-qa-tools>QA tools</button>
-                <button class="scroll-qa-close" type="button" data-theme-qa-close>×</button>
-            </div>
-            <div class="scroll-qa-scroll">
-                <div class="scroll-qa-card theme-qa-summary">
-                    <strong>Current environment</strong>
-                    <pre>${escapeHtml(formatThemeQaEnvironment(env))}</pre>
-                </div>
-                <div class="scroll-qa-card">
-                    <strong>Rules to verify</strong>
-                    <ul class="theme-qa-rules">
-                        <li>White text must only be on dark surfaces.</li>
-                        <li>Light card/modal surfaces must use dark text.</li>
-                        <li>Placeholder must be readable.</li>
-                        <li>Muted text must not disappear.</li>
-                        <li>Buttons must have readable text.</li>
-                        <li>Thermal-safe must not create white-on-white or gray-on-gray.</li>
-                    </ul>
-                </div>
-                <div class="theme-qa-grid">
-                    ${getThemeQaScenarios().map(renderThemeQaScenario).join('')}
-                </div>
-            </div>
-        `;
-        screen.querySelector('[data-theme-qa-close]')?.addEventListener('click', closeThemeContrastQa);
-        screen.querySelector('[data-theme-qa-tools]')?.addEventListener('click', () => {
-            closeThemeContrastQa();
-            openTools();
-        });
-        document.body.appendChild(screen);
-    }
 
     function closeThemeContrastQa() {
         document.getElementById(THEME_QA_SCREEN_ID)?.remove();
@@ -2432,7 +2385,6 @@
         getDebugInfo,
         copyDebugInfo,
         copyBugReport,
-        openThemeContrastQa,
         closeThemeContrastQa,
         isThemeQaEnabled,
         openTesterChat,
