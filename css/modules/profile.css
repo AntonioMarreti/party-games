@@ -2017,3 +2017,117 @@ body.thermal-safe #screen-settings .settings-screen-group {
     color: color-mix(in srgb, var(--text-muted), var(--text-main) 20%) !important;
     opacity: 0.75 !important;
 }
+
+/* === PALETTE GALLERY (LIVE PREVIEWS) === */
+.palette-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+@media (min-width: 500px) {
+    .palette-list { grid-template-columns: 1fr 1fr; }
+}
+
+.palette-card {
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+}
+.palette-card:active {
+    transform: scale(0.98);
+}
+.palette-card.active {
+    border-color: var(--app-accent);
+}
+
+/* Selected state info */
+.p-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+}
+.palette-card .palette-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+.palette-status {
+    display: none;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--app-accent);
+}
+.palette-card.active .palette-status {
+    display: flex;
+}
+
+/* Live Preview Construction */
+.p-preview-window {
+    background-color: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    padding: 16px;
+    height: 120px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.p-preview-surface {
+    background-color: var(--app-surface);
+    border-radius: 8px;
+    padding: 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.p-preview-text {
+    background-color: var(--app-text-muted);
+    height: 6px;
+    border-radius: 3px;
+    opacity: 0.5;
+}
+.p-preview-text-1 { width: 60%; }
+.p-preview-text-2 { width: 40%; }
+
+.p-preview-accent {
+    background-color: var(--app-accent);
+    height: 16px;
+    width: 48px;
+    border-radius: 16px;
+    margin-top: auto;
+}
+
+.p-preview-raised {
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background-color: var(--app-surface-raised);
+    border-top: 1px solid var(--app-border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 16px;
+}
+
+.p-preview-fab {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--app-accent);
+    margin-bottom: 10px;
+}

@@ -1,51 +1,58 @@
 <!-- Screen: Palettes -->
+<?php
+$paletteDefinitions = [
+    'amber-sapphire' => 'Янтарный сапфир',
+    'olive-sand' => 'Оливковый песок',
+    'lavender-graphite' => 'Лавандовый графит',
+    'burgundy-cream' => 'Бордовый крем',
+    'jade-biscuit' => 'Нефритовый бисквит',
+    'azure-quartz' => 'Лазурный кварц',
+    'graphite-lemon' => 'Графитовый лимон',
+    'beige-olive' => 'Бежево-оливковая'
+];
+?>
 <div id="screen-palettes" class="screen">
     <div class="room-content-wrapper">
-        <div class="settings-screen-header">
+        <div class="settings-screen-header mb-4">
             <button class="btn-back settings-back-btn" onclick="window.showScreen('settings')" aria-label="Назад">
                 <i class="bi bi-chevron-left"></i>
             </button>
             <h4 class="fw-bold m-0">Палитры</h4>
         </div>
 
-        <div class="settings-group settings-screen-group mb-4">
-            <div class="settings-section-head">
-                <h6 class="settings-section-title"><i class="bi bi-palette"></i>Встроенные палитры</h6>
+        <div class="palettes-gallery-header px-3 mb-3">
+            <h5 class="fw-bold mb-1">Встроенные палитры</h5>
+            <div class="text-muted small">8 вариантов оформления</div>
+        </div>
+
+        <div class="palette-list px-3 pb-5">
+            <?php foreach($paletteDefinitions as $id => $name): ?>
+            <div class="palette-card palette-tile" data-palette="<?= $id ?>" data-preview-palette="<?= $id ?>" onclick="applyPalette('<?= $id ?>'); highlightPaletteBtn(this);">
+
+                <div class="p-preview-window">
+                    <div class="p-preview-surface">
+                        <div class="p-preview-text p-preview-text-1"></div>
+                        <div class="p-preview-text p-preview-text-2"></div>
+                        <div class="p-preview-accent"></div>
+                    </div>
+                    <div class="p-preview-raised">
+                        <div class="p-preview-fab"></div>
+                    </div>
+                </div>
+
+                <div class="p-card-footer">
+                    <div class="palette-name"><?= $name ?></div>
+                    <div class="palette-status">
+                        <i class="bi bi-check-circle-fill"></i> <span class="ms-1">Выбрано</span>
+                    </div>
+                </div>
+                <!-- Hidden existing preview span so that settings row extraction in JS continues working without changes to JS -->
+                <span class="palette-preview d-none" style="--palette-a:var(--app-accent); --palette-b:var(--app-text)" aria-hidden="true">
+                    <span class="palette-preview-tone palette-preview-tone-a"></span>
+                    <span class="palette-preview-tone palette-preview-tone-b"></span>
+                </span>
             </div>
-            <div class="palette-grid" id="palette-grid-container">
-                <div class="palette-tile" data-palette="amber-sapphire" onclick="applyPalette('amber-sapphire'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#0F4C81;--palette-b:#F59E0B" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Янтарный сапфир</div>
-                </div>
-                <div class="palette-tile" data-palette="olive-sand" onclick="applyPalette('olive-sand'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#6B705C;--palette-b:#A5A58D" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Оливковый песок</div>
-                </div>
-                <div class="palette-tile" data-palette="lavender-graphite" onclick="applyPalette('lavender-graphite'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#413F54;--palette-b:#B19CD9" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Лавандовый графит</div>
-                </div>
-                <div class="palette-tile" data-palette="burgundy-cream" onclick="applyPalette('burgundy-cream'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#722F37;--palette-b:#EED9C4" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Бордовый крем</div>
-                </div>
-                <div class="palette-tile" data-palette="jade-biscuit" onclick="applyPalette('jade-biscuit'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#3F8E83;--palette-b:#FFDCA8" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Нефритовый бисквит</div>
-                </div>
-                <div class="palette-tile" data-palette="azure-quartz" onclick="applyPalette('azure-quartz'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#296D98;--palette-b:#EAF3FA" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Лазурный кварц</div>
-                </div>
-                <div class="palette-tile" data-palette="graphite-lemon" onclick="applyPalette('graphite-lemon'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#1E1E1E;--palette-b:#FFE788" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Графитовый лимон</div>
-                </div>
-                <div class="palette-tile" data-palette="beige-olive" onclick="applyPalette('beige-olive'); highlightPaletteBtn(this);">
-                    <span class="palette-preview" style="--palette-a:#424E2B;--palette-b:#E5D9C6" aria-hidden="true"><span class="palette-preview-tone palette-preview-tone-a"></span><span class="palette-preview-tone palette-preview-tone-b"></span></span>
-                    <div class="palette-name">Бежево-оливковая</div>
-                </div>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </div>
