@@ -215,11 +215,29 @@ function syncUI() {
     document.querySelectorAll('.palette-tile').forEach(tile => {
         if (tile.getAttribute('data-palette') === themePreferences.palette) {
             tile.classList.add('active');
+            updateCurrentPaletteUI(tile);
         } else {
             tile.classList.remove('active');
         }
     });
 }
+
+function updateCurrentPaletteUI(activeTile) {
+    if (!activeTile) return;
+    const nameEl = document.getElementById('current-palette-name');
+    const previewEl = document.getElementById('current-palette-preview');
+    if (nameEl) {
+        const tileName = activeTile.querySelector('.palette-name');
+        if (tileName) nameEl.textContent = tileName.textContent;
+    }
+    if (previewEl) {
+        const tilePreview = activeTile.querySelector('.palette-preview');
+        if (tilePreview) {
+            previewEl.style.cssText = tilePreview.style.cssText + ' width: 24px; height: 24px; border-radius: 50%; min-width: 24px;';
+        }
+    }
+}
+
 
 function toggleSetting(key, value) {
     appSettings[key] = value;
@@ -309,5 +327,8 @@ window.updateDesktopFullscreenVisibility = updateDesktopFullscreenVisibility;
 
 window.highlightPaletteBtn = function (el) {
     document.querySelectorAll('.palette-tile').forEach(btn => btn.classList.remove('active'));
-    if (el) el.classList.add('active');
+    if (el) {
+        el.classList.add('active');
+        updateCurrentPaletteUI(el);
+    }
 };
