@@ -119,6 +119,12 @@ body.tg-platform-android .game-detail-action-bar {
     box-shadow: var(--shadow-strong);
 }
 
+body.dark-mode .header-bg,
+body.tg-dark-theme.dark-mode .header-bg {
+    background: linear-gradient(180deg, var(--app-surface-raised), var(--app-surface));
+    color: var(--app-text);
+}
+
 .header-title {
     font-size: 32px;
     font-weight: 800;
@@ -260,10 +266,10 @@ body.tg-platform-android .game-detail-action-bar {
 body.dark-mode .bottom-nav,
 body.tg-dark-theme.dark-mode .bottom-nav,
 body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav {
-    --bottom-nav-bg: rgba(30, 41, 59, 0.96);
-    --bottom-nav-border: rgba(148, 163, 184, 0.26);
-    --bottom-nav-muted: rgba(203, 213, 225, 0.76);
-    --bottom-nav-active: color-mix(in srgb, var(--primary-color), white 18%);
+    --bottom-nav-bg: var(--app-surface-raised);
+    --bottom-nav-border: var(--app-border);
+    --bottom-nav-muted: var(--app-text-muted);
+    --bottom-nav-active: var(--app-accent);
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
 }
 

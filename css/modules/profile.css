@@ -932,6 +932,14 @@ body.large-font .settings-row-subtitle {
     z-index: 10;
 }
 
+body.dark-mode .profile-header-modern,
+body.tg-dark-theme.dark-mode .profile-header-modern,
+body.dark-mode .profile-header-premium,
+body.tg-dark-theme.dark-mode .profile-header-premium {
+    background: linear-gradient(180deg, var(--app-surface-raised), var(--app-surface));
+    color: var(--app-text);
+}
+
 .profile-avatar-xl {
     width: 100px;
     height: 100px;

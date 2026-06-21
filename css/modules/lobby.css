@@ -278,15 +278,15 @@ body.tg-dark-theme #tab-home {
 body.dark-mode #tab-home .home-flow,
 body.tg-dark-theme.dark-mode #tab-home .home-flow,
 body.tg-dark-theme.dark-mode.thermal-safe #tab-home .home-flow {
-    --home-surface-text: rgba(248, 250, 252, 0.94);
-    --home-surface-muted: rgba(203, 213, 225, 0.82);
-    --home-surface-link: color-mix(in srgb, var(--primary-color), white 22%);
-    --home-surface-border: rgba(148, 163, 184, 0.24);
-    --home-surface-chip-bg: rgba(15, 23, 42, 0.28);
-    --home-surface-card-bg: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(30, 41, 59, 0.9));
-    --home-surface-card-bg-solid: #1e293b;
-    --home-surface-action-bg: #1e293b;
-    --home-content-bg: var(--app-bg, #0f172a);
+    --home-surface-text: var(--app-text);
+    --home-surface-muted: var(--app-text-muted);
+    --home-surface-link: var(--app-accent);
+    --home-surface-border: var(--app-border);
+    --home-surface-chip-bg: var(--app-surface-raised);
+    --home-surface-card-bg: var(--app-surface);
+    --home-surface-card-bg-solid: var(--app-surface);
+    --home-surface-action-bg: var(--app-surface-raised);
+    --home-content-bg: var(--app-bg);
 }
 
 body.tg-dark-theme .home-flow .section-title {
@@ -1083,9 +1083,9 @@ body.history-details-open .bottom-nav {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 1px solid var(--border-main);
-    background: #fff;
-    color: var(--text-main);
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-raised);
+    color: var(--app-text);
     font-size: 18px;
     display: flex;
     align-items: center;
