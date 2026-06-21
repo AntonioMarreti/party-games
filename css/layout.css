@@ -178,7 +178,7 @@ body.tg-dark-theme.dark-mode .header-bg {
     transform: translateX(-50%);
     width: 100vw;
     height: calc(140px + var(--app-safe-bottom));
-    background: linear-gradient(to top, var(--bg-app) 20%, transparent 100%);
+    background: linear-gradient(to top, var(--app-bg, var(--bg-app)) 20%, transparent 100%);
     pointer-events: none;
     z-index: -1;
 }
