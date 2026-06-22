@@ -18,6 +18,9 @@ const DEFAULT_THEME_PREFERENCES = {
 // Internal state
 let appSettings = Object.assign({}, DEFAULT_SETTINGS);
 let themePreferences = Object.assign({}, DEFAULT_THEME_PREFERENCES);
+let palettePreviewActive = false;
+let originalPalette = null;
+let draftPalette = null;
 
 function getTelegramColorScheme() {
     try {
@@ -45,19 +48,24 @@ function getResolvedTheme() {
     return 'light';
 }
 
-function applyThemeDOM() {
+function getEffectivePalette() {
+    return palettePreviewActive && draftPalette ? draftPalette : themePreferences.palette;
+}
+
+function applyThemeDOM(paletteId = getEffectivePalette()) {
     const root = document.documentElement;
     const body = document.body;
     const resolvedTheme = getResolvedTheme();
+    const effectivePalette = paletteId || themePreferences.palette;
 
     root.setAttribute('data-theme-preference', themePreferences.preference);
     root.setAttribute('data-theme', resolvedTheme);
-    root.setAttribute('data-palette', themePreferences.palette);
+    root.setAttribute('data-palette', effectivePalette);
 
     if (body) {
         body.setAttribute('data-theme-preference', themePreferences.preference);
         body.setAttribute('data-theme', resolvedTheme);
-        body.setAttribute('data-palette', themePreferences.palette);
+        body.setAttribute('data-palette', effectivePalette);
 
         // Compatibility aliases
         body.classList.toggle('dark-mode', resolvedTheme === 'dark');
@@ -75,9 +83,12 @@ function applyThemeDOM() {
                 // but Telegram WebApp often accepts some standard colors or we fallback to basic hex if error.
                 if (colorToSet.startsWith('#')) {
                     window.Telegram.WebApp.setHeaderColor(colorToSet);
+                    window.Telegram.WebApp.setBackgroundColor?.(colorToSet);
                 } else {
                     // Default fallback if CSS variable is not a direct hex
-                    window.Telegram.WebApp.setHeaderColor(resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9');
+                    const fallbackColor = resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9';
+                    window.Telegram.WebApp.setHeaderColor(fallbackColor);
+                    window.Telegram.WebApp.setBackgroundColor?.(fallbackColor);
                 }
             } catch (e) {
                 console.error("Failed to set TG header color", e);
@@ -91,8 +102,82 @@ function applyPalette(paletteId) {
     if (!paletteId) return;
     themePreferences.palette = paletteId;
     saveThemePreferences();
-    applyThemeDOM();
+    applyThemeDOM(paletteId);
+    updateCurrentPaletteUI(paletteId);
     triggerHaptic('selection');
+}
+
+function getPaletteTile(paletteId) {
+    if (!paletteId) return null;
+    return Array.from(document.querySelectorAll('.palette-tile')).find(tile => tile.dataset.palette === paletteId) || null;
+}
+
+function renderPalettePreviewUI() {
+    const selectedPalette = draftPalette || themePreferences.palette;
+    const activeTile = getPaletteTile(selectedPalette);
+    const hero = document.getElementById('palette-hero');
+    const heroName = document.getElementById('palette-hero-name');
+    const cancelButton = document.getElementById('palette-cancel-button');
+    const applyButton = document.getElementById('palette-apply-button');
+    const isDirty = palettePreviewActive && selectedPalette !== originalPalette;
+
+    if (hero) hero.dataset.previewPalette = selectedPalette;
+    if (heroName && activeTile) {
+        heroName.textContent = activeTile.querySelector('.palette-name')?.textContent || selectedPalette;
+    }
+
+    document.querySelectorAll('.palette-tile').forEach(tile => {
+        const isSelected = tile.dataset.palette === selectedPalette;
+        tile.classList.toggle('active', isSelected);
+        tile.setAttribute('aria-selected', String(isSelected));
+    });
+
+    if (cancelButton) cancelButton.textContent = isDirty ? 'Отменить' : 'Назад';
+    if (applyButton) applyButton.disabled = !isDirty;
+}
+
+function beginPalettePreview() {
+    originalPalette = themePreferences.palette;
+    draftPalette = originalPalette;
+    palettePreviewActive = true;
+    applyThemeDOM(draftPalette);
+    renderPalettePreviewUI();
+}
+
+function previewPalette(paletteId) {
+    if (!getPaletteTile(paletteId)) return;
+    if (!palettePreviewActive) beginPalettePreview();
+    draftPalette = paletteId;
+    applyThemeDOM(draftPalette);
+    renderPalettePreviewUI();
+    triggerHaptic('selection');
+}
+
+function cancelPalettePreview(navigate = true) {
+    if (palettePreviewActive) {
+        const paletteToRestore = originalPalette || themePreferences.palette;
+        palettePreviewActive = false;
+        originalPalette = null;
+        draftPalette = null;
+        applyThemeDOM(paletteToRestore);
+        renderPalettePreviewUI();
+    }
+    if (navigate && window.showScreen) window.showScreen('settings');
+}
+
+function commitPalettePreview() {
+    if (!palettePreviewActive || !draftPalette || draftPalette === originalPalette) return;
+    const paletteToCommit = draftPalette;
+    themePreferences.palette = paletteToCommit;
+    saveThemePreferences();
+    palettePreviewActive = false;
+    originalPalette = null;
+    draftPalette = null;
+    applyThemeDOM(paletteToCommit);
+    updateCurrentPaletteUI(paletteToCommit);
+    renderPalettePreviewUI();
+    triggerHaptic('selection');
+    if (window.showScreen) window.showScreen('settings');
 }
 
 function applyAccentColor(color) {
@@ -160,7 +245,7 @@ function loadSettings() {
         window.Telegram?.WebApp?.onEvent?.('themeChanged', () => {
             syncTelegramThemeClass();
             if (themePreferences.preference === 'system') {
-                applyThemeDOM();
+                applyThemeDOM(getEffectivePalette());
             }
         });
     } catch (e) {
@@ -171,7 +256,7 @@ function loadSettings() {
     if (window.matchMedia) {
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
             if (themePreferences.preference === 'system') {
-                applyThemeDOM();
+                applyThemeDOM(getEffectivePalette());
             }
         });
     }
@@ -212,17 +297,12 @@ function syncUI() {
         radio.checked = (radio.value === themePreferences.preference);
     });
 
-    document.querySelectorAll('.palette-tile').forEach(tile => {
-        if (tile.getAttribute('data-palette') === themePreferences.palette) {
-            tile.classList.add('active');
-            updateCurrentPaletteUI(tile);
-        } else {
-            tile.classList.remove('active');
-        }
-    });
+    updateCurrentPaletteUI(themePreferences.palette);
+    renderPalettePreviewUI();
 }
 
-function updateCurrentPaletteUI(activeTile) {
+function updateCurrentPaletteUI(paletteId) {
+    const activeTile = getPaletteTile(paletteId);
     if (!activeTile) return;
     const nameEl = document.getElementById('current-palette-name');
     const previewEl = document.getElementById('current-palette-preview');
@@ -231,10 +311,7 @@ function updateCurrentPaletteUI(activeTile) {
         if (tileName) nameEl.textContent = tileName.textContent;
     }
     if (previewEl) {
-        const tilePreview = activeTile.querySelector('.palette-preview');
-        if (tilePreview) {
-            previewEl.style.cssText = tilePreview.style.cssText + ' width: 24px; height: 24px; border-radius: 50%; min-width: 24px;';
-        }
+        previewEl.dataset.previewPalette = paletteId;
     }
 }
 
@@ -305,13 +382,24 @@ function updateDesktopFullscreenVisibility() {
 window.ThemeManager = {
     loadSettings,
     applyPalette,
+    beginPalettePreview,
+    previewPalette,
+    cancelPalettePreview,
+    commitPalettePreview,
     applyAccentColor,
     setThemePreference,
     toggleSetting,
     triggerHaptic,
     updateDesktopFullscreenVisibility,
     get settings() { return appSettings; },
-    get theme() { return themePreferences; }
+    get theme() { return themePreferences; },
+    get palettePreview() {
+        return {
+            active: palettePreviewActive,
+            originalPalette,
+            draftPalette
+        };
+    }
 };
 
 // Aliases for backward compatibility
@@ -325,10 +413,10 @@ window.toggleSetting = toggleSetting;
 window.triggerHaptic = triggerHaptic;
 window.updateDesktopFullscreenVisibility = updateDesktopFullscreenVisibility;
 
-window.highlightPaletteBtn = function (el) {
-    document.querySelectorAll('.palette-tile').forEach(btn => btn.classList.remove('active'));
-    if (el) {
-        el.classList.add('active');
-        updateCurrentPaletteUI(el);
+window.addEventListener('screenChanged', event => {
+    if (event.detail?.screenId === 'screen-palettes') {
+        if (!palettePreviewActive) beginPalettePreview();
+        return;
     }
-};
+    if (palettePreviewActive) cancelPalettePreview(false);
+});

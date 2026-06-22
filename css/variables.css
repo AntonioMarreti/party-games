@@ -51,7 +51,7 @@
 
 /* Amber Sapphire - Light */
 :root[data-palette="amber-sapphire"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="amber-sapphire"] {
+html:not([data-theme="dark"]) [data-preview-palette="amber-sapphire"] {
     --app-bg: #F4F6F9;
     --app-surface: #FFFFFF;
     --app-surface-raised: #FFFFFF;
@@ -69,7 +69,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="amber-sapphire
 
 /* Amber Sapphire - Dark */
 :root[data-palette="amber-sapphire"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="amber-sapphire"] {
+html[data-theme="dark"] [data-preview-palette="amber-sapphire"] {
     --app-bg: #0B1120;
     --app-surface: #17253D;
     --app-surface-raised: #21324E;
@@ -87,7 +87,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="amber-sapphire"] {
 
 /* Olive Sand - Light */
 :root[data-palette="olive-sand"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="olive-sand"] {
+html:not([data-theme="dark"]) [data-preview-palette="olive-sand"] {
     --app-bg: #F7F6F2;
     --app-surface: #FFFEFB;
     --app-surface-raised: #FFFEFB;
@@ -105,7 +105,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="olive-sand"] {
 
 /* Olive Sand - Dark */
 :root[data-palette="olive-sand"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="olive-sand"] {
+html[data-theme="dark"] [data-preview-palette="olive-sand"] {
     --app-bg: #1C1E1B;
     --app-surface: #292C27;
     --app-surface-raised: #343830;
@@ -123,7 +123,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="olive-sand"] {
 
 /* Lavender Graphite - Light */
 :root[data-palette="lavender-graphite"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="lavender-graphite"] {
+html:not([data-theme="dark"]) [data-preview-palette="lavender-graphite"] {
     --app-bg: #F8F8FC;
     --app-surface: #FFFFFF;
     --app-surface-raised: #FFFFFF;
@@ -141,7 +141,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="lavender-graph
 
 /* Lavender Graphite - Dark */
 :root[data-palette="lavender-graphite"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="lavender-graphite"] {
+html[data-theme="dark"] [data-preview-palette="lavender-graphite"] {
     --app-bg: #16161A;
     --app-surface: #24242B;
     --app-surface-raised: #303039;
@@ -159,7 +159,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="lavender-graphite"] 
 
 /* Burgundy Cream - Light */
 :root[data-palette="burgundy-cream"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="burgundy-cream"] {
+html:not([data-theme="dark"]) [data-preview-palette="burgundy-cream"] {
     --app-bg: #FCFBF9;
     --app-surface: #FFFFFF;
     --app-surface-raised: #FFFFFF;
@@ -177,7 +177,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="burgundy-cream
 
 /* Burgundy Cream - Dark */
 :root[data-palette="burgundy-cream"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="burgundy-cream"] {
+html[data-theme="dark"] [data-preview-palette="burgundy-cream"] {
     --app-bg: #1A1316;
     --app-surface: #2A1D21;
     --app-surface-raised: #37262B;
@@ -195,7 +195,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="burgundy-cream"] {
 
 /* Jade Biscuit - Light */
 :root[data-palette="jade-biscuit"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="jade-biscuit"] {
+html:not([data-theme="dark"]) [data-preview-palette="jade-biscuit"] {
     --app-bg: #FFF9EE;
     --app-surface: #FFFFFF;
     --app-surface-raised: #FFFFFF;
@@ -213,7 +213,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="jade-biscuit"]
 
 /* Jade Biscuit - Dark */
 :root[data-palette="jade-biscuit"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="jade-biscuit"] {
+html[data-theme="dark"] [data-preview-palette="jade-biscuit"] {
     --app-bg: #121817;
     --app-surface: #1C2625;
     --app-surface-raised: #263432;
@@ -231,7 +231,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="jade-biscuit"] {
 
 /* Azure Quartz - Light */
 :root[data-palette="azure-quartz"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="azure-quartz"] {
+html:not([data-theme="dark"]) [data-preview-palette="azure-quartz"] {
     --app-bg: #EAF3FA;
     --app-surface: #FFFFFF;
     --app-surface-raised: #FFFFFF;
@@ -249,7 +249,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="azure-quartz"]
 
 /* Azure Quartz - Dark */
 :root[data-palette="azure-quartz"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="azure-quartz"] {
+html[data-theme="dark"] [data-preview-palette="azure-quartz"] {
     --app-bg: #0A1319;
     --app-surface: #13222D;
     --app-surface-raised: #1C3040;
@@ -267,7 +267,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="azure-quartz"] {
 
 /* Graphite Lemon - Light */
 :root[data-palette="graphite-lemon"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="graphite-lemon"] {
+html:not([data-theme="dark"]) [data-preview-palette="graphite-lemon"] {
     --app-bg: #FDFDF9;
     --app-surface: #FFFFFF;
     --app-surface-raised: #FFFFFF;
@@ -285,7 +285,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="graphite-lemon
 
 /* Graphite Lemon - Dark */
 :root[data-palette="graphite-lemon"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="graphite-lemon"] {
+html[data-theme="dark"] [data-preview-palette="graphite-lemon"] {
     --app-bg: #121212;
     --app-surface: #1E1E1E;
     --app-surface-raised: #2A2A2A;
@@ -303,7 +303,7 @@ html[data-theme="dark"] .palette-card[data-preview-palette="graphite-lemon"] {
 
 /* Beige Olive - Light */
 :root[data-palette="beige-olive"]:not([data-theme="dark"]),
-html:not([data-theme="dark"]) .palette-card[data-preview-palette="beige-olive"] {
+html:not([data-theme="dark"]) [data-preview-palette="beige-olive"] {
     --app-bg: #E5D9C6;
     --app-surface: #F4EFE6;
     --app-surface-raised: #FFFFFF;
@@ -321,7 +321,7 @@ html:not([data-theme="dark"]) .palette-card[data-preview-palette="beige-olive"] 
 
 /* Beige Olive - Dark */
 :root[data-palette="beige-olive"][data-theme="dark"],
-html[data-theme="dark"] .palette-card[data-preview-palette="beige-olive"] {
+html[data-theme="dark"] [data-preview-palette="beige-olive"] {
     --app-bg: #1A1A18;
     --app-surface: #252422;
     --app-surface-raised: #303529;

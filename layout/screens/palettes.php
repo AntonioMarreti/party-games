@@ -12,47 +12,57 @@ $paletteDefinitions = [
 ];
 ?>
 <div id="screen-palettes" class="screen">
-    <div class="room-content-wrapper">
-        <div class="settings-screen-header mb-4">
-            <button class="btn-back settings-back-btn" onclick="window.showScreen('settings')" aria-label="Назад">
-                <i class="bi bi-chevron-left"></i>
+    <div class="room-content-wrapper palette-picker-shell">
+        <header class="palette-app-header">
+            <button type="button" class="palette-app-header-back" onclick="ThemeManager.cancelPalettePreview()" aria-label="Назад в настройки">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                <span>Палитры</span>
             </button>
-            <h4 class="fw-bold m-0">Палитры</h4>
-        </div>
+        </header>
 
-        <div class="palettes-gallery-header px-3 mb-3">
-            <h5 class="fw-bold mb-1">Встроенные палитры</h5>
-            <div class="text-muted small">8 вариантов оформления</div>
-        </div>
+        <div class="palette-picker-scroll">
+            <section class="palette-hero" id="palette-hero" data-preview-palette="amber-sapphire" aria-labelledby="palette-hero-name">
+                <div class="palette-hero-canvas" aria-hidden="true">
+                    <div class="palette-hero-surface"></div>
+                    <div class="palette-hero-raised"></div>
+                    <div class="palette-hero-accent"></div>
+                </div>
+                <div class="palette-hero-footer">
+                    <span class="palette-hero-name" id="palette-hero-name">Янтарный сапфир</span>
+                    <i class="bi bi-check-circle-fill palette-hero-check" aria-hidden="true"></i>
+                </div>
+            </section>
 
-        <div class="palette-list px-3 pb-5">
-            <?php foreach($paletteDefinitions as $id => $name): ?>
-            <div class="palette-card palette-tile" data-palette="<?= $id ?>" data-preview-palette="<?= $id ?>" onclick="applyPalette('<?= $id ?>'); highlightPaletteBtn(this);">
-
-                <div class="p-preview-window">
-                    <div class="p-preview-surface">
-                        <div class="p-preview-text p-preview-text-1"></div>
-                        <div class="p-preview-text p-preview-text-2"></div>
-                        <div class="p-preview-accent"></div>
-                    </div>
-                    <div class="p-preview-raised">
-                        <div class="p-preview-fab"></div>
-                    </div>
+            <section class="palette-picker-section" aria-labelledby="built-in-palettes-title">
+                <div class="palette-picker-section-head">
+                    <h2 id="built-in-palettes-title">Встроенные палитры</h2>
+                    <span><?= count($paletteDefinitions) ?> палитр</span>
                 </div>
 
-                <div class="p-card-footer">
-                    <div class="palette-name"><?= $name ?></div>
-                    <div class="palette-status">
-                        <i class="bi bi-check-circle-fill"></i> <span class="ms-1">Выбрано</span>
-                    </div>
+                <div class="palette-list" role="listbox" aria-labelledby="built-in-palettes-title">
+                    <?php foreach ($paletteDefinitions as $id => $name): ?>
+                    <button type="button"
+                        class="palette-row palette-tile"
+                        data-palette="<?= $id ?>"
+                        role="option"
+                        aria-selected="false"
+                        onclick="ThemeManager.previewPalette('<?= $id ?>')">
+                        <span class="palette-role-swatch" data-preview-palette="<?= $id ?>" aria-hidden="true">
+                            <span class="palette-role-surface"></span>
+                            <span class="palette-role-raised"></span>
+                            <span class="palette-role-accent"></span>
+                        </span>
+                        <span class="palette-name"><?= $name ?></span>
+                        <i class="bi bi-check-circle-fill palette-row-check" aria-hidden="true"></i>
+                    </button>
+                    <?php endforeach; ?>
                 </div>
-                <!-- Hidden existing preview span so that settings row extraction in JS continues working without changes to JS -->
-                <span class="palette-preview d-none" style="--palette-a:var(--app-accent); --palette-b:var(--app-text)" aria-hidden="true">
-                    <span class="palette-preview-tone palette-preview-tone-a"></span>
-                    <span class="palette-preview-tone palette-preview-tone-b"></span>
-                </span>
-            </div>
-            <?php endforeach; ?>
+            </section>
         </div>
+
+        <footer class="palette-picker-actions">
+            <button type="button" class="palette-action palette-action-secondary" id="palette-cancel-button" onclick="ThemeManager.cancelPalettePreview()">Назад</button>
+            <button type="button" class="palette-action palette-action-primary" id="palette-apply-button" onclick="ThemeManager.commitPalettePreview()" disabled>Применить</button>
+        </footer>
     </div>
 </div>

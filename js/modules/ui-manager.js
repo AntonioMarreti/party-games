@@ -678,8 +678,11 @@ function handleSwipeBack() {
     const profileEditScreen = document.getElementById('screen-profile-edit');
     const settingsScreen = document.getElementById('screen-settings');
     const sessionsScreen = document.getElementById('screen-sessions');
+    const palettesScreen = document.getElementById('screen-palettes');
 
-    if (friendsScreen && friendsScreen.classList.contains('active-screen')) {
+    if (palettesScreen && palettesScreen.classList.contains('active-screen')) {
+        if (window.ThemeManager?.cancelPalettePreview) window.ThemeManager.cancelPalettePreview();
+    } else if (friendsScreen && friendsScreen.classList.contains('active-screen')) {
         if (window.showScreen) window.showScreen('lobby');
     } else if (leaderboardScreen && leaderboardScreen.classList.contains('active-screen')) {
         if (window.showScreen) window.showScreen('lobby');
