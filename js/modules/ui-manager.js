@@ -71,6 +71,10 @@ function showScreen(screenId) {
         return;
     }
 
+    const palettePickerOpen = finalId === 'screen-palettes';
+    document.documentElement.classList.toggle('palette-picker-open', palettePickerOpen);
+    document.body?.classList.toggle('palette-picker-open', palettePickerOpen);
+
     // Hide all screens
     document.querySelectorAll('.screen').forEach(s => {
         s.classList.remove('active-screen');

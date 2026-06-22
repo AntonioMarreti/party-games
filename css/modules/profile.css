@@ -2019,8 +2019,16 @@ body.thermal-safe #screen-settings .settings-screen-group {
 }
 
 /* === PALETTE PICKER === */
-#screen-palettes.active-screen {
+html.palette-picker-open,
+body.palette-picker-open {
+    height: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
+}
+
+#screen-palettes {
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 #screen-palettes .palette-picker-shell {
@@ -2029,6 +2037,7 @@ body.thermal-safe #screen-settings .settings-screen-group {
     min-height: 0;
     padding: var(--app-safe-top) 16px 0;
     overflow: hidden;
+    overscroll-behavior: none;
 }
 
 .palette-app-header {
@@ -2084,6 +2093,8 @@ body.thermal-safe #screen-settings .settings-screen-group {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
     padding: 10px 0 16px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
