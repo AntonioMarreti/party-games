@@ -42,7 +42,7 @@ $paletteDefinitions = [
                 <div class="palette-list" role="listbox" aria-labelledby="built-in-palettes-title">
                     <?php foreach ($paletteDefinitions as $id => $name): ?>
                     <button type="button"
-                        class="palette-row palette-tile"
+                        class="palette-row"
                         data-palette="<?= $id ?>"
                         role="option"
                         aria-selected="false"
@@ -60,7 +60,7 @@ $paletteDefinitions = [
             </section>
         </div>
 
-        <footer class="palette-picker-actions">
+        <footer class="palette-picker-footer">
             <button type="button" class="palette-action palette-action-secondary" id="palette-cancel-button" onclick="ThemeManager.cancelPalettePreview()">Назад</button>
             <button type="button" class="palette-action palette-action-primary" id="palette-apply-button" onclick="ThemeManager.commitPalettePreview()" disabled>Применить</button>
         </footer>

@@ -109,7 +109,7 @@ function applyPalette(paletteId) {
 
 function getPaletteTile(paletteId) {
     if (!paletteId) return null;
-    return Array.from(document.querySelectorAll('.palette-tile')).find(tile => tile.dataset.palette === paletteId) || null;
+    return Array.from(document.querySelectorAll('.palette-row')).find(tile => tile.dataset.palette === paletteId) || null;
 }
 
 function renderPalettePreviewUI() {
@@ -126,7 +126,7 @@ function renderPalettePreviewUI() {
         heroName.textContent = activeTile.querySelector('.palette-name')?.textContent || selectedPalette;
     }
 
-    document.querySelectorAll('.palette-tile').forEach(tile => {
+    document.querySelectorAll('.palette-row').forEach(tile => {
         const isSelected = tile.dataset.palette === selectedPalette;
         tile.classList.toggle('active', isSelected);
         tile.setAttribute('aria-selected', String(isSelected));
