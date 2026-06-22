@@ -2,13 +2,17 @@
 <?php
 $paletteDefinitions = [
     'amber-sapphire' => 'Янтарный сапфир',
-    'olive-sand' => 'Оливковый песок',
     'lavender-graphite' => 'Лавандовый графит',
     'burgundy-cream' => 'Бордовый крем',
     'jade-biscuit' => 'Нефритовый бисквит',
     'azure-quartz' => 'Лазурный кварц',
     'graphite-lemon' => 'Графитовый лимон',
-    'beige-olive' => 'Бежево-оливковая'
+    'beige-olive' => 'Бежево-оливковая',
+    'tiffany-graphite' => 'Тиффани-графит',
+    'pink-impulse' => 'Розовый импульс',
+    'cyber-violet' => 'Кибер-фиалка',
+    'turmeric-malt' => 'Куркума и солод',
+    'volcanic-night' => 'Вулканическая ночь'
 ];
 ?>
 <div id="screen-palettes" class="screen">

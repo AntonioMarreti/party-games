@@ -12,7 +12,11 @@ const DEFAULT_SETTINGS = {
 
 const DEFAULT_THEME_PREFERENCES = {
     preference: 'system', // system | light | dark
-    palette: 'amber-sapphire' // amber-sapphire | olive-sand | lavender-graphite | burgundy-cream
+    palette: 'amber-sapphire'
+};
+
+const LEGACY_PALETTE_MIGRATIONS = {
+    'olive-sand': 'beige-olive'
 };
 
 // Internal state
@@ -220,6 +224,11 @@ function loadSettings() {
 
     if (storedTheme && storedTheme.preference && storedTheme.palette) {
         themePreferences = { ...DEFAULT_THEME_PREFERENCES, ...storedTheme };
+        const migratedPalette = LEGACY_PALETTE_MIGRATIONS[themePreferences.palette];
+        if (migratedPalette) {
+            themePreferences.palette = migratedPalette;
+            saveThemePreferences();
+        }
     } else {
         // Migrate legacy
         let migratedPreference = 'system';
