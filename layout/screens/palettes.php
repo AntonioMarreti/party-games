@@ -16,8 +16,8 @@ $paletteDefinitions = [
         <header class="palette-app-header">
             <button type="button" class="palette-app-header-back" onclick="ThemeManager.cancelPalettePreview()" aria-label="Назад в настройки">
                 <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                <span>Палитры</span>
             </button>
+            <h1 class="palette-app-header-title">Палитры</h1>
         </header>
 
         <div class="palette-picker-scroll">
