@@ -1652,3 +1652,32 @@ body.dark-mode .game-summary-share-preview {
     color: var(--app-accent-text) !important;
     box-shadow: none !important;
 }
+
+body.thermal-safe #tab-games .rooms-mode-btn.active,
+body.thermal-safe #tab-games .rooms-mode-btn.active:hover,
+body.thermal-safe #tab-games .rooms-mode-btn.active:focus,
+body.thermal-safe #tab-games .rooms-mode-btn.active:active,
+body.thermal-safe #tab-games .rooms-empty-actions .btn-primary,
+body.thermal-safe #tab-games .rooms-empty-actions .btn-primary:hover,
+body.thermal-safe #tab-games .rooms-empty-actions .btn-primary:focus,
+body.thermal-safe #tab-games .rooms-empty-actions .btn-primary:active {
+    --bs-btn-color: var(--app-accent-text);
+    --bs-btn-hover-color: var(--app-accent-text);
+    --bs-btn-active-color: var(--app-accent-text);
+    background: var(--app-accent) !important;
+    border-color: var(--app-accent) !important;
+    color: var(--app-accent-text) !important;
+    -webkit-text-fill-color: var(--app-accent-text) !important;
+}
+
+body.thermal-safe #tab-games .rooms-mode-btn.active *,
+body.thermal-safe #tab-games .rooms-empty-actions .btn-primary * {
+    color: var(--app-accent-text) !important;
+    -webkit-text-fill-color: var(--app-accent-text) !important;
+}
+
+body.thermal-safe #tab-games .rooms-mode-btn.active svg,
+body.thermal-safe #tab-games .rooms-empty-actions .btn-primary svg {
+    fill: currentColor;
+    stroke: currentColor;
+}

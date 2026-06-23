@@ -199,6 +199,29 @@ body.tg-dark-theme #gameSelectorModal .game-list-content .text-muted {
     line-height: 1.2;
 }
 
+body.thermal-safe .lobby-modal .lobby-modal-primary-btn,
+body.thermal-safe .lobby-modal .lobby-modal-primary-btn:hover,
+body.thermal-safe .lobby-modal .lobby-modal-primary-btn:focus,
+body.thermal-safe .lobby-modal .lobby-modal-primary-btn:active {
+    --bs-btn-color: var(--app-accent-text);
+    --bs-btn-hover-color: var(--app-accent-text);
+    --bs-btn-active-color: var(--app-accent-text);
+    background: var(--app-accent) !important;
+    border-color: var(--app-accent) !important;
+    color: var(--app-accent-text) !important;
+    -webkit-text-fill-color: var(--app-accent-text) !important;
+}
+
+body.thermal-safe .lobby-modal .lobby-modal-primary-btn * {
+    color: var(--app-accent-text) !important;
+    -webkit-text-fill-color: var(--app-accent-text) !important;
+}
+
+body.thermal-safe .lobby-modal .lobby-modal-primary-btn svg {
+    fill: currentColor;
+    stroke: currentColor;
+}
+
 .lobby-modal-secondary-btn {
     display: inline-flex;
     align-items: center;
