@@ -90,11 +90,11 @@ body.modal-open {
 }
 
 .lobby-modal .modal-content {
-    background: rgba(255, 255, 255, 0.97) !important;
+    background: var(--app-surface-raised, var(--bg-card)) !important;
     background-image: none !important;
-    border-color: rgba(255, 255, 255, 0.82) !important;
-    color: #2D3436 !important;
-    box-shadow: 0 24px 52px rgba(17, 24, 39, 0.18) !important;
+    border-color: var(--app-border, var(--border-glass)) !important;
+    color: var(--app-text, var(--text-main)) !important;
+    box-shadow: var(--shadow-strong) !important;
 }
 
 .lobby-modal .modal-header,
@@ -112,7 +112,7 @@ body.modal-open {
 }
 
 .lobby-modal .modal-title {
-    color: #2D3436 !important;
+    color: var(--app-text, var(--text-main)) !important;
     font-size: 24px;
     font-weight: 850;
     line-height: 1.14;
@@ -121,13 +121,13 @@ body.modal-open {
 
 .lobby-modal .form-label,
 .lobby-modal .create-room-public-title {
-    color: #2D3436 !important;
+    color: var(--app-text, var(--text-main)) !important;
 }
 
 .lobby-modal .create-room-public-help,
 .lobby-modal .form-text,
 .lobby-modal .text-muted {
-    color: #6f7682 !important;
+    color: var(--app-text-muted, var(--text-muted)) !important;
 }
 
 body.dark-mode #gameSelectorModal .game-list-content .text-dark,
@@ -159,10 +159,10 @@ body.tg-dark-theme #gameSelectorModal .game-list-content .text-muted {
     min-height: 52px;
     padding: 13px 15px;
     border-radius: 16px !important;
-    background: #ffffff !important;
+    background: var(--bg-app) !important;
     background-image: none !important;
-    border: 1px solid rgba(203, 213, 225, 0.78) !important;
-    color: #2D3436 !important;
+    border: 1px solid var(--border-main) !important;
+    color: var(--text-main) !important;
     font-size: 16px;
     font-weight: 650;
     line-height: 1.25;
@@ -170,16 +170,16 @@ body.tg-dark-theme #gameSelectorModal .game-list-content .text-muted {
 }
 
 .lobby-modal .form-control::placeholder {
-    color: #7b8491 !important;
+    color: var(--text-muted) !important;
     opacity: 1;
     font-weight: 550;
 }
 
 .lobby-modal .form-control:focus {
-    background: #ffffff !important;
-    border-color: rgba(108, 92, 231, 0.48) !important;
-    color: #2D3436 !important;
-    box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.1) !important;
+    background: var(--bg-app) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color), transparent 85%) !important;
 }
 
 .lobby-modal-code-input {
@@ -1393,4 +1393,31 @@ body.dark-mode #modal-detailed-stats .rewards-achievement-filter.is-active {
     max-width: 350px;
     padding: 12px;
     position: relative;
+}
+
+/* === SYSTEM MODALS (Alerts, Confirms) === */
+.system-modal {
+    background: var(--app-surface-raised, var(--bg-card));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--app-border, var(--border-glass));
+    color: var(--app-text, var(--text-main));
+    box-shadow: var(--shadow-strong);
+}
+
+.system-modal .text-muted,
+.system-modal p {
+    color: var(--app-text-muted, var(--text-muted)) !important;
+}
+
+.system-modal .system-modal-title,
+.system-modal h5,
+.system-modal h2 {
+    color: var(--app-text, var(--text-main)) !important;
+}
+
+.system-modal .system-modal-btn-secondary {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--app-border) !important;
+    color: var(--app-text) !important;
 }

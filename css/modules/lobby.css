@@ -531,8 +531,8 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
 .thermal-safe .home-secondary-action,
 .thermal-safe .recommended-game-card,
 .thermal-safe .home-public-rooms-card {
-    background: var(--home-surface-card-bg-solid, #fff) !important;
-    border-color: var(--home-surface-border) !important;
+    background: var(--home-surface-card-bg-solid, var(--app-surface-raised, var(--bg-card))) !important;
+    border-color: var(--home-surface-border, var(--app-border, var(--border-glass))) !important;
 }
 
 .thermal-safe .play-mode-card {

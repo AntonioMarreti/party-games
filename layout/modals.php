@@ -130,8 +130,8 @@
 <!-- 4. Confirmation Modal -->
 <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 340px;">
-        <div class="modal-content border-0 shadow-lg"
-            style="border-radius: 30px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);">
+        <div class="modal-content system-modal border-0 shadow-lg"
+            style="border-radius: 30px;">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold w-100 text-center mt-2" id="confirm-modal-title">Подтвердите</h5>
             </div>
@@ -151,8 +151,8 @@
 <!-- 5. Alert Modal -->
 <div class="modal fade" id="alertModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
     <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 320px;">
-        <div class="modal-content border-0 shadow-lg"
-            style="border-radius: 30px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+        <div class="modal-content system-modal border-0 shadow-lg"
+            style="border-radius: 30px;">
             <div class="modal-body p-4 text-center">
                 <div class="mb-3" id="alert-modal-icon-container">
                     <i class="bi bi-info-circle text-primary fs-1"></i>
@@ -168,8 +168,8 @@
 <!-- 6. Custom Alert Modal (HTML) -->
 <div class="modal fade" id="customAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1075;">
     <div class="modal-dialog modal-dialog-centered mx-auto" style="max-width: 340px;">
-        <div class="modal-content border-0 shadow-lg"
-            style="border-radius: 30px; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); border: 1px solid rgba(255, 255, 255, 0.18);">
+        <div class="modal-content system-modal border-0 shadow-lg"
+            style="border-radius: 30px;">
             <div class="modal-body p-4 text-center">
                 <div class="mb-3">
                     <i id="customAPIIcon" class="bi bi-robot text-primary"
@@ -290,7 +290,7 @@
 <!-- 9. QR Invite Modal -->
 <div class="modal fade" id="qrInviteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="width: 85%; max-width: 480px;">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 32px; padding: 20px; position: relative;">
+        <div class="modal-content system-modal border-0 shadow-lg" style="border-radius: 32px; padding: 20px; position: relative;">
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3"
                 onclick="closeModal('qrInviteModal')" data-bs-dismiss="modal" aria-label="Close"
                 style="z-index: 10;"></button>
@@ -298,7 +298,7 @@
                 <div style="width: 40px; height: 4px; background: #E0E0E0; border-radius: 2px;"></div>
             </div>
             <div class="text-center">
-                <h5 class="fw-bold mb-4" style="color: var(--text-dark); font-size: 18px;">Комната <span
+                <h5 class="fw-bold mb-4 system-modal-title" style="font-size: 18px;">Комната <span
                         id="modal-room-code-title">...</span></h5>
                 <div class="d-flex justify-content-center mb-3">
                     <div id="modal-qr-code"
@@ -321,8 +321,8 @@
                         onclick="sendToTelegram()">
                         <i class="bi bi-telegram me-2"></i> Отправить в чат
                     </button>
-                    <button class="btn py-3 rounded-4 fw-bold shadow-sm"
-                        style="background: #fff; color: var(--primary-color); border: 1px solid #eee; font-size: 18px;"
+                    <button class="btn system-modal-btn-secondary py-3 rounded-4 fw-bold shadow-sm"
+                        style="font-size: 18px;"
                         onclick="closeModal('qrInviteModal'); openInviteModal()">
                         <i class="bi bi-person-plus-fill me-2"></i> Позвать друга
                     </button>
