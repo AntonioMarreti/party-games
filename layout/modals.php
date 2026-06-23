@@ -363,7 +363,19 @@
     </div>
 </div>
 
-<!-- 12. Avatar Viewer Modal -->
+<!-- 12. Profile Badge Info Modal -->
+<div id="profileBadgeInfoModal" class="custom-modal-overlay" style="display: none;" role="dialog"
+    aria-modal="true" aria-labelledby="profile-badge-info-title">
+    <div class="custom-modal-content glass-panel profile-badge-info-modal">
+        <div class="profile-badge-info-mark" aria-hidden="true">β</div>
+        <h5 id="profile-badge-info-title" class="fw-bold mb-2">Бета-тестер</h5>
+        <p class="text-muted mb-2">Этот игрок помогает тестировать Party Games до общих релизов и влияет на развитие проекта.</p>
+        <p class="text-muted mb-4">Свой значок можно скрыть в настройках профиля.</p>
+        <button type="button" class="btn btn-primary w-100 rounded-pill" onclick="closeModal('profileBadgeInfoModal')">Понятно</button>
+    </div>
+</div>
+
+<!-- 13. Avatar Viewer Modal -->
 <div id="modal-avatar-view" class="custom-modal-overlay" onclick="closeModal('modal-avatar-view')">
     <div class="avatar-view-shell animate__animated animate__zoomIn"
         onclick="event.stopPropagation()">

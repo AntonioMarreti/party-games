@@ -411,7 +411,7 @@ function action_get_leaderboard($pdo, $user, $data)
     try {
         if ($type === 'global') {
             $sql = "
-                SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+                SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, u.is_tester, u.hide_profile_badge
                 FROM user_statistics s
                 JOIN users u ON u.id = s.user_id
                 WHERE u.is_hidden_in_leaderboard = 0
@@ -442,7 +442,7 @@ function action_get_leaderboard($pdo, $user, $data)
             $placeholders = implode(',', array_fill(0, count($fids), '?'));
 
             $sql = "
-                SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+                SELECT s.rating, s.total_wins, s.total_points_earned, u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, u.is_tester, u.hide_profile_badge
                 FROM user_statistics s
                 JOIN users u ON u.id = s.user_id
                 WHERE s.user_id IN ($placeholders)

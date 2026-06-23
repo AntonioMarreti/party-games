@@ -128,6 +128,11 @@ function normalize_user_public_fields($user)
         return $user;
     }
 
+    $isTester = !empty($user['is_tester']);
+    $badgeIsHidden = !empty($user['hide_profile_badge']);
+    $user['profile_badge'] = $isTester && !$badgeIsHidden ? 'beta_tester' : null;
+    unset($user['is_tester'], $user['hide_profile_badge']);
+
     if (array_key_exists('username', $user)) {
         $user['username'] = sanitize_public_username($user['username'] ?? '');
     }
@@ -152,6 +157,21 @@ function normalize_user_public_fields($user)
     }
 
     return $user;
+}
+
+function normalize_current_user_fields($user)
+{
+    if (!is_array($user)) {
+        return $user;
+    }
+
+    $isTester = !empty($user['is_tester']);
+    $badgeIsHidden = !empty($user['hide_profile_badge']);
+    $normalized = normalize_user_public_fields($user);
+    $normalized['is_tester'] = $isTester;
+    $normalized['hide_profile_badge'] = $badgeIsHidden;
+
+    return $normalized;
 }
 
 function normalize_user_public_list($users)

@@ -3,9 +3,7 @@
     <!-- Modern Header -->
     <div class="profile-header-modern" style="padding-top: calc(60px + env(safe-area-inset-top));">
         <!-- Added padding for notch -->
-        <div class="profile-avatar-xl" id="profile-avatar-big">
-            <div class="profile-level-badge-float" id="profile-level-badge">1</div>
-        </div>
+        <div class="profile-avatar-xl" id="profile-avatar-big"></div>
         <h2 class="fw-bold mb-0" id="profile-name-big">...</h2>
         <div class="profile-level-summary">
             <div class="profile-level-summary-top">

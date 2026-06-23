@@ -340,7 +340,7 @@ function action_get_state($pdo, $user, $data)
     if (!$room) {
         echo json_encode([
             'status' => 'no_room',
-            'user' => $user,
+            'user' => normalize_current_user_fields($user),
             'favorites' => $favorites
         ]);
         return;
@@ -350,7 +350,7 @@ function action_get_state($pdo, $user, $data)
     // Note: We might want to do this less frequently or async, but SQL is fast enough for now
     $pdo->prepare("UPDATE room_players SET last_active = NOW() WHERE room_id = ? AND user_id = ? AND last_active < (NOW() - INTERVAL 60 SECOND)")->execute([$room['id'], $user['id']]);
 
-    $stmt = $pdo->prepare("SELECT u.id, u.first_name, u.photo_url, u.custom_name, u.custom_avatar, rp.is_host, rp.score, rp.is_bot, rp.bot_difficulty 
+    $stmt = $pdo->prepare("SELECT u.id, u.first_name, u.photo_url, u.custom_name, u.custom_avatar, u.is_tester, u.hide_profile_badge, rp.is_host, rp.score, rp.is_bot, rp.bot_difficulty
                     FROM room_players rp 
                     JOIN users u ON u.id = rp.user_id 
                     WHERE rp.room_id = ?
@@ -477,7 +477,7 @@ function action_get_state($pdo, $user, $data)
 
     echo json_encode([
         'status' => 'in_room',
-        'user' => $user,
+        'user' => normalize_current_user_fields($user),
         'room' => $room,
         'players' => $players,
         'is_host' => $room['is_host'],

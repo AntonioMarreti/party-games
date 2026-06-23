@@ -151,6 +151,22 @@
             </div>
         </div>
 
+        <div class="settings-group settings-screen-group mb-4" id="profile-badge-settings-group" style="display:none;">
+            <div class="settings-section-head">
+                <h6 class="settings-section-title"><i class="bi bi-patch-check"></i>Профиль тестера</h6>
+            </div>
+            <div class="settings-item border-0 pb-0">
+                <div class="settings-label-wrap">
+                    <div class="settings-row-title">Показывать значок бета-тестера</div>
+                    <div class="settings-row-subtitle">Другие игроки увидят его рядом с вашим аватаром.</div>
+                </div>
+                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                    <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-showProfileBadge"
+                        onchange="toggleProfileBadgeSetting(this.checked)">
+                </div>
+            </div>
+        </div>
+
         <!-- 3.5. SECURITY CARD -->
         <div class="settings-group settings-screen-group mb-4">
             <div class="settings-section-head">

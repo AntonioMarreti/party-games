@@ -954,33 +954,13 @@ body.tg-dark-theme.dark-mode .profile-header-premium {
 }
 
 /* FIX: Ensure renderAvatar output fits inside the container */
-.profile-avatar-xl>div:not(.profile-level-badge-float):not(#profile-level-badge),
+.profile-avatar-xl>div,
 .profile-avatar-xl .avatar-wrapper,
 .profile-avatar-xl .avatar-circle,
 .profile-avatar-xl img {
     width: 100% !important;
     height: 100% !important;
     border-radius: 50%;
-}
-
-.profile-level-badge-float {
-    position: absolute;
-    bottom: -5px;
-    right: -5px;
-    background: var(--accent-gold-gradient);
-    /* Keeping gold for now as it's a specific badge, but could be tokenized later */
-    color: var(--accent-gold-text);
-    font-weight: 800;
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    border: 2px solid white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-body.dark-mode .profile-level-badge-float {
-    box-shadow: 0 0 10px color-mix(in srgb, var(--accent-gold), transparent 40%);
-    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .profile-level-summary {

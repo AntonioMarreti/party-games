@@ -31,9 +31,31 @@ function action_update_settings($pdo, $user, $data)
             ->execute([$isHidden, $user['id']]);
     }
 
-    // Future: Handle other server-side settings here
+    if (array_key_exists('show_profile_badge', $data)) {
+        if (empty($user['is_tester'])) {
+            sendError('Setting is not available');
+        }
 
-    echo json_encode(['status' => 'ok']);
+        $showBadge = filter_var($data['show_profile_badge'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($showBadge === null) {
+            sendError('Invalid badge setting');
+        }
+
+        $pdo->prepare("UPDATE users SET hide_profile_badge = ? WHERE id = ?")
+            ->execute([$showBadge ? 0 : 1, $user['id']]);
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->execute([$user['id']]);
+    $freshUser = $stmt->fetch();
+    if ($freshUser) {
+        $freshUser = array_merge($user, $freshUser);
+    }
+
+    echo json_encode([
+        'status' => 'ok',
+        'user' => normalize_current_user_fields($freshUser ?: $user)
+    ]);
 }
 
 // Lazy migration safety net for user_favorites.
@@ -109,7 +131,7 @@ function action_get_me($pdo, $user, $data)
 {
     // Return fresh user data
     // calculated columns or specific fields can be added here
-    echo json_encode(['status' => 'ok', 'user' => normalize_user_public_fields($user)]);
+    echo json_encode(['status' => 'ok', 'user' => normalize_current_user_fields($user)]);
 }
 
 function action_get_favorites($pdo, $user, $data)

@@ -94,6 +94,22 @@ function getAvatarImg(src, style, altText = 'Avatar', onerrorCode = "this.style.
     return `<img src="${safeSrc}" alt="${safeAlt}" style="${style}" onerror="${onerrorCode}" ${extraAttrs}>`;
 }
 
+export function renderProfileBadge(user, sizeStr = 'md') {
+    if (user?.profile_badge !== 'beta_tester') return '';
+
+    const safeSize = ['sm', 'md', 'lg', 'xl', 'xxl'].includes(sizeStr) ? sizeStr : 'md';
+    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge="beta_tester" aria-label="Что означает значок бета-тестера">β</button>`;
+}
+
+document.addEventListener('click', (event) => {
+    const badge = event.target instanceof Element ? event.target.closest('[data-profile-badge]') : null;
+    if (!badge || badge.dataset.profileBadge !== 'beta_tester') return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (window.openModal) window.openModal('profileBadgeInfoModal');
+}, true);
+
 /**
  * Renders an avatar (Circle or Square) based on user data
  * @param {Object} user User object
@@ -186,9 +202,13 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     const clickHandler = disableClick ? '' : `onclick="event.stopPropagation(); if(window.openAvatarViewer) window.openAvatarViewer('${tempUid}')"`;
     const cursorStyle = disableClick ? '' : 'cursor:pointer;';
 
+    const badgeHtml = renderProfileBadge(user, sizeStr);
+    const safeUserId = escapeAvatarHtml(user.id ?? '');
+    let avatarHtml = '';
+
     if (isEmoji) {
         const fontSize = Math.floor(sizePx * 0.6);
-        return `
+        avatarHtml = `
             <div class="avatar-circle" 
                  ${clickHandler}
                  style="display:flex; align-items:center; justify-content:center; flex:0 0 ${sizePx}px; width:${sizePx}px; height:${sizePx}px; min-width:${sizePx}px; max-width:${sizePx}px; background:${bgColor}; border-radius:50%; ${cursorStyle} overflow:hidden;">
@@ -198,13 +218,15 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     } else {
         const initials = escapeAvatarHtml(getUserInitials(user, sizeStr === 'sm'));
         const fontSize = sizeStr === 'sm' ? Math.floor(sizePx * 0.5) : Math.floor(sizePx * 0.45);
-        return `
+        avatarHtml = `
             <div class="avatar-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; flex:0 0 ${sizePx}px; width:${sizePx}px; height:${sizePx}px; min-width:${sizePx}px; max-width:${sizePx}px; border-radius:50%; overflow:hidden; background:${palette}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); ${cursorStyle}" ${clickHandler}>
                 <span style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:${fontSize}px; font-weight:700; user-select:none; text-shadow:0 1px 2px rgba(0,0,0,0.15); pointer-events:none;">${initials}</span>
                 ${innerContent}
             </div>
         `;
     }
+
+    return `<div class="avatar-with-badge avatar-with-badge--${sizeStr}" data-avatar-user-id="${safeUserId}" style="width:${sizePx}px; height:${sizePx}px; flex:0 0 ${sizePx}px;">${avatarHtml}${badgeHtml}</div>`;
 }
 
 /**
@@ -316,5 +338,6 @@ export function handleViewerAvatarError(imgEl) {
 
 // === EXPOSE TO WINDOW (Legacy Bridge) ===
 window.renderAvatar = renderAvatar;
+window.renderProfileBadge = renderProfileBadge;
 window.openAvatarViewer = openAvatarViewer;
 window.handleViewerAvatarError = handleViewerAvatarError;

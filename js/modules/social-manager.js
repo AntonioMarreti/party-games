@@ -39,7 +39,6 @@ async function loadMyProfileStats() {
         const lvl = typeof window.calculateLevel === 'function' ? window.calculateLevel(xp) : 1;
         const progress = getLevelProgress(xp, lvl);
         if (window.safeText) {
-            window.safeText('profile-level-badge', lvl);
             window.safeText('profile-level-text', 'Уровень ' + lvl);
             window.safeText('profile-xp-text', xp + ' XP');
         }
@@ -1453,12 +1452,59 @@ const COLOR_OPTIONS = [
     'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
 ];
 
+let profileBadgeSettingInFlight = false;
+
+function refreshRenderedProfileBadges(user) {
+    const userId = String(user?.id ?? '');
+    if (!userId) return;
+
+    document.querySelectorAll('[data-avatar-user-id]').forEach((avatar) => {
+        if (avatar.dataset.avatarUserId !== userId) return;
+        avatar.querySelectorAll('[data-profile-badge]').forEach((badge) => badge.remove());
+        if (window.renderProfileBadge) {
+            const sizeClass = [...avatar.classList].find((name) => name.startsWith('avatar-with-badge--'));
+            const size = sizeClass ? sizeClass.replace('avatar-with-badge--', '') : 'md';
+            avatar.insertAdjacentHTML('beforeend', window.renderProfileBadge(user, size));
+        }
+    });
+}
+
+async function toggleProfileBadgeSetting(showBadge) {
+    const toggle = document.getElementById('setting-showProfileBadge');
+    if (profileBadgeSettingInFlight || !window.apiRequest) {
+        if (toggle) toggle.checked = !showBadge;
+        return;
+    }
+
+    profileBadgeSettingInFlight = true;
+    if (toggle) toggle.disabled = true;
+
+    try {
+        const response = await window.apiRequest({
+            action: 'update_settings',
+            show_profile_badge: showBadge
+        });
+        if (response.status !== 'ok' || !response.user) throw new Error(response.message || 'Badge update failed');
+
+        refreshRenderedProfileBadges(response.user);
+        renderCurrentUser(response.user);
+    } catch (error) {
+        if (toggle) toggle.checked = !showBadge;
+        console.error('Profile badge setting update failed:', error);
+    } finally {
+        profileBadgeSettingInFlight = false;
+        if (toggle) toggle.disabled = false;
+    }
+}
+
 function renderCurrentUser(user) {
     const userHash = JSON.stringify({
         id: user.id,
         name: user.custom_name || user.first_name,
         photo: user.photo_url,
-        avatar: user.custom_avatar
+        avatar: user.custom_avatar,
+        profileBadge: user.profile_badge,
+        hideProfileBadge: user.hide_profile_badge
     });
 
     const userChanged = userHash !== lastUserUpdateHash;
@@ -1470,6 +1516,10 @@ function renderCurrentUser(user) {
     window.isTesterUser = user?.is_tester === true
         || user?.is_tester === 1
         || user?.is_tester === '1';
+    const badgeSettingsGroup = document.getElementById('profile-badge-settings-group');
+    if (badgeSettingsGroup) badgeSettingsGroup.style.display = window.isTesterUser ? '' : 'none';
+    const badgeToggle = document.getElementById('setting-showProfileBadge');
+    if (badgeToggle) badgeToggle.checked = window.isTesterUser && !user.hide_profile_badge;
     if (window.ScrollQA && typeof window.ScrollQA.refreshAccess === 'function') {
         window.ScrollQA.refreshAccess(user);
     }
@@ -1488,10 +1538,7 @@ function renderCurrentUser(user) {
     // Avatar Big
     const bigAv = document.getElementById('profile-avatar-big');
     if (bigAv && window.renderAvatar) {
-        // Preserve badge if it exists
-        const badge = bigAv.querySelector('.profile-level-badge-float');
         bigAv.innerHTML = window.renderAvatar(user, 'xxl');
-        if (badge) bigAv.appendChild(badge);
     }
 
     // Also update "My Stats" if needed
@@ -1924,7 +1971,8 @@ window.SocialManager = {
     selectColor,
     saveProfile,
     switchAvatarTab,
-    switchFriendsTab
+    switchFriendsTab,
+    toggleProfileBadgeSetting
 };
 
 // Global aliases
@@ -1957,6 +2005,7 @@ window.closeFriendsScreen = closeFriendsScreen;
 window.loadFriendsList = loadFriendsList;
 window.loadFriendRequests = loadFriendRequests;
 window.switchFriendsTab = switchFriendsTab;
+window.toggleProfileBadgeSetting = toggleProfileBadgeSetting;
 
 window.addEventListener('tabChanged', (event) => {
     if (event.detail && event.detail.tabId === 'profile') {

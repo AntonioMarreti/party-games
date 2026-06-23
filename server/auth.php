@@ -201,7 +201,7 @@ function getUserByToken($token)
 
     if ($user) {
         $user['is_admin'] = in_array((int) $user['telegram_id'], ADMIN_IDS);
-        $user = normalize_user_public_fields($user);
+        $user = normalize_current_user_fields($user);
         // Update last_used for this session
         $lastUsedTs = !empty($user['session_last_used']) ? strtotime($user['session_last_used']) : 0;
         if (!$lastUsedTs || $lastUsedTs < time() - 300) {

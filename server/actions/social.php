@@ -13,7 +13,7 @@ function action_search_users($pdo, $user, $data) {
 
     try {
         $stmt = $pdo->prepare("
-            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, u.is_tester, u.hide_profile_badge
             FROM users u
             LEFT JOIN friendships f
                 ON (
@@ -152,7 +152,7 @@ function action_get_public_profile($pdo, $user, $data) {
     if (!$targetId) sendError('Invalid user ID');
     
     // 1. Get User Info
-    $stmt = $pdo->prepare("SELECT id, first_name, custom_name, photo_url, custom_avatar FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT id, first_name, custom_name, photo_url, custom_avatar, is_tester, hide_profile_badge FROM users WHERE id = ?");
     $stmt->execute([$targetId]);
     $targetUser = $stmt->fetch();
     
@@ -299,7 +299,7 @@ function action_get_friends($pdo, $user, $data) {
         // Complex query because user could be user_id OR friend_id
         
         $sql = "
-            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, f.status
+            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, u.is_tester, u.hide_profile_badge, f.status
             FROM friendships f
             JOIN users u ON (u.id = CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END)
             WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
@@ -311,7 +311,7 @@ function action_get_friends($pdo, $user, $data) {
         
         // Also get pending requests (incoming)
         $sqlPending = "
-            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar
+            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, u.is_tester, u.hide_profile_badge
             FROM friendships f
             JOIN users u ON u.id = f.user_id
             WHERE f.friend_id = ? AND f.status = 'pending'

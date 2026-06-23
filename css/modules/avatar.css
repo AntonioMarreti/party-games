@@ -1,3 +1,109 @@
+/* Profile badges */
+.avatar-with-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    vertical-align: middle;
+}
+
+.avatar-with-badge > .avatar-wrapper,
+.avatar-with-badge > .avatar-circle {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.avatar-badge {
+    position: absolute;
+    right: -11px;
+    bottom: -11px;
+    z-index: 4;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: transparent;
+    font-size: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.avatar-badge::before {
+    content: 'β';
+    position: absolute;
+    inset: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--app-surface, #fff);
+    border-radius: 50%;
+    background: #273248;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
+}
+
+.avatar-badge--sm::before {
+    inset: 11px;
+    font-size: 9px;
+}
+
+.avatar-badge--lg {
+    right: -10px;
+    bottom: -10px;
+    width: 40px;
+    height: 40px;
+}
+
+.avatar-badge--lg::before {
+    inset: 11px;
+    font-size: 11px;
+}
+
+.avatar-badge--xl,
+.avatar-badge--xxl {
+    right: -9px;
+    bottom: -9px;
+    width: 44px;
+    height: 44px;
+}
+
+.avatar-badge--xl::before,
+.avatar-badge--xxl::before {
+    inset: 10px;
+    font-size: 14px;
+    border-width: 3px;
+}
+
+.avatar-badge:focus-visible {
+    outline: 3px solid var(--primary-color, #6366f1);
+    outline-offset: 1px;
+}
+
+.profile-badge-info-modal {
+    max-width: 330px;
+    text-align: center;
+}
+
+.profile-badge-info-mark {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #273248;
+    color: #fff;
+    font-size: 25px;
+    font-weight: 800;
+}
+
 /* Avatar Editor Styles */
 #avatar-editor-overlay {
     background-color: var(--bg-app);
