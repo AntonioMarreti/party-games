@@ -85,25 +85,6 @@
     outline-offset: 1px;
 }
 
-.profile-badge-info-modal {
-    max-width: 330px;
-    text-align: center;
-}
-
-.profile-badge-info-mark {
-    width: 52px;
-    height: 52px;
-    margin: 0 auto 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: #273248;
-    color: #fff;
-    font-size: 25px;
-    font-weight: 800;
-}
-
 /* Avatar Editor Styles */
 #avatar-editor-overlay {
     background-color: var(--bg-app);

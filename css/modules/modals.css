@@ -491,6 +491,134 @@ body.thermal-safe .lobby-modal .create-room-public-row {
     animation: alertBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* Reusable profile badge information modal */
+.badge-info-modal-overlay {
+    box-sizing: border-box;
+    height: 100dvh !important;
+    padding: 16px !important;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    transition: none !important;
+}
+
+.custom-modal-content.badge-info-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 344px) !important;
+    max-width: 344px !important;
+    max-height: 100%;
+    margin: auto !important;
+    overflow: hidden;
+    border: 1px solid var(--app-border) !important;
+    border-radius: 24px;
+    background: var(--app-surface-raised);
+    color: var(--app-text);
+    box-shadow: var(--shadow-main);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    animation: none;
+}
+
+.badge-info-modal__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--app-border);
+    border-radius: 50%;
+    background: var(--app-surface);
+    color: var(--app-text-muted);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.badge-info-modal__close:focus-visible,
+.badge-info-modal__action:focus-visible {
+    outline: 3px solid var(--app-focus-ring);
+    outline-offset: 2px;
+}
+
+.badge-info-modal__body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 24px 24px 16px;
+    text-align: center;
+}
+
+.badge-info-modal__icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--app-border);
+    border-radius: 50%;
+    background: var(--app-accent-soft);
+    color: var(--app-accent);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.badge-info-modal__title {
+    margin: 0 36px 10px;
+    color: var(--app-text);
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.badge-info-modal__copy {
+    color: var(--app-text-muted);
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+.badge-info-modal__copy p {
+    margin: 0;
+}
+
+.badge-info-modal__copy p + p {
+    margin-top: 10px;
+}
+
+.badge-info-modal__footer {
+    flex: 0 0 auto;
+    padding: 14px 24px 22px;
+    border-top: 1px solid var(--app-border);
+    background: var(--app-surface-raised);
+}
+
+.badge-info-modal__action {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 18px;
+    border: 1px solid var(--app-accent);
+    border-radius: 14px;
+    background: var(--app-accent);
+    color: var(--app-accent-text);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--app-text), transparent 82%);
+    font-size: 15px;
+    font-weight: 750;
+    line-height: 1.2;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
 .daily-tasks-modal {
     padding: 18px;
     max-height: min(82vh, 620px);

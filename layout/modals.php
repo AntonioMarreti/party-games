@@ -364,14 +364,26 @@
 </div>
 
 <!-- 12. Profile Badge Info Modal -->
-<div id="profileBadgeInfoModal" class="custom-modal-overlay" style="display: none;" role="dialog"
+<div id="profileBadgeInfoModal" class="custom-modal-overlay badge-info-modal-overlay" style="display: none;" role="dialog"
     aria-modal="true" aria-labelledby="profile-badge-info-title">
-    <div class="custom-modal-content glass-panel profile-badge-info-modal">
-        <div class="profile-badge-info-mark" aria-hidden="true">β</div>
-        <h5 id="profile-badge-info-title" class="fw-bold mb-2">Бета-тестер</h5>
-        <p class="text-muted mb-2">Этот игрок помогает тестировать Party Games до общих релизов и влияет на развитие проекта.</p>
-        <p class="text-muted mb-4">Свой значок можно скрыть в настройках профиля.</p>
-        <button type="button" class="btn btn-primary w-100 rounded-pill" onclick="closeModal('profileBadgeInfoModal')">Понятно</button>
+    <div class="custom-modal-content badge-info-modal" data-badge-info-id="beta_tester">
+        <button type="button" class="badge-info-modal__close" data-bs-dismiss="modal"
+            aria-label="Закрыть информацию о значке">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+
+        <div class="badge-info-modal__body">
+            <div class="badge-info-modal__icon" data-badge-info-icon aria-hidden="true">β</div>
+            <h5 id="profile-badge-info-title" class="badge-info-modal__title">Бета-тестер</h5>
+            <div class="badge-info-modal__copy">
+                <p>Этот игрок помогает тестировать Party Games до общих релизов и влияет на развитие проекта.</p>
+                <p>Свой значок можно скрыть в настройках профиля.</p>
+            </div>
+        </div>
+
+        <div class="badge-info-modal__footer">
+            <button type="button" class="badge-info-modal__action" data-bs-dismiss="modal">Понятно</button>
+        </div>
     </div>
 </div>
 
