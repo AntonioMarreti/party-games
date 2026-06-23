@@ -173,7 +173,12 @@ body.thermal-safe {
 
 .thermal-safe .header-bg {
     background: var(--primary-color) !important;
+    color: var(--app-accent-text) !important;
     box-shadow: var(--thermal-shadow-card) !important;
+}
+
+.thermal-safe .header-bg .text-white {
+    color: var(--app-accent-text) !important;
 }
 
 .thermal-safe .login-bg-animated,
@@ -213,7 +218,7 @@ body.thermal-safe {
 .btn-primary {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
-    color: var(--tg-theme-button-text-color, var(--theme-button-text-color, #fff)) !important;
+    color: var(--app-accent-text) !important;
 }
 
 .btn-primary:hover,
@@ -221,7 +226,7 @@ body.thermal-safe {
 .btn-primary:active {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
-    color: var(--tg-theme-button-text-color, var(--theme-button-text-color, #fff)) !important;
+    color: var(--app-accent-text) !important;
     filter: brightness(0.96);
 }
 
@@ -235,11 +240,12 @@ body.thermal-safe {
 .btn-outline-primary:active {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
-    color: var(--tg-theme-button-text-color, var(--theme-button-text-color, #fff)) !important;
+    color: var(--app-accent-text) !important;
 }
 
 .bg-primary {
     background-color: var(--primary-color) !important;
+    color: var(--app-accent-text) !important;
 }
 
 .border-primary {

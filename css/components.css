@@ -1387,7 +1387,7 @@ body.dark-mode .game-summary-share-preview {
 
 .rooms-mode-btn.active {
     background: var(--primary-color);
-    color: #fff;
+    color: var(--app-accent-text);
     box-shadow: 0 10px 24px rgba(108, 92, 231, 0.22);
 }
 
@@ -1611,7 +1611,7 @@ body.dark-mode .game-summary-share-preview {
 
 .thermal-safe .rooms-mode-btn.active {
     background: var(--primary-color) !important;
-    color: #fff !important;
+    color: var(--app-accent-text) !important;
     box-shadow: none !important;
 }
 
@@ -1649,6 +1649,6 @@ body.dark-mode .game-summary-share-preview {
 
 .thermal-safe .room-card-primary-btn {
     background: var(--primary-color) !important;
-    color: #fff !important;
+    color: var(--app-accent-text) !important;
     box-shadow: none !important;
 }

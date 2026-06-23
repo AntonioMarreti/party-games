@@ -120,8 +120,13 @@ body.tg-platform-android.safe-top #tab-home .header-bg.home-hero {
 
 .thermal-safe .home-daily-tasks-button {
     background: rgba(255, 255, 255, 0.18) !important;
+    color: var(--app-accent-text) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+}
+
+.thermal-safe .home-hero-text {
+    color: var(--app-accent-text) !important;
 }
 
 .home-hero-text {

@@ -324,7 +324,7 @@ body.thermal-safe .lobby-modal .create-room-public-row {
     width: 100%;
     border-radius: 50rem;
     font-weight: 700;
-    color: white !important;
+    color: var(--app-accent-text) !important;
     background: var(--primary-gradient);
     border: none !important;
     padding: 12px;
