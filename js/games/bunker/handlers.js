@@ -92,11 +92,11 @@ window.bunkerFinish = async function (evt) {
 
             await window.apiRequest({ action: 'stop_game' });
 
-            // Memory Leak Fix: Clear Ticker on Exit
-            if (window.bunkerTickInterval) {
+            if (typeof window.stopBunkerTick === 'function') {
+                window.stopBunkerTick('finish_game');
+            } else if (window.bunkerTickInterval) {
                 clearInterval(window.bunkerTickInterval);
                 window.bunkerTickInterval = null;
-                console.log("[Bunker] Ticker cleared on exit.");
             }
 
             window.bunkerState = { activeTab: 'me', lastRes: null, lastServerState: null, lastStateHash: '' };

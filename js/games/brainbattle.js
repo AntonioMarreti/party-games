@@ -72,7 +72,10 @@
 
     async function render_brainbattle(res) {
         const container = document.getElementById('game-area');
-        if (!container) return;
+        if (!container) {
+            stopBrainBattleAutoTick('missing_game_area');
+            return;
+        }
 
         // 1. ЗАГРУЗЧИК
         if (!window.BB_ENGINES_LOADED) {
@@ -356,7 +359,18 @@
 
     function syncBrainBattleAutoTick(state, res = {}) {
         const roomKey = getBrainBattleAutoTickRoomKey(res);
-        if (!state || state.phase !== 'playing' || res?.room?.status !== 'playing' || !roomKey) {
+        const gameScreen = document.getElementById('screen-game');
+        const isGameScreenActive = !!gameScreen?.classList.contains('active-screen');
+        if (
+            document.hidden
+            || !state
+            || state.phase !== 'playing'
+            || res?.room?.status !== 'playing'
+            || res?.room?.game_type !== 'brainbattle'
+            || Number(res?.is_host || 0) !== 1
+            || !isGameScreenActive
+            || !roomKey
+        ) {
             stopBrainBattleAutoTick('not_playing_or_room_inactive', {
                 phase: state?.phase || null,
                 room_status: res?.room?.status || null,
@@ -371,11 +385,17 @@
             roomCode: res?.room?.room_code || null,
             phase: state.phase,
             roundId: state.round_id || null,
-            currentRound: state.current_round || null
+            currentRound: state.current_round || null,
+            gameType: res?.room?.game_type || null,
+            isHost: Number(res?.is_host || 0) === 1
         });
     }
 
     function startBrainBattleAutoTick(snapshot) {
+        if (document.hidden || !snapshot?.isHost || snapshot?.gameType !== 'brainbattle') {
+            stopBrainBattleAutoTick('start_guard');
+            return;
+        }
         if (brainBattleAutoTickInterval && brainBattleAutoTickRoomKey === snapshot.roomKey) {
             brainBattleAutoTickSnapshot = snapshot;
             debugBrainBattleAutoTick('already_running', {
@@ -407,9 +427,10 @@
     }
 
     function stopBrainBattleAutoTick(reason = 'stop', details = {}) {
-        if (!brainBattleAutoTickInterval) return;
-        clearInterval(brainBattleAutoTickInterval);
-        brainBattleAutoTickInterval = null;
+        if (brainBattleAutoTickInterval) {
+            clearInterval(brainBattleAutoTickInterval);
+            brainBattleAutoTickInterval = null;
+        }
         brainBattleAutoTickRoomKey = '';
         brainBattleAutoTickSnapshot = null;
         debugBrainBattleAutoTick('stop', { reason, ...details });
@@ -419,13 +440,20 @@
         if (brainBattleAutoTickInFlight) return;
 
         const gameScreen = document.getElementById('screen-game');
-        const isGameScreenActive = !gameScreen || gameScreen.classList.contains('active-screen');
+        const isGameScreenActive = !!gameScreen?.classList.contains('active-screen');
         const snapshot = brainBattleAutoTickSnapshot;
-        const selectedGameId = window.selectedGameId || '';
-        if (!isGameScreenActive || (selectedGameId && selectedGameId !== 'brainbattle') || !snapshot || snapshot.phase !== 'playing') {
+        if (
+            document.hidden
+            || !isGameScreenActive
+            || !document.getElementById('bb-wrapper')
+            || !snapshot
+            || snapshot.phase !== 'playing'
+            || snapshot.gameType !== 'brainbattle'
+            || !snapshot.isHost
+        ) {
             stopBrainBattleAutoTick('runtime_guard', {
+                document_hidden: document.hidden,
                 is_game_screen_active: isGameScreenActive,
-                selected_game_id: selectedGameId || null,
                 phase: snapshot?.phase || null,
                 room_key: snapshot?.roomKey || null
             });
@@ -463,6 +491,8 @@
             brainBattleAutoTickInFlight = false;
         }
     }
+
+    window.stopBrainBattleAutoTick = stopBrainBattleAutoTick;
 
     function getBrainBattleAutoTickRoomKey(res = {}) {
         const roomId = res?.room?.id;

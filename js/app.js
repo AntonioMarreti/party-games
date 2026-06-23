@@ -671,12 +671,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // === STATE MANAGEMENT ===
+function stopGameBackgroundWorkExcept(activeGameType = null, reason = 'lifecycle') {
+    const lifecycles = [
+        ['bunker', 'stopBunkerTick'],
+        ['wordclash_party', 'stopWordClashPartyTick'],
+        ['brainbattle', 'stopBrainBattleAutoTick']
+    ];
+
+    lifecycles.forEach(([gameType, stopName]) => {
+        if (activeGameType === gameType) return;
+        if (typeof window[stopName] === 'function') {
+            window[stopName](reason);
+        }
+    });
+}
+
+window.stopGameBackgroundWorkExcept = stopGameBackgroundWorkExcept;
+
 window.addEventListener('screenChanged', (e) => {
     const id = e.detail.screenId;
     if (id === 'screen-game') {
         if (typeof renderReactionToolbar === 'function') renderReactionToolbar();
+        if (!document.hidden && window.currentRoomCode && typeof window.checkState === 'function') {
+            window.checkState();
+        }
     } else {
         if (typeof hideReactionToolbar === 'function') hideReactionToolbar();
+        stopGameBackgroundWorkExcept(null, 'screen_changed');
     }
 
     if (id === 'screen-settings' && window.syncColorButtonSelection) syncColorButtonSelection();
@@ -727,6 +748,7 @@ window.addEventListener('tabChanged', (e) => {
 let checkStatePromise = null;
 
 window.checkState = async function (options = {}) {
+    if (document.hidden && options.allowWhenHidden !== true) return;
     const isLeaving = window.RoomManager ? window.RoomManager.getIsLeavingProcess() : false;
     if (isLeaving) return;
     if (checkStatePromise) return checkStatePromise;
@@ -786,6 +808,7 @@ window.checkState = async function (options = {}) {
                 && gameType !== 'lobby'
                 && roomStatus !== 'waiting'
                 && (roomStatus === 'playing' || hasGameState);
+            stopGameBackgroundWorkExcept(shouldRenderGame ? gameType : null, 'game_state_changed');
             if (gameType && gameType !== 'lobby') {
                 window.selectedGameId = gameType;
             }
@@ -851,6 +874,7 @@ window.checkState = async function (options = {}) {
             if (window.updateNotificationBadge) updateNotificationBadge(notifsCount);
         } else {
             if (window.RoomManager) window.RoomManager.stopPolling();
+            stopGameBackgroundWorkExcept(null, 'left_room');
             window.currentRoomCode = null;
             window.isHost = false;
 
@@ -924,12 +948,20 @@ async function loadGameScripts(files) {
     }
 }
 
+let visibilitySyncPromise = null;
+
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
         if (window.RoomManager) window.RoomManager.stopPolling();
+        stopGameBackgroundWorkExcept(null, 'document_hidden');
     } else if (window.currentRoomCode && window.RoomManager) {
         window.RoomManager.startPolling();
-        checkState();
+        if (!visibilitySyncPromise) {
+            visibilitySyncPromise = Promise.resolve(checkState({ visibilityResume: true }))
+                .finally(() => {
+                    visibilitySyncPromise = null;
+                });
+        }
     }
 });
 

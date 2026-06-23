@@ -1142,8 +1142,13 @@ async function sendScheduledGameManualReminder(id) {
 // === POLLING ===
 
 function startPolling() {
+    if (document.hidden) return;
     if (pollInterval) return;
     pollInterval = setInterval(() => {
+        if (document.hidden) {
+            stopPolling();
+            return;
+        }
         if (window.__pgSuspendPolling) return;
         if (typeof window.checkState === 'function') window.checkState();
     }, 3000);

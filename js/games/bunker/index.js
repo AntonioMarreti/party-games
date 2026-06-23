@@ -1,13 +1,22 @@
 window.render_bunker = async function (res) {
     var container = document.getElementById('game-area');
-    if (!container) return;
+    if (!container) {
+        stopBunkerTick('missing_game_area');
+        return;
+    }
 
-    if (!res || !res.room) return;
+    if (!res || !res.room) {
+        stopBunkerTick('missing_room');
+        return;
+    }
 
     var state = typeof res.room.game_state === 'string'
         ? JSON.parse(res.room.game_state)
         : res.room.game_state;
-    if (!state) return;
+    if (!state) {
+        stopBunkerTick('missing_state');
+        return;
+    }
 
     // Ensure Host Status is updated for Ticker
     if (typeof res.is_host !== 'undefined') window.isHost = res.is_host;
@@ -48,6 +57,8 @@ window.render_bunker = async function (res) {
         wrapper.className = 'bunker-theme-wrapper animate__animated animate__fadeIn';
         container.appendChild(wrapper);
     }
+
+    syncBunkerTickLifecycle(state, res);
 
     // Check for new history items (Reveal Animations)
     if (lastState && state.history && state.history.length > (lastState.history ? lastState.history.length : 0)) {
@@ -142,25 +153,99 @@ window.render_bunker = async function (res) {
     }
 })();
 
-// --- TICK LOOP ---
-// Hosts send tick to server to drive bot AI
-if (window.bunkerTickInterval) {
-    clearInterval(window.bunkerTickInterval);
+// --- TICK LIFECYCLE ---
+// Server tick is only useful while the active reveal turn belongs to a bot.
+var bunkerTickInFlight = false;
+var bunkerTickSnapshot = null;
+
+function isBunkerGameScreenActive() {
+    var screen = document.getElementById('screen-game');
+    var wrapper = document.getElementById('bunker-wrapper');
+    return !!(screen && screen.classList.contains('active-screen') && wrapper && wrapper.isConnected);
 }
 
-window.bunkerTickInterval = setInterval(function () {
-    if (window.isHost) {
-        var fd = new FormData();
-        fd.append('action', 'game_action');
-        fd.append('type', 'tick');
-        fd.append('token', localStorage.getItem('pg_token'));
+function bunkerCurrentBotNeedsTick(state, res) {
+    if (!state || state.phase !== 'round' || state.turn_phase !== 'reveal') return false;
+    var currentPlayerId = String(state.current_player_id || '');
+    if (!currentPlayerId) return false;
+    var players = res?.players || res?.room?.players || [];
+    return players.some(function (player) {
+        return String(player?.id || player?.user_id || '') === currentPlayerId && Number(player?.is_bot || 0) === 1;
+    });
+}
 
-        fetch('server/api.php', {
+function canRunBunkerTick(snapshot = bunkerTickSnapshot) {
+    var res = snapshot?.res;
+    var state = snapshot?.state;
+    return !!(
+        snapshot
+        && !document.hidden
+        && res?.room?.game_type === 'bunker'
+        && res?.room?.status === 'playing'
+        && Number(res?.is_host || 0) === 1
+        && isBunkerGameScreenActive()
+        && bunkerCurrentBotNeedsTick(state, res)
+    );
+}
+
+function stopBunkerTick(reason = 'stop') {
+    if (window.bunkerTickInterval) {
+        clearInterval(window.bunkerTickInterval);
+        window.bunkerTickInterval = null;
+    }
+    bunkerTickSnapshot = null;
+    if (window.DEBUG_BUNKER_TICK === true) {
+        console.debug('[Bunker tick] stopped', reason);
+    }
+}
+
+async function runBunkerTick() {
+    if (!canRunBunkerTick()) {
+        stopBunkerTick('runtime_guard');
+        return;
+    }
+    if (bunkerTickInFlight) return;
+
+    bunkerTickInFlight = true;
+    var fd = new FormData();
+    fd.append('action', 'game_action');
+    fd.append('type', 'tick');
+    fd.append('token', localStorage.getItem('pg_token'));
+
+    try {
+        await fetch('server/api.php', {
             method: 'POST',
             body: fd
         });
+    } catch (error) {
+        console.warn('[Bunker tick] request failed', error);
+    } finally {
+        bunkerTickInFlight = false;
     }
-}, 2000);
+}
+
+function startBunkerTick() {
+    if (!canRunBunkerTick()) {
+        stopBunkerTick('not_required');
+        return;
+    }
+    if (window.bunkerTickInterval) return;
+    window.bunkerTickInterval = setInterval(runBunkerTick, 2000);
+}
+
+function syncBunkerTickLifecycle(state, res) {
+    bunkerTickSnapshot = { state: state, res: res };
+    if (canRunBunkerTick()) startBunkerTick();
+    else stopBunkerTick('state_not_eligible');
+}
+
+if (window.bunkerTickInterval) {
+    clearInterval(window.bunkerTickInterval);
+    window.bunkerTickInterval = null;
+}
+
+window.stopBunkerTick = stopBunkerTick;
+window.syncBunkerTickLifecycle = syncBunkerTickLifecycle;
 
 // --- HELPERS ---
 

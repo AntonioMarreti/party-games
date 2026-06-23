@@ -6,6 +6,84 @@
     ];
     let currentGuess = '';
     let currentGuessKey = '';
+    let wcpTickInFlight = false;
+    let wcpTickSnapshot = null;
+
+    function isWordClashPartyScreenActive() {
+        const screen = document.getElementById('screen-game');
+        const shell = document.getElementById('wcp-shell');
+        return !!(screen && screen.classList.contains('active-screen') && shell && shell.isConnected);
+    }
+
+    function wordClashPartyHasBots(res) {
+        const players = res?.players || res?.room?.players || [];
+        return players.some(player => Number(player?.is_bot || 0) === 1);
+    }
+
+    function canRunWordClashPartyTick(snapshot = wcpTickSnapshot) {
+        const res = snapshot?.res;
+        const state = snapshot?.state;
+        return !!(
+            snapshot
+            && !document.hidden
+            && res?.room?.game_type === 'wordclash_party'
+            && res?.room?.status === 'playing'
+            && isHost(res)
+            && wordClashPartyHasBots(res)
+            && ['leader_choose', 'playing'].includes(state?.phase)
+            && isWordClashPartyScreenActive()
+        );
+    }
+
+    function stopWordClashPartyTick(reason = 'stop') {
+        if (window.wcpTickInterval) {
+            clearInterval(window.wcpTickInterval);
+            window.wcpTickInterval = null;
+        }
+        wcpTickSnapshot = null;
+        if (window.DEBUG_WCP_TICK === true) {
+            console.debug('[WordClash Party tick] stopped', reason);
+        }
+    }
+
+    async function runWordClashPartyTick() {
+        if (!canRunWordClashPartyTick()) {
+            stopWordClashPartyTick('runtime_guard');
+            return;
+        }
+        if (wcpTickInFlight || typeof window.apiRequest !== 'function') return;
+
+        wcpTickInFlight = true;
+        try {
+            await window.apiRequest({ action: 'game_action', type: 'tick' });
+        } catch (error) {
+            console.warn('[WordClash Party tick] request failed', error);
+        } finally {
+            wcpTickInFlight = false;
+        }
+    }
+
+    function startWordClashPartyTick() {
+        if (!canRunWordClashPartyTick()) {
+            stopWordClashPartyTick('not_required');
+            return;
+        }
+        if (window.wcpTickInterval) return;
+        window.wcpTickInterval = setInterval(runWordClashPartyTick, 3000);
+    }
+
+    function syncWordClashPartyTickLifecycle(state, res) {
+        wcpTickSnapshot = { state, res };
+        if (canRunWordClashPartyTick()) startWordClashPartyTick();
+        else stopWordClashPartyTick('state_not_eligible');
+    }
+
+    if (window.wcpTickInterval) {
+        clearInterval(window.wcpTickInterval);
+        window.wcpTickInterval = null;
+    }
+
+    window.stopWordClashPartyTick = stopWordClashPartyTick;
 
     function parseState(res) {
         const raw = res?.game_state || res?.room?.game_state;
@@ -562,27 +640,10 @@
 
     window.renderWordClashParty = function (res) {
         const container = document.getElementById('game-area');
-        if (!container) return;
-
-        if (isHost(res)) {
-            if (!window.wcpTickInterval) {
-                window.wcpTickInterval = setInterval(() => {
-                    if (window.selectedGameId === 'wordclash_party' && document.getElementById('wcp-shell')) {
-                        // Используем apiRequest напрямую, чтобы избежать глобального showAlert на ошибки (например, десинхрон фаз)
-                        if (typeof window.apiRequest === 'function') {
-                            window.apiRequest({ action: 'game_action', type: 'tick' }).catch(() => {});
-                        }
-                    } else {
-                        clearInterval(window.wcpTickInterval);
-                        window.wcpTickInterval = null;
-                    }
-                }, 3000);
-            }
-        } else if (window.wcpTickInterval) {
-            clearInterval(window.wcpTickInterval);
-            window.wcpTickInterval = null;
+        if (!container) {
+            stopWordClashPartyTick('missing_game_area');
+            return;
         }
-
 
         window.lastWcpRes = res;
         const state = parseState(res);
@@ -592,6 +653,7 @@
         window.selectedGameId = 'wordclash_party';
 
         const content = renderShell(container);
+        syncWordClashPartyTickLifecycle(state, res);
         updateRoundPill(state);
         const shell = document.getElementById('wcp-shell');
         const title = document.querySelector('#wcp-shell .wcp-title');
@@ -701,6 +763,7 @@
     };
 
     window.wcpBackToLobby = function () {
+        stopWordClashPartyTick('back_to_lobby');
         const res = window.lastWcpRes;
         if (res && !isHost(res) && typeof window.leaveRoom === 'function') {
             return window.leaveRoom();
