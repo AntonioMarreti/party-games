@@ -1460,7 +1460,7 @@ function refreshRenderedProfileBadges(user) {
 
     document.querySelectorAll('[data-avatar-user-id]').forEach((avatar) => {
         if (avatar.dataset.avatarUserId !== userId) return;
-        avatar.querySelectorAll('[data-profile-badge]').forEach((badge) => badge.remove());
+        avatar.querySelectorAll('[data-profile-badge-trigger]').forEach((badge) => badge.remove());
         if (window.renderProfileBadge) {
             const sizeClass = [...avatar.classList].find((name) => name.startsWith('avatar-with-badge--'));
             const size = sizeClass ? sizeClass.replace('avatar-with-badge--', '') : 'md';

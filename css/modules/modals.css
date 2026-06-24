@@ -569,6 +569,7 @@ body.thermal-safe .lobby-modal .create-room-public-row {
     font-size: 24px;
     font-weight: 800;
     line-height: 1;
+    pointer-events: none;
 }
 
 .badge-info-modal__title {

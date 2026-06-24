@@ -98,12 +98,13 @@ export function renderProfileBadge(user, sizeStr = 'md') {
     if (user?.profile_badge !== 'beta_tester') return '';
 
     const safeSize = ['sm', 'md', 'lg', 'xl', 'xxl'].includes(sizeStr) ? sizeStr : 'md';
-    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge="beta_tester" aria-label="Что означает значок бета-тестера">β</button>`;
+    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge-trigger="beta_tester" aria-label="Что означает значок бета-тестера">β</button>`;
 }
 
 document.addEventListener('click', (event) => {
-    const badge = event.target instanceof Element ? event.target.closest('[data-profile-badge]') : null;
-    if (!badge || badge.dataset.profileBadge !== 'beta_tester') return;
+    const trigger = event.target instanceof Element ? event.target.closest('[data-profile-badge-trigger]') : null;
+    if (!trigger || trigger.dataset.profileBadgeTrigger !== 'beta_tester') return;
+    if (trigger.closest('#profileBadgeInfoModal')) return;
 
     event.preventDefault();
     event.stopPropagation();

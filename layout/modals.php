@@ -373,7 +373,7 @@
         </button>
 
         <div class="badge-info-modal__body">
-            <div class="badge-info-modal__icon" data-badge-info-icon aria-hidden="true">β</div>
+            <span class="badge-info-modal__icon" aria-hidden="true">β</span>
             <h5 id="profile-badge-info-title" class="badge-info-modal__title">Бета-тестер</h5>
             <div class="badge-info-modal__copy">
                 <p>Этот игрок помогает тестировать Party Games до общих релизов и влияет на развитие проекта.</p>
