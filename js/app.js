@@ -8,6 +8,46 @@ document.addEventListener('click', (e) => {
     }
 }, { once: false });
 
+window.__lastModalInteraction = null;
+
+document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const modalControl = target.closest(
+        '[data-bs-toggle="modal"], [data-bs-dismiss="modal"], [data-bs-target], [data-profile-badge-trigger]'
+    );
+    const modalContainer = target.closest('.modal, .custom-modal-overlay');
+    if (!modalControl && !modalContainer) return;
+
+    const element = modalControl || target;
+    const safeToken = (value, maxLength = 80) => {
+        const normalized = String(value || '').replace(/[^a-zA-Z0-9_:#.-]/g, '').slice(0, maxLength);
+        return normalized || null;
+    };
+    const classNames = Array.from(element.classList || [])
+        .map(name => safeToken(name, 48))
+        .filter(Boolean)
+        .slice(0, 8);
+    const shownModalIds = Array.from(document.querySelectorAll('.modal.show'))
+        .map(modal => safeToken(modal.id, 80))
+        .filter(Boolean)
+        .slice(0, 8);
+
+    window.__lastModalInteraction = {
+        tag: String(element.tagName || '').toLowerCase().slice(0, 16) || null,
+        id: safeToken(element.id),
+        classes: classNames,
+        data_bs_toggle: safeToken(element.getAttribute('data-bs-toggle')),
+        data_bs_target: safeToken(element.getAttribute('data-bs-target')),
+        data_bs_dismiss: safeToken(element.getAttribute('data-bs-dismiss')),
+        data_profile_badge_trigger: safeToken(element.getAttribute('data-profile-badge-trigger')),
+        closest_modal_id: safeToken(element.closest('.modal')?.id),
+        shown_modal_ids: shownModalIds,
+        timestamp: new Date().toISOString()
+    };
+}, true);
+
 window.onerror = function (msg, url, line, col, error) {
     if (!window.logClientError) return false;
 
@@ -27,7 +67,8 @@ window.onerror = function (msg, url, line, col, error) {
         action: window.__lastApiAction || window.__lastUiAction || null,
         source_url: url || null,
         line: line || null,
-        column: col || null
+        column: col || null,
+        last_modal_interaction: window.__lastModalInteraction || null
     });
     return false;
 };

@@ -292,7 +292,7 @@
     <div class="modal-dialog modal-dialog-centered" style="width: 85%; max-width: 480px;">
         <div class="modal-content system-modal border-0 shadow-lg" style="border-radius: 32px; padding: 20px; position: relative;">
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3"
-                onclick="closeModal('qrInviteModal')" data-bs-dismiss="modal" aria-label="Close"
+                data-bs-dismiss="modal" aria-label="Close"
                 style="z-index: 10;"></button>
             <div class="d-flex justify-content-center mb-2">
                 <div style="width: 40px; height: 4px; background: #E0E0E0; border-radius: 2px;"></div>
@@ -367,7 +367,7 @@
 <div id="profileBadgeInfoModal" class="custom-modal-overlay badge-info-modal-overlay" style="display: none;" role="dialog"
     aria-modal="true" aria-labelledby="profile-badge-info-title">
     <div class="custom-modal-content badge-info-modal" data-badge-info-id="beta_tester">
-        <button type="button" class="badge-info-modal__close" data-bs-dismiss="modal"
+        <button type="button" class="badge-info-modal__close" onclick="closeModal('profileBadgeInfoModal')"
             aria-label="Закрыть информацию о значке">
             <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
@@ -382,7 +382,8 @@
         </div>
 
         <div class="badge-info-modal__footer">
-            <button type="button" class="badge-info-modal__action" data-bs-dismiss="modal">Понятно</button>
+            <button type="button" class="badge-info-modal__action"
+                onclick="closeModal('profileBadgeInfoModal')">Понятно</button>
         </div>
     </div>
 </div>

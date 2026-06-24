@@ -332,13 +332,14 @@ function setupModalClosing() {
         });
     });
 
-    // 2. Global listener for dismiss buttons (Bootstrap compatibility)
+    // 2. Custom overlays may opt into Bootstrap-style dismiss markup.
+    // Native .modal elements remain exclusively handled by Bootstrap data API.
     document.addEventListener('click', (e) => {
         const dismissBtn = e.target.closest('[data-bs-dismiss="modal"]');
         if (dismissBtn) {
-            const modal = dismissBtn.closest('.modal, .custom-modal-overlay');
-            if (modal && modal.id) {
-                closeModal(modal.id);
+            const customModal = dismissBtn.closest('.custom-modal-overlay');
+            if (customModal && customModal.id) {
+                closeModal(customModal.id);
             }
         }
     });

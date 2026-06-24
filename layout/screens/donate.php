@@ -250,6 +250,7 @@
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         const modalBody = document.getElementById('payment-modal-body');
+        if (!modalBody) return;
         modalBody.innerHTML = '';
 
         if (isMobile) {
@@ -297,6 +298,7 @@
 
         // Show Modal using Bootstrap
         const paymentModalEl = document.getElementById('paymentModal');
+        if (!paymentModalEl || !window.bootstrap?.Modal) return;
 
         // Move to body to avoid z-index/transform issues in .screen
         if (paymentModalEl.parentElement !== document.body) {

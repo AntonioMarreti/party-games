@@ -65,7 +65,7 @@ async function createRoom() {
 
             // Safe Modal Closing
             const modalEl = document.getElementById('createModal');
-            if (modalEl && window.bootstrap) {
+            if (modalEl && window.bootstrap?.Modal) {
                 const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modal.hide();
 
@@ -133,7 +133,7 @@ function closeCreateRoomModal(event) {
     if (event) event.stopPropagation();
 
     const modalEl = document.getElementById('createModal');
-    if (modalEl && window.bootstrap) {
+    if (modalEl && window.bootstrap?.Modal) {
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.hide();
         return;
@@ -211,7 +211,7 @@ async function joinRoom(code = null, passwordOverride = null) {
         if (res.status === 'ok') {
             // Safe Modal Closing
             const modalEl = document.getElementById('joinModal');
-            if (modalEl && window.bootstrap) {
+            if (modalEl && window.bootstrap?.Modal) {
                 const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modal.hide();
             }
@@ -754,7 +754,7 @@ function populateScheduledGameForm(defaultGameType = null) {
 function openScheduledGameModal(gameType = null) {
     populateScheduledGameForm(gameType);
     const modalEl = document.getElementById('scheduledGameModal');
-    if (modalEl && window.bootstrap) {
+    if (modalEl && window.bootstrap?.Modal) {
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
     } else if (window.showModal) {
         window.showModal('scheduledGameModal');
@@ -798,7 +798,7 @@ function editScheduledGame(id) {
     if (descriptionInput) descriptionInput.value = game.description || '';
 
     const modalEl = document.getElementById('scheduledGameModal');
-    if (modalEl && window.bootstrap) {
+    if (modalEl && window.bootstrap?.Modal) {
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
     } else if (window.showModal) {
         window.showModal('scheduledGameModal');
@@ -849,7 +849,7 @@ async function createScheduledGame() {
         }
 
         const modalEl = document.getElementById('scheduledGameModal');
-        if (modalEl && window.bootstrap) {
+        if (modalEl && window.bootstrap?.Modal) {
             bootstrap.Modal.getOrCreateInstance(modalEl).hide();
         } else if (window.closeModal) {
             window.closeModal('scheduledGameModal');
@@ -1341,7 +1341,10 @@ function openQrModal() {
         });
     }
 
-    if (window.showModal) window.showModal('qrInviteModal');
+    const qrModalEl = document.getElementById('qrInviteModal');
+    if (qrModalEl && window.bootstrap?.Modal) {
+        window.bootstrap.Modal.getOrCreateInstance(qrModalEl).show();
+    }
 }
 
 async function copyInviteLink() {
@@ -1446,7 +1449,7 @@ let inviteModalInstance = null;
 
 async function openInviteModal() {
     const modalEl = document.getElementById('inviteFriendsModal');
-    if (!modalEl) return;
+    if (!modalEl || !window.bootstrap?.Modal) return;
 
     // Reset
     selectedInviteFriends.clear();
@@ -1654,8 +1657,8 @@ async function addBot(difficulty) {
 
     // If using 'customAlertModal' specifically from HTML:
     const legacyModal = document.getElementById('customAlertModal');
-    if (legacyModal) {
-        const m = bootstrap.Modal.getInstance(legacyModal);
+    if (legacyModal && window.bootstrap?.Modal) {
+        const m = window.bootstrap.Modal.getInstance(legacyModal);
         if (m) m.hide();
     }
     // Also try closing generic custom overlays
@@ -2111,7 +2114,7 @@ function _refreshGameList(lobbyState) {
             _refreshGameList(lobbyState);
 
             const modalEl = document.getElementById('gameSelectorModal');
-            if (window.bootstrap) {
+            if (modalEl && window.bootstrap?.Modal) {
                 const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
                 modal.hide();
             }

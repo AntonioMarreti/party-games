@@ -105,7 +105,8 @@ function buildSpyfallSkeleton(state, wrapper, isHost) {
                 <div id="spyfall-spy-controls" style="display:none;">
                     <div class="section-label mb-2">Список локаций (нажми, чтобы вычеркнуть):</div>
                     <div id="spyfall-locations" class="spyfall-locations-list mb-4"></div>
-                    <button class="glass-btn glass-btn-danger w-100 mb-4" data-bs-toggle="modal" data-bs-target="#spyGuessModal">
+                    <button class="glass-btn glass-btn-danger w-100 mb-4"
+                        onclick="document.getElementById('spyGuessModal').style.display='flex'">
                         🕵️‍♂️ Угадать локацию
                     </button>
                 </div>
