@@ -29,23 +29,23 @@
     border-radius: 50%;
     background: transparent;
     color: inherit;
+    font-size: 0;
     box-shadow: none;
     cursor: pointer;
     touch-action: manipulation;
 }
 
 .avatar-badge__visual {
-    --avatar-badge-beta-core-size: 14px;
-    --avatar-badge-beta-glyph-size: 10px;
-    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: var(--app-badge-beta-ring);
+    background: var(--app-badge-beta-bg);
     color: var(--app-badge-beta-fg);
+    font-size: 11px;
+    font-weight: 700;
     line-height: 1;
     opacity: 1;
     filter: none;
@@ -53,36 +53,10 @@
     pointer-events: none;
 }
 
-.avatar-badge__visual::before {
-    content: "";
-    position: absolute;
-    inset: calc((100% - var(--avatar-badge-beta-core-size)) / 2);
-    width: var(--avatar-badge-beta-core-size);
-    height: var(--avatar-badge-beta-core-size);
-    border-radius: 50%;
-    background: var(--app-badge-beta-core);
-}
-
-.avatar-badge__glyph {
-    position: relative;
-    z-index: 1;
-    display: block;
-    width: var(--avatar-badge-beta-glyph-size);
-    height: var(--avatar-badge-beta-glyph-size);
-    color: inherit;
-    fill: currentColor;
-    overflow: visible;
-}
-
-.avatar-badge__glyph path {
-    fill: currentColor;
-}
-
 .avatar-badge--sm .avatar-badge__visual {
-    --avatar-badge-beta-core-size: 12px;
-    --avatar-badge-beta-glyph-size: 9px;
     width: 16px;
     height: 16px;
+    font-size: 10px;
 }
 
 .avatar-badge--lg {
@@ -93,10 +67,9 @@
 }
 
 .avatar-badge--lg .avatar-badge__visual {
-    --avatar-badge-beta-core-size: 17px;
-    --avatar-badge-beta-glyph-size: 12px;
     width: 21px;
     height: 21px;
+    font-size: 12px;
 }
 
 .avatar-badge--xl,
@@ -108,17 +81,15 @@
 }
 
 .avatar-badge--xl .avatar-badge__visual {
-    --avatar-badge-beta-core-size: 20px;
-    --avatar-badge-beta-glyph-size: 14px;
     width: 24px;
     height: 24px;
+    font-size: 14px;
 }
 
 .avatar-badge--xxl .avatar-badge__visual {
-    --avatar-badge-beta-core-size: 22px;
-    --avatar-badge-beta-glyph-size: 15px;
     width: 26px;
     height: 26px;
+    font-size: 16px;
 }
 
 .avatar-badge:focus-visible {

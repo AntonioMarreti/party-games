@@ -94,13 +94,11 @@ function getAvatarImg(src, style, altText = 'Avatar', onerrorCode = "this.style.
     return `<img src="${safeSrc}" alt="${safeAlt}" style="${style}" onerror="${onerrorCode}" ${extraAttrs}>`;
 }
 
-const BETA_BADGE_GLYPH_SVG = '<svg class="avatar-badge__glyph" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.35 2.8c0-.67.55-1.2 1.2-1.2.67 0 1.2.53 1.2 1.2v1.05h2.18c3.03 0 5.22 1.72 5.22 4.25 0 1.55-.82 2.78-2.18 3.48 1.76.65 2.88 2.16 2.88 4.23 0 3.08-2.36 5.12-5.58 5.12h-2.52v.67c0 .67-.53 1.2-1.2 1.2-.65 0-1.2-.53-1.2-1.2V2.8Zm2.4 3.38v4.25h2.08c1.67 0 2.82-.86 2.82-2.18 0-1.28-1.06-2.07-2.74-2.07h-2.16Zm0 6.45v5.93h2.43c1.96 0 3.18-1.07 3.18-2.76 0-1.86-1.36-3.17-3.38-3.17h-2.23Z"></path></svg>';
-
 export function renderProfileBadge(user, sizeStr = 'md') {
     if (user?.profile_badge !== 'beta_tester') return '';
 
     const safeSize = ['sm', 'md', 'lg', 'xl', 'xxl'].includes(sizeStr) ? sizeStr : 'md';
-    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge-trigger="beta_tester" aria-label="Что означает значок бета-тестера"><span class="avatar-badge__visual" aria-hidden="true">${BETA_BADGE_GLYPH_SVG}</span></button>`;
+    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge-trigger="beta_tester" aria-label="Что означает значок бета-тестера"><span class="avatar-badge__visual" aria-hidden="true">β</span></button>`;
 }
 
 document.addEventListener('click', (event) => {
