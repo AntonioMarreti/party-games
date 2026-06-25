@@ -36,27 +36,41 @@
 }
 
 .avatar-badge__visual {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
+    --avatar-badge-beta-visual-size: 17px;
+    --avatar-badge-beta-glyph-size: 12px;
+    display: grid;
+    place-items: center;
+    width: var(--avatar-badge-beta-visual-size);
+    height: var(--avatar-badge-beta-visual-size);
     border-radius: 50%;
+    padding: 0;
+    margin: 0;
     background: var(--app-badge-beta-bg);
     color: var(--app-badge-beta-fg);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 0;
     line-height: 1;
+    letter-spacing: 0;
     opacity: 1;
     filter: none;
     box-shadow: var(--app-badge-beta-shadow);
     pointer-events: none;
 }
 
+.avatar-badge__visual::before {
+    content: "β";
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: var(--avatar-badge-beta-glyph-size);
+    font-weight: 700;
+    line-height: 1;
+    color: inherit;
+    opacity: 1;
+    filter: none;
+    transform: translateY(-0.5px);
+}
+
 .avatar-badge--sm .avatar-badge__visual {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
+    --avatar-badge-beta-visual-size: 15px;
+    --avatar-badge-beta-glyph-size: 11px;
 }
 
 .avatar-badge--lg {
@@ -67,9 +81,8 @@
 }
 
 .avatar-badge--lg .avatar-badge__visual {
-    width: 21px;
-    height: 21px;
-    font-size: 12px;
+    --avatar-badge-beta-visual-size: 19px;
+    --avatar-badge-beta-glyph-size: 13px;
 }
 
 .avatar-badge--xl,
@@ -81,15 +94,13 @@
 }
 
 .avatar-badge--xl .avatar-badge__visual {
-    width: 24px;
-    height: 24px;
-    font-size: 14px;
+    --avatar-badge-beta-visual-size: 22px;
+    --avatar-badge-beta-glyph-size: 15px;
 }
 
 .avatar-badge--xxl .avatar-badge__visual {
-    width: 26px;
-    height: 26px;
-    font-size: 16px;
+    --avatar-badge-beta-visual-size: 24px;
+    --avatar-badge-beta-glyph-size: 17px;
 }
 
 .avatar-badge:focus-visible {
