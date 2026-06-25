@@ -19,38 +19,26 @@
     right: -11px;
     bottom: -11px;
     z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 36px;
     height: 36px;
     border: 0;
     padding: 0;
     border-radius: 50%;
-    background: transparent;
-    color: transparent;
-    font-size: 0;
+    background: var(--app-badge-beta-bg);
+    color: var(--app-badge-beta-fg);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: var(--app-badge-beta-shadow);
     cursor: pointer;
     touch-action: manipulation;
 }
 
-.avatar-badge::before {
-    content: 'β';
-    position: absolute;
-    inset: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid var(--app-surface, #fff);
-    border-radius: 50%;
-    background: #273248;
-    color: #fff;
+.avatar-badge--sm {
     font-size: 10px;
-    font-weight: 800;
-    line-height: 1;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
-}
-
-.avatar-badge--sm::before {
-    inset: 11px;
-    font-size: 9px;
 }
 
 .avatar-badge--lg {
@@ -58,11 +46,7 @@
     bottom: -10px;
     width: 40px;
     height: 40px;
-}
-
-.avatar-badge--lg::before {
-    inset: 11px;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .avatar-badge--xl,
@@ -71,13 +55,7 @@
     bottom: -9px;
     width: 44px;
     height: 44px;
-}
-
-.avatar-badge--xl::before,
-.avatar-badge--xxl::before {
-    inset: 10px;
     font-size: 14px;
-    border-width: 3px;
 }
 
 .avatar-badge:focus-visible {

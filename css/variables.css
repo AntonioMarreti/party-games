@@ -45,6 +45,9 @@
     --app-focus-ring: rgba(15, 76, 129, 0.40);
     --app-header-bg: #F4F6F9;
     --app-header-text: #1E293B;
+    --app-badge-beta-bg: var(--app-accent);
+    --app-badge-beta-fg: #FFFFFF;
+    --app-badge-beta-shadow: 0 2px 6px rgba(15, 23, 42, 0.24);
 }
 
 /* === Palette Definitions === */
@@ -191,6 +194,8 @@ html[data-theme="dark"] [data-preview-palette="burgundy-cream"] {
     --app-focus-ring: rgba(238, 217, 196, 0.40);
     --app-header-bg: #1A1316;
     --app-header-text: #FFF8F4;
+    --app-badge-beta-bg: #C46A78;
+    --app-badge-beta-fg: #2A0E16;
 }
 
 /* Jade Biscuit - Light */
@@ -227,6 +232,8 @@ html[data-theme="dark"] [data-preview-palette="jade-biscuit"] {
     --app-focus-ring: rgba(255, 220, 168, 0.40);
     --app-header-bg: #121817;
     --app-header-text: #F0F4F3;
+    --app-badge-beta-bg: #6EC7B8;
+    --app-badge-beta-fg: #08211E;
 }
 
 /* Azure Quartz - Light */
@@ -353,6 +360,8 @@ html:not([data-theme="dark"]) [data-preview-palette="tiffany-graphite"] {
     --app-focus-ring: rgba(33, 241, 168, 0.40);
     --app-header-bg: #E7F8F2;
     --app-header-text: #17211E;
+    --app-badge-beta-bg: #0F7A5D;
+    --app-badge-beta-fg: #FFFFFF;
 }
 
 /* Tiffany Graphite - Dark */
@@ -389,6 +398,8 @@ html:not([data-theme="dark"]) [data-preview-palette="pink-impulse"] {
     --app-focus-ring: rgba(253, 24, 67, 0.40);
     --app-header-bg: #FFF0F3;
     --app-header-text: #32151D;
+    --app-badge-beta-bg: #B11232;
+    --app-badge-beta-fg: #FFFFFF;
 }
 
 /* Pink Impulse - Dark */
@@ -443,6 +454,8 @@ html[data-theme="dark"] [data-preview-palette="cyber-violet"] {
     --app-focus-ring: rgba(182, 255, 0, 0.40);
     --app-header-bg: #160B19;
     --app-header-text: #FAF7FB;
+    --app-badge-beta-bg: #B56BFF;
+    --app-badge-beta-fg: #160B19;
 }
 
 /* Turmeric Malt - Light */
@@ -461,6 +474,8 @@ html:not([data-theme="dark"]) [data-preview-palette="turmeric-malt"] {
     --app-focus-ring: rgba(255, 190, 11, 0.40);
     --app-header-bg: #F6E9C4;
     --app-header-text: #2A2312;
+    --app-badge-beta-bg: #8A5E00;
+    --app-badge-beta-fg: #FFFFFF;
 }
 
 /* Turmeric Malt - Dark */
@@ -579,6 +594,8 @@ body.dark-mode {
     --shadow-main: 0 10px 40px rgba(0, 0, 0, 0.4);
     --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.6);
     --shadow-glow: 0 0 25px color-mix(in srgb, var(--app-accent), transparent 40%);
+    --app-badge-beta-fg: var(--app-accent-text);
+    --app-badge-beta-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
 
     --accent-gold-gradient: linear-gradient(45deg, #FFD700, #b37400);
 
