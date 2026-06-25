@@ -98,7 +98,7 @@ export function renderProfileBadge(user, sizeStr = 'md') {
     if (user?.profile_badge !== 'beta_tester') return '';
 
     const safeSize = ['sm', 'md', 'lg', 'xl', 'xxl'].includes(sizeStr) ? sizeStr : 'md';
-    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge-trigger="beta_tester" aria-label="Что означает значок бета-тестера">β</button>`;
+    return `<button type="button" class="avatar-badge avatar-badge--beta avatar-badge--${safeSize}" data-profile-badge-trigger="beta_tester" aria-label="Что означает значок бета-тестера"><span class="avatar-badge__visual" aria-hidden="true">β</span></button>`;
 }
 
 document.addEventListener('click', (event) => {

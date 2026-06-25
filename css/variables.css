@@ -86,6 +86,8 @@ html[data-theme="dark"] [data-preview-palette="amber-sapphire"] {
     --app-focus-ring: rgba(245, 158, 11, 0.40);
     --app-header-bg: #0B1120;
     --app-header-text: #F8FAFC;
+    --app-badge-beta-bg: #3A2A12;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Olive Sand - Light */
@@ -122,6 +124,8 @@ html[data-theme="dark"] [data-preview-palette="olive-sand"] {
     --app-focus-ring: rgba(165, 165, 141, 0.40);
     --app-header-bg: #1C1E1B;
     --app-header-text: #F4F3EC;
+    --app-badge-beta-bg: #35382C;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Lavender Graphite - Light */
@@ -158,6 +162,8 @@ html[data-theme="dark"] [data-preview-palette="lavender-graphite"] {
     --app-focus-ring: rgba(177, 156, 217, 0.40);
     --app-header-bg: #16161A;
     --app-header-text: #F7F6FB;
+    --app-badge-beta-bg: #2D2840;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Burgundy Cream - Light */
@@ -194,8 +200,8 @@ html[data-theme="dark"] [data-preview-palette="burgundy-cream"] {
     --app-focus-ring: rgba(238, 217, 196, 0.40);
     --app-header-bg: #1A1316;
     --app-header-text: #FFF8F4;
-    --app-badge-beta-bg: #C46A78;
-    --app-badge-beta-fg: #2A0E16;
+    --app-badge-beta-bg: #3A1E28;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Jade Biscuit - Light */
@@ -232,8 +238,8 @@ html[data-theme="dark"] [data-preview-palette="jade-biscuit"] {
     --app-focus-ring: rgba(255, 220, 168, 0.40);
     --app-header-bg: #121817;
     --app-header-text: #F0F4F3;
-    --app-badge-beta-bg: #6EC7B8;
-    --app-badge-beta-fg: #08211E;
+    --app-badge-beta-bg: #18332F;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Azure Quartz - Light */
@@ -270,6 +276,8 @@ html[data-theme="dark"] [data-preview-palette="azure-quartz"] {
     --app-focus-ring: rgba(88, 164, 214, 0.40);
     --app-header-bg: #0A1319;
     --app-header-text: #EAF3FA;
+    --app-badge-beta-bg: #163241;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Graphite Lemon - Light */
@@ -306,6 +314,8 @@ html[data-theme="dark"] [data-preview-palette="graphite-lemon"] {
     --app-focus-ring: rgba(255, 231, 136, 0.40);
     --app-header-bg: #121212;
     --app-header-text: #F5F5F5;
+    --app-badge-beta-bg: #2B2A22;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Beige Olive - Light */
@@ -342,6 +352,8 @@ html[data-theme="dark"] [data-preview-palette="beige-olive"] {
     --app-focus-ring: rgba(140, 155, 106, 0.40);
     --app-header-bg: #1A1A18;
     --app-header-text: #E5D9C6;
+    --app-badge-beta-bg: #303529;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Tiffany Graphite - Light */
@@ -380,6 +392,8 @@ html[data-theme="dark"] [data-preview-palette="tiffany-graphite"] {
     --app-focus-ring: rgba(33, 241, 168, 0.40);
     --app-header-bg: #111413;
     --app-header-text: #F1FFF9;
+    --app-badge-beta-bg: #13342C;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Pink Impulse - Light */
@@ -418,6 +432,8 @@ html[data-theme="dark"] [data-preview-palette="pink-impulse"] {
     --app-focus-ring: rgba(253, 24, 67, 0.40);
     --app-header-bg: #180E12;
     --app-header-text: #FFF7F9;
+    --app-badge-beta-bg: #3A1721;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Cyber Violet - Light */
@@ -454,8 +470,8 @@ html[data-theme="dark"] [data-preview-palette="cyber-violet"] {
     --app-focus-ring: rgba(182, 255, 0, 0.40);
     --app-header-bg: #160B19;
     --app-header-text: #FAF7FB;
-    --app-badge-beta-bg: #B56BFF;
-    --app-badge-beta-fg: #160B19;
+    --app-badge-beta-bg: #30173A;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Turmeric Malt - Light */
@@ -494,6 +510,8 @@ html[data-theme="dark"] [data-preview-palette="turmeric-malt"] {
     --app-focus-ring: rgba(255, 190, 11, 0.40);
     --app-header-bg: #171308;
     --app-header-text: #FFF4D1;
+    --app-badge-beta-bg: #3A2B12;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* Volcanic Night - Light */
@@ -530,6 +548,8 @@ html[data-theme="dark"] [data-preview-palette="volcanic-night"] {
     --app-focus-ring: rgba(255, 65, 3, 0.40);
     --app-header-bg: #001621;
     --app-header-text: #F3FAFC;
+    --app-badge-beta-bg: #3A1B12;
+    --app-badge-beta-fg: var(--app-text);
 }
 
 /* === Legacy Compatibility Aliases === */

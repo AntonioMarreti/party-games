@@ -27,17 +27,33 @@
     border: 0;
     padding: 0;
     border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 0;
+    box-shadow: none;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.avatar-badge__visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
     background: var(--app-badge-beta-bg);
     color: var(--app-badge-beta-fg);
     font-size: 12px;
     font-weight: 800;
     line-height: 1;
     box-shadow: var(--app-badge-beta-shadow);
-    cursor: pointer;
-    touch-action: manipulation;
+    pointer-events: none;
 }
 
-.avatar-badge--sm {
+.avatar-badge--sm .avatar-badge__visual {
+    width: 18px;
+    height: 18px;
     font-size: 10px;
 }
 
@@ -46,7 +62,12 @@
     bottom: -10px;
     width: 40px;
     height: 40px;
-    font-size: 14px;
+}
+
+.avatar-badge--lg .avatar-badge__visual {
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
 }
 
 .avatar-badge--xl,
@@ -55,7 +76,18 @@
     bottom: -9px;
     width: 44px;
     height: 44px;
+}
+
+.avatar-badge--xl .avatar-badge__visual {
+    width: 28px;
+    height: 28px;
     font-size: 14px;
+}
+
+.avatar-badge--xxl .avatar-badge__visual {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
 }
 
 .avatar-badge:focus-visible {
