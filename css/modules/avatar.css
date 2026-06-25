@@ -94,9 +94,9 @@
 }
 
 .avatar-badge--xxl .avatar-badge__visual {
-    --avatar-badge-beta-outer-size: 26px;
-    --avatar-badge-beta-core-size: 20px;
-    --avatar-badge-beta-glyph-size: 16px;
+    --avatar-badge-beta-outer-size: 24px;
+    --avatar-badge-beta-core-size: 18px;
+    --avatar-badge-beta-glyph-size: 14px;
 }
 
 .avatar-badge:focus-visible {
