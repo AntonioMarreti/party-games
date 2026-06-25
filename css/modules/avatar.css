@@ -39,21 +39,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--app-badge-beta-bg);
     color: var(--app-badge-beta-fg);
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 700;
     line-height: 1;
+    opacity: 1;
+    filter: none;
     box-shadow: var(--app-badge-beta-shadow);
     pointer-events: none;
 }
 
 .avatar-badge--sm .avatar-badge__visual {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     font-size: 10px;
 }
 
@@ -65,9 +67,9 @@
 }
 
 .avatar-badge--lg .avatar-badge__visual {
-    width: 24px;
-    height: 24px;
-    font-size: 13px;
+    width: 21px;
+    height: 21px;
+    font-size: 12px;
 }
 
 .avatar-badge--xl,
@@ -79,14 +81,14 @@
 }
 
 .avatar-badge--xl .avatar-badge__visual {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     font-size: 14px;
 }
 
 .avatar-badge--xxl .avatar-badge__visual {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     font-size: 16px;
 }
 
