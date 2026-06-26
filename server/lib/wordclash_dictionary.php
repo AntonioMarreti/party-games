@@ -91,16 +91,6 @@ function wc_dict_guess_words(int $length): array
     return $cache[$length];
 }
 
-function wc_dict_static_blacklist(): array
-{
-    static $cache = null;
-    if ($cache !== null) {
-        return $cache;
-    }
-    $cache = wc_dict_read_json_words(wc_dict_root() . '/words/wordclash_target_blacklist.json', null);
-    return $cache;
-}
-
 function wc_dict_table_ready(PDO $pdo, string $table): bool
 {
     try {
@@ -178,9 +168,7 @@ function wc_dict_active_targets(?PDO $pdo, int $length): array
             ");
             $stmt->execute([$length]);
             $words = array_values(array_map('wc_dict_normalize_word', $stmt->fetchAll(PDO::FETCH_COLUMN)));
-            if (!empty($words)) {
-                return $words;
-            }
+            return $words;
         } catch (Throwable $e) {
             // Fall back below; games must keep starting safely.
         }
@@ -205,21 +193,26 @@ function wc_dict_status(?PDO $pdo, string $word): array
         return ['word' => $word, 'length' => $length, 'valid' => false, 'message' => $message];
     }
 
-    $inStaticBlacklist = in_array($word, wc_dict_static_blacklist(), true);
     $inBroadGuess = in_array($word, wc_dict_guess_words($length), true);
-    $fallbackActive = in_array($word, wc_dict_base_targets($length), true);
+    $dbSeedComplete = $pdo instanceof PDO ? wc_dict_seed_complete($pdo) : false;
 
     $row = null;
-    if ($pdo instanceof PDO && wc_dict_seed_complete($pdo)) {
-        $stmt = $pdo->prepare("
-            SELECT word, word_length, state, source, updated_by_user_id, created_at, updated_at
-            FROM wordclash_target_words
-            WHERE word = ?
-            LIMIT 1
-        ");
-        $stmt->execute([$word]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if ($pdo instanceof PDO && $dbSeedComplete) {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT word, word_length, state, source, updated_by_user_id, created_at, updated_at
+                FROM wordclash_target_words
+                WHERE word = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$word]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Throwable $e) {
+            $dbSeedComplete = false;
+        }
     }
+
+    $fallbackActive = $dbSeedComplete ? false : in_array($word, wc_dict_base_targets($length), true);
 
     return [
         'word' => $word,
@@ -227,9 +220,8 @@ function wc_dict_status(?PDO $pdo, string $word): array
         'valid' => true,
         'state' => $row['state'] ?? ($fallbackActive ? 'active' : 'absent'),
         'source' => $row['source'] ?? ($fallbackActive ? 'json_fallback' : null),
-        'in_static_blacklist' => $inStaticBlacklist,
         'in_broad_guess' => $inBroadGuess,
-        'db_seed_complete' => $pdo instanceof PDO ? wc_dict_seed_complete($pdo) : false,
+        'db_seed_complete' => $dbSeedComplete,
         'updated_at' => $row['updated_at'] ?? null,
     ];
 }
@@ -256,9 +248,6 @@ function wc_dict_validate_add(PDO $pdo, string $word): array
     if (!$ok) {
         return [false, $message, $word, $length, null];
     }
-    if (in_array($word, wc_dict_static_blacklist(), true)) {
-        return [false, 'Слово в статическом blacklist', $word, $length, null];
-    }
     if (!in_array($word, wc_dict_guess_words($length), true)) {
         return [false, 'Слова нет в широком словаре допустимых попыток', $word, $length, null];
     }
@@ -271,9 +260,6 @@ function wc_dict_validate_add(PDO $pdo, string $word): array
     }
     if ($row && $row['state'] === 'banned') {
         return [false, 'Слово запрещено. Сначала выберите «Разрешить снова»', $word, $length, $row];
-    }
-    if (!$row && !in_array($word, wc_dict_base_targets($length), true)) {
-        return [false, 'Слова нет в стартовом проверенном target-словаре', $word, $length, null];
     }
 
     return [true, null, $word, $length, $row];

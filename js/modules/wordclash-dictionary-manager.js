@@ -74,14 +74,14 @@
 
     function dictionaryStateLabel(state) {
         const labels = {
-            active: 'в игре',
-            removed: 'убрано из загадок',
-            banned: 'запрещено',
-            absent: 'нет в target-словаре',
-            add: 'добавлено',
-            remove: 'убрано',
-            restore: 'возвращено',
-            ban: 'запрещено',
+            active: 'В словаре',
+            removed: 'Убрано из загадок',
+            banned: 'Запрещено для загадок',
+            absent: 'Нет в словаре',
+            add: 'добавлено в словарь',
+            remove: 'убрано из загадок',
+            restore: 'возвращено в словарь',
+            ban: 'запрещено для загадок',
             unban: 'разрешено снова',
             suggest: 'предложено',
             suggestion_approved: 'предложение одобрено',
@@ -96,11 +96,14 @@
             dictionaryStateLabel(status.state),
             status.source ? `источник: ${status.source}` : 'источник: нет',
             status.in_broad_guess ? 'можно использовать в попытках' : 'нет в словаре попыток',
-            status.in_static_blacklist ? 'в blacklist' : 'не в blacklist',
         ];
         renderStatus('');
         renderSearchResult(parts.join(' · '));
         renderActions(status);
+    }
+
+    function renderActionButton(buttons, op, word, label, className) {
+        buttons.push(`<button type="button" class="btn btn-sm ${className} rounded-pill" onclick="runWordclashDictionaryAction('${op}', '${word}')">${label}</button>`);
     }
 
     function renderActions(status) {
@@ -108,22 +111,33 @@
         if (!el) return;
         const word = escapeHtml(status.word);
         const buttons = [];
-        if (status.state === 'absent' || status.state === 'removed') {
-            buttons.push(`<button type="button" class="btn btn-sm btn-success rounded-pill" onclick="runWordclashDictionaryAction('add', '${word}')">Добавить</button>`);
-        }
-        if (status.state === 'active') {
-            buttons.push(`<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="runWordclashDictionaryAction('remove', '${word}')">Убрать из загадок</button>`);
-        }
-        if (status.state === 'removed') {
-            buttons.push(`<button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="runWordclashDictionaryAction('restore', '${word}')">Вернуть</button>`);
-        }
-        if (status.state !== 'banned') {
-            buttons.push(`<button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="runWordclashDictionaryAction('ban', '${word}')">Запретить</button>`);
-        }
         if (status.state === 'banned') {
-            buttons.push(`<button type="button" class="btn btn-sm btn-outline-warning rounded-pill" onclick="runWordclashDictionaryAction('unban', '${word}')">Разрешить снова</button>`);
+            renderActionButton(buttons, 'unban', word, 'Разрешить снова', 'btn-outline-warning');
+        } else if (status.state === 'active') {
+            renderActionButton(buttons, 'remove', word, 'Убрать из загадок', 'btn-outline-secondary');
+            renderActionButton(buttons, 'ban', word, 'Запретить', 'btn-outline-danger');
+        } else if (status.state === 'removed') {
+            renderActionButton(buttons, 'restore', word, 'Вернуть в словарь', 'btn-outline-primary');
+            renderActionButton(buttons, 'ban', word, 'Запретить', 'btn-outline-danger');
+        } else if (status.state === 'absent') {
+            if (status.in_broad_guess) {
+                renderActionButton(buttons, 'add', word, 'Добавить в словарь', 'btn-success');
+                renderActionButton(buttons, 'ban', word, 'Запретить', 'btn-outline-danger');
+            }
         }
         el.innerHTML = buttons.join('');
+    }
+
+    function actionResultMessage(op, status) {
+        const word = status?.word || 'Слово';
+        const messages = {
+            add: `${word} добавлено в словарь загадок.`,
+            remove: `${word} убрано из загадок.`,
+            restore: `${word} возвращено в словарь загадок.`,
+            ban: `${word} запрещено для загадок.`,
+            unban: `${word} разрешено снова и переведено в убранные.`
+        };
+        return messages[op] || 'Изменение сохранено.';
     }
 
     function renderCounts(counts) {
@@ -247,11 +261,15 @@
     window.runWordclashDictionaryAction = async function (op, word) {
         const res = await window.apiRequest({ action: 'wordclash_dictionary_action', op, word });
         if (res.status !== 'ok') {
+            const actions = document.getElementById('wordclash-dictionary-actions');
+            if (actions) actions.innerHTML = '';
+            renderSearchResult(res.message || 'Действие невозможно');
             renderStatus(res.message || 'Ошибка изменения');
             return;
         }
         lastStatus = res.word_status || lastStatus;
         if (lastStatus) renderWordStatus(lastStatus);
+        renderStatus(res.message || actionResultMessage(op, lastStatus));
         renderCounts(res.counts);
         renderSuggestions(res.suggestions || []);
         renderAudit(res.audit || []);

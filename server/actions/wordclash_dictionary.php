@@ -60,23 +60,29 @@ function action_wordclash_dictionary_action(PDO $pdo, array $user, array $data):
     $op = (string) ($data['op'] ?? '');
     $word = (string) ($data['word'] ?? '');
     $actor = (int) ($user['id'] ?? 0);
+    $message = 'Изменение сохранено.';
 
     try {
         switch ($op) {
             case 'add':
                 $status = wc_dict_add_word($pdo, $word, $actor, 'admin');
+                $message = $status['word'] . ' добавлено в словарь загадок.';
                 break;
             case 'remove':
                 $status = wc_dict_remove_word($pdo, $word, $actor);
+                $message = $status['word'] . ' убрано из загадок.';
                 break;
             case 'ban':
                 $status = wc_dict_ban_word($pdo, $word, $actor);
+                $message = $status['word'] . ' запрещено для загадок.';
                 break;
             case 'restore':
                 $status = wc_dict_restore_word($pdo, $word, $actor);
+                $message = $status['word'] . ' возвращено в словарь загадок.';
                 break;
             case 'unban':
                 $status = wc_dict_unban_word($pdo, $word, $actor);
+                $message = $status['word'] . ' разрешено снова и переведено в убранные.';
                 break;
             default:
                 sendError('Unknown dictionary action');
@@ -87,6 +93,7 @@ function action_wordclash_dictionary_action(PDO $pdo, array $user, array $data):
 
     echo json_encode([
         'status' => 'ok',
+        'message' => $message,
         'word_status' => $status,
         'counts' => wc_dict_counts($pdo),
         'audit' => wc_dict_recent_audit($pdo, 20),
