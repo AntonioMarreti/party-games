@@ -690,6 +690,12 @@
     };
 
     window.wcpChooseWord = function (word) {
+        const normalized = String(word || '').trim().toLowerCase();
+        const length = Array.from(normalized).length;
+        if (![5, 6, 7].includes(length) || !/^[а-яё]+$/u.test(normalized)) {
+            showHint('Это слово пока не подходит для Wordclash Party. Выбери другое слово из 5–7 букв.');
+            return Promise.resolve({ status: 'error' });
+        }
         return sendPartyAction('choose_word', { word });
     };
 

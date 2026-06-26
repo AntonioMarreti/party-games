@@ -4,6 +4,9 @@
 $wcpWordCache = [];
 $wcpTargetCache = [];
 
+const WCP_TARGET_POLICY_ACTIVE_V1 = 'active_targets_v1';
+const WCP_TARGET_WORD_ERROR = 'Это слово пока не подходит для Wordclash Party. Выбери другое слово из 5–7 букв.';
+
 function wcpNormalizeWord($word)
 {
     return mb_strtolower(trim((string) $word), 'UTF-8');
@@ -46,58 +49,43 @@ function wcpIsPartyFriendlyTarget($word) {
 
 function wcpLoadTargetWords($length = 5)
 {
-    global $wcpTargetCache, $pdo;
+    global $wcpTargetCache;
     if (isset($wcpTargetCache[$length])) {
         return $wcpTargetCache[$length];
     }
 
+    if (!in_array((int) $length, [5, 6, 7], true)) {
+        return [];
+    }
+
     $file = __DIR__ . '/../../words/russian_' . (int) $length . '_targets.json';
     if (!file_exists($file)) {
-        return wcpLoadWords($length);
+        return [];
     }
 
     $words = json_decode(file_get_contents($file), true);
     $result = is_array($words) ? array_values(array_filter(array_map('wcpNormalizeWord', $words))) : [];
-
-    $blacklistFile = __DIR__ . '/../../words/wordclash_target_blacklist.json';
-    $blocked = [];
-    if (file_exists($blacklistFile)) {
-        $blacklist = json_decode(file_get_contents($blacklistFile), true);
-        if (is_array($blacklist) && !empty($blacklist)) {
-            $blocked = array_flip(array_map('wcpNormalizeWord', $blacklist));
-        }
-    }
-
-    if (isset($pdo) && $pdo instanceof PDO) {
-        try {
-            $stmt = $pdo->prepare("SELECT normalized_word FROM wcp_dynamic_blacklist WHERE game_type = 'wordclash_party' AND word_length = ?");
-            $stmt->execute([$length]);
-            $dbBlocked = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            foreach ($dbBlocked as $bWord) {
-                $blocked[$bWord] = true;
-            }
-        } catch (Throwable $e) {
-            // Fallback gracefully
-        }
-    }
-
-    if (!empty($blocked)) {
-        $result = array_values(array_filter($result, function ($word) use ($blocked) {
-            if (isset($blocked[$word])) return false;
-            return wcpIsPartyFriendlyTarget($word);
-        }));
-    } else {
-        $result = array_values(array_filter($result, function ($word) {
-            return wcpIsPartyFriendlyTarget($word);
-        }));
-    }
-
-    if (empty($result)) {
-        $result = wcpLoadWords($length);
-    }
+    $result = array_values(array_unique(array_filter($result, function ($word) use ($length) {
+        return mb_strlen($word, 'UTF-8') === (int) $length && preg_match('/^[а-яё]+$/u', $word);
+    })));
 
     $wcpTargetCache[$length] = $result;
     return $result;
+}
+
+function wcpIsActiveTargetWord($word, $length)
+{
+    $word = wcpNormalizeWord($word);
+    $length = (int) $length;
+    if (!in_array($length, [5, 6, 7], true) || mb_strlen($word, 'UTF-8') !== $length) {
+        return false;
+    }
+    return in_array($word, wcpLoadTargetWords($length), true);
+}
+
+function wcpUsesActiveTargetPolicy($state)
+{
+    return ($state['target_policy'] ?? '') === WCP_TARGET_POLICY_ACTIVE_V1;
 }
 
 function wcpGetPlayers($pdo, $roomId)
@@ -172,6 +160,7 @@ function wcpStartLeaderChoice($pdo, $room, &$state, $resetScores = false)
     $state['current_round'] = $round;
     $state['leader_id'] = $players[$leaderIndex];
     $state['candidate_words'] = $candidates;
+    $state['target_policy'] = WCP_TARGET_POLICY_ACTIVE_V1;
     $state['secret_word'] = '';
     $state['guesses'] = [];
     $state['guessed'] = [];
@@ -338,6 +327,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         }
 
         $state['candidate_words'] = $candidates;
+        $state['target_policy'] = WCP_TARGET_POLICY_ACTIVE_V1;
         $state['rerolls'] = $rerolls + 1;
         updateGameState($room['id'], $state);
         return ['status' => 'ok'];
@@ -352,9 +342,14 @@ function handleGameAction($pdo, $room, $user, $postData)
         }
 
         $word = wcpNormalizeWord($postData['word'] ?? '');
+        $wordLength = (int) ($state['word_length'] ?? 5);
+        if (wcpUsesActiveTargetPolicy($state) && !wcpIsActiveTargetWord($word, $wordLength)) {
+            return ['status' => 'error', 'message' => WCP_TARGET_WORD_ERROR];
+        }
+
         $candidates = array_map('wcpNormalizeWord', $state['candidate_words'] ?? []);
         if (!in_array($word, $candidates, true)) {
-            return ['status' => 'error', 'message' => 'Выберите слово из вариантов'];
+            return ['status' => 'error', 'message' => wcpUsesActiveTargetPolicy($state) ? WCP_TARGET_WORD_ERROR : 'Выберите слово из вариантов'];
         }
 
         $state['secret_word'] = $word;
@@ -414,6 +409,9 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         if ($phase === 'leader_choose' && in_array((string)($state['leader_id'] ?? ''), $bots)) {
             if (!empty($state['candidate_words'][0])) {
+                if (wcpUsesActiveTargetPolicy($state) && !wcpIsActiveTargetWord($state['candidate_words'][0], (int) ($state['word_length'] ?? 5))) {
+                    return ['status' => 'error', 'message' => WCP_TARGET_WORD_ERROR];
+                }
                 $state['secret_word'] = $state['candidate_words'][0];
                 $state['phase'] = 'playing';
                 $state['round_start_time'] = time();
