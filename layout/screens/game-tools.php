@@ -51,29 +51,34 @@
         </div>
 
         <div id="wordclash-dictionary-admin-panel" class="wordclash-dictionary-screen-panel">
-            <div class="wordclash-dictionary-search-row mb-3">
+            <form class="wordclash-dictionary-search-row" onsubmit="searchWordclashDictionaryWord(); return false;">
                 <input type="text" id="wordclash-dictionary-search" class="form-control" placeholder="Слово 5–7 букв">
-                <button type="button" class="btn btn-dark" onclick="searchWordclashDictionaryWord()">Найти</button>
+                <button type="submit" class="wordclash-dictionary-search-btn" aria-label="Найти слово">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                </button>
+            </form>
+
+            <div id="wordclash-dictionary-status" class="wordclash-dictionary-hint">Введите слово для проверки.</div>
+            <div id="wordclash-dictionary-counts" class="wordclash-dictionary-counts"></div>
+            <div id="wordclash-dictionary-result" class="wordclash-dictionary-result" hidden>
+                <div id="wordclash-dictionary-result-text" class="wordclash-dictionary-result-text"></div>
+                <div id="wordclash-dictionary-actions" class="d-flex flex-wrap gap-2"></div>
             </div>
 
-            <div id="wordclash-dictionary-status" class="small text-muted mb-3">Введите слово для проверки.</div>
-            <div id="wordclash-dictionary-actions" class="d-flex flex-wrap gap-2 mb-3"></div>
-            <div id="wordclash-dictionary-counts" class="mb-4"></div>
-
-            <div class="settings-group settings-screen-group mb-4">
-                <div class="settings-section-head">
-                    <h6 class="settings-section-title"><i class="bi bi-inbox"></i>Предложения тестеров</h6>
-                    <span id="wordclash-dictionary-suggestions-badge" class="wordclash-dictionary-section-badge" hidden>0</span>
+            <section class="wordclash-dictionary-section">
+                <div class="wordclash-dictionary-section-head">
+                    <h5>Предложения тестеров</h5>
+                    <span id="wordclash-dictionary-suggestions-badge" class="wordclash-dictionary-section-badge">0</span>
                 </div>
                 <div id="wordclash-dictionary-suggestions" class="wordclash-dictionary-list"></div>
-            </div>
+            </section>
 
-            <div class="settings-group settings-screen-group mb-4">
-                <div class="settings-section-head">
-                    <h6 class="settings-section-title"><i class="bi bi-clock-history"></i>Последние изменения</h6>
+            <section class="wordclash-dictionary-section">
+                <div class="wordclash-dictionary-section-head">
+                    <h5>Последние изменения</h5>
                 </div>
                 <div id="wordclash-dictionary-audit" class="wordclash-dictionary-audit-list small text-muted"></div>
-            </div>
+            </section>
         </div>
     </div>
 </div>

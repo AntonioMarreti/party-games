@@ -38,6 +38,7 @@
     async function refreshDictionaryAdmin(word = '') {
         const res = await window.apiRequest({ action: 'wordclash_dictionary_get', word });
         if (res.status !== 'ok') {
+            clearSearchResult();
             renderStatus(res.message || 'Ошибка загрузки');
             return;
         }
@@ -53,6 +54,22 @@
     function renderStatus(text) {
         const el = document.getElementById('wordclash-dictionary-status');
         if (el) el.textContent = text;
+    }
+
+    function renderSearchResult(text) {
+        const result = document.getElementById('wordclash-dictionary-result');
+        const resultText = document.getElementById('wordclash-dictionary-result-text');
+        if (resultText) resultText.textContent = text;
+        if (result) result.hidden = false;
+    }
+
+    function clearSearchResult() {
+        const result = document.getElementById('wordclash-dictionary-result');
+        const resultText = document.getElementById('wordclash-dictionary-result-text');
+        const actions = document.getElementById('wordclash-dictionary-actions');
+        if (result) result.hidden = true;
+        if (resultText) resultText.textContent = '';
+        if (actions) actions.innerHTML = '';
     }
 
     function dictionaryStateLabel(state) {
@@ -81,7 +98,8 @@
             status.in_broad_guess ? 'можно использовать в попытках' : 'нет в словаре попыток',
             status.in_static_blacklist ? 'в blacklist' : 'не в blacklist',
         ];
-        renderStatus(parts.join(' · '));
+        renderStatus('');
+        renderSearchResult(parts.join(' · '));
         renderActions(status);
     }
 
@@ -113,20 +131,11 @@
         if (!el || !counts) return;
         const rows = [5, 6, 7].map(length => {
             const c = counts[String(length)] || {};
-            return `
-                <div class="wordclash-dictionary-count-row">
-                    <span>${length} букв</span>
-                    <strong>${Number(c.active || 0)}</strong>
-                </div>
-            `;
+            return `<span>${length} букв · <strong>${Number(c.active || 0)}</strong></span>`;
         }).join('');
         el.innerHTML = `
-            <div class="settings-group settings-screen-group wordclash-dictionary-count-card mb-0">
-                <div class="settings-section-head">
-                    <h6 class="settings-section-title"><i class="bi bi-grid-3x3-gap"></i>Слова в игре</h6>
-                </div>
-                <div class="wordclash-dictionary-count-list">${rows}</div>
-            </div>
+            <div class="wordclash-dictionary-count-title">В словаре</div>
+            <div class="wordclash-dictionary-count-list">${rows}</div>
         `;
     }
 
@@ -136,7 +145,7 @@
         if (!el) return;
         if (badge) {
             badge.textContent = String(items.length);
-            badge.hidden = items.length === 0;
+            badge.hidden = false;
         }
         if (!items.length) {
             el.innerHTML = '<div class="text-muted small">Пока нет предложений.</div>';
@@ -209,9 +218,8 @@
         if (!isAdmin()) return;
         lastStatus = null;
         const input = document.getElementById('wordclash-dictionary-search');
-        const actions = document.getElementById('wordclash-dictionary-actions');
         if (input) input.value = '';
-        if (actions) actions.innerHTML = '';
+        clearSearchResult();
         renderStatus('Введите слово для проверки.');
         if (window.showScreen) window.showScreen('wordclash-dictionary');
         refreshDictionaryAdmin();
@@ -230,8 +238,7 @@
         const word = input ? input.value.trim() : '';
         if (!word) {
             renderStatus('Введите слово для проверки.');
-            const actions = document.getElementById('wordclash-dictionary-actions');
-            if (actions) actions.innerHTML = '';
+            clearSearchResult();
             return;
         }
         refreshDictionaryAdmin(word);
