@@ -143,13 +143,17 @@
 
         const adminToolRow = document.getElementById('wordclash-tool-admin-row');
         const suggestToolRow = document.getElementById('wordclash-tool-suggest-row');
-        if (adminToolRow) adminToolRow.style.display = isAdmin(user) ? '' : 'none';
+        const hasAdminAccess = isAdmin(user);
+        const hasTesterAccess = user?.is_tester === true
+            || user?.is_tester === 1
+            || user?.is_tester === '1';
+        if (adminToolRow) {
+            adminToolRow.style.display = hasAdminAccess ? '' : 'none';
+            adminToolRow.classList.toggle('border-0', hasAdminAccess && !hasTesterAccess);
+            adminToolRow.classList.toggle('pb-0', hasAdminAccess && !hasTesterAccess);
+        }
         if (suggestToolRow) {
-            suggestToolRow.style.display = (
-                user?.is_tester === true
-                || user?.is_tester === 1
-                || user?.is_tester === '1'
-            ) ? '' : 'none';
+            suggestToolRow.style.display = hasTesterAccess ? '' : 'none';
         }
     };
 

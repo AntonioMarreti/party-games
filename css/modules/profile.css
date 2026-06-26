@@ -354,7 +354,7 @@ body.dark-mode .stat-label {
 #screen-profile-edit h4,
 #screen-friends h4,
 #screen-leaderboard h4,
-#screen-settings h4 {
+:is(#screen-settings, #screen-game-tools) h4 {
     color: var(--text-main);
     font-weight: 800;
     margin-bottom: 15px;
@@ -1672,14 +1672,14 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     padding-bottom: var(--app-bottom-nav-clearance) !important;
 }
 
-#screen-settings .settings-screen-header {
+:is(#screen-settings, #screen-game-tools) .settings-screen-header {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 18px;
 }
 
-#screen-settings .settings-back-btn {
+:is(#screen-settings, #screen-game-tools) .settings-back-btn {
     width: 42px;
     height: 42px;
     flex: 0 0 42px;
@@ -1693,7 +1693,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
 }
 
-#screen-settings h4 {
+:is(#screen-settings, #screen-game-tools) h4 {
     padding-left: 0;
     margin-bottom: 0;
     text-shadow: none;
@@ -1701,7 +1701,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     line-height: 1.1;
 }
 
-#screen-settings .settings-screen-group {
+:is(#screen-settings, #screen-game-tools) .settings-screen-group {
     margin-bottom: 16px !important;
     padding: 12px 14px !important;
     border-radius: 22px;
@@ -1710,7 +1710,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
 }
 
-#screen-settings .settings-section-head {
+:is(#screen-settings, #screen-game-tools) .settings-section-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1718,7 +1718,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     margin-bottom: 8px;
 }
 
-#screen-settings .settings-section-title {
+:is(#screen-settings, #screen-game-tools) .settings-section-title {
     display: inline-flex;
     align-items: center;
     gap: 7px;
@@ -1731,7 +1731,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     text-transform: uppercase;
 }
 
-#screen-settings .settings-section-title i {
+:is(#screen-settings, #screen-game-tools) .settings-section-title i {
     color: var(--primary-color);
     font-size: 13px;
     letter-spacing: 0;
@@ -1742,7 +1742,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
 }
 
 #screen-settings .settings-accent-title,
-#screen-settings .settings-row-title {
+:is(#screen-settings, #screen-game-tools) .settings-row-title {
     color: var(--text-main);
     font-size: 15px;
     font-weight: 800;
@@ -1754,11 +1754,11 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     margin-bottom: 10px;
 }
 
-#screen-settings .settings-row-title-warning {
+:is(#screen-settings, #screen-game-tools) .settings-row-title-warning {
     color: color-mix(in srgb, var(--status-warning), var(--text-main) 28%);
 }
 
-#screen-settings .settings-row-subtitle {
+:is(#screen-settings, #screen-game-tools) .settings-row-subtitle {
     margin-top: 4px;
     color: var(--text-muted);
     font-size: 12.5px;
@@ -1793,25 +1793,25 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
         0 8px 18px color-mix(in srgb, var(--primary-color), transparent 72%);
 }
 
-#screen-settings .settings-item {
+:is(#screen-settings, #screen-game-tools) .settings-item {
     min-height: 58px;
     gap: 14px;
     padding: 13px 0;
 }
 
-#screen-settings .settings-item.pb-0 {
+:is(#screen-settings, #screen-game-tools) .settings-item.pb-0 {
     padding-bottom: 13px !important;
 }
 
-#screen-settings .settings-item:not(:last-child) {
+:is(#screen-settings, #screen-game-tools) .settings-item:not(:last-child) {
     border-bottom-color: color-mix(in srgb, var(--divider), transparent 18%);
 }
 
-#screen-settings .settings-item.border-0 {
+:is(#screen-settings, #screen-game-tools) .settings-item.border-0 {
     border-bottom: 0 !important;
 }
 
-#screen-settings .settings-item.clickable {
+:is(#screen-settings, #screen-game-tools) .settings-item.clickable {
     min-height: 60px;
     margin: 0 -10px;
     width: calc(100% + 20px);
@@ -1819,16 +1819,16 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     border-radius: 16px;
 }
 
-#screen-settings .settings-item.clickable:hover,
-#screen-settings .settings-item.clickable:focus-visible {
+:is(#screen-settings, #screen-game-tools) .settings-item.clickable:hover,
+:is(#screen-settings, #screen-game-tools) .settings-item.clickable:focus-visible {
     background: color-mix(in srgb, var(--primary-color), transparent 92%);
 }
 
-#screen-settings .settings-item.clickable:active {
+:is(#screen-settings, #screen-game-tools) .settings-item.clickable:active {
     background: color-mix(in srgb, var(--primary-color), transparent 88%);
 }
 
-#screen-settings .settings-label-wrap {
+:is(#screen-settings, #screen-game-tools) .settings-label-wrap {
     min-width: 0;
     flex: 1 1 auto;
 }
@@ -1882,7 +1882,7 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent), transparent 78%) !important;
 }
 
-#screen-settings .settings-row-icon {
+:is(#screen-settings, #screen-game-tools) .settings-row-icon {
     width: 40px;
     height: 40px;
     flex: 0 0 40px;
@@ -1908,29 +1908,29 @@ body.tg-dark-theme.dark-mode .profile-menu-icon-danger {
     border-color: #d0d7de;
 }
 
-body.dark-mode #screen-settings .settings-screen-group,
-body.tg-dark-theme.dark-mode #screen-settings .settings-screen-group {
+body.dark-mode :is(#screen-settings, #screen-game-tools) .settings-screen-group,
+body.tg-dark-theme.dark-mode :is(#screen-settings, #screen-game-tools) .settings-screen-group {
     background: color-mix(in srgb, var(--bg-card), #ffffff 3%);
     border-color: color-mix(in srgb, var(--border-glass), #ffffff 12%);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
 }
 
-body.dark-mode #screen-settings .settings-back-btn,
-body.tg-dark-theme.dark-mode #screen-settings .settings-back-btn {
+body.dark-mode :is(#screen-settings, #screen-game-tools) .settings-back-btn,
+body.tg-dark-theme.dark-mode :is(#screen-settings, #screen-game-tools) .settings-back-btn {
     background: color-mix(in srgb, var(--bg-card), #ffffff 4%);
     border-color: color-mix(in srgb, var(--primary-color), transparent 54%);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
 }
 
-body.dark-mode #screen-settings .settings-row-subtitle,
-body.tg-dark-theme.dark-mode #screen-settings .settings-row-subtitle,
-body.thermal-safe #screen-settings .settings-row-subtitle {
+body.dark-mode :is(#screen-settings, #screen-game-tools) .settings-row-subtitle,
+body.tg-dark-theme.dark-mode :is(#screen-settings, #screen-game-tools) .settings-row-subtitle,
+body.thermal-safe :is(#screen-settings, #screen-game-tools) .settings-row-subtitle {
     color: var(--text-muted) !important;
     opacity: 1;
 }
 
-body.dark-mode #screen-settings .settings-section-title,
-body.tg-dark-theme.dark-mode #screen-settings .settings-section-title {
+body.dark-mode :is(#screen-settings, #screen-game-tools) .settings-section-title,
+body.tg-dark-theme.dark-mode :is(#screen-settings, #screen-game-tools) .settings-section-title {
     color: color-mix(in srgb, var(--text-muted), #ffffff 8%);
 }
 
@@ -1944,8 +1944,8 @@ body.tg-dark-theme.dark-mode #screen-settings .settings-switch:checked {
     background-color: var(--app-accent) !important;
 }
 
-body.dark-mode #screen-settings .settings-row-icon,
-body.tg-dark-theme.dark-mode #screen-settings .settings-row-icon {
+body.dark-mode :is(#screen-settings, #screen-game-tools) .settings-row-icon,
+body.tg-dark-theme.dark-mode :is(#screen-settings, #screen-game-tools) .settings-row-icon {
     background: color-mix(in srgb, var(--primary-color), transparent 84%);
     border-color: color-mix(in srgb, var(--primary-color), transparent 68%);
 }
@@ -1962,22 +1962,22 @@ body.tg-dark-theme.dark-mode .palette-preview {
     border-color: rgba(255, 255, 255, 0.14);
 }
 
-body.thermal-safe #screen-settings .settings-screen-group {
+body.thermal-safe :is(#screen-settings, #screen-game-tools) .settings-screen-group {
     background: var(--thermal-surface-bg) !important;
     border-color: var(--thermal-border) !important;
     box-shadow: var(--thermal-shadow-soft) !important;
 }
 
 @media (max-width: 380px) {
-    #screen-settings .settings-screen-group {
+    :is(#screen-settings, #screen-game-tools) .settings-screen-group {
         padding: 11px 12px !important;
     }
 
-    #screen-settings .settings-row-title {
+    :is(#screen-settings, #screen-game-tools) .settings-row-title {
         font-size: 14px;
     }
 
-    #screen-settings .settings-row-subtitle {
+    :is(#screen-settings, #screen-game-tools) .settings-row-subtitle {
         font-size: 12px;
     }
 
