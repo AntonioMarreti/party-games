@@ -163,15 +163,6 @@
         if (window.switchTab) window.switchTab('profile');
     };
 
-    window.openWordclashGameTools = function () {
-        if (!isTester()) return;
-        if (window.showScreen) window.showScreen('game-tools-wordclash');
-    };
-
-    window.closeWordclashGameTools = function () {
-        if (window.showScreen) window.showScreen('game-tools');
-    };
-
     window.openWordclashDictionaryAdmin = function () {
         openDictionaryModal('admin');
     };
