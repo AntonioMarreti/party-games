@@ -56,6 +56,149 @@ function getEffectivePalette() {
     return palettePreviewActive && draftPalette ? draftPalette : themePreferences.palette;
 }
 
+function getRealTelegramWebApp() {
+    try {
+        const tg = window.Telegram?.WebApp;
+        if (!tg || tg.__PGB_MOCK === true || window.Telegram?.__PGB_MOCK === true) return null;
+        return tg;
+    } catch (e) {
+        return null;
+    }
+}
+
+function telegramVersionAtLeast(tg, version) {
+    try {
+        return typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast(version);
+    } catch (e) {
+        return true;
+    }
+}
+
+function normalizeOpaqueHexColor(color) {
+    const value = String(color || '').trim();
+    let match = value.match(/^#([0-9a-f]{3})$/i);
+    if (match) {
+        return '#' + match[1].split('').map(char => char + char).join('').toUpperCase();
+    }
+
+    match = value.match(/^#([0-9a-f]{4})$/i);
+    if (match && match[1][3].toLowerCase() === 'f') {
+        return '#' + match[1].slice(0, 3).split('').map(char => char + char).join('').toUpperCase();
+    }
+
+    match = value.match(/^#([0-9a-f]{6})$/i);
+    if (match) return '#' + match[1].toUpperCase();
+
+    match = value.match(/^#([0-9a-f]{8})$/i);
+    if (match && match[1].slice(6).toLowerCase() === 'ff') {
+        return '#' + match[1].slice(0, 6).toUpperCase();
+    }
+
+    return null;
+}
+
+function parseRgbColorToHex(color) {
+    const value = String(color || '').trim();
+    const match = value.match(/^rgba?\((.+)\)$/i);
+    if (!match) return null;
+
+    const normalized = match[1].replace(/\s*\/\s*/g, ' / ');
+    const parts = normalized.includes(',')
+        ? normalized.split(',').map(part => part.trim())
+        : normalized.split(/\s+/).filter(Boolean);
+
+    const slashIndex = parts.indexOf('/');
+    const rgbParts = (slashIndex === -1 ? parts : parts.slice(0, slashIndex)).slice(0, 3);
+    const alphaValue = slashIndex === -1 ? parts[3] : parts[slashIndex + 1];
+
+    if (rgbParts.length !== 3) return null;
+    if (alphaValue && alphaValue !== '1' && alphaValue !== '100%') return null;
+
+    const hex = rgbParts.map(part => {
+        if (part.endsWith('%')) {
+            const percentage = Number.parseFloat(part);
+            if (!Number.isFinite(percentage)) return null;
+            return Math.round(Math.max(0, Math.min(100, percentage)) * 2.55);
+        }
+
+        const channel = Number.parseFloat(part);
+        if (!Number.isFinite(channel)) return null;
+        return Math.round(Math.max(0, Math.min(255, channel)));
+    });
+
+    if (hex.some(channel => channel === null)) return null;
+    return '#' + hex.map(channel => channel.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function resolveCssColorToHex(color) {
+    const directHex = normalizeOpaqueHexColor(color);
+    if (directHex) return directHex;
+
+    const rgbHex = parseRgbColorToHex(color);
+    if (rgbHex) return rgbHex;
+
+    try {
+        const root = document.documentElement;
+        if (!root || !color) return null;
+
+        const probe = document.createElement('span');
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        probe.style.pointerEvents = 'none';
+        probe.style.color = color;
+        root.appendChild(probe);
+
+        const resolved = parseRgbColorToHex(getComputedStyle(probe).color);
+        probe.remove();
+        return resolved;
+    } catch (e) {
+        return null;
+    }
+}
+
+function getComputedThemeColorHex(tokenName) {
+    try {
+        const tokenValue = getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim();
+        return resolveCssColorToHex(tokenValue);
+    } catch (e) {
+        return null;
+    }
+}
+
+function getAppliedTelegramChromeColors() {
+    const resolvedTheme = document.documentElement.getAttribute('data-theme') || getResolvedTheme();
+    const fallbackColor = resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9';
+    const appBackgroundHex = getComputedThemeColorHex('--app-bg') || fallbackColor;
+
+    return {
+        headerHex: getComputedThemeColorHex('--app-header-bg') || appBackgroundHex,
+        backgroundHex: appBackgroundHex
+    };
+}
+
+function syncTelegramChrome() {
+    const tg = getRealTelegramWebApp();
+    if (!tg) return;
+
+    const { headerHex, backgroundHex } = getAppliedTelegramChromeColors();
+
+    if (headerHex && typeof tg.setHeaderColor === 'function' && telegramVersionAtLeast(tg, '6.9')) {
+        try {
+            tg.setHeaderColor(headerHex);
+        } catch (e) {
+            // Older clients can reject custom HEX header colors; the app should keep running.
+        }
+    }
+
+    if (backgroundHex && typeof tg.setBackgroundColor === 'function' && telegramVersionAtLeast(tg, '6.1')) {
+        try {
+            tg.setBackgroundColor(backgroundHex);
+        } catch (e) {
+            // Background color support is best-effort in old or non-standard clients.
+        }
+    }
+}
+
 function applyThemeDOM(paletteId = getEffectivePalette()) {
     const root = document.documentElement;
     const body = document.body;
@@ -73,32 +216,9 @@ function applyThemeDOM(paletteId = getEffectivePalette()) {
 
         // Compatibility aliases
         body.classList.toggle('dark-mode', resolvedTheme === 'dark');
-
-        // Update Telegram Header to use the new calm background token instead of bright accent
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.setHeaderColor) {
-            try {
-                // Get the computed background color from the token
-                const computedStyle = getComputedStyle(root);
-                let headerBg = computedStyle.getPropertyValue('--app-header-bg').trim();
-                let appBg = computedStyle.getPropertyValue('--app-bg').trim();
-                let colorToSet = headerBg || appBg || (resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9');
-
-                // Telegram setHeaderColor requires hex. We might need to handle this if var resolves to non-hex,
-                // but Telegram WebApp often accepts some standard colors or we fallback to basic hex if error.
-                if (colorToSet.startsWith('#')) {
-                    window.Telegram.WebApp.setHeaderColor(colorToSet);
-                    window.Telegram.WebApp.setBackgroundColor?.(colorToSet);
-                } else {
-                    // Default fallback if CSS variable is not a direct hex
-                    const fallbackColor = resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9';
-                    window.Telegram.WebApp.setHeaderColor(fallbackColor);
-                    window.Telegram.WebApp.setBackgroundColor?.(fallbackColor);
-                }
-            } catch (e) {
-                console.error("Failed to set TG header color", e);
-            }
-        }
     }
+
+    syncTelegramChrome();
 }
 
 // Public API for Theme
@@ -255,6 +375,8 @@ function loadSettings() {
             syncTelegramThemeClass();
             if (themePreferences.preference === 'system') {
                 applyThemeDOM(getEffectivePalette());
+            } else {
+                syncTelegramChrome();
             }
         });
     } catch (e) {
@@ -397,6 +519,7 @@ window.ThemeManager = {
     commitPalettePreview,
     applyAccentColor,
     setThemePreference,
+    syncTelegramChrome,
     toggleSetting,
     triggerHaptic,
     updateDesktopFullscreenVisibility,

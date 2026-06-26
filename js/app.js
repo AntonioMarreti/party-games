@@ -318,7 +318,9 @@ function initTelegramWebAppShell(tg, context = 'startup') {
             tg.isVerticalSwipesEnabled = false;
         }
 
-        if (tg.setBackgroundColor) tg.setBackgroundColor('#F4F5F9');
+        if (window.ThemeManager && typeof window.ThemeManager.syncTelegramChrome === 'function') {
+            window.ThemeManager.syncTelegramChrome();
+        }
         if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
         if (tg.ready) tg.ready();
         document.body.classList.toggle('tg-dark-theme', tg.colorScheme === 'dark');

@@ -77,12 +77,8 @@
                     document.documentElement.classList.add('dark-mode');
                 }
 
-                // 4. Telegram early apply
+                // 4. Telegram early shell setup
                 if (tg) {
-                    var isDark = resolvedTheme === 'dark';
-                    var bg = isDark ? '#0b1120' : '#f4f6f9';
-                    if (tg.setBackgroundColor) tg.setBackgroundColor(bg);
-                    if (tg.setHeaderColor) tg.setHeaderColor(bg);
                     if (tg.expand) tg.expand();
                 }
             } catch (e) { console.error('Early TG Init failed', e); }
