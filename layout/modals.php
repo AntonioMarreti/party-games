@@ -1,5 +1,41 @@
 <!-- === MODALS === -->
 
+<div class="modal fade" id="wordclashDictionaryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold ps-2" id="wordclash-dictionary-title">Словарь Wordclash</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <div id="wordclash-dictionary-admin-panel" style="display:none;">
+                    <div class="input-group mb-3">
+                        <input type="text" id="wordclash-dictionary-search" class="form-control" placeholder="Слово 5–7 букв">
+                        <button type="button" class="btn btn-dark" onclick="searchWordclashDictionaryWord()">Найти</button>
+                    </div>
+                    <div id="wordclash-dictionary-status" class="small text-muted mb-3">Введите слово для проверки.</div>
+                    <div id="wordclash-dictionary-actions" class="d-flex flex-wrap gap-2 mb-3"></div>
+                    <div id="wordclash-dictionary-counts" class="small text-muted mb-3"></div>
+                    <h6 class="fw-bold mb-2">Предложения тестеров</h6>
+                    <div id="wordclash-dictionary-suggestions" class="d-flex flex-column gap-2 mb-3"></div>
+                    <h6 class="fw-bold mb-2">Последние изменения</h6>
+                    <div id="wordclash-dictionary-audit" class="d-flex flex-column gap-1 small text-muted"></div>
+                </div>
+
+                <form id="wordclash-dictionary-suggest-panel" style="display:none;" onsubmit="submitWordclashDictionarySuggestion(); return false;">
+                    <label class="form-label small fw-bold text-muted" for="wordclash-dictionary-suggest-word">Слово</label>
+                    <input type="text" id="wordclash-dictionary-suggest-word" class="form-control mb-3" placeholder="5–7 русских букв">
+                    <label class="form-label small fw-bold text-muted" for="wordclash-dictionary-suggest-comment">Комментарий</label>
+                    <textarea id="wordclash-dictionary-suggest-comment" class="form-control mb-3" maxlength="180" rows="3"
+                        placeholder="Почему слово стоит добавить?"></textarea>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Отправить</button>
+                    <div id="wordclash-dictionary-suggest-result" class="small text-muted mt-3"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 1. Removed: Leaderboard is now a separate screen -->
 
 <!-- 2. Invite Friends Modal -->

@@ -315,6 +315,10 @@ $routes = [
     'open_scheduled_game' => 'actions/scheduled_games.php',
     'cancel_scheduled_game' => 'actions/scheduled_games.php',
     'send_scheduled_game_manual_reminder' => 'actions/scheduled_games.php',
+    'wordclash_dictionary_get' => 'actions/wordclash_dictionary.php',
+    'wordclash_dictionary_action' => 'actions/wordclash_dictionary.php',
+    'wordclash_dictionary_suggest' => 'actions/wordclash_dictionary.php',
+    'wordclash_dictionary_review_suggestion' => 'actions/wordclash_dictionary.php',
 
     'admin_stats' => 'actions/admin.php',
     'reset_leaderboard' => 'actions/admin.php',

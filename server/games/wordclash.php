@@ -1,5 +1,6 @@
 <?php
 // server/games/wordclash.php
+require_once __DIR__ . '/../lib/wordclash_dictionary.php';
 
 // Cache for loaded words to avoid re-reading file on every check in the same request
 $wordCache = [];
@@ -35,20 +36,11 @@ function loadTargetWords($length = 5)
     if (isset($targetCache[$length]))
         return $targetCache[$length];
 
-    $file = __DIR__ . '/../../words/russian_' . $length . '_targets.json';
-    if (!file_exists($file)) {
-        return loadWords($length); // Fallback
-    }
-    $words = json_decode(file_get_contents($file), true);
-    $result = is_array($words) ? $words : [];
-
-    // Normalize words just in case
-    $result = array_map(function ($w) {
-        return mb_strtolower(trim($w), 'UTF-8');
-    }, $result);
+    global $pdo;
+    $result = wc_dict_active_targets($pdo instanceof PDO ? $pdo : null, (int) $length);
 
     if (empty($result)) {
-        return loadWords($length);
+        return loadWords($length); // Last-resort fallback to keep game startup safe.
     }
 
     $targetCache[$length] = $result;

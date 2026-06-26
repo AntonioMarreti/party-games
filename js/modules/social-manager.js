@@ -1523,6 +1523,9 @@ function renderCurrentUser(user) {
     if (window.ScrollQA && typeof window.ScrollQA.refreshAccess === 'function') {
         window.ScrollQA.refreshAccess(user);
     }
+    if (typeof window.refreshWordclashDictionaryAccess === 'function') {
+        window.refreshWordclashDictionaryAccess(user);
+    }
 
     // Header Name
     if (window.safeText) window.safeText('user-name-display', user.custom_name || user.first_name);

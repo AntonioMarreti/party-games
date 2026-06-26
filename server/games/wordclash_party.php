@@ -1,5 +1,6 @@
 <?php
 // server/games/wordclash_party.php
+require_once __DIR__ . '/../lib/wordclash_dictionary.php';
 
 $wcpWordCache = [];
 $wcpTargetCache = [];
@@ -58,16 +59,8 @@ function wcpLoadTargetWords($length = 5)
         return [];
     }
 
-    $file = __DIR__ . '/../../words/russian_' . (int) $length . '_targets.json';
-    if (!file_exists($file)) {
-        return [];
-    }
-
-    $words = json_decode(file_get_contents($file), true);
-    $result = is_array($words) ? array_values(array_filter(array_map('wcpNormalizeWord', $words))) : [];
-    $result = array_values(array_unique(array_filter($result, function ($word) use ($length) {
-        return mb_strlen($word, 'UTF-8') === (int) $length && preg_match('/^[а-яё]+$/u', $word);
-    })));
+    global $pdo;
+    $result = wc_dict_active_targets($pdo instanceof PDO ? $pdo : null, (int) $length);
 
     $wcpTargetCache[$length] = $result;
     return $result;
@@ -80,7 +73,8 @@ function wcpIsActiveTargetWord($word, $length)
     if (!in_array($length, [5, 6, 7], true) || mb_strlen($word, 'UTF-8') !== $length) {
         return false;
     }
-    return in_array($word, wcpLoadTargetWords($length), true);
+    global $pdo;
+    return wc_dict_is_active_target($pdo instanceof PDO ? $pdo : null, $word, $length);
 }
 
 function wcpUsesActiveTargetPolicy($state)
@@ -510,16 +504,13 @@ function handleGameAction($pdo, $room, $user, $postData)
         }
 
         if ($type === 'block_word') {
-            require_once __DIR__ . '/../actions/qa.php';
-            if (!qa_is_tester_or_admin($user)) {
+            if (empty($user['is_admin'])) {
                 return ['status' => 'error', 'message' => 'Нет прав'];
             }
             try {
-                $stmt = $pdo->prepare("
-                    INSERT IGNORE INTO wcp_dynamic_blacklist (normalized_word, word, game_type, word_length, source, added_by, reason)
-                    VALUES (?, ?, 'wordclash_party', ?, 'tester', ?, ?)
-                ");
-                $stmt->execute([$normalizedWord, $word, $wordLength, $userId, mb_substr($reason, 0, 255)]);
+                wc_dict_ban_word($pdo, $normalizedWord, (int) $userId);
+                global $wcpTargetCache;
+                unset($wcpTargetCache[$wordLength]);
 
                 // Optionally auto-approve reports for this word
                 try {
