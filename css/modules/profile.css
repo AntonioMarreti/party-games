@@ -2165,9 +2165,61 @@ body.thermal-safe :is(#screen-settings, #screen-game-tools) .settings-screen-gro
 #screen-wordclash-dictionary .wordclash-dictionary-result-text {
     margin-bottom: 10px;
     color: var(--text-main);
+}
+
+#screen-wordclash-dictionary .wordclash-search-word {
+    color: var(--text-main);
+    font-size: 20px;
+    font-weight: 850;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+#screen-wordclash-dictionary .wordclash-search-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    color: var(--text-muted);
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.35;
+    line-height: 1.25;
+}
+
+#screen-wordclash-dictionary .wordclash-search-status-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1.15;
+}
+
+#screen-wordclash-dictionary .wordclash-search-status-chip.is-active {
+    color: color-mix(in srgb, var(--status-success, #22c55e), var(--text-main) 30%);
+    background: color-mix(in srgb, var(--status-success, #22c55e), transparent 86%);
+}
+
+#screen-wordclash-dictionary .wordclash-search-status-chip.is-banned {
+    color: color-mix(in srgb, var(--status-warning, #f59e0b), var(--text-main) 24%);
+    background: color-mix(in srgb, var(--status-warning, #f59e0b), transparent 84%);
+}
+
+#screen-wordclash-dictionary .wordclash-search-status-chip.is-removed,
+#screen-wordclash-dictionary .wordclash-search-status-chip.is-absent {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--divider), transparent 38%);
+}
+
+#screen-wordclash-dictionary .wordclash-search-description {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.38;
 }
 
 #screen-wordclash-dictionary .wordclash-dictionary-section {

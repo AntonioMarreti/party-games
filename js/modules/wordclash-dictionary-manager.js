@@ -63,6 +63,13 @@
         if (result) result.hidden = false;
     }
 
+    function renderSearchResultHtml(html) {
+        const result = document.getElementById('wordclash-dictionary-result');
+        const resultText = document.getElementById('wordclash-dictionary-result-text');
+        if (resultText) resultText.innerHTML = html;
+        if (result) result.hidden = false;
+    }
+
     function clearSearchResult() {
         const result = document.getElementById('wordclash-dictionary-result');
         const resultText = document.getElementById('wordclash-dictionary-result-text');
@@ -77,7 +84,7 @@
             active: 'В словаре',
             removed: 'Убрано из загадок',
             banned: 'Запрещено для загадок',
-            absent: 'Нет в словаре',
+            absent: 'Не добавлено в словарь',
             add: 'добавлено в словарь',
             remove: 'убрано из загадок',
             restore: 'возвращено в словарь',
@@ -90,15 +97,48 @@
         return labels[state] || state || 'неизвестно';
     }
 
+    function dictionaryStatusTone(state) {
+        if (state === 'active') return 'active';
+        if (state === 'banned') return 'banned';
+        if (state === 'removed') return 'removed';
+        return 'absent';
+    }
+
+    function dictionaryStatusDescription(status) {
+        const acceptsGuess = !!status.in_broad_guess;
+        if (status.state === 'banned') {
+            return acceptsGuess
+                ? 'Игра может принять это слово как попытку, но не выберет его загадкой.'
+                : 'Слово запрещено для загадок и не найдено в словаре допустимых попыток.';
+        }
+        if (status.state === 'active') {
+            return acceptsGuess
+                ? 'Может быть загадкой и принимается в попытках.'
+                : 'Может быть загадкой, но не найдено в словаре допустимых попыток.';
+        }
+        if (status.state === 'removed') {
+            return acceptsGuess
+                ? 'Не выпадет загадкой, но принимается в попытках.'
+                : 'Не выпадет загадкой и не найдено в словаре допустимых попыток.';
+        }
+        if (acceptsGuess) {
+            return 'Слово принимается в попытках и его можно добавить как возможную загадку.';
+        }
+        return 'Слова нет в широком словаре допустимых попыток, поэтому его нельзя добавить как загадку.';
+    }
+
     function renderWordStatus(status) {
-        const parts = [
-            `${status.word} · ${status.length} букв`,
-            dictionaryStateLabel(status.state),
-            status.source ? `источник: ${status.source}` : 'источник: нет',
-            status.in_broad_guess ? 'можно использовать в попытках' : 'нет в словаре попыток',
-        ];
+        const label = dictionaryStateLabel(status.state);
         renderStatus('');
-        renderSearchResult(parts.join(' · '));
+        renderSearchResultHtml(`
+            <div class="wordclash-search-word">${escapeHtml(status.word)}</div>
+            <div class="wordclash-search-meta">
+                <span>${escapeHtml(status.length)} букв</span>
+                <span aria-hidden="true">·</span>
+                <span class="wordclash-search-status-chip is-${dictionaryStatusTone(status.state)}">${escapeHtml(label)}</span>
+            </div>
+            <div class="wordclash-search-description">${escapeHtml(dictionaryStatusDescription(status))}</div>
+        `);
         renderActions(status);
     }
 
