@@ -2028,6 +2028,186 @@ body.thermal-safe :is(#screen-settings, #screen-game-tools) .settings-screen-gro
     margin-right: 0;
 }
 
+#screen-wordclash-dictionary .room-content-wrapper {
+    padding-bottom: var(--app-bottom-nav-clearance);
+}
+
+#screen-wordclash-dictionary .settings-screen-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+#screen-wordclash-dictionary .settings-screen-header h4 {
+    padding-left: 0;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-main);
+    text-shadow: none;
+}
+
+#screen-wordclash-dictionary .settings-back-btn {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color) !important;
+    background: color-mix(in srgb, var(--bg-card), var(--bg-app) 22%);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 62%);
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-search-row {
+    display: flex;
+    gap: 10px;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-search-row .form-control {
+    min-width: 0;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-search-row .btn {
+    flex: 0 0 auto;
+    border-radius: 14px;
+    font-weight: 800;
+    padding-inline: 18px;
+}
+
+#screen-wordclash-dictionary .settings-screen-group {
+    margin-bottom: 16px !important;
+    padding: 12px 14px !important;
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--bg-card), var(--bg-app) 12%);
+    border-color: color-mix(in srgb, var(--border-glass), var(--text-main) 5%);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+#screen-wordclash-dictionary .settings-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 22px;
+    margin-bottom: 8px;
+}
+
+#screen-wordclash-dictionary .settings-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#screen-wordclash-dictionary .settings-section-title i {
+    flex: 0 0 auto;
+    color: var(--primary-color);
+    font-size: 13px;
+    line-height: 1;
+    letter-spacing: 0;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-section-badge {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color), transparent 88%);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-count-list {
+    display: grid;
+    gap: 6px;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-count-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 28px;
+    color: var(--text-main);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-count-row strong {
+    font-size: 16px;
+    font-weight: 900;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-suggestion-card {
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--divider), transparent 18%);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--bg-card), var(--bg-app) 8%);
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-audit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: baseline;
+}
+
+#screen-wordclash-dictionary .wordclash-dictionary-audit-row strong {
+    color: var(--text-main);
+}
+
+body.dark-mode #screen-wordclash-dictionary .settings-screen-group,
+body.tg-dark-theme.dark-mode #screen-wordclash-dictionary .settings-screen-group {
+    background: color-mix(in srgb, var(--bg-card), #ffffff 3%);
+    border-color: color-mix(in srgb, var(--border-glass), #ffffff 12%);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode #screen-wordclash-dictionary .settings-back-btn,
+body.tg-dark-theme.dark-mode #screen-wordclash-dictionary .settings-back-btn {
+    background: color-mix(in srgb, var(--bg-card), #ffffff 4%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 54%);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+body.dark-mode #screen-wordclash-dictionary .settings-section-title,
+body.tg-dark-theme.dark-mode #screen-wordclash-dictionary .settings-section-title {
+    color: color-mix(in srgb, var(--text-muted), #ffffff 8%);
+}
+
+body.thermal-safe #screen-wordclash-dictionary .settings-screen-group {
+    background: var(--thermal-surface-bg) !important;
+    border-color: var(--thermal-border) !important;
+    box-shadow: var(--thermal-shadow-soft) !important;
+}
+
 @media (max-width: 380px) {
     :is(#screen-settings, #screen-game-tools) .settings-screen-group {
         padding: 11px 12px !important;

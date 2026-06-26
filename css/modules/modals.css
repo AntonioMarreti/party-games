@@ -274,6 +274,27 @@ body.thermal-safe .lobby-modal .create-room-public-row {
     transition: 0.2s;
 }
 
+#wordclashDictionaryModal .wordclash-suggest-close-btn {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    flex: 0 0 48px;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    margin-left: auto;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 .invite-icon-wrapper {
     width: 80px;
     height: 80px;

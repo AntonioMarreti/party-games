@@ -21,19 +21,13 @@
             .replace(/'/g, '&#039;');
     }
 
-    function openDictionaryModal(mode) {
-        const adminPanel = document.getElementById('wordclash-dictionary-admin-panel');
+    function openSuggestionModal() {
         const suggestPanel = document.getElementById('wordclash-dictionary-suggest-panel');
         const title = document.getElementById('wordclash-dictionary-title');
-        if (!adminPanel || !suggestPanel) return;
+        if (!suggestPanel) return;
 
-        adminPanel.style.display = mode === 'admin' ? '' : 'none';
-        suggestPanel.style.display = mode === 'suggest' ? '' : 'none';
-        if (title) title.textContent = mode === 'admin' ? 'Словарь Wordclash' : 'Предложить слово для Wordclash';
-
-        if (mode === 'admin') {
-            refreshDictionaryAdmin();
-        }
+        suggestPanel.style.display = '';
+        if (title) title.textContent = 'Предложить слово для Wordclash';
 
         const modalEl = document.getElementById('wordclashDictionaryModal');
         if (modalEl && window.bootstrap) {
@@ -61,14 +55,31 @@
         if (el) el.textContent = text;
     }
 
+    function dictionaryStateLabel(state) {
+        const labels = {
+            active: 'в игре',
+            removed: 'убрано из загадок',
+            banned: 'запрещено',
+            absent: 'нет в target-словаре',
+            add: 'добавлено',
+            remove: 'убрано',
+            restore: 'возвращено',
+            ban: 'запрещено',
+            unban: 'разрешено снова',
+            suggest: 'предложено',
+            suggestion_approved: 'предложение одобрено',
+            suggestion_rejected: 'предложение отклонено'
+        };
+        return labels[state] || state || 'неизвестно';
+    }
+
     function renderWordStatus(status) {
         const parts = [
-            `Слово: ${status.word}`,
-            `длина: ${status.length}`,
-            `статус: ${status.state}`,
-            `источник: ${status.source || 'нет'}`,
-            status.in_broad_guess ? 'есть в guess-словаре' : 'нет в guess-словаре',
-            status.in_static_blacklist ? 'в static blacklist' : 'не в static blacklist',
+            `${status.word} · ${status.length} букв`,
+            dictionaryStateLabel(status.state),
+            status.source ? `источник: ${status.source}` : 'источник: нет',
+            status.in_broad_guess ? 'можно использовать в попытках' : 'нет в словаре попыток',
+            status.in_static_blacklist ? 'в blacklist' : 'не в blacklist',
         ];
         renderStatus(parts.join(' · '));
         renderActions(status);
@@ -100,24 +111,46 @@
     function renderCounts(counts) {
         const el = document.getElementById('wordclash-dictionary-counts');
         if (!el || !counts) return;
-        el.textContent = [5, 6, 7].map(length => {
+        const rows = [5, 6, 7].map(length => {
             const c = counts[String(length)] || {};
-            return `${length}: active ${c.active || 0}, removed ${c.removed || 0}, banned ${c.banned || 0}`;
-        }).join(' · ');
+            return `
+                <div class="wordclash-dictionary-count-row">
+                    <span>${length} букв</span>
+                    <strong>${Number(c.active || 0)}</strong>
+                </div>
+            `;
+        }).join('');
+        el.innerHTML = `
+            <div class="settings-group settings-screen-group wordclash-dictionary-count-card mb-0">
+                <div class="settings-section-head">
+                    <h6 class="settings-section-title"><i class="bi bi-grid-3x3-gap"></i>Слова в игре</h6>
+                </div>
+                <div class="wordclash-dictionary-count-list">${rows}</div>
+            </div>
+        `;
     }
 
     function renderSuggestions(items) {
         const el = document.getElementById('wordclash-dictionary-suggestions');
+        const badge = document.getElementById('wordclash-dictionary-suggestions-badge');
         if (!el) return;
+        if (badge) {
+            badge.textContent = String(items.length);
+            badge.hidden = items.length === 0;
+        }
         if (!items.length) {
-            el.innerHTML = '<div class="text-muted small">Очередь пуста.</div>';
+            el.innerHTML = '<div class="text-muted small">Пока нет предложений.</div>';
             return;
         }
         el.innerHTML = items.map(item => `
-            <div class="border rounded-3 p-2">
-                <div class="fw-bold">${escapeHtml(item.word)} <span class="text-muted small">${escapeHtml(item.word_length)}</span></div>
-                <div class="small text-muted">${escapeHtml(item.comment || 'Без комментария')}</div>
-                <div class="d-flex gap-2 mt-2">
+            <div class="wordclash-dictionary-suggestion-card">
+                <div class="d-flex justify-content-between gap-2">
+                    <div class="fw-bold">${escapeHtml(item.word)} <span class="text-muted small">${escapeHtml(item.word_length)} букв</span></div>
+                    <div class="text-muted small text-nowrap">${escapeHtml(item.created_at || '')}</div>
+                </div>
+                <div class="small text-muted mt-1">${escapeHtml(item.comment || 'Без комментария')}</div>
+                <div class="small text-muted mt-1">Пользователь #${escapeHtml(item.author_user_id || '—')}</div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
                     <button type="button" class="btn btn-sm btn-success rounded-pill" onclick="reviewWordclashDictionarySuggestion(${Number(item.id)}, 'approved')">Одобрить</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="reviewWordclashDictionarySuggestion(${Number(item.id)}, 'rejected')">Отклонить</button>
                 </div>
@@ -133,7 +166,12 @@
             return;
         }
         el.innerHTML = items.map(item => `
-            <div>${escapeHtml(item.timestamp)} · ${escapeHtml(item.action)} · ${escapeHtml(item.word)} · ${escapeHtml(item.word_length)}</div>
+            <div class="wordclash-dictionary-audit-row">
+                <span>${escapeHtml(item.timestamp)}</span>
+                <strong>${escapeHtml(item.word)}</strong>
+                <span>${escapeHtml(dictionaryStateLabel(item.action))}</span>
+                <span>${escapeHtml(item.word_length)} букв</span>
+            </div>
         `).join('');
     }
 
@@ -168,11 +206,23 @@
     };
 
     window.openWordclashDictionaryAdmin = function () {
-        openDictionaryModal('admin');
+        if (!isAdmin()) return;
+        lastStatus = null;
+        const input = document.getElementById('wordclash-dictionary-search');
+        const actions = document.getElementById('wordclash-dictionary-actions');
+        if (input) input.value = '';
+        if (actions) actions.innerHTML = '';
+        renderStatus('Введите слово для проверки.');
+        if (window.showScreen) window.showScreen('wordclash-dictionary');
+        refreshDictionaryAdmin();
+    };
+
+    window.closeWordclashDictionaryScreen = function () {
+        if (window.showScreen) window.showScreen('game-tools');
     };
 
     window.openWordclashDictionarySuggest = function () {
-        openDictionaryModal('suggest');
+        openSuggestionModal();
     };
 
     window.searchWordclashDictionaryWord = function () {
@@ -180,6 +230,8 @@
         const word = input ? input.value.trim() : '';
         if (!word) {
             renderStatus('Введите слово для проверки.');
+            const actions = document.getElementById('wordclash-dictionary-actions');
+            if (actions) actions.innerHTML = '';
             return;
         }
         refreshDictionaryAdmin(word);
