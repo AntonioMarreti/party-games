@@ -23,6 +23,7 @@ require_once 'layout/version.php';
                 <?php include 'layout/screens/history.php'; ?>
                 <?php include 'layout/screens/friends.php'; ?>
                 <?php include 'layout/screens/settings.php'; ?>
+                <?php include 'layout/screens/game-tools.php'; ?>
                 <?php include 'layout/screens/palettes.php'; ?>
                 <?php include 'layout/screens/sessions.php'; ?>
                 <?php include 'layout/screens/game-detail.php'; ?>

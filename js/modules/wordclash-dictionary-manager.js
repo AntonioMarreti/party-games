@@ -140,30 +140,36 @@
     window.refreshWordclashDictionaryAccess = function (user = window.globalUser) {
         const toolsRow = document.getElementById('game-tools-row');
         if (toolsRow) toolsRow.style.display = isTester(user) ? '' : 'none';
+
+        const adminToolRow = document.getElementById('wordclash-tool-admin-row');
+        const suggestToolRow = document.getElementById('wordclash-tool-suggest-row');
+        if (adminToolRow) adminToolRow.style.display = isAdmin(user) ? '' : 'none';
+        if (suggestToolRow) {
+            suggestToolRow.style.display = (
+                user?.is_tester === true
+                || user?.is_tester === 1
+                || user?.is_tester === '1'
+            ) ? '' : 'none';
+        }
     };
 
     window.openGameTools = function () {
         if (!isTester()) return;
-
-        const modalEl = document.getElementById('gameToolsModal');
-        if (modalEl && window.bootstrap) {
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
+        if (window.showScreen) window.showScreen('game-tools');
     };
 
-    window.openWordclashToolsFromGameTools = function () {
+    window.closeGameToolsScreen = function () {
+        if (window.showScreen) window.showScreen('lobby');
+        if (window.switchTab) window.switchTab('profile');
+    };
+
+    window.openWordclashGameTools = function () {
         if (!isTester()) return;
+        if (window.showScreen) window.showScreen('game-tools-wordclash');
+    };
 
-        const toolsModal = document.getElementById('gameToolsModal');
-        if (toolsModal && window.bootstrap) {
-            bootstrap.Modal.getInstance(toolsModal)?.hide();
-        }
-
-        if (isAdmin()) {
-            window.openWordclashDictionaryAdmin();
-        } else {
-            window.openWordclashDictionarySuggest();
-        }
+    window.closeWordclashGameTools = function () {
+        if (window.showScreen) window.showScreen('game-tools');
     };
 
     window.openWordclashDictionaryAdmin = function () {
