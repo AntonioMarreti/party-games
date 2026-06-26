@@ -1,5 +1,31 @@
 <!-- === MODALS === -->
 
+<div class="modal fade" id="gameToolsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold ps-2">Управление играми</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <button type="button" id="game-tools-wordclash-card" class="btn-unstyled settings-item clickable profile-menu-row w-100"
+                    onclick="openWordclashToolsFromGameTools()">
+                    <div class="profile-menu-main">
+                        <div class="profile-menu-icon">
+                            <i class="bi bi-journal-check fs-5" aria-hidden="true"></i>
+                        </div>
+                        <span class="profile-menu-title">
+                            Wordclash
+                            <span class="d-block text-muted fw-normal" style="font-size: 0.85rem;">Слова и предложения</span>
+                        </span>
+                    </div>
+                    <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="wordclashDictionaryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">

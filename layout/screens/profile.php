@@ -117,24 +117,13 @@
                 <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
-            <button type="button" id="wordclash-dictionary-admin-row" class="btn-unstyled settings-item clickable profile-menu-row"
-                onclick="openWordclashDictionaryAdmin()" style="display:none;">
+            <button type="button" id="game-tools-row" class="btn-unstyled settings-item clickable profile-menu-row"
+                onclick="openGameTools()" style="display:none;">
                 <div class="profile-menu-main">
                     <div class="profile-menu-icon">
-                        <i class="bi bi-journal-check fs-5" aria-hidden="true"></i>
+                        <i class="bi bi-controller fs-5" aria-hidden="true"></i>
                     </div>
-                    <span class="profile-menu-title">Словарь Wordclash</span>
-                </div>
-                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
-            </button>
-
-            <button type="button" id="wordclash-dictionary-suggest-row" class="btn-unstyled settings-item clickable profile-menu-row"
-                onclick="openWordclashDictionarySuggest()" style="display:none;">
-                <div class="profile-menu-main">
-                    <div class="profile-menu-icon">
-                        <i class="bi bi-plus-circle fs-5" aria-hidden="true"></i>
-                    </div>
-                    <span class="profile-menu-title">Предложить слово для Wordclash</span>
+                    <span class="profile-menu-title">Управление играми</span>
                 </div>
                 <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>

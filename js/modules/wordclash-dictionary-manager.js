@@ -138,10 +138,32 @@
     }
 
     window.refreshWordclashDictionaryAccess = function (user = window.globalUser) {
-        const adminRow = document.getElementById('wordclash-dictionary-admin-row');
-        const suggestRow = document.getElementById('wordclash-dictionary-suggest-row');
-        if (adminRow) adminRow.style.display = isAdmin(user) ? '' : 'none';
-        if (suggestRow) suggestRow.style.display = isTester(user) ? '' : 'none';
+        const toolsRow = document.getElementById('game-tools-row');
+        if (toolsRow) toolsRow.style.display = isTester(user) ? '' : 'none';
+    };
+
+    window.openGameTools = function () {
+        if (!isTester()) return;
+
+        const modalEl = document.getElementById('gameToolsModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    };
+
+    window.openWordclashToolsFromGameTools = function () {
+        if (!isTester()) return;
+
+        const toolsModal = document.getElementById('gameToolsModal');
+        if (toolsModal && window.bootstrap) {
+            bootstrap.Modal.getInstance(toolsModal)?.hide();
+        }
+
+        if (isAdmin()) {
+            window.openWordclashDictionaryAdmin();
+        } else {
+            window.openWordclashDictionarySuggest();
+        }
     };
 
     window.openWordclashDictionaryAdmin = function () {
