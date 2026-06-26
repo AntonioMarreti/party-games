@@ -15,7 +15,7 @@
 
             <button type="button" id="wordclash-tool-admin-row" class="btn-unstyled settings-item clickable"
                 onclick="openWordclashDictionaryAdmin()" style="display:none;">
-                <div class="menu-icon-wrap settings-row-icon" style="margin-left: 0;" aria-hidden="true">
+                <div class="menu-icon-wrap settings-row-icon game-tools-row-icon" aria-hidden="true">
                     <i class="bi bi-journal-check"></i>
                 </div>
                 <div class="settings-label-wrap">
@@ -27,7 +27,7 @@
 
             <button type="button" id="wordclash-tool-suggest-row" class="btn-unstyled settings-item clickable border-0 pb-0"
                 onclick="openWordclashDictionarySuggest()" style="display:none;">
-                <div class="menu-icon-wrap settings-row-icon" style="margin-left: 0;" aria-hidden="true">
+                <div class="menu-icon-wrap settings-row-icon game-tools-row-icon" aria-hidden="true">
                     <i class="bi bi-plus-circle"></i>
                 </div>
                 <div class="settings-label-wrap">
