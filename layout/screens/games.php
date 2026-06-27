@@ -27,3 +27,5 @@
         <div style="height: 100px;"></div>
     </div>
 </div>
+
+<script src="js/modules/scheduled-game-invite.js?v=<?php echo $v; ?>"></script>
