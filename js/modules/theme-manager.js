@@ -19,6 +19,31 @@ const LEGACY_PALETTE_MIGRATIONS = {
     'olive-sand': 'beige-olive'
 };
 
+const TELEGRAM_DARK_CHROME_SCREEN_IDS = new Set([
+    'screen-lobby',
+    'screen-login',
+    'screen-splash',
+    'screen-game-detail'
+]);
+
+const TELEGRAM_DARK_CHROME_COLOR = '#0B1120';
+
+const PALETTE_LIGHT_TOP_COLORS = {
+    'amber-sapphire': '#EAF1F7',
+    'olive-sand': '#F7F6F2',
+    'lavender-graphite': '#EFEDF6',
+    'burgundy-cream': '#F5ECE7',
+    'jade-biscuit': '#F3E5CC',
+    'azure-quartz': '#EAF3FA',
+    'graphite-lemon': '#F2F1E8',
+    'beige-olive': '#E5D9C6',
+    'tiffany-graphite': '#E7F8F2',
+    'pink-impulse': '#FFF0F3',
+    'cyber-violet': '#F0F5DE',
+    'turmeric-malt': '#F6E9C4',
+    'volcanic-night': '#EAF0F1'
+};
+
 // Internal state
 let appSettings = Object.assign({}, DEFAULT_SETTINGS);
 let themePreferences = Object.assign({}, DEFAULT_THEME_PREFERENCES);
@@ -165,18 +190,37 @@ function getComputedThemeColorHex(tokenName) {
     }
 }
 
+function getActiveScreenId() {
+    try {
+        return document.querySelector('.screen.active-screen')?.id || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function getPaletteLightTopColorHex() {
+    const paletteId = getEffectivePalette();
+    return PALETTE_LIGHT_TOP_COLORS[paletteId]
+        || PALETTE_LIGHT_TOP_COLORS[themePreferences.palette]
+        || PALETTE_LIGHT_TOP_COLORS[DEFAULT_THEME_PREFERENCES.palette];
+}
+
 function getAppliedTelegramChromeColors() {
     const resolvedTheme = document.documentElement.getAttribute('data-theme') || getResolvedTheme();
     const fallbackColor = resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9';
     const appBackgroundHex = getComputedThemeColorHex('--app-bg') || fallbackColor;
+    const activeScreenId = getActiveScreenId();
+    const headerHex = TELEGRAM_DARK_CHROME_SCREEN_IDS.has(activeScreenId)
+        ? TELEGRAM_DARK_CHROME_COLOR
+        : getPaletteLightTopColorHex();
 
     return {
-        headerHex: getComputedThemeColorHex('--app-header-bg') || appBackgroundHex,
+        headerHex,
         backgroundHex: appBackgroundHex
     };
 }
 
-function syncTelegramChrome() {
+function syncTelegramChromeForActiveScreen() {
     const tg = getRealTelegramWebApp();
     if (!tg) return;
 
@@ -199,6 +243,10 @@ function syncTelegramChrome() {
     }
 }
 
+function syncTelegramChrome() {
+    syncTelegramChromeForActiveScreen();
+}
+
 function applyThemeDOM(paletteId = getEffectivePalette()) {
     const root = document.documentElement;
     const body = document.body;
@@ -218,7 +266,7 @@ function applyThemeDOM(paletteId = getEffectivePalette()) {
         body.classList.toggle('dark-mode', resolvedTheme === 'dark');
     }
 
-    syncTelegramChrome();
+    syncTelegramChromeForActiveScreen();
 }
 
 // Public API for Theme
@@ -376,7 +424,7 @@ function loadSettings() {
             if (themePreferences.preference === 'system') {
                 applyThemeDOM(getEffectivePalette());
             } else {
-                syncTelegramChrome();
+                syncTelegramChromeForActiveScreen();
             }
         });
     } catch (e) {
@@ -519,6 +567,7 @@ window.ThemeManager = {
     commitPalettePreview,
     applyAccentColor,
     setThemePreference,
+    syncTelegramChromeForActiveScreen,
     syncTelegramChrome,
     toggleSetting,
     triggerHaptic,
@@ -548,7 +597,9 @@ window.updateDesktopFullscreenVisibility = updateDesktopFullscreenVisibility;
 window.addEventListener('screenChanged', event => {
     if (event.detail?.screenId === 'screen-palettes') {
         if (!palettePreviewActive) beginPalettePreview();
-        return;
+    } else if (palettePreviewActive) {
+        cancelPalettePreview(false);
     }
-    if (palettePreviewActive) cancelPalettePreview(false);
+
+    syncTelegramChromeForActiveScreen();
 });

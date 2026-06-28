@@ -263,7 +263,9 @@ window.syncTelegramDesktopFullscreenCloud = function() {
 
                         if (isDesktop && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
                             try {
+                                window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
                                 tg.requestFullscreen();
+                                window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
                             } catch (e) {
                                 console.warn('CloudStorage requestFullscreen err', e);
                             }
@@ -288,6 +290,8 @@ function initTelegramWebAppShell(tg, context = 'startup') {
 
         }
 
+        window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
+
         try {
             const platform = String(window.getTelegramPlatformFallback ? window.getTelegramPlatformFallback(tg) : (tg.platform || '')).toLowerCase();
             const isDesktop = window.isTelegramDesktopLikePlatform ? window.isTelegramDesktopLikePlatform(platform) : (platform === 'tdesktop' || platform === 'macos' || platform === 'mac');
@@ -300,9 +304,14 @@ function initTelegramWebAppShell(tg, context = 'startup') {
             } else {
                 if (!isDesktop || isFullscreenEnabled) {
                     try {
+                        window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
                         let res = tg.requestFullscreen();
                         if (res instanceof Promise) {
-                            res.catch(e => console.warn('requestFullscreen rejected', e));
+                            res
+                                .then(() => window.ThemeManager?.syncTelegramChromeForActiveScreen?.())
+                                .catch(e => console.warn('requestFullscreen rejected', e));
+                        } else {
+                            window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
                         }
                     } catch (e) {
                         console.warn('requestFullscreen failed', e);
@@ -318,9 +327,7 @@ function initTelegramWebAppShell(tg, context = 'startup') {
             tg.isVerticalSwipesEnabled = false;
         }
 
-        if (window.ThemeManager && typeof window.ThemeManager.syncTelegramChrome === 'function') {
-            window.ThemeManager.syncTelegramChrome();
-        }
+        window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
         if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
         if (tg.ready) tg.ready();
         document.body.classList.toggle('tg-dark-theme', tg.colorScheme === 'dark');
@@ -406,7 +413,11 @@ window.toggleTdesktopFullscreen = function(enabled) {
 
     if (enabled) {
         if (tg && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0')) {
-            try { tg.requestFullscreen(); } catch (e) { console.warn('requestFullscreen error', e); }
+            try {
+                window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
+                tg.requestFullscreen();
+                window.ThemeManager?.syncTelegramChromeForActiveScreen?.();
+            } catch (e) { console.warn('requestFullscreen error', e); }
         }
     } else {
         if (tg && typeof tg.exitFullscreen === 'function') {
