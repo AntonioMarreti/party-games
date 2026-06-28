@@ -572,10 +572,10 @@ function switchRoomsMode(mode = 'live') {
     });
 
     if (currentRoomsMode === 'scheduled') {
-        loadScheduledGames();
-    } else {
-        loadPublicRooms();
+        return loadScheduledGames();
     }
+
+    return loadPublicRooms();
 }
 
 function consumePendingScheduledDeepLink(renderedGames = [], container = null) {
@@ -721,8 +721,8 @@ function resetScheduledGameModalMode() {
     const submitBtn = document.getElementById('scheduled-game-submit');
     const select = document.getElementById('scheduled-game-type');
     if (editIdInput) editIdInput.value = '';
-    if (titleEl) titleEl.innerText = 'Запланировать игру';
-    if (submitBtn) submitBtn.innerText = 'Запланировать';
+    if (titleEl) titleEl.innerText = 'Собери игру';
+    if (submitBtn) submitBtn.innerText = 'Собрать игру';
     if (select) select.disabled = false;
 }
 
@@ -805,6 +805,35 @@ function editScheduledGame(id) {
     }
 }
 
+function showScheduledGameCreatedConfirmation(scheduledGameId) {
+    const share = () => {
+        if (typeof window.shareScheduledGameInvite === 'function') {
+            window.shareScheduledGameInvite(scheduledGameId);
+            return;
+        }
+
+        showScheduledFeedback(
+            'Приглашение недоступно',
+            'Кнопка приглашения появится на карточке игры после обновления списка.',
+            'warning'
+        );
+    };
+
+    if (typeof window.showConfirmation === 'function') {
+        window.showConfirmation(
+            'Игра собрана',
+            'Теперь пригласи друзей, чтобы они могли записаться.',
+            share,
+            { confirmText: 'Пригласить игроков', cancelText: 'Позже' }
+        );
+        return;
+    }
+
+    if (window.showAlert) {
+        window.showAlert('Игра собрана', 'Теперь пригласи друзей, чтобы они могли записаться.', 'success');
+    }
+}
+
 async function createScheduledGame() {
     if (isScheduledGameSubmitPending) return;
 
@@ -828,11 +857,11 @@ async function createScheduledGame() {
     if (editId) payload.scheduled_game_id = editId;
 
     const submitBtn = document.getElementById('scheduled-game-submit');
-    const originalSubmitText = submitBtn?.innerText || (editId ? 'Сохранить' : 'Запланировать');
+    const originalSubmitText = submitBtn?.innerText || (editId ? 'Сохранить' : 'Собрать игру');
     isScheduledGameSubmitPending = true;
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerText = editId ? 'Сохраняем...' : 'Планируем...';
+        submitBtn.innerText = editId ? 'Сохраняем...' : 'Собираем...';
     }
 
     try {
@@ -856,8 +885,13 @@ async function createScheduledGame() {
         }
 
         resetScheduledGameModalMode();
-        if (window.showToast) window.showToast(editId ? 'Игра обновлена' : 'Игра запланирована', 'success');
-        switchRoomsMode('scheduled');
+        if (editId) {
+            if (window.showToast) window.showToast('Игра обновлена', 'success');
+            await switchRoomsMode('scheduled');
+        } else {
+            await switchRoomsMode('scheduled');
+            showScheduledGameCreatedConfirmation(Number(res.scheduled_game_id || 0));
+        }
     } finally {
         isScheduledGameSubmitPending = false;
         if (submitBtn) {
@@ -909,7 +943,7 @@ async function loadScheduledGames() {
                 <div class="rooms-empty-title">Пока игр по расписанию нет</div>
                 <div class="rooms-empty-text">Создайте игру на вечер — другие смогут увидеть её здесь.</div>
                 <div class="rooms-empty-actions">
-                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGameModal()">Запланировать игру</button>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGameModal()">Собери игру</button>
                 </div>
             </div>
         `;

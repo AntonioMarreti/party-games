@@ -270,7 +270,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold ps-2" id="scheduled-game-modal-title">Запланировать игру</h5>
+                <h5 class="modal-title fw-bold ps-2" id="scheduled-game-modal-title">Собери игру</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
             <div class="modal-body pt-2">
@@ -302,7 +302,7 @@
                         placeholder="Описание (необязательно)" style="border-radius: 16px;"></textarea>
                     <div class="form-text small mb-3">Записавшиеся увидят обновлённое время в расписании.</div>
                     <button type="submit" id="scheduled-game-submit" class="btn btn-primary w-100 btn-lg"
-                        style="border-radius: 16px;">Запланировать</button>
+                        style="border-radius: 16px;">Собрать игру</button>
                 </form>
             </div>
         </div>

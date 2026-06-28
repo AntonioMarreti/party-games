@@ -38,9 +38,26 @@
         ].join('\n');
     }
 
-    function shareScheduledGameInvite(card) {
+    function getCardByScheduledGameId(scheduledGameId) {
+        return document.querySelector(`${CARD_SELECTOR}[data-scheduled-game-id="${Number(scheduledGameId)}"]`);
+    }
+
+    function showShareUnavailable() {
+        const message = 'Не удалось открыть приглашение. Попробуйте кнопку «Пригласить» на карточке игры.';
+        if (window.showToast) {
+            window.showToast(message, 'warning');
+        } else if (window.showAlert) {
+            window.showAlert('Приглашение недоступно', message, 'warning');
+        }
+    }
+
+    function shareScheduledGameInvite(target) {
+        const card = target instanceof Element ? target : getCardByScheduledGameId(target);
         const scheduledGameId = Number(card?.dataset?.scheduledGameId || 0);
-        if (!scheduledGameId) return;
+        if (!scheduledGameId) {
+            showShareUnavailable();
+            return;
+        }
 
         const inviteLink = getScheduledInviteLink(scheduledGameId);
         const shareText = getInviteText(card);
@@ -51,7 +68,8 @@
             return;
         }
 
-        window.open(shareUrl, '_blank', 'noopener');
+        const opened = window.open(shareUrl, '_blank', 'noopener');
+        if (!opened) showShareUnavailable();
     }
 
     function addInviteAction(card) {
