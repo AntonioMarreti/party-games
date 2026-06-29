@@ -887,8 +887,8 @@ body.tg-dark-theme.dark-mode .theme-mode-option input:checked + .theme-mode-btn 
     width: 100%;
     min-width: 0;
     white-space: normal;
-    word-break: normal;
-    overflow-wrap: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 390px) {

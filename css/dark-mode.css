@@ -47,7 +47,8 @@ body.dark-mode .custom-modal-overlay .custom-modal-content span {
     color: var(--text-main);
 }
 
-body.dark-mode .custom-modal-overlay .custom-modal-content .text-muted {
+body.dark-mode .custom-modal-overlay .custom-modal-content .text-muted,
+body.dark-mode .modal-content .text-muted {
     color: var(--text-muted) !important;
 }
 
