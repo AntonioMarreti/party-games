@@ -23,3 +23,4 @@ Execution discipline:
 - Do not make unrelated cleanup, refactors, new top-level files, or duplicate instruction files.
 - Distinguish code checks, browser/debug-account checks, and real production delivery in reports. Debug accounts do not prove native Telegram UI, real bot delivery, or push notifications.
 - Before creating or changing agent instructions, inspect existing AGENTS.md and .agents workflows first.
+- Do not start localhost servers, python -m http.server, dev servers, Docker containers, or local test pages unless the current task explicitly requires local runtime testing. Prefer Browser Tester against the intended environment or direct code/computed-style inspection.
