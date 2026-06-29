@@ -98,11 +98,14 @@ done
 cd "$PROJECT_ROOT"
 
 if [ "$MODE" == "apply" ]; then
-    if [ -f "$PROJECT_ROOT/.env.deploy.local" ]; then
-        set -o allexport
-        source "$PROJECT_ROOT/.env.deploy.local"
-        set +o allexport
+    if [ ! -f "$PROJECT_ROOT/.env.deploy.local" ]; then
+        echo "Missing .env.deploy.local. Deployment stopped; do not search shell history, env files, or SSH config."
+        exit 1
     fi
+
+    set -o allexport
+    source "$PROJECT_ROOT/.env.deploy.local"
+    set +o allexport
 
     : "${DEPLOY_HOST:?Set DEPLOY_HOST}"
     : "${DEPLOY_USER:?Set DEPLOY_USER}"
