@@ -266,7 +266,7 @@
 </div>
 
 <!-- 8.1 Scheduled Game Modal -->
-<div class="modal fade" id="scheduledGameModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="scheduledGameModal" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" data-bs-focus="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 24px;">
             <div class="modal-header border-0 pb-0">

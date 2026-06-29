@@ -1488,7 +1488,7 @@ body.dark-mode .game-summary-share-preview {
 .scheduled-game-meta-line i {
     flex-shrink: 0;
     color: var(--text-muted);
-    opacity: 0.7;
+    opacity: 0.85;
 }
 
 .scheduled-game-meta-secondary {
