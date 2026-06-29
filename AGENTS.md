@@ -16,3 +16,10 @@ Workflow:
 - Before deploy: run ./tools/deploy.sh --dry-run with the exact files.
 - Deploy only explicitly named files through ./tools/deploy.sh --apply.
 - After deploy: rely on its SHA-256 verification; do not run alternative deploy commands.
+
+Execution discipline:
+- Do not commit, push, deploy, change production settings, or invoke Browser Tester unless the current task explicitly requests that phase.
+- On a failed check or missing deploy configuration, stop and report the exact blocker. Do not search shell history, .envrc, SSH config, environment variables, or attempt alternative deployment commands.
+- Do not make unrelated cleanup, refactors, new top-level files, or duplicate instruction files.
+- Distinguish code checks, browser/debug-account checks, and real production delivery in reports. Debug accounts do not prove native Telegram UI, real bot delivery, or push notifications.
+- Before creating or changing agent instructions, inspect existing AGENTS.md and .agents workflows first.

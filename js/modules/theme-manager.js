@@ -210,13 +210,19 @@ function getAppliedTelegramChromeColors() {
     const fallbackColor = resolvedTheme === 'dark' ? '#0B1120' : '#F4F6F9';
     const appBackgroundHex = getComputedThemeColorHex('--app-bg') || fallbackColor;
     const activeScreenId = getActiveScreenId();
-    const headerHex = TELEGRAM_DARK_CHROME_SCREEN_IDS.has(activeScreenId)
+    const isDarkChrome = TELEGRAM_DARK_CHROME_SCREEN_IDS.has(activeScreenId);
+    const headerHex = isDarkChrome
         ? TELEGRAM_DARK_CHROME_COLOR
         : getPaletteLightTopColorHex();
 
+    const bottomBarHex = isDarkChrome
+        ? TELEGRAM_DARK_CHROME_COLOR
+        : appBackgroundHex;
+
     return {
         headerHex,
-        backgroundHex: appBackgroundHex
+        backgroundHex: appBackgroundHex,
+        bottomBarHex
     };
 }
 
@@ -224,7 +230,7 @@ function syncTelegramChromeForActiveScreen() {
     const tg = getRealTelegramWebApp();
     if (!tg) return;
 
-    const { headerHex, backgroundHex } = getAppliedTelegramChromeColors();
+    const { headerHex, backgroundHex, bottomBarHex } = getAppliedTelegramChromeColors();
 
     if (headerHex && typeof tg.setHeaderColor === 'function' && telegramVersionAtLeast(tg, '6.9')) {
         try {
@@ -239,6 +245,14 @@ function syncTelegramChromeForActiveScreen() {
             tg.setBackgroundColor(backgroundHex);
         } catch (e) {
             // Background color support is best-effort in old or non-standard clients.
+        }
+    }
+
+    if (bottomBarHex && typeof tg.setBottomBarColor === 'function' && telegramVersionAtLeast(tg, '7.10')) {
+        try {
+            tg.setBottomBarColor(bottomBarHex);
+        } catch (e) {
+            // Bottom bar color is supported in newer clients.
         }
     }
 }
