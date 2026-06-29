@@ -225,6 +225,14 @@ function scheduled_deep_link_url($scheduledGameId)
     return 'https://t.me/mpartygamebot/app?startapp=scheduled_' . (int) $scheduledGameId;
 }
 
+function scheduled_room_deep_link_url($roomCode)
+{
+    if (defined('BOT_USERNAME') && BOT_USERNAME) {
+        return 'https://t.me/' . BOT_USERNAME . '/app?startapp=' . $roomCode;
+    }
+    return 'https://t.me/mpartygamebot/app?startapp=' . $roomCode;
+}
+
 function scheduled_manual_reminder_message(array $game)
 {
     $title = trim((string) ($game['title'] ?? ''));
@@ -291,6 +299,52 @@ function scheduled_create_room($pdo, $user, $game, $hostId)
     ], 'Scheduled game opened as room');
 
     return ['room_id' => $roomId, 'room_code' => $code];
+}
+
+function scheduled_notify_subscribers($pdo, $gameId, $text, $buttonText = null, $buttonUrl = null)
+{
+    if (!class_exists('TelegramLogger')) {
+        return;
+    }
+    if (!scheduled_table_exists($pdo, 'scheduled_game_subscriptions')) {
+        return;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT u.telegram_id
+        FROM scheduled_game_subscriptions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.scheduled_game_id = ?
+          AND s.status = 'subscribed'
+          AND u.telegram_id IS NOT NULL
+          AND u.telegram_id != ''
+    ");
+    $stmt->execute([(int) $gameId]);
+    $subscribers = $stmt->fetchAll();
+
+    if (!$subscribers) {
+        return;
+    }
+
+    $replyMarkup = null;
+    if ($buttonText && $buttonUrl) {
+        $replyMarkup = [
+            'inline_keyboard' => [ [ ['text' => $buttonText, 'url' => $buttonUrl] ] ]
+        ];
+    }
+
+    foreach ($subscribers as $sub) {
+        $params = [
+            'chat_id' => $sub['telegram_id'],
+            'text' => $text,
+            'parse_mode' => 'HTML',
+            'disable_web_page_preview' => true,
+        ];
+        if ($replyMarkup) {
+            $params['reply_markup'] = $replyMarkup;
+        }
+        TelegramLogger::sendRequest('sendMessage', $params);
+    }
 }
 
 function action_create_scheduled_game($pdo, $user, $data)
@@ -444,7 +498,7 @@ function action_get_scheduled_games($pdo, $user, $data)
     scheduled_send_ok(['games' => $stmt->fetchAll()]);
 }
 
-function action_update_scheduled_game($pdo, $user, $data)
+function action_reschedule_scheduled_game($pdo, $user, $data)
 {
     scheduled_cleanup_expired($pdo);
 
@@ -453,62 +507,51 @@ function action_update_scheduled_game($pdo, $user, $data)
         $game = scheduled_find_for_update($pdo, $data['scheduled_game_id'] ?? 0);
         $hostId = $game['host_id'] ?? ($game['host_user_id'] ?? null);
         if ((int) $hostId !== (int) $user['id']) {
-            throw new RuntimeException('Изменить игру может только хост');
+            throw new RuntimeException('Перенести игру может только хост');
         }
         if ($game['status'] !== 'scheduled') {
-            throw new RuntimeException('Изменить можно только запланированную игру');
+            throw new RuntimeException('Перенести можно только запланированную игру');
         }
 
         $startsAt = scheduled_parse_datetime($data['starts_at'] ?? '');
-        $title = scheduled_text($data['title'] ?? '', 'Открытая игра', 120);
-        $description = scheduled_text($data['description'] ?? '', '', 500);
-        $minPlayers = scheduled_int($data['min_players'] ?? $game['min_players'], (int) $game['min_players']);
-        $maxPlayers = scheduled_int($data['max_players'] ?? $game['max_players'], (int) $game['max_players']);
 
-        if ($minPlayers < 1) {
-            throw new RuntimeException('Минимум игроков должен быть не меньше 1');
-        }
-        if ($maxPlayers < $minPlayers) {
-            throw new RuntimeException('Лимит игроков должен быть не меньше минимума');
-        }
-        if ($maxPlayers > 16) {
-            throw new RuntimeException('Максимум можно указать 16 игроков');
-        }
+        if ($startsAt !== $game['starts_at']) {
+            $stmt = $pdo->prepare("
+                UPDATE scheduled_games
+                SET starts_at = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $startsAt,
+                (int) $game['id'],
+            ]);
 
-        $stmt = $pdo->prepare("
-            UPDATE scheduled_games
-            SET title = ?,
-                description = ?,
-                starts_at = ?,
-                min_players = ?,
-                max_players = ?
-            WHERE id = ?
-        ");
-        $stmt->execute([
-            $title,
-            $description,
-            $startsAt,
-            $minPlayers,
-            $maxPlayers,
-            (int) $game['id'],
-        ]);
+            if (scheduled_table_exists($pdo, 'scheduled_game_host_reminders')) {
+                $pdo->prepare("UPDATE scheduled_game_host_reminders SET reminder_sent_at = NULL WHERE scheduled_game_id = ?")->execute([(int)$game['id']]);
+            }
+            if (scheduled_table_exists($pdo, 'scheduled_game_subscriptions')) {
+                $pdo->prepare("UPDATE scheduled_game_subscriptions SET reminder_sent_at = NULL WHERE scheduled_game_id = ?")->execute([(int)$game['id']]);
+            }
+
+            $title = htmlspecialchars(trim((string)($game['title'] ?? '')) ?: 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $timeFormatted = date('d.m.Y H:i', strtotime($startsAt));
+            scheduled_notify_subscribers($pdo, (int)$game['id'], "Время игры «{$title}» изменилось. Новый старт: {$timeFormatted}.", "Открыть игру", scheduled_deep_link_url((int)$game['id']));
+        }
 
         $pdo->commit();
-        scheduled_log_event('update_scheduled_game', [
+        scheduled_log_event('reschedule_scheduled_game', [
             'scheduled_game_id' => (int) $game['id'],
             'host_user_id' => (int) ($user['id'] ?? 0),
             'starts_at' => $startsAt,
-            'min_players' => $minPlayers,
-            'max_players' => $maxPlayers,
-        ], 'Scheduled game updated');
+        ], 'Scheduled game rescheduled');
         scheduled_send_ok(['scheduled_game_id' => (int) $game['id']]);
     } catch (RuntimeException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         sendError($e->getMessage());
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        TelegramLogger::logError('scheduled_games', ['message' => $e->getMessage(), 'action' => 'update']);
-        sendError('Scheduled update error');
+        TelegramLogger::logError('scheduled_games', ['message' => $e->getMessage(), 'action' => 'reschedule']);
+        sendError('Scheduled reschedule error');
     }
 }
 
@@ -681,6 +724,10 @@ function action_open_scheduled_game($pdo, $user, $data)
         $stmt->execute($params);
 
         $pdo->commit();
+
+        $title = htmlspecialchars(trim((string)($game['title'] ?? '')) ?: 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        scheduled_notify_subscribers($pdo, (int)$game['id'], "Комната для игры «{$title}» открыта. Можно заходить.", "Зайти в комнату", scheduled_room_deep_link_url($room['room_code']));
+
         scheduled_log_event('open_scheduled_game', [
             'scheduled_game_id' => (int) $game['id'],
             'host_user_id' => (int) $hostId,
@@ -725,6 +772,10 @@ function action_cancel_scheduled_game($pdo, $user, $data)
         ")->execute([(int) $game['id']]);
 
         $pdo->commit();
+
+        $title = htmlspecialchars(trim((string)($game['title'] ?? '')) ?: 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        scheduled_notify_subscribers($pdo, (int)$game['id'], "Игра «{$title}» отменена.");
+
         scheduled_log_event('cancel_scheduled_game', [
             'scheduled_game_id' => (int) $game['id'],
             'host_user_id' => (int) ($user['id'] ?? 0),

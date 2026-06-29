@@ -761,14 +761,14 @@ function openScheduledGameModal(gameType = null) {
     }
 }
 
-function editScheduledGame(id) {
+function rescheduleScheduledGame(id) {
     const game = currentScheduledGamesById.get(Number(id));
     if (!game) {
-        if (window.showToast) window.showToast('Не удалось открыть редактирование', 'error');
+        if (window.showToast) window.showToast('Не удалось открыть перенос', 'error');
         return;
     }
     if (game.status !== 'scheduled') {
-        if (window.showToast) window.showToast('Эту игру уже нельзя изменить', 'warning');
+        if (window.showToast) window.showToast('Эту игру уже нельзя перенести', 'warning');
         return;
     }
 
@@ -785,17 +785,29 @@ function editScheduledGame(id) {
     const descriptionInput = document.getElementById('scheduled-game-description');
 
     if (editIdInput) editIdInput.value = String(game.id || id);
-    if (titleEl) titleEl.innerText = 'Редактировать игру';
-    if (submitBtn) submitBtn.innerText = 'Сохранить';
+    if (titleEl) titleEl.innerText = 'Перенести игру';
+    if (submitBtn) submitBtn.innerText = 'Перенести';
     if (select) {
         select.value = game.game_type || select.value;
         select.disabled = true;
     }
-    if (titleInput) titleInput.value = game.title || '';
+    if (titleInput) {
+        titleInput.value = game.title || '';
+        titleInput.disabled = true;
+    }
     if (startsInput) startsInput.value = getScheduledInputDateValue(game.starts_at) || getDefaultScheduledStartValue();
-    if (minInput) minInput.value = game.min_players || 2;
-    if (maxInput) maxInput.value = game.max_players || 8;
-    if (descriptionInput) descriptionInput.value = game.description || '';
+    if (minInput) {
+        minInput.value = game.min_players || 2;
+        minInput.disabled = true;
+    }
+    if (maxInput) {
+        maxInput.value = game.max_players || 8;
+        maxInput.disabled = true;
+    }
+    if (descriptionInput) {
+        descriptionInput.value = game.description || '';
+        descriptionInput.disabled = true;
+    }
 
     const modalEl = document.getElementById('scheduledGameModal');
     if (modalEl && window.bootstrap?.Modal) {
@@ -846,7 +858,7 @@ async function createScheduledGame() {
     const description = document.getElementById('scheduled-game-description')?.value || '';
 
     const payload = {
-        action: editId ? 'update_scheduled_game' : 'create_scheduled_game',
+        action: editId ? 'reschedule_scheduled_game' : 'create_scheduled_game',
         game_type: gameType,
         title,
         starts_at: startsAt,
@@ -857,11 +869,11 @@ async function createScheduledGame() {
     if (editId) payload.scheduled_game_id = editId;
 
     const submitBtn = document.getElementById('scheduled-game-submit');
-    const originalSubmitText = submitBtn?.innerText || (editId ? 'Сохранить' : 'Собрать игру');
+    const originalSubmitText = submitBtn?.innerText || (editId ? 'Перенести' : 'Собрать игру');
     isScheduledGameSubmitPending = true;
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerText = editId ? 'Сохраняем...' : 'Собираем...';
+        submitBtn.innerText = editId ? 'Переносим...' : 'Собираем...';
     }
 
     try {
@@ -1004,7 +1016,7 @@ async function loadScheduledGames() {
             primaryAction = canOpen
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)})">Открыть</button>`
                 : `<span class="scheduled-game-disabled-action" aria-disabled="true">Откроется после набора игроков</span>`;
-            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="editScheduledGame(${Number(game.id)})">Редактировать</button>${hasRealSubscribers ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>` : ''}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить игру</button>`;
+            secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="rescheduleScheduledGame(${Number(game.id)})">Перенести игру</button>${hasRealSubscribers ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>` : ''}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить игру</button>`;
         } else {
             primaryAction = spotsLeft <= 0 && !isSubscribed
                 ? `<span class="scheduled-game-disabled-action">Мест нет</span>`
@@ -1759,7 +1771,7 @@ window.RoomManager = {
     loadScheduledGames,
     switchRoomsMode,
     openScheduledGameModal,
-    editScheduledGame,
+    rescheduleScheduledGame,
     createScheduledGame,
     subscribeScheduledGame,
     unsubscribeScheduledGame,
@@ -1802,7 +1814,7 @@ window.loadPublicRooms = loadPublicRooms;
 window.loadScheduledGames = loadScheduledGames;
 window.switchRoomsMode = switchRoomsMode;
 window.openScheduledGameModal = openScheduledGameModal;
-window.editScheduledGame = editScheduledGame;
+window.rescheduleScheduledGame = rescheduleScheduledGame;
 window.createScheduledGame = createScheduledGame;
 window.subscribeScheduledGame = subscribeScheduledGame;
 window.unsubscribeScheduledGame = unsubscribeScheduledGame;
