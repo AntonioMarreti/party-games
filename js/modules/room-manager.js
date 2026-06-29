@@ -915,7 +915,7 @@ async function loadScheduledGames() {
         <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
             <div class="rooms-list-title">Сегодня и позже</div>
             ${withAction ? `<button onclick="openScheduledGameModal()" class="btn-unstyled rooms-list-action-pill">
-                <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Создать</span>
+                <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Собери игру</span>
             </button>` : ''}
         </div>
     `;
