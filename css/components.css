@@ -1491,6 +1491,10 @@ body.dark-mode .game-summary-share-preview {
     opacity: 0.85;
 }
 
+body.dark-mode .scheduled-game-meta-line i {
+    color: var(--app-text-muted);
+}
+
 .scheduled-game-meta-secondary {
     margin-top: 6px;
     opacity: 0.92;
@@ -1649,14 +1653,14 @@ body.dark-mode .game-summary-share-preview {
 }
 
 body.dark-mode.thermal-safe .scheduled-game-text-action {
-    color: var(--text-muted) !important;
+    color: var(--app-text-muted) !important;
 }
 
 body.dark-mode.thermal-safe .scheduled-game-disabled-action,
 body.dark-mode.thermal-safe .scheduled-game-badge {
     background: rgba(255, 255, 255, 0.08) !important;
     border-color: rgba(255, 255, 255, 0.04) !important;
-    color: var(--text-muted) !important;
+    color: var(--app-text-muted) !important;
 }
 
 .thermal-safe .room-card-primary-btn {
