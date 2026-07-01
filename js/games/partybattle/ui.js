@@ -1034,9 +1034,16 @@ window.PartyBattleUI = {
                 <div class="flex-grow-1 d-flex flex-column align-items-center px-3 pt-2 pb-3 text-center position-relative animate__animated animate__fadeIn">
                     <h2 class="fw-bold mb-2 text-truncate" style="color:var(--text-main); line-height:1.05; max-width:420px; width:100%; font-size:clamp(1.35rem, 5vw, 1.8rem);">${title}</h2>
                     ${winnerType === 'truth' ? `<div class="text-muted fw-semibold mb-2" style="max-width:420px; font-size:0.9rem;">${subtitle}</div>` : ''}
-                    ${(mode === 'meme' && winnerType !== 'truth') ? `
+                    ${((mode === 'meme' || mode === 'caption') && winnerType !== 'truth') ? `
                         <div class="d-flex flex-column align-items-center animate__animated animate__fadeInUp w-100 mt-2 mb-2">
-                            <img src="${winnerContent}" class="rounded-4 shadow-sm" style="max-height: 45vh; max-width: 100%; object-fit: contain;" referrerpolicy="no-referrer">
+                            ${mode === 'meme' ? `
+                                <img src="${winnerContent}" class="rounded-4 shadow-sm" style="max-height: 45vh; max-width: 100%; object-fit: contain;" referrerpolicy="no-referrer">
+                            ` : `
+                                ${pb_renderPromptImage(gameState.displayPrompt?.mediaUrl || '', 'rounded-4 shadow-sm', 'max-height: 45vh; max-width: 100%; object-fit: contain;')}
+                                <div class="mt-3 w-100 px-2">
+                                    <h3 class="fw-bold mb-0" style="color:var(--text-main); line-height: 1.25; font-size: clamp(1.2rem, 4.5vw, 1.8rem); word-break: break-word;">${winnerContent}</h3>
+                                </div>
+                            `}
                             <div class="fw-bold mt-3" style="color:var(--text-muted); font-size: 0.95rem;">${scoreLabel}</div>
                         </div>
                     ` : `
@@ -1046,12 +1053,7 @@ window.PartyBattleUI = {
                                     <span class="badge rounded-pill px-3 py-2 pb-success-pill">Это была правда</span>
                                 </div>
                             ` : ''}
-                            ${mode === 'caption' ? `
-                                <div class="mb-3">
-                                    ${pb_renderPromptImage(gameState.displayPrompt?.mediaUrl || '', 'w-100 rounded-4 object-fit-cover shadow-sm', 'max-height: 210px;')}
-                                </div>
-                                <h3 class="fw-bold mb-2" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.18rem, 4.2vw, 1.72rem);">${winnerContent}</h3>
-                            ` : (mode === 'whoami' ? '' : `
+                            ${(mode === 'whoami' ? '' : `
                                 <h3 class="fw-bold mb-2" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.12rem, 4vw, 1.62rem);">${winnerContent}</h3>
                             `)}
                             ${winnerType === 'truth'
