@@ -996,11 +996,13 @@ window.PartyBattleUI = {
         const winnerContent = roundResult.winner_content || '';
         const winnerVotes = roundResult.winner_votes || (winnerId ? (voteCounts[winnerId] || 0) : 0);
         const winnerPlayer = players.find(p => String(p.id) === String(winnerPlayerId));
-        const title = winnerType === 'truth' ? 'Правда раскрыта!' : 'Победитель раунда!';
+        const winnerName = winnerPlayer?.display_name || winnerPlayer?.first_name || 'Игрок';
+        const voteLabel = pb_formatVoteLabel(winnerVotes);
+        const scoreLabel = winnerType === 'truth' ? '' : `+${winnerVotes * 100} · ${winnerVotes} ${voteLabel}`;
+        const title = winnerType === 'truth' ? 'Правда раскрыта!' : `${winnerName} победил!`;
         const subtitle = winnerType === 'truth'
             ? 'Игроки чаще всего выбрали правильный вариант.'
-            : (winnerPlayer?.display_name || winnerPlayer?.first_name || 'Игрок');
-        const modeMeta = pb_getModeMeta(mode);
+            : winnerName;
         const bluffTruth = mode === 'bluff'
             ? String(gameState.displayPrompt?.truth || gameState.round?.prompt?.truth || '').trim()
             : '';
@@ -1029,41 +1031,30 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column pb-game-screen ${isHost ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
-                <div class="flex-grow-1 d-flex flex-column align-items-center p-3 text-center position-relative animate__animated animate__fadeIn">
-                    <div class="small fw-bold text-uppercase mb-2" style="color:var(--primary-color); letter-spacing:0.16em;">Результат</div>
-                    <h2 class="fw-bold mb-2" style="color:var(--text-main); line-height:1.02;">${title}</h2>
-                    <div class="text-muted fw-semibold mb-3" style="max-width:420px; font-size:0.98rem;">${winnerType === 'truth' ? subtitle : `${subtitle} победил в режиме «${modeMeta.label}»`}</div>
-                    <div class="p-3 rounded-4 animate__animated animate__fadeInUp pb-surface"
-                        style="max-width: 420px; width: 100%;">
+                <div class="flex-grow-1 d-flex flex-column align-items-center px-3 pt-2 pb-3 text-center position-relative animate__animated animate__fadeIn">
+                    <h2 class="fw-bold mb-2 text-truncate" style="color:var(--text-main); line-height:1.05; max-width:420px; width:100%; font-size:clamp(1.35rem, 5vw, 1.8rem);">${title}</h2>
+                    ${winnerType === 'truth' ? `<div class="text-muted fw-semibold mb-2" style="max-width:420px; font-size:0.9rem;">${subtitle}</div>` : ''}
+                    <div class="p-2 rounded-4 animate__animated animate__fadeInUp pb-surface pb-round-result-card">
                         ${winnerType === 'truth' ? `
-                            <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="d-flex align-items-center justify-content-center mb-2">
                                 <span class="badge rounded-pill px-3 py-2 pb-success-pill">Это была правда</span>
                             </div>
-                        ` : `
-                            <div class="d-flex align-items-center justify-content-center mb-3 gap-2">
-                                <div style="width:40px; height:40px;">${pb_renderAvatar(winnerPlayer, 'md')}</div>
-                                <span class="fw-bold" style="color:var(--text-main); font-size:1rem;">${subtitle}</span>
-                            </div>
-                        `}
+                        ` : ''}
                         ${mode === 'meme' && winnerType !== 'truth' ? `
-                            <div class="rounded-4 overflow-hidden mb-3" style="aspect-ratio: 1;">
-                                <img src="${winnerContent}" class="w-100 h-100 object-fit-cover shadow-sm" referrerpolicy="no-referrer">
+                            <div class="rounded-4 overflow-hidden mb-2 pb-round-result-media">
+                                <img src="${winnerContent}" class="w-100 h-100 shadow-sm" referrerpolicy="no-referrer">
                             </div>
                         ` : (mode === 'caption' ? `
-                            <div class="mb-3">
+                            <div class="mb-2">
                                 ${pb_renderPromptImage(gameState.displayPrompt?.mediaUrl || '', 'w-100 rounded-4 object-fit-cover shadow-sm', 'max-height: 210px;')}
                             </div>
-                            <h3 class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.28rem, 4.5vw, 1.9rem);">${winnerContent}</h3>
+                            <h3 class="fw-bold mb-2" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.18rem, 4.2vw, 1.72rem);">${winnerContent}</h3>
                         ` : (mode === 'whoami' ? '' : `
-                            <h3 class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.22rem, 4.4vw, 1.8rem);">${winnerContent}</h3>
+                            <h3 class="fw-bold mb-2" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.12rem, 4vw, 1.62rem);">${winnerContent}</h3>
                         `))}
-                        <div class="text-center rounded-4 p-3 pb-surface-muted">
-                            ${winnerType === 'truth'
+                        ${winnerType === 'truth'
                 ? `<div class="small text-muted fw-bold">Голосов за правду: ${winnerVotes}</div>`
-                : `<div class="small text-muted fw-bold text-uppercase mb-1" style="letter-spacing:0.12em;">Награда</div>
-                                   <h2 class="fw-bold text-primary mb-1">+${winnerVotes * 100}</h2>
-                                   <div class="small text-muted fw-bold">Голосов: ${winnerVotes}</div>`}
-                        </div>
+                : `<div class="fw-bold pb-round-result-meta">${scoreLabel}</div>`}
                     </div>
                     ${mode === 'bluff' ? `
                         <div class="mt-3 p-3 rounded-4 pb-surface" style="max-width: 420px; width: 100%;">
@@ -1339,6 +1330,15 @@ function pb_getModeMeta(mode) {
     };
 
     return map[mode] || { label: mode || '' };
+}
+
+function pb_formatVoteLabel(count) {
+    const abs = Math.abs(Number(count) || 0);
+    const mod10 = abs % 10;
+    const mod100 = abs % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'голос';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'голоса';
+    return 'голосов';
 }
 
 function pb_getStageMeta(view) {

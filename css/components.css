@@ -169,6 +169,27 @@
     box-shadow: none;
 }
 
+.pb-round-result-card {
+    max-width: 420px;
+    width: 100%;
+}
+
+.pb-round-result-media {
+    background: var(--bg-secondary);
+    aspect-ratio: 1;
+    max-height: min(42vh, 300px);
+}
+
+.pb-round-result-media img {
+    object-fit: contain;
+}
+
+.pb-round-result-meta {
+    color: var(--primary-color);
+    font-size: 1rem;
+    line-height: 1.1;
+}
+
 @media (max-width: 480px) {
     .pb-meme-hand {
         padding: 10px 8px 8px;
@@ -191,6 +212,10 @@
 
     #search-toggle-div {
         margin-top: 0 !important;
+    }
+
+    .pb-round-result-media {
+        max-height: min(34vh, 230px);
     }
 }
 
