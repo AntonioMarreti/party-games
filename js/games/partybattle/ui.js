@@ -975,7 +975,7 @@ window.PartyBattleUI = {
                         `}
                         ${mode === 'meme' && winnerType !== 'truth' ? `
                             <div class="rounded-4 overflow-hidden mb-3" style="aspect-ratio: 1;">
-                                <img src="${winnerContent}" class="w-100 h-100 object-fit-cover shadow-sm">
+                                <img src="${winnerContent}" class="w-100 h-100 object-fit-cover shadow-sm" referrerpolicy="no-referrer">
                             </div>
                         ` : (mode === 'caption' ? `
                             <div class="mb-3">
@@ -1176,7 +1176,7 @@ window.PartyBattleUI = {
                     return `
                         <div class="col-6">
                             <div class="rounded-3 overflow-hidden shadow-sm" style="aspect-ratio: 1; cursor: pointer;" onclick="window.PartyBattleUI.submitAnswer('${url}')">
-                                <img src="${url}" class="w-100 h-100 object-fit-cover" loading="lazy">
+                                <img src="${url}" class="w-100 h-100 object-fit-cover" loading="lazy" referrerpolicy="no-referrer">
                             </div>
                         </div>`;
                 }).join('')}
@@ -1239,7 +1239,7 @@ function pb_renderPromptImage(url, className = '', style = '') {
 
     const fallbackUrl = pb_getPromptImageFallbackUrl(safeUrl);
     const fallbackAttr = fallbackUrl ? ` data-fallback-src="${fallbackUrl}"` : '';
-    return `<img src="${safeUrl}" class="${className}" style="${style}" loading="lazy"${fallbackAttr} onerror="if(!this.dataset.fallbackApplied && this.dataset.fallbackSrc){this.dataset.fallbackApplied='1';this.src=this.dataset.fallbackSrc;return;}this.outerHTML='<div class=&quot;d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3&quot; style=&quot;min-height:200px;background:#f6f7fb;border:1px solid rgba(90, 103, 255, 0.08);${style || ''}&quot;><i class=&quot;bi bi-image-alt mb-2&quot; style=&quot;font-size:1.4rem;&quot;></i><span>Изображение недоступно</span></div>';">`;
+    return `<img src="${safeUrl}" class="${className}" style="${style}" loading="lazy"${fallbackAttr} referrerpolicy="no-referrer" onerror="if(!this.dataset.fallbackApplied && this.dataset.fallbackSrc){this.dataset.fallbackApplied='1';this.src=this.dataset.fallbackSrc;return;}this.outerHTML='<div class=&quot;d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3&quot; style=&quot;min-height:200px;background:#f6f7fb;border:1px solid rgba(90, 103, 255, 0.08);${style || ''}&quot;><i class=&quot;bi bi-image-alt mb-2&quot; style=&quot;font-size:1.4rem;&quot;></i><span>Изображение недоступно</span></div>';">`;
 }
 
 function pb_getPromptImageFallbackUrl(url) {

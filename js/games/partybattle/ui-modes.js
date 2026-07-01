@@ -138,7 +138,7 @@ window.PartyBattleModes = {
             return `
                                 <div class="col-6">
                                     <div class="rounded-4 overflow-hidden position-relative shadow-sm" onclick="window.PartyBattleUI.submitAnswer('${url}')" style="aspect-ratio: 1; cursor: pointer;">
-                                        <img src="${url}" loading="lazy" class="w-100 h-100 object-fit-cover" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                        <img src="${url}" loading="lazy" class="w-100 h-100 object-fit-cover" referrerpolicy="no-referrer" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     </div>
                                 </div>
                             `;
@@ -180,7 +180,7 @@ window.PartyBattleModes = {
                         <div class="col-6">
                             <div class="rounded-4 overflow-hidden shadow-sm mb-2 position-relative" style="aspect-ratio: 1; border: ${isMe ? '2px solid var(--primary-color)' : '1px solid rgba(90, 103, 255, 0.08)'}; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.parentNode.querySelector('button'))"` : ''}>
-                                <img src="${entry.value}" class="w-100 h-100 object-fit-cover">
+                                <img src="${entry.value}" class="w-100 h-100 object-fit-cover" referrerpolicy="no-referrer">
                                 ${isMe ? `<div class="position-absolute top-0 start-0 m-2"><span class="badge rounded-pill px-3 py-2" style="font-size:0.68rem; background: rgba(255,255,255,0.92); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">Твой ответ</span></div>` : ''}
                                 ${hasVoted && !isMe ? `<div class="position-absolute inset-0 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.3);"><i class="bi bi-check-circle-fill text-white fs-1"></i></div>` : ''}
                             </div>
