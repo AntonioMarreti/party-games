@@ -153,6 +153,20 @@
 .pb-meme-card {
     aspect-ratio: 1;
     cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.pb-meme-card.is-selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color), transparent 72%);
+}
+
+.pb-meme-selected-badge {
+    background: var(--primary-color);
+    color: var(--text-on-accent);
+    border: 1px solid color-mix(in srgb, var(--text-on-accent), transparent 72%);
+    box-shadow: none;
 }
 
 @media (max-width: 480px) {

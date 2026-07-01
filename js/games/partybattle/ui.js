@@ -719,7 +719,11 @@ window.PartyBattleUI = {
         const hasSubmitted = gameState.submissionEntries.some(entry => String(entry.authorId) === myId);
         const usesTextComposer = gameState.activeMode !== 'meme'
             && (gameState.roundFamily === 'creative_vote' || gameState.roundFamily === 'bluff');
-        const hasBottomPrimary = !hasSubmitted && usesTextComposer;
+        const usesMemePicker = gameState.activeMode === 'meme';
+        const hasBottomPrimary = !hasSubmitted && (usesTextComposer || usesMemePicker);
+        if (usesMemePicker) {
+            this.syncMemeSelection(gameState);
+        }
 
         let html = `
             <div class="d-flex flex-column pb-game-screen ${hasBottomPrimary ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
@@ -763,7 +767,9 @@ window.PartyBattleUI = {
 
         html += `
                 ${this.renderSubmissionFooter({
-                    primaryButton: hasBottomPrimary
+                    primaryButton: hasBottomPrimary && usesMemePicker
+                        ? this.renderMemeSubmitButton()
+                        : hasBottomPrimary
                         ? `<button id="pb-submit-answer-btn" class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm" style="box-shadow: 0 16px 36px rgba(var(--primary-rgb), 0.2) !important; min-height: 56px;" onclick="window.PartyBattleUI.submitAnswer()">
                             <i class="bi bi-send-fill me-2"></i> ${this.getSubmissionButtonLabel(gameState)}
                         </button>`
@@ -836,6 +842,75 @@ window.PartyBattleUI = {
         if (activeMode === 'bluff') return 'ОТПРАВИТЬ ЛОЖЬ';
         if (activeMode === 'acronym') return 'ОТПРАВИТЬ';
         return 'ОТПРАВИТЬ ШУТКУ';
+    },
+
+    renderMemeSubmitButton: function () {
+        const selectedUrl = this.getSelectedMemeUrl();
+        if (!selectedUrl) {
+            return `<button id="pb-submit-meme-btn" class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.88rem;" disabled>
+                Выберите мем
+            </button>`;
+        }
+        return `<button id="pb-submit-meme-btn" class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.88rem;" onclick="window.PartyBattleUI.submitSelectedMemeAnswer(this)">
+            Отправить мем <i class="bi bi-arrow-right ms-1"></i>
+        </button>`;
+    },
+
+    syncMemeSelection: function (gameState) {
+        const roundKey = [
+            gameState.current_round || '',
+            gameState.activeMode || '',
+            gameState.displayPrompt?.body || gameState.displayPrompt?.mediaUrl || ''
+        ].join('|');
+        if (this._selectedMemeRoundKey !== roundKey) {
+            this._selectedMemeRoundKey = roundKey;
+            this._selectedMemeUrl = '';
+            this._isSubmittingMemeAnswer = false;
+        }
+    },
+
+    getSelectedMemeUrl: function () {
+        return this._selectedMemeUrl || '';
+    },
+
+    selectMemeAnswer: function (url, card = null) {
+        if (!url || this._isSubmittingMemeAnswer) return;
+        this._selectedMemeUrl = url;
+        document.querySelectorAll('.pb-meme-card').forEach(el => {
+            const isSelected = el.dataset.memeUrl === url;
+            el.classList.toggle('is-selected', isSelected);
+            const badge = el.querySelector('.pb-meme-selected-badge');
+            if (badge) badge.classList.toggle('d-none', !isSelected);
+        });
+        if (card && !card.classList.contains('is-selected')) {
+            card.classList.add('is-selected');
+        }
+        const btn = document.getElementById('pb-submit-meme-btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Отправить мем <i class="bi bi-arrow-right ms-1"></i>';
+            btn.onclick = () => window.PartyBattleUI.submitSelectedMemeAnswer(btn);
+        }
+    },
+
+    submitSelectedMemeAnswer: async function (button = null) {
+        const selectedUrl = this.getSelectedMemeUrl();
+        if (!selectedUrl || this._isSubmittingMemeAnswer) return;
+        this._isSubmittingMemeAnswer = true;
+        const originalHtml = button ? button.innerHTML : '';
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Отправляем...';
+        }
+        try {
+            await window.sendGameAction('submit_answer', { answer: selectedUrl });
+        } catch (e) {
+            this._isSubmittingMemeAnswer = false;
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = originalHtml || 'Отправить мем <i class="bi bi-arrow-right ms-1"></i>';
+            }
+        }
     },
 
     /* --- VOTING SCREEN --- */
@@ -1166,14 +1241,19 @@ window.PartyBattleUI = {
         try {
             const res = await window.apiRequest({ action: 'game_action', type: 'search_gifs', query: query });
             if (res.status === 'ok' && res.results && res.results.length > 0) {
+                const selectedUrl = this.getSelectedMemeUrl();
                 container.innerHTML = `
                 <div class="row g-2 p-1">
                     ${res.results.map(gif => {
                     const url = gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || gif.url;
+                    const isSelected = selectedUrl === url;
                     return `
                         <div class="col-6">
-                            <div class="rounded-3 overflow-hidden shadow-sm" style="aspect-ratio: 1; cursor: pointer;" onclick="window.PartyBattleUI.submitAnswer('${url}')">
+                            <div class="rounded-3 overflow-hidden shadow-sm position-relative pb-meme-card ${isSelected ? 'is-selected' : ''}" data-meme-url="${url}" onclick="window.PartyBattleUI.selectMemeAnswer('${url}', this)">
                                 <img src="${url}" class="w-100 h-100 object-fit-cover" loading="lazy" referrerpolicy="no-referrer">
+                                <div class="position-absolute top-0 end-0 m-2 rounded-pill px-2 py-1 small fw-bold pb-meme-selected-badge ${isSelected ? '' : 'd-none'}" style="font-size:0.68rem;">
+                                    <i class="bi bi-check2 me-1"></i>Выбрано
+                                </div>
                             </div>
                         </div>`;
                 }).join('')}

@@ -116,6 +116,7 @@ window.PartyBattleModes = {
 
     /* --- MEME MODE (Migrated from memebattle) --- */
     renderMemeSubmission: function (gameState, myHand) {
+        const selectedUrl = window.PartyBattleUI?.getSelectedMemeUrl?.() || '';
         return `
              <div class="pb-meme-hand">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-meme-hand-toolbar">
@@ -150,10 +151,14 @@ window.PartyBattleModes = {
                     <div class="row g-2" id="meme-hand-grid">
                         ${myHand.map(gif => {
             const url = gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || gif.url;
+            const isSelected = selectedUrl === url;
             return `
                                 <div class="col-6">
-                                    <div class="rounded-4 overflow-hidden position-relative shadow-sm pb-meme-card" onclick="window.PartyBattleUI.submitAnswer('${url}')">
+                                    <div class="rounded-4 overflow-hidden position-relative shadow-sm pb-meme-card ${isSelected ? 'is-selected' : ''}" data-meme-url="${url}" onclick="window.PartyBattleUI.selectMemeAnswer('${url}', this)">
                                         <img src="${url}" loading="lazy" class="w-100 h-100 object-fit-cover" referrerpolicy="no-referrer" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                        <div class="position-absolute top-0 end-0 m-2 rounded-pill px-2 py-1 small fw-bold pb-meme-selected-badge ${isSelected ? '' : 'd-none'}" style="font-size:0.68rem;">
+                                            <i class="bi bi-check2 me-1"></i>Выбрано
+                                        </div>
                                     </div>
                                 </div>
                             `;
