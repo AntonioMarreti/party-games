@@ -209,6 +209,9 @@
         const playAgainAction = options.playAgainAction || 'play-again';
         const roomActionLabel = options.roomActionLabel || '';
         const roomAction = options.roomAction || 'return-to-room';
+        const nextGameLabel = options.nextGameLabel || '';
+        const nextGameAction = options.nextGameAction || 'next-game';
+        const playAgainDisabled = options.playAgainDisabled ? 'disabled' : '';
         const shareLabel = options.shareLabel || 'Поделиться в Telegram';
         const canShareStory = Boolean(window.Telegram?.WebApp?.shareToStory);
         const previewTitle = winnerName ? `Победитель: ${winnerName}` : (data.outcome || 'Итог партии');
@@ -242,12 +245,17 @@
                     <button class="btn btn-primary game-summary-btn" type="button" data-game-summary-action="share" data-game-id="${escapeHtml(data.gameId)}">
                         <i class="bi bi-telegram me-2"></i> ${escapeHtml(shareLabel)}
                     </button>
-                    <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(playAgainAction)}" data-game-id="${escapeHtml(data.gameId)}">
+                    <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(playAgainAction)}" data-game-id="${escapeHtml(data.gameId)}" ${playAgainDisabled}>
                         <i class="bi bi-arrow-repeat me-2"></i> ${escapeHtml(playAgainLabel)}
                     </button>
                     ${roomActionLabel ? `
                         <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(roomAction)}" data-game-id="${escapeHtml(data.gameId)}">
                             <i class="bi bi-door-open me-2"></i> ${escapeHtml(roomActionLabel)}
+                        </button>
+                    ` : ''}
+                    ${nextGameLabel ? `
+                        <button class="btn btn-outline-secondary game-summary-btn" type="button" data-game-summary-action="${escapeHtml(nextGameAction)}" data-game-id="${escapeHtml(data.gameId)}">
+                            <i class="bi bi-calendar-plus me-2"></i> ${escapeHtml(nextGameLabel)}
                         </button>
                     ` : ''}
                     ${canShareStory ? `

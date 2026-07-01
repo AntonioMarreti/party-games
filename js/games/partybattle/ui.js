@@ -1109,10 +1109,13 @@ window.PartyBattleUI = {
                     `}
 
                     ${postGameSummary ? window.GameSummaryProvider.render(postGameSummary, {
-            playAgainLabel: isHost ? 'Играть еще раз' : 'В комнату',
-            playAgainAction: isHost ? 'play-again' : 'return-to-room',
-            roomActionLabel: isHost ? 'В комнату' : '',
-            roomAction: 'return-to-room'
+            playAgainLabel: isHost ? 'Сыграть ещё раз' : 'Ожидаем ведущего...',
+            playAgainAction: isHost ? 'play-again' : '',
+            playAgainDisabled: !isHost,
+            roomActionLabel: 'Сменить игру / В лобби',
+            roomAction: 'return-to-room',
+            nextGameLabel: 'Собрать следующую игру',
+            nextGameAction: 'schedule-partybattle'
         }) : ''}
                 </div>
 
@@ -1397,12 +1400,25 @@ if (window.GameSummaryProvider) {
         },
         playAgain: function () {
             if (typeof window.sendGameAction === 'function') {
-                window.sendGameAction('back_to_lobby');
+                window.sendGameAction('rematch');
             }
         },
         'return-to-room': function () {
             if (typeof window.sendGameAction === 'function') {
                 window.sendGameAction('back_to_lobby');
+            }
+        },
+        'schedule-partybattle': function () {
+            const select = document.getElementById('scheduled-game-type');
+            if (select) {
+                select.value = 'partybattle';
+                // Trigger change event just in case
+                select.dispatchEvent(new Event('change'));
+            }
+            const modalEl = document.getElementById('scheduledGameModal');
+            if (modalEl && window.bootstrap) {
+                const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                modal.show();
             }
         }
     });

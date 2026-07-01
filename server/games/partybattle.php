@@ -105,6 +105,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         $state['selected_modes'] = $modes;
         $state['theme'] = $theme;
         $state['ai_mode'] = $aiMode;
+        $state['custom_topic'] = $customTopic;
         $state['scores'] = [];
         $state['recent_cards'] = $recentCards;
         $state['started_at'] = time();
@@ -154,6 +155,80 @@ function handleGameAction($pdo, $room, $user, $postData)
 
         if (empty($state['situations_deck'])) {
             return ['status' => 'error', 'message' => 'Не удалось сгенерировать колоду. Попробуйте другой набор или отключите AI.'];
+        }
+
+        pb_startNextRound($pdo, $room, $state);
+        updateGameState($room['id'], $state);
+        return ['status' => 'ok'];
+    }
+
+    if ($type === 'rematch') {
+        if (!$room['is_host']) {
+            return ['status' => 'error', 'message' => 'Only host'];
+        }
+        if (($state['phase'] ?? null) !== 'results') {
+            return ['status' => 'error', 'message' => 'Not in results phase'];
+        }
+        if (empty($state['stats_recorded'])) {
+            pb_recordFinalStatsIfNeeded($pdo, $room, $state);
+        }
+
+        $rounds = $state['total_rounds'] ?? 5;
+        $modes = $state['selected_modes'] ?? pb_getDefaultModes();
+        $theme = $state['theme'] ?? 'base';
+        $aiMode = $state['ai_mode'] ?? false;
+        $customTopic = $state['custom_topic'] ?? '';
+        $recentCards = pb_normalizeRecentCards($state['recent_cards'] ?? []);
+
+        $state = getInitialState();
+        $state['total_rounds'] = $rounds;
+        $state['selected_modes'] = $modes;
+        $state['theme'] = $theme;
+        $state['ai_mode'] = $aiMode;
+        $state['custom_topic'] = $customTopic;
+        $state['scores'] = [];
+        $state['recent_cards'] = $recentCards;
+        $state['started_at'] = time();
+        $state['stats_recorded'] = false;
+
+        $allIds = pb_getRoomPlayerIds($pdo, $room['id']);
+        foreach ($allIds as $id) {
+            $state['scores'][(string) $id] = 0;
+        }
+
+        $mixedDeck = [];
+        foreach ($modes as $mode) {
+            $deck = pb_generateDeck(
+                $pdo,
+                $mode,
+                $theme,
+                $aiMode,
+                $customTopic,
+                $rounds,
+                $state['recent_cards'][$mode] ?? []
+            );
+            if (empty($deck)) {
+                error_log("PartyBattle: WARNING: Deck for mode $mode is empty during rematch");
+                continue;
+            }
+
+            shuffle($deck);
+            $limit = max(3, $rounds);
+            foreach (array_slice($deck, 0, $limit) as $card) {
+                $mixedDeck[] = pb_buildDeckCard($mode, $card);
+            }
+        }
+        $mixedDeck = pb_dedupeDeckCards($mixedDeck);
+        shuffle($mixedDeck);
+        $state['situations_deck'] = array_slice($mixedDeck, 0, $rounds);
+
+        $availableRounds = count($state['situations_deck']);
+        if ($availableRounds > 0 && $availableRounds < $rounds) {
+            $state['total_rounds'] = $availableRounds;
+        }
+
+        if (empty($state['situations_deck'])) {
+            return ['status' => 'error', 'message' => 'Не удалось сгенерировать колоду для реванша.'];
         }
 
         pb_startNextRound($pdo, $room, $state);
