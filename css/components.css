@@ -19,6 +19,158 @@
     flex-shrink: 0;
 }
 
+/* Party Battle active round surfaces */
+.pb-surface {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    box-shadow: var(--shadow-main);
+}
+
+.pb-surface-muted {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    box-shadow: none;
+}
+
+.pb-mode-pill {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    font-weight: 700;
+    box-shadow: none;
+}
+
+.pb-bottom-bar {
+    background: var(--bg-card) !important;
+    border-top: 1px solid var(--border-glass);
+    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.14);
+}
+
+.pb-bottom-bar-inner {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-sm);
+}
+
+.pb-secondary-action {
+    background: var(--bg-secondary) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-glass) !important;
+}
+
+.pb-status-pill,
+.pb-muted-pill {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+}
+
+.pb-accent-pill {
+    background: var(--app-accent-soft);
+    border: 1px solid color-mix(in srgb, var(--primary-color), transparent 70%);
+    color: var(--primary-color);
+}
+
+.pb-success-pill {
+    background: color-mix(in srgb, var(--status-success), transparent 86%);
+    border: 1px solid color-mix(in srgb, var(--status-success), transparent 70%);
+    color: var(--status-success);
+}
+
+.pb-vote-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+}
+
+.pb-vote-card.is-mine {
+    background: color-mix(in srgb, var(--bg-card), var(--primary-color) 8%);
+    border-color: color-mix(in srgb, var(--primary-color), transparent 55%);
+}
+
+.pb-input-shell {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    box-shadow: none;
+}
+
+.pb-input-shell .input-group-text,
+.pb-input-shell .form-control {
+    color: var(--text-main);
+}
+
+.pb-disabled-control {
+    background: var(--bg-secondary) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border-glass) !important;
+}
+
+body.dark-mode .pb-surface,
+body.dark-mode .pb-bottom-bar-inner,
+body.dark-mode .pb-vote-card,
+body.dark-mode.thermal-safe .pb-surface,
+body.dark-mode.thermal-safe .pb-bottom-bar-inner,
+body.dark-mode.thermal-safe .pb-vote-card {
+    background: var(--bg-card);
+    border-color: var(--border-glass);
+    color: var(--text-main);
+    box-shadow: none;
+}
+
+body.dark-mode .pb-surface-muted,
+body.dark-mode .pb-mode-pill,
+body.dark-mode .pb-status-pill,
+body.dark-mode .pb-muted-pill,
+body.dark-mode .pb-input-shell,
+body.dark-mode.thermal-safe .pb-surface-muted,
+body.dark-mode.thermal-safe .pb-mode-pill,
+body.dark-mode.thermal-safe .pb-status-pill,
+body.dark-mode.thermal-safe .pb-muted-pill,
+body.dark-mode.thermal-safe .pb-input-shell {
+    background: var(--bg-secondary);
+    border-color: var(--border-glass);
+    color: var(--text-main);
+    box-shadow: none;
+}
+
+body.dark-mode .pb-status-pill,
+body.dark-mode.thermal-safe .pb-status-pill,
+body.dark-mode .pb-muted-pill,
+body.dark-mode.thermal-safe .pb-muted-pill {
+    color: var(--text-muted);
+}
+
+body.dark-mode .pb-bottom-bar,
+body.dark-mode.thermal-safe .pb-bottom-bar {
+    background: var(--bg-card) !important;
+    border-top-color: var(--border-glass);
+    box-shadow: none;
+}
+
+body.dark-mode .pb-secondary-action,
+body.dark-mode.thermal-safe .pb-secondary-action,
+body.dark-mode .pb-disabled-control,
+body.dark-mode.thermal-safe .pb-disabled-control {
+    background: var(--bg-secondary) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border-glass) !important;
+}
+
+body.dark-mode .pb-input-shell .form-control,
+body.dark-mode.thermal-safe .pb-input-shell .form-control {
+    background: transparent !important;
+    color: var(--text-main) !important;
+}
+
+body.dark-mode .pb-input-shell .form-control::placeholder,
+body.dark-mode.thermal-safe .pb-input-shell .form-control::placeholder {
+    color: var(--text-muted);
+}
+
 .avatar-lg {
     width: 60px;
     height: 60px;

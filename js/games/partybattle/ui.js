@@ -591,8 +591,8 @@ window.PartyBattleUI = {
                 </button>
                 ${roundText || modeMeta.label ? `
                     <div class="mx-auto ${compact ? 'mb-1' : 'mb-2'}" style="max-width: min(100%, ${compact ? '240px' : '260px'});">
-                        ${roundText ? `<div class="fw-bold ${compact ? 'mb-0' : 'mb-1'}" style="color:#5a67ff; font-size: ${compact ? '0.84rem' : '0.92rem'}; line-height:1.1;">${roundText}</div>` : ''}
-                        ${modeMeta.label ? `<div class="mx-auto rounded-pill px-3 ${compact ? 'py-1' : 'py-2'} text-truncate shadow-sm" style="background: rgba(255,255,255,0.92); color: var(--text-main); border: 1px solid rgba(90, 103, 255, 0.08); font-size: ${compact ? '0.8rem' : '0.88rem'}; font-weight: 700; box-shadow: 0 8px 18px rgba(31,38,135,0.04);">${modeMeta.label}</div>` : ''}
+                        ${roundText ? `<div class="fw-bold ${compact ? 'mb-0' : 'mb-1'}" style="color:var(--primary-color); font-size: ${compact ? '0.84rem' : '0.92rem'}; line-height:1.1;">${roundText}</div>` : ''}
+                        ${modeMeta.label ? `<div class="mx-auto rounded-pill px-3 ${compact ? 'py-1' : 'py-2'} text-truncate pb-mode-pill" style="max-width: 100%; font-size: ${compact ? '0.8rem' : '0.88rem'};">${modeMeta.label}</div>` : ''}
                     </div>
                 ` : ''}
                 <h2 class="fw-black m-0 ${compact ? 'mb-0' : 'mb-1'}" style="color:var(--text-main); line-height: 0.98; letter-spacing: -0.045em; font-size:${compact ? '1.42rem' : '1.86rem'};">Party Battle</h2>
@@ -605,12 +605,12 @@ window.PartyBattleUI = {
         const primaryButton = options.primaryButton || '';
         const statusMarkup = options.statusMarkup || '';
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2" style="z-index: 1000; padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important; background: #ffffff; border-top: 1px solid rgba(0,0,0,0.06); box-shadow: 0 -8px 24px rgba(31, 38, 135, 0.06);">
-                <div class="rounded-4 p-2 shadow-sm" style="background: #ffffff; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 6px 16px rgba(31, 38, 135, 0.03);">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1000; padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;">
+                <div class="rounded-4 p-2 pb-bottom-bar-inner">
                     ${statusMarkup}
                     ${primaryButton}
                     ${primaryButton ? '<div class="mb-2"></div>' : ''}
-                    <button class="btn btn-outline-secondary w-100 fw-bold border-0 rounded-4" style="background: #f3f4f8; color: var(--text-main); font-size: 0.84rem; min-height: 42px;" onclick="window.sendGameAction('back_to_lobby')">
+                    <button class="btn btn-outline-secondary w-100 fw-bold rounded-4 pb-secondary-action" style="font-size: 0.84rem; min-height: 42px;" onclick="window.sendGameAction('back_to_lobby')">
                         <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
                     </button>
                 </div>
@@ -622,11 +622,11 @@ window.PartyBattleUI = {
     renderSubmissionFooter: function (options = {}) {
         const primaryButton = options.primaryButton || '';
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2" style="z-index: 1100; bottom: var(--pb-keyboard-offset, 0px); padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important; background: #ffffff; border-top: 1px solid rgba(0,0,0,0.06); box-shadow: 0 -8px 24px rgba(31, 38, 135, 0.06);">
-                <div class="rounded-4 p-2 shadow-sm" style="background: #ffffff; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 6px 16px rgba(31, 38, 135, 0.03);">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1100; bottom: var(--pb-keyboard-offset, 0px); padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;">
+                <div class="rounded-4 p-2 pb-bottom-bar-inner">
                     <div class="d-flex align-items-stretch gap-2">
                         ${primaryButton ? primaryButton.replace('w-100 py-3 rounded-4', 'flex-fill py-2 rounded-4').replace('min-height: 56px;', 'min-height: 42px; font-size: 0.88rem; padding-left: 10px; padding-right: 10px;') : ''}
-                        <button class="btn btn-outline-secondary flex-fill fw-bold border-0 rounded-4" style="background: #f3f4f8; color: var(--text-main); font-size: 0.82rem; min-height: 42px; white-space: nowrap; padding-left: 10px; padding-right: 10px;" onclick="window.sendGameAction('back_to_lobby')">
+                        <button class="btn btn-outline-secondary flex-fill fw-bold rounded-4 pb-secondary-action" style="font-size: 0.82rem; min-height: 42px; white-space: nowrap; padding-left: 10px; padding-right: 10px;" onclick="window.sendGameAction('back_to_lobby')">
                             <i class="bi bi-box-arrow-right me-1"></i> ВЫЙТИ
                         </button>
                     </div>
@@ -650,9 +650,9 @@ window.PartyBattleUI = {
         const imageUrl = gameState.displayPrompt.mediaUrl || '';
 
         html += `
-            <div class="badge rounded-pill mb-3 border shadow-sm px-3 py-1" style="font-size: 11px; background: rgba(90, 103, 255, 0.1); color: #5a67ff; border-color: rgba(90, 103, 255, 0.14) !important; letter-spacing:0.12em;">СИТУАЦИЯ</div>
-            <div class="p-3 mb-4 shadow-sm rounded-4 d-flex align-items-center justify-content-center text-center position-relative overflow-hidden"
-                 style="min-height: 132px; width: 100%; max-width: 600px; background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.08) !important; box-shadow: 0 12px 28px rgba(31, 38, 135, 0.04) !important; padding: ${gameState.displayPrompt.kind === 'image' ? '0 !important' : '1rem'}">
+            <div class="badge rounded-pill mb-3 px-3 py-1 pb-accent-pill" style="font-size: 11px; letter-spacing:0.12em;">СИТУАЦИЯ</div>
+            <div class="p-3 mb-4 rounded-4 d-flex align-items-center justify-content-center text-center position-relative overflow-hidden pb-surface"
+                 style="min-height: 132px; width: 100%; max-width: 600px; padding: ${gameState.displayPrompt.kind === 'image' ? '0 !important' : '1rem'}">
                 ${gameState.displayPrompt.kind === 'image' ? `
                     ${pb_renderPromptImage(imageUrl, 'w-100 h-100 object-fit-cover position-absolute top-0 start-0')}
                 ` : `
@@ -729,10 +729,10 @@ window.PartyBattleUI = {
                 ${this.renderHeader(gameState, { compact: true })}
 
                 <div class="px-3 pt-2 pb-1 animate__animated animate__fadeInDown">
-                    <div class="p-2 shadow-sm rounded-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(90, 103, 255, 0.04)); border: 1px solid var(--border-glass); box-shadow: 0 12px 28px rgba(31, 38, 135, 0.04) !important;">
+                    <div class="p-2 rounded-4 pb-surface">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
                             <div class="small text-muted fw-bold opacity-75 text-uppercase" style="font-size: 10px; letter-spacing: 0.14em;">${modeMeta.label}</div>
-                            <span class="badge rounded-pill px-3 py-1" style="background: rgba(90, 103, 255, 0.1); color: #5a67ff; border: 1px solid rgba(90, 103, 255, 0.14);">Сбор ответов</span>
+                            <span class="badge rounded-pill px-3 py-1 pb-accent-pill">Сбор ответов</span>
                         </div>
                         ${gameState.displayPrompt?.kind === 'image'
                 ? pb_renderPromptImage(situation, 'w-100 rounded-3 object-fit-cover shadow-sm', 'max-height: 148px;')
@@ -745,11 +745,11 @@ window.PartyBattleUI = {
         if (hasSubmitted) {
             html += `
                 <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center p-4">
-                    <div class="p-4 rounded-4 shadow-lg animate__animated animate__bounceIn mb-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(var(--primary-rgb), 0.05)); border: 1px solid var(--border-glass); box-shadow: 0 24px 60px rgba(31, 38, 135, 0.08) !important;">
+                    <div class="p-4 rounded-4 animate__animated animate__bounceIn mb-4 pb-surface">
                         <i class="bi bi-check-circle-fill text-success display-1 mb-4 d-block"></i>
                         <h3 class="fw-bold" style="color:var(--text-main);">Принято!</h3>
                         <p class="text-muted small mb-4">${gameState.activeMode === 'bluff' ? 'Ложь записана. Ждем остальные ответы...' : 'Ответ отправлен. Ждем остальных игроков...'}</p>
-                        <div class="d-flex align-items-center justify-content-center gap-2 bg-secondary bg-opacity-10 rounded-pill px-3 py-2 mx-auto" style="max-width: fit-content;">
+                        <div class="d-flex align-items-center justify-content-center gap-2 rounded-pill px-3 py-2 mx-auto pb-status-pill" style="max-width: fit-content;">
                             <div class="spinner-border spinner-border-sm text-primary"></div>
                             <span class="small fw-bold opacity-75">Сдали: ${submittedCount} / ${totalPlayers}</span>
                         </div>
@@ -860,10 +860,10 @@ window.PartyBattleUI = {
                 ${this.renderHeader(gameState, { compact: true })}
 
                 <div class="flex-grow-1 px-3 animate__animated animate__fadeIn">
-                    <div class="p-3 mb-3 rounded-4 shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
+                    <div class="p-3 mb-3 rounded-4 pb-surface">
                         <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
                             <div class="small text-muted fw-bold text-uppercase" style="letter-spacing:0.14em;">${modeMeta.label}</div>
-                            <span class="badge rounded-pill px-3 py-1" style="background: rgba(90, 103, 255, 0.1); color: #5a67ff; border: 1px solid rgba(90, 103, 255, 0.14); font-size:0.78rem;">${hasVoted ? 'Голос принят' : 'Выбери лучший вариант'}</span>
+                            <span class="badge rounded-pill px-3 py-1 pb-accent-pill" style="font-size:0.78rem;">${hasVoted ? 'Голос принят' : 'Выбери лучший вариант'}</span>
                         </div>
                         ${gameState.displayPrompt?.kind === 'image'
                 ? `<div>${pb_renderPromptImage(situation, 'w-100 rounded-4 object-fit-cover shadow-sm mx-auto', 'max-width: 600px; max-height: 164px;')}</div>`
@@ -887,7 +887,7 @@ window.PartyBattleUI = {
 
                 ${this.renderBottomActions({
                     statusMarkup: `
-                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2 rounded-pill py-1" style="background: #f3f4f8;">
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2 rounded-pill py-1 pb-status-pill">
                             <div class="spinner-grow spinner-grow-sm text-primary" role="status"></div>
                             <span class="small fw-bold text-muted" style="font-size:0.78rem;">Голоса: <span style="color:var(--text-main);">${votedCount} / ${totalPlayers}</span></span>
                         </div>
@@ -958,14 +958,14 @@ window.PartyBattleUI = {
             <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 12px);">
                 ${this.renderHeader(gameState, { compact: true })}
                 <div class="flex-grow-1 d-flex flex-column align-items-center p-3 text-center position-relative animate__animated animate__fadeIn">
-                    <div class="small fw-bold text-uppercase mb-2" style="color:#5a67ff; letter-spacing:0.16em;">Результат</div>
+                    <div class="small fw-bold text-uppercase mb-2" style="color:var(--primary-color); letter-spacing:0.16em;">Результат</div>
                     <h2 class="fw-bold mb-2" style="color:var(--text-main); line-height:1.02;">${title}</h2>
                     <div class="text-muted fw-semibold mb-3" style="max-width:420px; font-size:0.98rem;">${winnerType === 'truth' ? subtitle : `${subtitle} победил в режиме «${modeMeta.label}»`}</div>
-                    <div class="p-3 rounded-4 shadow-sm animate__animated animate__fadeInUp"
-                        style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.12); max-width: 420px; width: 100%; box-shadow: 0 12px 28px rgba(31, 38, 135, 0.04) !important;">
+                    <div class="p-3 rounded-4 animate__animated animate__fadeInUp pb-surface"
+                        style="max-width: 420px; width: 100%;">
                         ${winnerType === 'truth' ? `
                             <div class="d-flex align-items-center justify-content-center mb-3">
-                                <span class="badge rounded-pill px-3 py-2" style="background:#e9f8ef; color:#179b4d;">Это была правда</span>
+                                <span class="badge rounded-pill px-3 py-2 pb-success-pill">Это была правда</span>
                             </div>
                         ` : `
                             <div class="d-flex align-items-center justify-content-center mb-3 gap-2">
@@ -985,7 +985,7 @@ window.PartyBattleUI = {
                         ` : (mode === 'whoami' ? '' : `
                             <h3 class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.22rem, 4.4vw, 1.8rem);">${winnerContent}</h3>
                         `))}
-                        <div class="text-center rounded-4 p-3" style="background: #f6f8ff;">
+                        <div class="text-center rounded-4 p-3 pb-surface-muted">
                             ${winnerType === 'truth'
                 ? `<div class="small text-muted fw-bold">Голосов за правду: ${winnerVotes}</div>`
                 : `<div class="small text-muted fw-bold text-uppercase mb-1" style="letter-spacing:0.12em;">Награда</div>
@@ -994,10 +994,10 @@ window.PartyBattleUI = {
                         </div>
                     </div>
                     ${mode === 'bluff' ? `
-                        <div class="mt-3 p-3 rounded-4 shadow-sm" style="background: rgba(255,255,255,0.98); border: 1px solid rgba(90, 103, 255, 0.08); max-width: 420px; width: 100%; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04) !important;">
+                        <div class="mt-3 p-3 rounded-4 pb-surface" style="max-width: 420px; width: 100%;">
                             <div class="small fw-bold text-uppercase text-muted mb-2" style="letter-spacing:0.14em;">Как начислены очки</div>
                             ${bluffTruth ? `
-                                <div class="rounded-4 px-3 py-2 mb-3 text-start" style="background:#f6f8ff;">
+                                <div class="rounded-4 px-3 py-2 mb-3 text-start pb-surface-muted">
                                     <div class="small fw-bold text-uppercase text-muted mb-1" style="letter-spacing:0.12em;">Правильный ответ</div>
                                     <div class="fw-bold" style="color:var(--text-main); font-size:0.96rem;">${bluffTruth}</div>
                                 </div>
@@ -1009,7 +1009,7 @@ window.PartyBattleUI = {
                             ${bluffAwardRows.length > 0 ? `
                                 <div class="d-flex flex-column gap-2">
                                     ${bluffAwardRows.map(row => `
-                                        <div class="d-flex justify-content-between align-items-center gap-3 rounded-4 px-3 py-2" style="background:#f7f8fc;">
+                                        <div class="d-flex justify-content-between align-items-center gap-3 rounded-4 px-3 py-2 pb-surface-muted">
                                             <div class="text-start">
                                                 <div class="fw-bold" style="color:var(--text-main); font-size:0.92rem;">${row.playerName}</div>
                                                 <div class="small text-muted" style="font-size:0.74rem;">
@@ -1018,7 +1018,7 @@ window.PartyBattleUI = {
                                                     ${row.bluff > 0 ? `за обман: +${row.bluff}` : ''}
                                                 </div>
                                             </div>
-                                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12); font-size:0.76rem;">+${row.total}</span>
+                                            <span class="badge rounded-pill px-3 py-2 pb-accent-pill" style="font-size:0.76rem;">+${row.total}</span>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -1036,7 +1036,7 @@ window.PartyBattleUI = {
                         </button>`
                         : '',
                     statusMarkup: !isHost
-                        ? `<div class="p-2 w-100 text-center rounded-4 opacity-75 mb-2" style="background: #f3f4f8; border: 1px solid rgba(90, 103, 255, 0.08);">
+                        ? `<div class="p-2 w-100 text-center rounded-4 opacity-75 mb-2 pb-status-pill">
                             <span class="small fw-bold text-muted" style="font-size:0.78rem;">Хост скоро продолжит игру...</span>
                         </div>`
                         : ''
@@ -1165,7 +1165,7 @@ window.PartyBattleUI = {
         if (!container) return;
         if (!query || query.length < 2) return;
 
-        container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3" style="background:#f6f7fb; border:1px solid rgba(90, 103, 255, 0.08);"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div class="small fw-semibold text-muted">Ищем подходящие GIF...</div></div>`;
+        container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div class="small fw-semibold text-muted">Ищем подходящие GIF...</div></div>`;
         try {
             const res = await window.apiRequest({ action: 'game_action', type: 'search_gifs', query: query });
             if (res.status === 'ok' && res.results && res.results.length > 0) {
@@ -1182,10 +1182,10 @@ window.PartyBattleUI = {
                 }).join('')}
                 </div>`;
             } else {
-                container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3" style="background:#f6f7fb; border:1px solid rgba(90, 103, 255, 0.08);"><i class="bi bi-search text-primary opacity-50 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Ничего не найдено</div><div class="small text-muted mt-1">Попробуй другой запрос или обнови формулировку.</div></div>`;
+                container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><i class="bi bi-search text-primary opacity-50 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Ничего не найдено</div><div class="small text-muted mt-1">Попробуй другой запрос или обнови формулировку.</div></div>`;
             }
         } catch (e) {
-            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3" style="background:#fff7f8; border:1px solid rgba(220, 53, 69, 0.12);"><i class="bi bi-wifi-off text-danger opacity-75 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Поиск временно недоступен</div><div class="small text-muted mt-1">Повтори попытку через несколько секунд.</div></div>`;
+            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><i class="bi bi-wifi-off text-danger opacity-75 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Поиск временно недоступен</div><div class="small text-muted mt-1">Повтори попытку через несколько секунд.</div></div>`;
         }
     }
 };
@@ -1234,12 +1234,12 @@ function pb_getPromptDisplay(prompt, legacySituation = null) {
 function pb_renderPromptImage(url, className = '', style = '') {
     const safeUrl = String(url || '');
     if (!safeUrl) {
-        return `<div class="d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3" style="min-height:200px; background:#f6f7fb; border:1px solid rgba(90, 103, 255, 0.08);"><i class="bi bi-image-alt mb-2" style="font-size:1.4rem;"></i><span>Изображение недоступно</span></div>`;
+        return `<div class="d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3 pb-surface-muted" style="min-height:200px;"><i class="bi bi-image-alt mb-2" style="font-size:1.4rem;"></i><span>Изображение недоступно</span></div>`;
     }
 
     const fallbackUrl = pb_getPromptImageFallbackUrl(safeUrl);
     const fallbackAttr = fallbackUrl ? ` data-fallback-src="${fallbackUrl}"` : '';
-    return `<img src="${safeUrl}" class="${className}" style="${style}" loading="lazy"${fallbackAttr} referrerpolicy="no-referrer" onerror="if(!this.dataset.fallbackApplied && this.dataset.fallbackSrc){this.dataset.fallbackApplied='1';this.src=this.dataset.fallbackSrc;return;}this.outerHTML='<div class=&quot;d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3&quot; style=&quot;min-height:200px;background:#f6f7fb;border:1px solid rgba(90, 103, 255, 0.08);${style || ''}&quot;><i class=&quot;bi bi-image-alt mb-2&quot; style=&quot;font-size:1.4rem;&quot;></i><span>Изображение недоступно</span></div>';">`;
+    return `<img src="${safeUrl}" class="${className}" style="${style}" loading="lazy"${fallbackAttr} referrerpolicy="no-referrer" onerror="if(!this.dataset.fallbackApplied && this.dataset.fallbackSrc){this.dataset.fallbackApplied='1';this.src=this.dataset.fallbackSrc;return;}this.outerHTML='<div class=&quot;d-flex flex-column align-items-center justify-content-center rounded-4 text-muted small text-center px-3 pb-surface-muted&quot; style=&quot;min-height:200px;${style || ''}&quot;><i class=&quot;bi bi-image-alt mb-2&quot; style=&quot;font-size:1.4rem;&quot;></i><span>Изображение недоступно</span></div>';">`;
 }
 
 function pb_getPromptImageFallbackUrl(url) {

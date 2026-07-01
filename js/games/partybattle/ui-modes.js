@@ -7,7 +7,7 @@ window.PartyBattleModes = {
         if (gameState.roundFamily === 'direct_vote') {
             return `
                 <div class="px-2 pb-3 animate__animated animate__fadeIn">
-                    <div class="rounded-4 p-4 text-center shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.03)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
+                    <div class="rounded-4 p-4 text-center pb-surface">
                         <i class="bi bi-hourglass-split text-primary opacity-50 d-block mb-3" style="font-size: 1.8rem;"></i>
                         <div class="fw-bold mb-2" style="color:var(--text-main);">Сейчас начнётся голосование</div>
                         <div class="small text-muted">Хост раздаёт карточки и подготавливает варианты для выбора.</div>
@@ -46,13 +46,13 @@ window.PartyBattleModes = {
 
         return `
             <div class="pb-composer-card px-2 pb-2 animate__animated animate__fadeIn">
-                <div class="rounded-4 p-2 shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.04)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
+                <div class="rounded-4 p-2 pb-surface">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
                         <label class="form-label fw-bold small text-muted text-uppercase m-0" style="letter-spacing: 0.14em; opacity: 0.78; font-size: 0.73rem;">${promptText}</label>
                         <div class="small text-muted opacity-50" style="font-size: 0.78rem;"><span id="pb-joke-count">0</span>/150</div>
                     </div>
-                    <textarea id="pb-joke-input" class="form-control rounded-4 p-2 shadow-sm" rows="3" placeholder="${placeholderText}" maxlength="150" 
-                        style="background: rgba(255,255,255,0.92); border: 1px solid rgba(var(--primary-rgb), 0.12); color: var(--text-main); font-size: 0.92rem; line-height:1.24; resize: none; min-height: 88px; box-shadow: none;"></textarea>
+                    <textarea id="pb-joke-input" class="form-control rounded-4 p-2 pb-input-shell" rows="3" placeholder="${placeholderText}" maxlength="150"
+                        style="font-size: 0.92rem; line-height:1.24; resize: none; min-height: 88px; box-shadow: none;"></textarea>
                 </div>
             </div>
             <script>
@@ -85,12 +85,12 @@ window.PartyBattleModes = {
             const isMe = String(entry.authorId) === myId;
             return `
                         <div class="col-12">
-                            <div class="p-3 rounded-4 shadow-sm position-relative ${isMe ? 'border-primary' : ''}" 
-                                 style="background: ${isMe ? 'linear-gradient(180deg, rgba(90, 103, 255, 0.06), rgba(255,255,255,0.98))' : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.02))'}; border: 1px solid ${isMe ? 'rgba(var(--primary-rgb), 0.24)' : 'rgba(90, 103, 255, 0.08)'}; transition: all 0.2s; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
+                            <div class="p-3 rounded-4 position-relative pb-vote-card ${isMe ? 'is-mine' : ''}"
+                                 style="transition: all 0.2s; ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
-                                    <div class="small fw-bold text-uppercase" style="letter-spacing:0.12em; color:${isMe ? '#5a67ff' : 'var(--text-muted)'}; font-size:0.7rem;">${isMe ? 'Твой ответ' : `Вариант ${index + 1}`}</div>
-                                    ${isMe ? `<span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12); font-size: 0.68rem; font-weight:700;">Твой ответ</span>` : ''}
+                                    <div class="small fw-bold text-uppercase" style="letter-spacing:0.12em; color:${isMe ? 'var(--primary-color)' : 'var(--text-muted)'}; font-size:0.7rem;">${isMe ? 'Твой ответ' : `Вариант ${index + 1}`}</div>
+                                    ${isMe ? `<span class="badge rounded-pill px-3 py-2 pb-accent-pill" style="font-size: 0.68rem; font-weight:700;">Твой ответ</span>` : ''}
                                 </div>
                                 <div class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.22; font-size: 0.95rem;">${entry.value}</div>
 
@@ -101,7 +101,7 @@ window.PartyBattleModes = {
                                         </button>
                                     </div>
                                 ` : isMe ? `
-                                    <div class="rounded-pill py-2 px-3 text-center fw-bold" style="background:#eef1f7; color:var(--text-muted); font-size:0.7rem; letter-spacing:0.04em;">
+                                    <div class="rounded-pill py-2 px-3 text-center fw-bold pb-muted-pill" style="font-size:0.7rem; letter-spacing:0.04em;">
                                         ТВОЙ ВАРИАНТ
                                     </div>
                                 ` : ''}
@@ -126,7 +126,7 @@ window.PartyBattleModes = {
                 </div>
 
                 ${myHand.length === 0 ? `
-                    <div class="rounded-4 p-4 text-center shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.03)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
+                    <div class="rounded-4 p-4 text-center pb-surface">
                         <div class="spinner-border text-primary opacity-50 mb-3"></div>
                         <div class="fw-bold mb-2" style="color:var(--text-main);">Собираем руку</div>
                         <div class="text-muted small">Подбираем набор реакций для этого раунда.</div>
@@ -153,7 +153,7 @@ window.PartyBattleModes = {
                 </div>
 
                 <div id="manual-search-div" class="mt-3" style="display:none;">
-                     <div class="input-group bg-white bg-opacity-50 rounded-4 overflow-hidden border shadow-sm">
+                     <div class="input-group rounded-4 overflow-hidden pb-input-shell">
                         <span class="input-group-text bg-transparent border-0 pe-0"><i class="bi bi-search text-muted opacity-50"></i></span>
                         <input type="text" id="meme-search-input" class="form-control border-0 bg-transparent py-2 ps-2" placeholder="Поиск по теме..." oninput="window.PartyBattleUI.searchGifsDebounced(this.value)">
                     </div>
@@ -178,10 +178,10 @@ window.PartyBattleModes = {
             const isMe = String(entry.authorId) === myId;
             return `
                         <div class="col-6">
-                            <div class="rounded-4 overflow-hidden shadow-sm mb-2 position-relative" style="aspect-ratio: 1; border: ${isMe ? '2px solid var(--primary-color)' : '1px solid rgba(90, 103, 255, 0.08)'}; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
+                            <div class="rounded-4 overflow-hidden mb-2 position-relative" style="aspect-ratio: 1; border: ${isMe ? '2px solid var(--primary-color)' : '1px solid var(--border-glass)'}; ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.parentNode.querySelector('button'))"` : ''}>
                                 <img src="${entry.value}" class="w-100 h-100 object-fit-cover" referrerpolicy="no-referrer">
-                                ${isMe ? `<div class="position-absolute top-0 start-0 m-2"><span class="badge rounded-pill px-3 py-2" style="font-size:0.68rem; background: rgba(255,255,255,0.92); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">Твой ответ</span></div>` : ''}
+                                ${isMe ? `<div class="position-absolute top-0 start-0 m-2"><span class="badge rounded-pill px-3 py-2 pb-mode-pill" style="font-size:0.68rem;">Твой ответ</span></div>` : ''}
                                 ${hasVoted && !isMe ? `<div class="position-absolute inset-0 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.3);"><i class="bi bi-check-circle-fill text-white fs-1"></i></div>` : ''}
                             </div>
                             ${!hasVoted && !isMe ? `
@@ -190,7 +190,7 @@ window.PartyBattleModes = {
                                     ВЫБРАТЬ
                                 </button>
                             ` : isMe ? `
-                                <div class="rounded-pill py-2 px-3 text-center fw-bold" style="background:#eef1f7; color:var(--text-muted); font-size:0.68rem; letter-spacing:0.04em;">ТВОЙ ВАРИАНТ</div>
+                                <div class="rounded-pill py-2 px-3 text-center fw-bold pb-muted-pill" style="font-size:0.68rem; letter-spacing:0.04em;">ТВОЙ ВАРИАНТ</div>
                             ` : ''}
                         </div>`;
         }).join('')}
@@ -208,13 +208,12 @@ window.PartyBattleModes = {
             const isMe = pid === myId;
             return `
                         <div class="col-6">
-                            <div class="p-3 rounded-4 shadow-sm text-center position-relative" 
-                                 style="background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(var(--primary-rgb), 0.04)); border: 1px solid ${isMe ? 'rgba(var(--primary-rgb), 0.34)' : 'var(--border-glass)'}; box-shadow: 0 14px 34px rgba(31, 38, 135, 0.05);">
+                            <div class="p-3 rounded-4 text-center position-relative pb-vote-card ${isMe ? 'is-mine' : ''}">
                                 <div style="display:flex; justify-content:center; margin-bottom:10px;">
                                     ${pb_renderAvatar(p, 'lg')}
                                 </div>
                                 <div class="fw-bold text-truncate mb-2" style="color:var(--text-main); font-size: 0.9rem;">${p.display_name}</div>
-                                ${isMe ? `<div class="badge rounded-pill mb-3 px-3 py-2" style="font-size:0.68rem; background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">Это я</div>` : ''}
+                                ${isMe ? `<div class="badge rounded-pill mb-3 px-3 py-2 pb-accent-pill" style="font-size:0.68rem;">Это я</div>` : ''}
                                 
                                 ${!hasVoted ? `
                                         <button class="btn btn-primary w-100 py-2 rounded-pill fw-bold shadow-sm"
@@ -259,13 +258,13 @@ window.PartyBattleModes = {
 
             return `
                         <div class="col-12 animate__animated animate__fadeInUp">
-                            <div class="card shadow-sm border-0 rounded-4"
-                                 style="background: ${isMe ? 'linear-gradient(180deg, rgba(90, 103, 255, 0.06), rgba(255,255,255,0.98))' : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(var(--primary-rgb), 0.02))'}; border: 1px solid ${isMe ? 'rgba(90, 103, 255, 0.24)' : (hasVoted ? 'var(--border-glass)' : 'rgba(90, 103, 255, 0.08)')} !important; box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04); ${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
+                            <div class="card rounded-4 pb-vote-card ${isMe ? 'is-mine' : ''}"
+                                 style="${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
                                 <div class="card-body p-3 text-center">
                                     <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
-                                        <div class="small fw-bold text-uppercase" style="letter-spacing:0.12em; color:${isMe ? '#5a67ff' : 'var(--text-muted)'}; font-size:0.7rem;">${isMe ? 'Твой ответ' : `Вариант ${index + 1}`}</div>
-                                        ${isMe ? `<span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12); font-size:0.68rem; font-weight:700;">Твой ответ</span>` : ''}
+                                        <div class="small fw-bold text-uppercase" style="letter-spacing:0.12em; color:${isMe ? 'var(--primary-color)' : 'var(--text-muted)'}; font-size:0.7rem;">${isMe ? 'Твой ответ' : `Вариант ${index + 1}`}</div>
+                                        ${isMe ? `<span class="badge rounded-pill px-3 py-2 pb-accent-pill" style="font-size:0.68rem; font-weight:700;">Твой ответ</span>` : ''}
                                     </div>
                                     <div class="fw-bold mb-3" style="color:var(--text-main); line-height: 1.22; font-size: 0.95rem;">${entry.value}</div>
                                     
@@ -277,11 +276,11 @@ window.PartyBattleModes = {
                                             </button>
                                     </div>
                                     ` : isMe ? `
-                                        <button class="btn btn-light w-100 py-2 rounded-pill fw-bold" style="min-height:34px; font-size:0.7rem; background:#eef1f7; color:var(--text-muted); letter-spacing:0.02em;" disabled>
+                                        <button class="btn w-100 py-2 rounded-pill fw-bold pb-disabled-control" style="min-height:34px; font-size:0.7rem; letter-spacing:0.02em;" disabled>
                                             НЕЛЬЗЯ ГОЛОСОВАТЬ ЗА СВОЙ ВАРИАНТ
                                         </button>
                                     ` : `
-                                        <button class="btn btn-secondary w-100 py-2 rounded-pill fw-bold" style="min-height:34px; font-size:0.72rem; opacity:0.82;" disabled>
+                                        <button class="btn w-100 py-2 rounded-pill fw-bold pb-disabled-control" style="min-height:34px; font-size:0.72rem; opacity:0.82;" disabled>
                                             <i class="bi bi-check2-circle me-1"></i>ОЖИДАНИЕ...
                                         </button>
                                     `}
