@@ -80,7 +80,7 @@ window.PartyBattleModes = {
         });
 
         return `
-            <div class="row g-2 px-2 pb-4">
+            <div class="row g-2 px-2">
                 ${sorted.map((entry, index) => {
             const isMe = String(entry.authorId) === myId;
             return `
@@ -117,7 +117,7 @@ window.PartyBattleModes = {
     /* --- MEME MODE (Migrated from memebattle) --- */
     renderMemeSubmission: function (gameState, myHand) {
         return `
-             <div class="p-3 pb-5">
+             <div class="p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <span class="small fw-bold text-muted opacity-75" style="letter-spacing:0.12em; font-size:0.74rem;">ТВОЯ РУКА</span>
                     <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center" style="font-size:0.8rem;" onclick="window.PartyBattleUI.refreshHand(event)">
@@ -173,7 +173,7 @@ window.PartyBattleModes = {
             return String(a.id).localeCompare(String(b.id));
         });
         return `
-            <div class="row g-3 px-2 pb-4">
+            <div class="row g-3 px-2">
                 ${sorted.map(entry => {
             const isMe = String(entry.authorId) === myId;
             return `
@@ -252,7 +252,7 @@ window.PartyBattleModes = {
         const shuffled = [...mine, ...others];
 
         return `
-            <div class="row g-2 px-2 pb-4">
+            <div class="row g-2 px-2">
                 ${shuffled.map((entry, index) => {
             const isMe = String(entry.authorId) === myId;
 

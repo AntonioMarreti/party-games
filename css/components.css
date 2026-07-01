@@ -42,10 +42,29 @@
     box-shadow: none;
 }
 
+.pb-game-screen {
+    --pb-bottom-bar-reserve: 142px;
+    padding-bottom: calc(var(--pb-bottom-bar-reserve) + var(--pb-keyboard-offset, 0px) + env(safe-area-inset-bottom));
+}
+
+.pb-round-line {
+    color: var(--primary-color);
+    font-weight: 800;
+    font-size: 0.84rem;
+    line-height: 1.12;
+    white-space: nowrap;
+}
+
+.pb-round-line-mode {
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
 .pb-bottom-bar {
     background: var(--bg-card) !important;
     border-top: 1px solid var(--border-glass);
     box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.14);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
 }
 
 .pb-bottom-bar-inner {
@@ -55,9 +74,22 @@
 }
 
 .pb-secondary-action {
-    background: var(--bg-secondary) !important;
+    background: transparent !important;
     color: var(--text-main) !important;
-    border-color: var(--border-glass) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    opacity: 0.78;
+}
+
+.pb-submission-actions .btn-primary {
+    flex: 1 1 auto;
+}
+
+.pb-submission-actions .pb-secondary-action {
+    flex: 0 0 auto;
+    min-width: 84px;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .pb-status-pill,
@@ -155,8 +187,14 @@ body.dark-mode .pb-secondary-action,
 body.dark-mode.thermal-safe .pb-secondary-action,
 body.dark-mode .pb-disabled-control,
 body.dark-mode.thermal-safe .pb-disabled-control {
-    background: var(--bg-secondary) !important;
+    background: transparent !important;
     color: var(--text-muted) !important;
+    border-color: transparent !important;
+}
+
+body.dark-mode .pb-disabled-control,
+body.dark-mode.thermal-safe .pb-disabled-control {
+    background: var(--bg-secondary) !important;
     border-color: var(--border-glass) !important;
 }
 

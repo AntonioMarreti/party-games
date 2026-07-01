@@ -577,7 +577,7 @@ window.PartyBattleUI = {
         const stageMeta = pb_getStageMeta(gameState.view);
         const compact = !!options.compact;
         const roundText = gameState.view !== 'lobby' && gameState.view !== 'results'
-            ? `Раунд ${gameState.current_round} из ${gameState.total_rounds}`
+            ? `Раунд ${gameState.current_round}/${gameState.total_rounds}`
             : '';
         const isHost = (window.APP_STATE?.room?.is_host) || false;
 
@@ -590,9 +590,8 @@ window.PartyBattleUI = {
                     <span>Выйти</span>
                 </button>
                 ${roundText || modeMeta.label ? `
-                    <div class="mx-auto ${compact ? 'mb-1' : 'mb-2'}" style="max-width: min(100%, ${compact ? '240px' : '260px'});">
-                        ${roundText ? `<div class="fw-bold ${compact ? 'mb-0' : 'mb-1'}" style="color:var(--primary-color); font-size: ${compact ? '0.84rem' : '0.92rem'}; line-height:1.1;">${roundText}</div>` : ''}
-                        ${modeMeta.label ? `<div class="mx-auto rounded-pill px-3 ${compact ? 'py-1' : 'py-2'} text-truncate pb-mode-pill" style="max-width: 100%; font-size: ${compact ? '0.8rem' : '0.88rem'};">${modeMeta.label}</div>` : ''}
+                    <div class="mx-auto ${compact ? 'mb-1' : 'mb-2'} pb-round-line text-truncate" style="max-width: min(100%, ${compact ? '250px' : '270px'});">
+                        ${roundText}${roundText && modeMeta.label ? ' <span class="pb-round-line-mode">·</span> ' : ''}${modeMeta.label ? `<span class="pb-round-line-mode">${modeMeta.label}</span>` : ''}
                     </div>
                 ` : ''}
                 <h2 class="fw-black m-0 ${compact ? 'mb-0' : 'mb-1'}" style="color:var(--text-main); line-height: 0.98; letter-spacing: -0.045em; font-size:${compact ? '1.42rem' : '1.86rem'};">Party Battle</h2>
@@ -605,7 +604,7 @@ window.PartyBattleUI = {
         const primaryButton = options.primaryButton || '';
         const statusMarkup = options.statusMarkup || '';
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1000; padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1000;">
                 <div class="rounded-4 p-2 pb-bottom-bar-inner">
                     ${statusMarkup}
                     ${primaryButton}
@@ -615,24 +614,22 @@ window.PartyBattleUI = {
                     </button>
                 </div>
             </div>
-            <div style="height:${primaryButton ? '138px' : '104px'};"></div>
         `;
     },
 
     renderSubmissionFooter: function (options = {}) {
         const primaryButton = options.primaryButton || '';
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1100; bottom: var(--pb-keyboard-offset, 0px); padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1100; bottom: var(--pb-keyboard-offset, 0px);">
                 <div class="rounded-4 p-2 pb-bottom-bar-inner">
-                    <div class="d-flex align-items-stretch gap-2">
+                    <div class="d-flex align-items-stretch gap-2 pb-submission-actions">
                         ${primaryButton ? primaryButton.replace('w-100 py-3 rounded-4', 'flex-fill py-2 rounded-4').replace('min-height: 56px;', 'min-height: 42px; font-size: 0.88rem; padding-left: 10px; padding-right: 10px;') : ''}
-                        <button class="btn btn-outline-secondary flex-fill fw-bold rounded-4 pb-secondary-action" style="font-size: 0.82rem; min-height: 42px; white-space: nowrap; padding-left: 10px; padding-right: 10px;" onclick="window.sendGameAction('back_to_lobby')">
+                        <button class="btn btn-outline-secondary fw-bold rounded-4 pb-secondary-action" style="font-size: 0.8rem; min-height: 42px; white-space: nowrap;" onclick="window.sendGameAction('back_to_lobby')">
                             <i class="bi bi-box-arrow-right me-1"></i> ВЫЙТИ
                         </button>
                     </div>
                 </div>
             </div>
-            <div style="height: calc(var(--pb-keyboard-offset, 0px) + 86px);"></div>
         `;
     },
 
@@ -641,7 +638,7 @@ window.PartyBattleUI = {
 
         const isHost = window.APP_STATE.room.is_host;
         let html = `
-            <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
                 <div class="d-flex flex-column align-items-center justify-content-start flex-grow-1 pb-4 pt-1 animate__animated animate__fadeIn px-3">
         `;
@@ -722,10 +719,9 @@ window.PartyBattleUI = {
         const hasSubmitted = gameState.submissionEntries.some(entry => String(entry.authorId) === myId);
         const usesTextComposer = gameState.activeMode !== 'meme'
             && (gameState.roundFamily === 'creative_vote' || gameState.roundFamily === 'bluff');
-        const footerHeight = !hasSubmitted && usesTextComposer ? 86 : 126;
 
         let html = `
-            <div class="d-flex flex-column pb-3" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(var(--pb-keyboard-offset, 0px) + env(safe-area-inset-bottom) + ${footerHeight}px);">
+            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
 
                 <div class="px-3 pt-2 pb-1 animate__animated animate__fadeInDown">
@@ -856,7 +852,7 @@ window.PartyBattleUI = {
         const votedCount = gameState.voteMap ? Object.keys(gameState.voteMap).length : 0;
 
         let html = `
-            <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 12px);">
+            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
 
                 <div class="flex-grow-1 px-3 animate__animated animate__fadeIn">
@@ -955,7 +951,7 @@ window.PartyBattleUI = {
         const bluffAwardRows = Object.values(bluffAwardSummary).sort((a, b) => b.total - a.total);
 
         let html = `
-            <div class="d-flex flex-column" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 12px);">
+            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
                 <div class="flex-grow-1 d-flex flex-column align-items-center p-3 text-center position-relative animate__animated animate__fadeIn">
                     <div class="small fw-bold text-uppercase mb-2" style="color:var(--primary-color); letter-spacing:0.16em;">Результат</div>
