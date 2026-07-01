@@ -43,8 +43,12 @@
 }
 
 .pb-game-screen {
-    --pb-bottom-bar-reserve: 120px;
+    --pb-bottom-bar-reserve: 88px;
     padding-bottom: calc(var(--pb-bottom-bar-reserve) + var(--pb-keyboard-offset, 0px) + env(safe-area-inset-bottom));
+}
+
+.pb-game-screen--with-primary {
+    --pb-bottom-bar-reserve: 120px;
 }
 
 .pb-active-content {
@@ -81,13 +85,24 @@
 }
 
 .pb-bottom-bar {
-    background: var(--bg-card) !important;
-    border-top: 1px solid var(--border-glass);
-    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.14);
+    background: transparent !important;
+    border-top: 0;
+    box-shadow: none;
     padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
 }
 
+.pb-bottom-bar--with-primary {
+    background: var(--bg-card) !important;
+    border-top: 1px solid var(--border-glass);
+}
+
 .pb-bottom-bar-inner {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.pb-bottom-bar--with-primary .pb-bottom-bar-inner {
     background: var(--bg-card);
     border: 1px solid var(--border-glass);
     box-shadow: var(--shadow-sm);
@@ -103,22 +118,17 @@
 
 .pb-bottom-bar .pb-secondary-action {
     font-size: 0.78rem;
-    min-height: 34px;
-    padding-top: 2px;
-    padding-bottom: 2px;
+    min-height: 44px;
+    padding: 0 10px;
     line-height: 1.1;
 }
 
 .pb-submission-actions .btn-primary {
-    flex: 1 1 auto;
+    width: 100%;
 }
 
 .pb-submission-actions .pb-secondary-action {
-    flex: 0 0 auto;
     align-self: center;
-    min-width: 70px;
-    padding-left: 6px;
-    padding-right: 6px;
 }
 
 .pb-meme-hand {
@@ -220,11 +230,17 @@
 }
 
 body.dark-mode .pb-surface,
-body.dark-mode .pb-bottom-bar-inner,
 body.dark-mode .pb-vote-card,
 body.dark-mode.thermal-safe .pb-surface,
-body.dark-mode.thermal-safe .pb-bottom-bar-inner,
 body.dark-mode.thermal-safe .pb-vote-card {
+    background: var(--bg-card);
+    border-color: var(--border-glass);
+    color: var(--text-main);
+    box-shadow: none;
+}
+
+body.dark-mode .pb-bottom-bar--with-primary .pb-bottom-bar-inner,
+body.dark-mode.thermal-safe .pb-bottom-bar--with-primary .pb-bottom-bar-inner {
     background: var(--bg-card);
     border-color: var(--border-glass);
     color: var(--text-main);
@@ -256,9 +272,15 @@ body.dark-mode.thermal-safe .pb-muted-pill {
 
 body.dark-mode .pb-bottom-bar,
 body.dark-mode.thermal-safe .pb-bottom-bar {
+    background: transparent !important;
+    border-top-color: transparent;
+    box-shadow: none;
+}
+
+body.dark-mode .pb-bottom-bar--with-primary,
+body.dark-mode.thermal-safe .pb-bottom-bar--with-primary {
     background: var(--bg-card) !important;
     border-top-color: var(--border-glass);
-    box-shadow: none;
 }
 
 body.dark-mode .pb-secondary-action,

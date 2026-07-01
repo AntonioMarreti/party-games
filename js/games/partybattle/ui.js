@@ -593,13 +593,16 @@ window.PartyBattleUI = {
     renderBottomActions: function (options = {}) {
         const primaryButton = options.primaryButton || '';
         const statusMarkup = options.statusMarkup || '';
+        const hasPrimary = !!primaryButton;
+        const barModeClass = hasPrimary ? 'pb-bottom-bar--with-primary' : 'pb-bottom-bar--secondary-only';
+        const innerPaddingClass = hasPrimary ? 'p-2' : 'p-0';
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1000;">
-                <div class="rounded-4 p-2 pb-bottom-bar-inner">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar ${barModeClass}" style="z-index: 1000;">
+                <div class="rounded-4 ${innerPaddingClass} text-center pb-bottom-bar-inner">
                     ${statusMarkup}
                     ${primaryButton}
                     ${primaryButton ? '<div class="mb-1"></div>' : ''}
-                    <button class="btn btn-link w-100 fw-bold rounded-4 text-decoration-none pb-secondary-action" onclick="window.sendGameAction('back_to_lobby')">
+                    <button class="btn btn-link d-inline-flex align-items-center justify-content-center mx-auto fw-bold rounded-4 text-decoration-none pb-secondary-action" onclick="window.sendGameAction('back_to_lobby')">
                         <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
                     </button>
                 </div>
@@ -609,12 +612,15 @@ window.PartyBattleUI = {
 
     renderSubmissionFooter: function (options = {}) {
         const primaryButton = options.primaryButton || '';
+        const hasPrimary = !!primaryButton;
+        const barModeClass = hasPrimary ? 'pb-bottom-bar--with-primary' : 'pb-bottom-bar--secondary-only';
+        const innerPaddingClass = hasPrimary ? 'p-2' : 'p-0';
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar" style="z-index: 1100; bottom: var(--pb-keyboard-offset, 0px);">
-                <div class="rounded-4 p-2 pb-bottom-bar-inner">
-                    <div class="d-flex align-items-stretch gap-2 pb-submission-actions">
-                        ${primaryButton ? primaryButton.replace('w-100 py-3 rounded-4', 'flex-fill py-2 rounded-4').replace('min-height: 56px;', 'min-height: 42px; font-size: 0.88rem; padding-left: 10px; padding-right: 10px;') : ''}
-                        <button class="btn btn-link fw-bold rounded-4 text-decoration-none pb-secondary-action" style="white-space: nowrap;" onclick="window.sendGameAction('back_to_lobby')">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar ${barModeClass}" style="z-index: 1100; bottom: var(--pb-keyboard-offset, 0px);">
+                <div class="rounded-4 ${innerPaddingClass} text-center pb-bottom-bar-inner">
+                    <div class="d-flex flex-column align-items-center gap-1 pb-submission-actions">
+                        ${primaryButton ? primaryButton.replace('w-100 py-3 rounded-4', 'w-100 py-2 rounded-4').replace('min-height: 56px;', 'min-height: 42px; font-size: 0.88rem; padding-left: 10px; padding-right: 10px;') : ''}
+                        <button class="btn btn-link d-inline-flex align-items-center justify-content-center fw-bold rounded-4 text-decoration-none pb-secondary-action" style="white-space: nowrap;" onclick="window.sendGameAction('back_to_lobby')">
                             <i class="bi bi-box-arrow-right me-1"></i> ВЫЙТИ
                         </button>
                     </div>
@@ -629,7 +635,7 @@ window.PartyBattleUI = {
         const isHost = window.APP_STATE.room.is_host;
         let primaryButton = '';
         let html = `
-            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column pb-game-screen ${isHost ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
                 <div class="d-flex flex-column align-items-center flex-grow-1 pb-3 pt-2 animate__animated animate__fadeIn px-3 pb-active-content pb-situation-stage">
         `;
@@ -713,9 +719,10 @@ window.PartyBattleUI = {
         const hasSubmitted = gameState.submissionEntries.some(entry => String(entry.authorId) === myId);
         const usesTextComposer = gameState.activeMode !== 'meme'
             && (gameState.roundFamily === 'creative_vote' || gameState.roundFamily === 'bluff');
+        const hasBottomPrimary = !hasSubmitted && usesTextComposer;
 
         let html = `
-            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column pb-game-screen ${hasBottomPrimary ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
 
                 <div class="px-3 pt-2 pb-1 animate__animated animate__fadeInDown">
@@ -756,7 +763,7 @@ window.PartyBattleUI = {
 
         html += `
                 ${this.renderSubmissionFooter({
-                    primaryButton: !hasSubmitted && usesTextComposer
+                    primaryButton: hasBottomPrimary
                         ? `<button id="pb-submit-answer-btn" class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm" style="box-shadow: 0 16px 36px rgba(var(--primary-rgb), 0.2) !important; min-height: 56px;" onclick="window.PartyBattleUI.submitAnswer()">
                             <i class="bi bi-send-fill me-2"></i> ${this.getSubmissionButtonLabel(gameState)}
                         </button>`
@@ -945,7 +952,7 @@ window.PartyBattleUI = {
         const bluffAwardRows = Object.values(bluffAwardSummary).sort((a, b) => b.total - a.total);
 
         let html = `
-            <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
+            <div class="d-flex flex-column pb-game-screen ${isHost ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
                 <div class="flex-grow-1 d-flex flex-column align-items-center p-3 text-center position-relative animate__animated animate__fadeIn">
                     <div class="small fw-bold text-uppercase mb-2" style="color:var(--primary-color); letter-spacing:0.16em;">Результат</div>
