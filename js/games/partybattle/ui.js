@@ -574,28 +574,18 @@ window.PartyBattleUI = {
 
     renderHeader: function (gameState, options = {}) {
         const modeMeta = pb_getModeMeta(gameState.activeMode);
-        const stageMeta = pb_getStageMeta(gameState.view);
         const compact = !!options.compact;
         const roundText = gameState.view !== 'lobby' && gameState.view !== 'results'
             ? `Раунд ${gameState.current_round}/${gameState.total_rounds}`
             : '';
-        const isHost = (window.APP_STATE?.room?.is_host) || false;
 
         return `
-            <div class="header-container px-3 ${compact ? 'pt-2 pb-1' : 'pt-2 pb-2'} text-center position-relative z-3" style="background: transparent;">
-                <button class="btn btn-link position-absolute start-0 top-50 translate-middle-y text-muted px-2 d-inline-flex align-items-center gap-1 text-decoration-none"
-                        onclick="${isHost ? "window.sendGameAction('back_to_lobby')" : "window.leaveRoom()"}"
-                        style="font-size: 0.86rem; font-weight: 700; line-height: 1; outline: none; box-shadow: none; min-height: 34px;">
-                    <i class="bi ${isHost ? 'bi-chevron-left' : 'bi-box-arrow-right'}"></i>
-                    <span>Выйти</span>
-                </button>
+            <div class="header-container px-3 ${compact ? 'pt-1 pb-1' : 'pt-2 pb-2'} text-center position-relative z-3" style="background: transparent;">
                 ${roundText || modeMeta.label ? `
-                    <div class="mx-auto ${compact ? 'mb-1' : 'mb-2'} pb-round-line text-truncate" style="max-width: min(100%, ${compact ? '250px' : '270px'});">
+                    <div class="mx-auto pb-round-line text-truncate" style="max-width: min(100%, ${compact ? '270px' : '290px'});">
                         ${roundText}${roundText && modeMeta.label ? ' <span class="pb-round-line-mode">·</span> ' : ''}${modeMeta.label ? `<span class="pb-round-line-mode">${modeMeta.label}</span>` : ''}
                     </div>
                 ` : ''}
-                <h2 class="fw-black m-0 ${compact ? 'mb-0' : 'mb-1'}" style="color:var(--text-main); line-height: 0.98; letter-spacing: -0.045em; font-size:${compact ? '1.42rem' : '1.86rem'};">Party Battle</h2>
-                <div class="small fw-bold text-uppercase" style="color:var(--text-muted); letter-spacing: 0.18em; font-size:${compact ? '0.66rem' : '0.74rem'};">${stageMeta.label}</div>
             </div>
             `;
     },
@@ -647,15 +637,20 @@ window.PartyBattleUI = {
         const imageUrl = gameState.displayPrompt.mediaUrl || '';
 
         html += `
-            <div class="badge rounded-pill mb-3 px-3 py-1 pb-accent-pill" style="font-size: 11px; letter-spacing:0.12em;">СИТУАЦИЯ</div>
             <div class="p-3 mb-4 rounded-4 d-flex align-items-center justify-content-center text-center position-relative overflow-hidden pb-surface"
                  style="min-height: 132px; width: 100%; max-width: 600px; padding: ${gameState.displayPrompt.kind === 'image' ? '0 !important' : '1rem'}">
                 ${gameState.displayPrompt.kind === 'image' ? `
                     ${pb_renderPromptImage(imageUrl, 'w-100 h-100 object-fit-cover position-absolute top-0 start-0')}
+                    <div class="position-absolute top-0 start-0 end-0 p-3 text-start" style="background: linear-gradient(180deg, rgba(0,0,0,0.38), transparent);">
+                        <div class="pb-situation-label" style="color:var(--text-on-accent); opacity:0.78;">Ситуация</div>
+                    </div>
                 ` : `
                     <i class="bi bi-masks-theater position-absolute" style="top: -10px; left: -10px; font-size: 80px; opacity: 0.05; transform: rotate(-15deg);"></i>
                     <i class="bi bi-emoji-laughing position-absolute" style="bottom: -10px; right: -10px; font-size: 80px; opacity: 0.05; transform: rotate(15deg);"></i>
-                    <h3 class="fw-bold m-0 position-relative z-1" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.32rem, 4.8vw, 2.2rem);">${sitText}</h3>
+                    <div class="position-relative z-1 w-100">
+                        <div class="pb-situation-label mb-2">Ситуация</div>
+                        <h3 class="fw-bold m-0" style="color:var(--text-main); line-height: 1.18; font-size: clamp(1.32rem, 4.8vw, 2.2rem);">${sitText}</h3>
+                    </div>
                 `}
             </div>
         `;
