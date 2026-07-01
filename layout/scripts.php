@@ -153,7 +153,7 @@ if (!defined('TG_CLIENT_ID')) {
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 4000);
-            fetch('server/api.php', { method: 'POST', body, signal: controller.signal })
+            fetch((window.APP_BASE_PATH || '/') + 'server/api.php', { method: 'POST', body, signal: controller.signal })
                 .catch(() => { })
                 .finally(() => clearTimeout(timeoutId));
         } catch (e) {
@@ -223,7 +223,7 @@ if (!defined('TG_CLIENT_ID')) {
     }
 
     async function pollPendingBotAuth(tempCode, manual = false) {
-        const check = await fetch('server/api.php', {
+        const check = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
             method: 'POST',
             body: new URLSearchParams({
                 action: 'poll_auth_session',
@@ -478,7 +478,7 @@ if (!defined('TG_CLIENT_ID')) {
                         formData.append('platform', 'web');
                         formData.append('device', getAuthDeviceName());
 
-                        const res = await fetch('server/api.php', { method: 'POST', body: formData }).then(r => r.json());
+                        const res = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', { method: 'POST', body: formData }).then(r => r.json());
                         if (res.status === 'ok') {
                             localStorage.setItem('pg_token', res.token);
                             logAuthClientEvent('telegram_login_success');
@@ -506,7 +506,7 @@ if (!defined('TG_CLIENT_ID')) {
     // === Fallback: Login via Bot (polling) ===
     async function loginViaBot() {
         try {
-            const res = await fetch('server/api.php', {
+            const res = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
                 method: 'POST',
                 body: new URLSearchParams({ action: 'create_auth_session' })
             }).then(r => r.json());

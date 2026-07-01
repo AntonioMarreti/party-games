@@ -36,6 +36,9 @@
     <!-- Telegram WebApp -->
     <script src="js/libs/telegram-web-app.js?v=<?php echo $v; ?>"></script>
     <script>
+        window.APP_BASE_PATH = <?php echo json_encode(rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/') . '/'); ?>;
+    </script>
+    <script>
         // Immediate Theme Init to prevent "Flash of Default Color"
         (function () {
             try {

@@ -3,7 +3,7 @@
  * Handles core network communication with the backend.
  */
 
-const API_URL = 'server/api.php';
+const API_URL = (window.APP_BASE_PATH || '/') + 'server/api.php';
 let authToken = localStorage.getItem('pg_token') ? localStorage.getItem('pg_token').trim() : null;
 let serverTimeOffset = 0;
 let consecutiveGetStateTimeouts = 0;

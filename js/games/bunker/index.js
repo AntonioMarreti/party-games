@@ -213,7 +213,7 @@ async function runBunkerTick() {
     fd.append('token', localStorage.getItem('pg_token'));
 
     try {
-        await fetch('server/api.php', {
+        await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
             method: 'POST',
             body: fd
         });
