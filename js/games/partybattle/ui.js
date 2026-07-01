@@ -598,8 +598,8 @@ window.PartyBattleUI = {
                 <div class="rounded-4 p-2 pb-bottom-bar-inner">
                     ${statusMarkup}
                     ${primaryButton}
-                    ${primaryButton ? '<div class="mb-2"></div>' : ''}
-                    <button class="btn btn-outline-secondary w-100 fw-bold rounded-4 pb-secondary-action" style="font-size: 0.84rem; min-height: 42px;" onclick="window.sendGameAction('back_to_lobby')">
+                    ${primaryButton ? '<div class="mb-1"></div>' : ''}
+                    <button class="btn btn-outline-secondary w-100 fw-bold rounded-4 pb-secondary-action" onclick="window.sendGameAction('back_to_lobby')">
                         <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
                     </button>
                 </div>
@@ -627,10 +627,11 @@ window.PartyBattleUI = {
         if (!gameState.displayPrompt) return;
 
         const isHost = window.APP_STATE.room.is_host;
+        let primaryButton = '';
         let html = `
             <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
-                <div class="d-flex flex-column align-items-center justify-content-start flex-grow-1 pb-4 pt-1 animate__animated animate__fadeIn px-3">
+                <div class="d-flex flex-column align-items-center flex-grow-1 pb-3 pt-2 animate__animated animate__fadeIn px-3 pb-active-content pb-situation-stage">
         `;
 
         const sitText = gameState.displayPrompt.body || '';
@@ -661,13 +662,11 @@ window.PartyBattleUI = {
             else if (gameState.displayPrompt.kind === 'image') btnText = 'Начать сбор ответов';
             else if (gameState.roundFamily === 'creative_vote' || gameState.roundFamily === 'bluff') btnText = 'Начать сбор ответов';
 
-            html += `
-            <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm mb-3 animate__animated animate__pulse animate__infinite"
-                style="max-width: 600px; min-height:42px; font-size:0.94rem; box-shadow: 0 12px 28px rgba(var(--primary-rgb), 0.2) !important;"
+            primaryButton = `<button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm animate__animated animate__pulse animate__infinite"
+                style="min-height:42px; font-size:0.94rem; box-shadow: 0 12px 28px rgba(var(--primary-rgb), 0.2) !important;"
                 onclick="window.sendGameAction('next_round')">
                 ${btnText} <i class="bi bi-arrow-right"></i>
-            </button>
-            `;
+            </button>`;
         } else {
             html += `
             <div class="spinner-border text-primary opacity-50 mb-3" role="status"></div>
@@ -677,7 +676,7 @@ window.PartyBattleUI = {
 
         html += `
                 </div>
-                ${this.renderBottomActions()}
+                ${this.renderBottomActions({ primaryButton })}
             </div>
         `;
         document.getElementById('game-area').innerHTML = html;

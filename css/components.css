@@ -47,6 +47,17 @@
     padding-bottom: calc(var(--pb-bottom-bar-reserve) + var(--pb-keyboard-offset, 0px) + env(safe-area-inset-bottom));
 }
 
+.pb-active-content {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.pb-situation-stage {
+    justify-content: center;
+    gap: 14px;
+}
+
 .pb-round-line {
     color: var(--primary-color);
     font-weight: 800;
@@ -88,6 +99,13 @@
     border-color: transparent !important;
     box-shadow: none !important;
     opacity: 0.78;
+}
+
+.pb-bottom-bar .pb-secondary-action {
+    font-size: 0.78rem;
+    min-height: 30px;
+    padding-top: 3px;
+    padding-bottom: 3px;
 }
 
 .pb-submission-actions .btn-primary {
