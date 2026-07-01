@@ -43,7 +43,7 @@
 }
 
 .pb-game-screen {
-    --pb-bottom-bar-reserve: 142px;
+    --pb-bottom-bar-reserve: 120px;
     padding-bottom: calc(var(--pb-bottom-bar-reserve) + var(--pb-keyboard-offset, 0px) + env(safe-area-inset-bottom));
 }
 
@@ -103,9 +103,10 @@
 
 .pb-bottom-bar .pb-secondary-action {
     font-size: 0.78rem;
-    min-height: 30px;
-    padding-top: 3px;
-    padding-bottom: 3px;
+    min-height: 34px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    line-height: 1.1;
 }
 
 .pb-submission-actions .btn-primary {
@@ -114,9 +115,59 @@
 
 .pb-submission-actions .pb-secondary-action {
     flex: 0 0 auto;
-    min-width: 84px;
-    padding-left: 10px;
-    padding-right: 10px;
+    align-self: center;
+    min-width: 70px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.pb-meme-hand {
+    padding: 12px;
+}
+
+.pb-meme-hand-toolbar {
+    gap: 8px;
+}
+
+.pb-meme-action {
+    color: var(--primary-color) !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-height: 30px;
+    padding: 2px 0;
+    font-size: 0.78rem;
+    line-height: 1.1;
+}
+
+.pb-meme-card {
+    aspect-ratio: 1;
+    cursor: pointer;
+}
+
+@media (max-width: 480px) {
+    .pb-meme-hand {
+        padding: 10px 8px 8px;
+    }
+
+    .pb-meme-hand-toolbar {
+        align-items: center;
+        margin-bottom: 8px !important;
+    }
+
+    #meme-hand-grid {
+        --bs-gutter-x: 0.45rem;
+        --bs-gutter-y: 0.45rem;
+    }
+
+    #meme-hand-grid > .col-6 {
+        flex: 0 0 auto;
+        width: 33.333333%;
+    }
+
+    #search-toggle-div {
+        margin-top: 0 !important;
+    }
 }
 
 .pb-status-pill,

@@ -599,7 +599,7 @@ window.PartyBattleUI = {
                     ${statusMarkup}
                     ${primaryButton}
                     ${primaryButton ? '<div class="mb-1"></div>' : ''}
-                    <button class="btn btn-outline-secondary w-100 fw-bold rounded-4 pb-secondary-action" onclick="window.sendGameAction('back_to_lobby')">
+                    <button class="btn btn-link w-100 fw-bold rounded-4 text-decoration-none pb-secondary-action" onclick="window.sendGameAction('back_to_lobby')">
                         <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
                     </button>
                 </div>
@@ -614,7 +614,7 @@ window.PartyBattleUI = {
                 <div class="rounded-4 p-2 pb-bottom-bar-inner">
                     <div class="d-flex align-items-stretch gap-2 pb-submission-actions">
                         ${primaryButton ? primaryButton.replace('w-100 py-3 rounded-4', 'flex-fill py-2 rounded-4').replace('min-height: 56px;', 'min-height: 42px; font-size: 0.88rem; padding-left: 10px; padding-right: 10px;') : ''}
-                        <button class="btn btn-outline-secondary fw-bold rounded-4 pb-secondary-action" style="font-size: 0.8rem; min-height: 42px; white-space: nowrap;" onclick="window.sendGameAction('back_to_lobby')">
+                        <button class="btn btn-link fw-bold rounded-4 text-decoration-none pb-secondary-action" style="white-space: nowrap;" onclick="window.sendGameAction('back_to_lobby')">
                             <i class="bi bi-box-arrow-right me-1"></i> ВЫЙТИ
                         </button>
                     </div>

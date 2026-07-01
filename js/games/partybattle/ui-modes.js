@@ -117,12 +117,27 @@ window.PartyBattleModes = {
     /* --- MEME MODE (Migrated from memebattle) --- */
     renderMemeSubmission: function (gameState, myHand) {
         return `
-             <div class="p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+             <div class="pb-meme-hand">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-meme-hand-toolbar">
                     <span class="small fw-bold text-muted opacity-75" style="letter-spacing:0.12em; font-size:0.74rem;">ТВОЯ РУКА</span>
-                    <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center" style="font-size:0.8rem;" onclick="window.PartyBattleUI.refreshHand(event)">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Обновить
-                    </button>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center pb-meme-action" onclick="window.PartyBattleUI.refreshHand(event)">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Обновить
+                        </button>
+                        <div id="search-toggle-div">
+                            <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center pb-meme-action" onclick="document.getElementById('manual-search-div').style.display='block'; document.getElementById('search-toggle-div').style.display='none'">
+                                <i class="bi bi-search me-1"></i> Найти свой мем
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="manual-search-div" class="mb-3" style="display:none;">
+                     <div class="input-group rounded-4 overflow-hidden pb-input-shell">
+                        <span class="input-group-text bg-transparent border-0 pe-0"><i class="bi bi-search text-muted opacity-50"></i></span>
+                        <input type="text" id="meme-search-input" class="form-control border-0 bg-transparent py-2 ps-2" placeholder="Поиск по теме..." oninput="window.PartyBattleUI.searchGifsDebounced(this.value)">
+                    </div>
+                    <div id="meme-results" class="row g-2 mt-2"></div>
                 </div>
 
                 ${myHand.length === 0 ? `
@@ -137,7 +152,7 @@ window.PartyBattleModes = {
             const url = gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || gif.url;
             return `
                                 <div class="col-6">
-                                    <div class="rounded-4 overflow-hidden position-relative shadow-sm" onclick="window.PartyBattleUI.submitAnswer('${url}')" style="aspect-ratio: 1; cursor: pointer;">
+                                    <div class="rounded-4 overflow-hidden position-relative shadow-sm pb-meme-card" onclick="window.PartyBattleUI.submitAnswer('${url}')">
                                         <img src="${url}" loading="lazy" class="w-100 h-100 object-fit-cover" referrerpolicy="no-referrer" style="transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     </div>
                                 </div>
@@ -145,20 +160,6 @@ window.PartyBattleModes = {
         }).join('')}
                     </div>
                 `}
-
-                <div class="mt-4 text-center" id="search-toggle-div">
-                    <button class="btn btn-outline-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.9rem;" onclick="document.getElementById('manual-search-div').style.display='block'; document.getElementById('search-toggle-div').style.display='none'">
-                            <i class="bi bi-search"></i> Найти свой мем
-                    </button>
-                </div>
-
-                <div id="manual-search-div" class="mt-3" style="display:none;">
-                     <div class="input-group rounded-4 overflow-hidden pb-input-shell">
-                        <span class="input-group-text bg-transparent border-0 pe-0"><i class="bi bi-search text-muted opacity-50"></i></span>
-                        <input type="text" id="meme-search-input" class="form-control border-0 bg-transparent py-2 ps-2" placeholder="Поиск по теме..." oninput="window.PartyBattleUI.searchGifsDebounced(this.value)">
-                    </div>
-                    <div id="meme-results" class="row g-2 mt-2"></div>
-                </div>
             </div>
         `;
     },
