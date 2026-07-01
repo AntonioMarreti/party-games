@@ -1357,7 +1357,64 @@ function pb_generatePlayerHand(&$state, $userId, $sharedPool = null)
     }
 
     shuffle($pool);
-    $state['hands'][(string) $userId] = array_slice($pool, 0, 6);
+    $hand = [];
+    $seen = [];
+    foreach ($pool as $gif) {
+        if (!is_array($gif)) {
+            continue;
+        }
+        $key = pb_getGifDedupeKey($gif);
+        if ($key !== '' && isset($seen[$key])) {
+            continue;
+        }
+        if ($key !== '') {
+            $seen[$key] = true;
+        }
+        $hand[] = $gif;
+        if (count($hand) >= 6) {
+            break;
+        }
+    }
+
+    $state['hands'][(string) $userId] = $hand;
+}
+
+function pb_getGifDedupeKey($gif)
+{
+    if (!is_array($gif)) {
+        return '';
+    }
+
+    $providerId = trim((string) ($gif['id'] ?? $gif['gif_id'] ?? $gif['provider_id'] ?? ''));
+    if ($providerId !== '') {
+        return 'id:' . $providerId;
+    }
+
+    $url = (string) ($gif['media_formats']['gif']['url']
+        ?? $gif['url']
+        ?? $gif['media_formats']['tinygif']['url']
+        ?? $gif['preview']
+        ?? '');
+    return pb_normalizeGifDedupeUrl($url);
+}
+
+function pb_normalizeGifDedupeUrl($url)
+{
+    $url = trim((string) $url);
+    if ($url === '') {
+        return '';
+    }
+
+    $url = pb_normalizeCaptionMediaUrl($url);
+    $parts = parse_url($url);
+    if (!is_array($parts) || empty($parts['host']) || empty($parts['path'])) {
+        return 'url:' . $url;
+    }
+
+    $scheme = strtolower($parts['scheme'] ?? 'https');
+    $host = strtolower($parts['host']);
+    $path = $parts['path'];
+    return 'url:' . $scheme . '://' . $host . $path;
 }
 
 function pb_getPromptDisplayText($prompt)
