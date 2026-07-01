@@ -244,6 +244,11 @@ function handleGameAction($pdo, $room, $user, $postData)
             return ['status' => 'error'];
         }
 
+        // Clear cached gif_pool so it is rebuilt using the current provider.
+        // This prevents stale Giphy URLs (which may be geo-restricted) from
+        // persisting across retries when Klipy is now available.
+        unset($state['round']['gif_pool']);
+
         pb_generatePlayerHand($state, $userId);
         updateGameState($room['id'], $state);
         return ['status' => 'ok', 'hand' => $state['hands'][$userId] ?? []];

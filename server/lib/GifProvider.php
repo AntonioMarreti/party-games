@@ -82,7 +82,18 @@ class GiphyProvider implements GifProviderInterface
             return '';
         }
 
+        // Match media*.giphy.com/media/<segment>/...
         if (preg_match('#https?://(?:media\d*|media)\.giphy\.com/media/([^/]+)/#i', $url, $matches)) {
+            $id = $matches[1];
+
+            // v1 token IDs contain dots and are long — the CDN path is non-trivial.
+            // Reconstructing them via i.giphy.com causes 404.
+            // Return the original media*.giphy.com URL unchanged.
+            if (strpos($id, '.') !== false) {
+                return $url;
+            }
+
+            // Classic short alphanumeric Giphy ID: safe to rewrite to i.giphy.com.
             $path = parse_url($url, PHP_URL_PATH) ?: '';
             $filename = basename($path);
 
@@ -90,9 +101,9 @@ class GiphyProvider implements GifProviderInterface
             $queryString = $query ? '?' . $query : '';
 
             if ($filename !== '') {
-                return 'https://i.giphy.com/media/' . $matches[1] . '/' . $filename . $queryString;
+                return 'https://i.giphy.com/media/' . $id . '/' . $filename . $queryString;
             }
-            return 'https://i.giphy.com/media/' . $matches[1] . '/giphy.gif' . $queryString;
+            return 'https://i.giphy.com/media/' . $id . '/giphy.gif' . $queryString;
         }
 
         return $url;
