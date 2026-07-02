@@ -148,87 +148,121 @@ window.PartyBattleUI = {
         const selectedRounds = parseInt(gameState.total_rounds, 10) || 5;
         const isAiMode = !!gameState.ai_mode;
         let html = `
-        <div class="d-flex flex-column h-100 pb-3" style="padding-top: calc(env(safe-area-inset-top) + 10px); background:
-            radial-gradient(circle at top, rgba(var(--primary-rgb), 0.12), transparent 35%),
-            linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%);">
+        <div class="d-flex flex-column h-100 pb-3" style="padding-top: calc(env(safe-area-inset-top) + 10px); background-color: var(--pb-bg-color, #1a1b26); color: var(--pb-text-color, #ffffff); background-image: radial-gradient(circle at top, rgba(90,103,255, 0.1), transparent 35%);">
             <div class="px-3 pt-2 position-relative">
-                <button class="btn btn-link position-absolute start-0 top-0 ms-1 text-muted px-2"
+                <button class="btn btn-link position-absolute start-0 top-0 ms-1 text-light opacity-50 px-2"
                         onclick="window.leaveRoom()"
                         style="font-size: 1.4rem; z-index: 10; outline: none; box-shadow: none;">
                     <i class="bi bi-x-lg"></i>
                 </button>
                 <div class="text-center mb-3">
-                    <div class="game-page-title fw-black mb-1" style="font-size:2.1rem; letter-spacing:-0.045em; line-height:0.98; background: var(--primary-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Party Battle</div>
-                    <div class="game-page-subtitle text-uppercase fw-bold small" style="color:var(--text-muted); letter-spacing:0.18em; font-size:0.72rem;">Mix, Vote, Laugh</div>
-                </div>
-                <div class="rounded-4 p-3 mb-3 shadow-sm" style="background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), rgba(255,255,255,0.04)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
-                    <div class="small text-uppercase fw-bold mb-1" style="letter-spacing:0.18em; color:var(--text-muted);">Лобби</div>
-                    <div class="fw-semibold" style="color:var(--text-main); line-height:1.35;">Собери свою смесь режимов и запускай быстрые раунды без скучных пауз.</div>
+                    <div class="game-page-title fw-black mb-1" style="font-size:1.8rem; letter-spacing:-0.045em; line-height:0.98; background: var(--primary-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Party Battle</div>
+                    <div class="game-page-subtitle text-uppercase fw-bold small opacity-50" style="letter-spacing:0.18em; font-size:0.72rem;">${isHost ? 'Соберите свою игру' : 'Ведущий настраивает игру'}</div>
                 </div>
             </div>
         `;
 
-        // HOST CONTROLS
         if (isHost) {
             html += `
-            <div class="px-3 flex-grow-1">
-                <div class="mb-3 rounded-4 p-3 shadow-sm" style="background: rgba(255,255,255,0.96); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
-                    <label class="small fw-bold mb-2 d-block text-muted text-uppercase" style="letter-spacing:0.14em; font-size:0.72rem;">Выбранные режимы</label>
-                    <div id="pb-selected-modes-preview" class="d-flex flex-wrap gap-2 mb-3">
-                        ${this.renderSelectedModeBadges(selectedModes)}
+            <div class="px-3 flex-grow-1" style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <label class="small fw-bold text-uppercase opacity-50" style="letter-spacing:0.14em; font-size:0.75rem;">Режимы</label>
+                        <span id="pb-selected-count" class="badge rounded-pill" style="background: rgba(90, 103, 255, 0.2); color: #929cff;">${selectedModes.length} выбрано</span>
                     </div>
-                    <button class="btn btn-outline-primary w-100 rounded-4 fw-bold" style="background: rgba(var(--primary-rgb), 0.06); border: 1px solid rgba(var(--primary-rgb), 0.18); min-height: 42px; font-size: 0.9rem;"
-                            onclick="document.getElementById('pbModesModal').style.display='flex'">
-                        <i class="bi bi-list-check me-2"></i> Изменить режимы
-                    </button>
+                    <div class="d-flex flex-wrap gap-2 pb-modes-container">
+                        ${[
+                            { id: 'meme', label: 'МемоБатл' },
+                            { id: 'caption', label: 'Подпиши картинку' },
+                            { id: 'joke', label: 'Добивка' },
+                            { id: 'whoami', label: 'Кто из нас?' },
+                            { id: 'advice', label: 'Вредные советы' },
+                            { id: 'acronym', label: 'Дешифратор' },
+                            { id: 'bluff', label: 'Блеф' }
+                        ].map(m => `
+                            <label class="pb-mode-chip ${selectedModes.includes(m.id) ? 'active' : ''}" style="cursor: pointer;">
+                                <input class="d-none pb-mode-cb" type="checkbox" value="${m.id}" ${selectedModes.includes(m.id) ? 'checked' : ''} onchange="PartyBattleUI.updateModesPreview()">
+                                <span>${m.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
                 </div>
 
-                <div class="mb-3 rounded-4 p-3 shadow-sm" style="background: rgba(255,255,255,0.96); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
-                    <label class="small fw-bold mb-2 d-block text-muted text-uppercase" style="letter-spacing:0.14em; font-size:0.72rem;">Количество раундов</label>
-                    <div class="d-flex gap-2 mb-3">
-                        <button class="btn btn-outline-secondary flex-fill pb-round-btn rounded-4 ${selectedRounds === 3 ? 'active' : ''}" data-rounds="3" style="min-height:40px; font-weight:700; ${selectedRounds === 3 ? 'border-color: var(--primary-color); background: rgba(var(--primary-rgb), 0.1);' : ''}" onclick="PartyBattleUI.selectRounds(3)">3</button>
-                        <button class="btn btn-outline-secondary flex-fill pb-round-btn rounded-4 ${selectedRounds === 5 ? 'active' : ''}" data-rounds="5" style="min-height:40px; font-weight:700; ${selectedRounds === 5 ? 'border-color: var(--primary-color); background: rgba(var(--primary-rgb), 0.1);' : ''}" onclick="PartyBattleUI.selectRounds(5)">5</button>
-                        <button class="btn btn-outline-secondary flex-fill pb-round-btn rounded-4 ${selectedRounds === 7 ? 'active' : ''}" data-rounds="7" style="min-height:40px; font-weight:700; ${selectedRounds === 7 ? 'border-color: var(--primary-color); background: rgba(var(--primary-rgb), 0.1);' : ''}" onclick="PartyBattleUI.selectRounds(7)">7</button>
-                        <button class="btn btn-outline-secondary flex-fill pb-round-btn rounded-4 ${selectedRounds === 10 ? 'active' : ''}" data-rounds="10" style="min-height:40px; font-weight:700; ${selectedRounds === 10 ? 'border-color: var(--primary-color); background: rgba(var(--primary-rgb), 0.1);' : ''}" onclick="PartyBattleUI.selectRounds(10)">10</button>
+                <div class="mb-4">
+                    <label class="small fw-bold mb-3 d-block text-uppercase opacity-50" style="letter-spacing:0.14em; font-size:0.75rem;">Раундов</label>
+                    <div class="d-flex gap-2 mb-2">
+                        ${[3, 5, 7, 10].map(r => `
+                            <button class="btn flex-fill pb-round-btn rounded-4 ${selectedRounds === r ? 'active' : ''}" data-rounds="${r}" style="min-height: 44px; border: 1px solid ${selectedRounds === r ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)'}; color: #fff; font-weight:700; ${selectedRounds === r ? 'background: rgba(90, 103, 255, 0.2);' : 'background: rgba(255,255,255,0.05);'}" onclick="PartyBattleUI.selectRounds(${r})">${r}</button>
+                        `).join('')}
                     </div>
-                    <input type="number" id="pb-rounds-custom" class="form-control rounded-3 py-2 text-center"
-                           style="background: var(--bg-main); border: 1px solid var(--border-glass); color: var(--text-main);"
-                           placeholder="Или введите количество..." min="1" max="20" value="${[3, 5, 7, 10].includes(selectedRounds) ? '' : selectedRounds}" oninput="PartyBattleUI.customRoundsInput()">
+                    <input type="number" id="pb-rounds-custom" class="form-control rounded-4 py-2 text-center"
+                           style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff;"
+                           placeholder="Свой вариант..." min="1" max="20" value="${[3, 5, 7, 10].includes(selectedRounds) ? '' : selectedRounds}" oninput="PartyBattleUI.customRoundsInput()">
                     <input type="hidden" id="pb-rounds" value="${selectedRounds}">
                 </div>
 
-                <div class="mb-3 rounded-4 p-3 shadow-sm" style="background: rgba(255,255,255,0.96); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2" style="letter-spacing:0.14em; font-size:0.72rem;">Настройки колоды</label>
-                    <div id="pb-selected-theme-preview" class="d-flex mb-3">
-                        <span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">
-                            ${selectedTheme === 'adult' ? '18+ Полный треш' : 'Базовая колода'}
-                        </span>
-                    </div>
-                    ${this.renderThemeScopeSummary(selectedTheme, selectedModes)}
-
-                    <div class="d-flex flex-column gap-3 mb-4">
-                        <button class="btn btn-outline-primary w-100 fw-bold rounded-4" style="background: rgba(var(--primary-rgb), 0.06); border: 1px solid rgba(var(--primary-rgb), 0.18); min-height: 42px; font-size: 0.9rem;"
-                                onclick="document.getElementById('pbThemeModal').style.display='flex'">
-                            <i class="bi bi-collection me-2"></i> Изменить колоду
-                        </button>
-                        <input type="hidden" id="pb-theme" value="${selectedTheme}">
-
-                        <div class="form-check form-switch p-3 rounded-4 d-flex align-items-center m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08);">
-                            <input class="form-check-input m-0 me-3" type="checkbox" id="pb-ai-mode" style="transform: scale(1.3);" ${isAiMode ? 'checked' : ''}>
-                            <label class="form-check-label text-muted small fw-bold m-0" for="pb-ai-mode">Генерация карточек через AI</label>
+                <div class="accordion pb-accordion mb-3" id="pbAdditionalAccordion">
+                    <div class="accordion-item" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 1rem; overflow: hidden;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#pbAdditionalCollapse" style="background: transparent; color: #fff; box-shadow: none; font-size: 0.9rem; font-weight: bold; border: none;">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <span><i class="bi bi-collection opacity-50 me-2"></i> Дополнительно</span>
+                                    <span class="small opacity-50 me-3 fw-normal" id="pb-theme-summary-text">${selectedTheme === 'adult' ? '18+' : 'Базовая'}</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="pbAdditionalCollapse" class="accordion-collapse collapse" data-bs-parent="#pbAdditionalAccordion">
+                            <div class="accordion-body border-top border-secondary border-opacity-10 pt-3 px-3 pb-3">
+                                <label class="small fw-bold text-uppercase opacity-50 mb-3" style="font-size: 0.7rem; letter-spacing: 0.1em;">Тема колоды</label>
+                                <div class="d-flex flex-column gap-2 mb-4">
+                                    <label class="form-check d-flex align-items-center p-3 rounded-4 m-0" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="PartyBattleUI.selectTheme('base')">
+                                        <input class="form-check-input pb-theme-radio m-0 bg-transparent border-secondary" type="radio" name="pb-theme-radio" value="base" ${selectedTheme === 'base' ? 'checked' : ''} style="transform: scale(1.3);">
+                                        <div class="ms-3">
+                                            <div class="fw-bold text-light" style="font-size: 0.95rem;">Базовая колода</div>
+                                            <div class="small opacity-50" style="font-size: 0.75rem;">Стандартный набор ситуаций</div>
+                                        </div>
+                                    </label>
+                                    <label class="form-check d-flex align-items-center p-3 rounded-4 m-0" style="background: rgba(220, 53, 69, 0.08); border: 1px solid rgba(220, 53, 69, 0.2); cursor: pointer;" onclick="PartyBattleUI.selectTheme('adult')">
+                                        <input class="form-check-input pb-theme-radio m-0 bg-transparent border-danger" type="radio" name="pb-theme-radio" value="adult" ${selectedTheme === 'adult' ? 'checked' : ''} style="transform: scale(1.3);">
+                                        <div class="ms-3">
+                                            <div class="fw-bold text-danger" style="font-size: 0.95rem;">18+ Полный треш</div>
+                                            <div class="small text-danger opacity-75" style="font-size: 0.75rem;">Жесткий юмор для режимов с adult-паками</div>
+                                        </div>
+                                    </label>
+                                    <input type="hidden" id="pb-theme" value="${selectedTheme}">
+                                </div>
+                                
+                                <div class="form-check form-switch p-3 rounded-4 d-flex align-items-center m-0" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);">
+                                    <input class="form-check-input m-0 me-3 bg-secondary border-secondary" type="checkbox" id="pb-ai-mode" style="transform: scale(1.3);" ${isAiMode ? 'checked' : ''}>
+                                    <label class="form-check-label text-light small opacity-75 m-0" for="pb-ai-mode">Генерация карточек через AI</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             `;
         } else {
-            // PLAYER VIEW
+            const labels = {
+                'meme': 'МемоБатл',
+                'joke': 'Добивка',
+                'whoami': 'Кто из нас?',
+                'advice': 'Вредные советы',
+                'acronym': 'Дешифратор',
+                'caption': 'Подпиши картинку',
+                'bluff': 'Блеф'
+            };
+            const currentModesText = selectedModes.map(m => labels[m] || m).join(' · ');
+
             html += `
             <div class="px-3 flex-grow-1 d-flex flex-column justify-content-center align-items-center">
-                <div class="rounded-4 p-4 text-center shadow-sm" style="background: var(--bg-card); border: 1px solid var(--border-glass); max-width: 340px;">
-                    <div class="spinner-border text-primary opacity-50 mb-4" style="width: 3rem; height: 3rem;"></div>
-                    <h4 class="fw-bold mb-2" style="color:var(--text-main);">Ожидание</h4>
-                    <p class="text-muted text-center mb-0">Хост сейчас настраивает режимы и количество раундов...</p>
+                <div class="rounded-4 p-4 text-center w-100" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); max-width: 340px;">
+                    <div class="spinner-border opacity-50 mb-4" style="width: 2.5rem; height: 2.5rem; color: var(--primary-color);"></div>
+                    <div class="small text-uppercase fw-bold opacity-50 mb-2" style="letter-spacing:0.1em;">Будем играть</div>
+                    <div class="fw-bold text-light mb-1" style="font-size: 1.1rem;">${currentModesText || 'Режимы не выбраны'}</div>
+                    <div class="text-light opacity-75 fw-semibold mb-4">${selectedRounds} раундов</div>
+                    
+                    <div class="small opacity-50 text-uppercase" style="letter-spacing:0.1em;">Ожидаем старта</div>
                 </div>
             </div>
             `;
@@ -236,12 +270,15 @@ window.PartyBattleUI = {
 
         html += `
             <div class="px-3 pb-3 mt-auto" style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important;">
-                <div class="rounded-4 p-2 shadow-sm" style="background: #ffffff; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 6px 16px rgba(31, 38, 135, 0.03);">
-                    ${isHost ? `<button class="btn btn-primary w-100 mb-2 py-2 rounded-4 fw-bold shadow-sm" style="font-size:0.94rem; min-height:42px;" onclick="PartyBattleUI.startGame()"><i class="bi bi-play-fill me-1"></i> Начать игру</button>` : ''}
-                    <button class="btn btn-outline-secondary w-100 fw-bold border-0 rounded-4" style="background: #f3f4f8; color: var(--text-main); font-size: 0.84rem; min-height: 42px;" onclick="window.sendGameAction('back_to_lobby')">
+                ${isHost ? `
+                    <button id="pb-start-btn" class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm" style="font-size:1rem; border:none; background: linear-gradient(135deg, var(--primary-color), #4e5bf4);" onclick="PartyBattleUI.startGame()" ${selectedModes.length === 0 ? 'disabled' : ''}>
+                        ${selectedModes.length === 0 ? 'Выберите режимы' : 'Начать игру'}
+                    </button>
+                ` : `
+                    <button class="btn w-100 fw-bold border-0 rounded-4" style="background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); font-size: 0.88rem; min-height: 44px;" onclick="window.sendGameAction('back_to_lobby')">
                         <i class="bi bi-box-arrow-right me-1"></i> ПОКИНУТЬ ИГРУ
                     </button>
-                </div>
+                `}
             </div>
         </div>
         `;
@@ -400,111 +437,60 @@ window.PartyBattleUI = {
 
     selectTheme: function (val) {
         document.getElementById('pb-theme').value = val;
+        this.updateThemePreview();
     },
 
     updateThemePreview: function () {
-        const preview = document.getElementById('pb-selected-theme-preview');
         const themeInput = document.getElementById('pb-theme');
-        if (!preview || !themeInput) return;
-
-        const val = themeInput.value;
-        const labels = {
-            'base': 'Базовая колода',
-            'adult': '18+ Полный треш'
-        };
-
-        if (val === 'adult') {
-            preview.innerHTML = `<span class="badge rounded-pill px-3 py-2" style="background: rgba(220, 53, 69, 0.12); color:#dc3545; border: 1px solid rgba(220, 53, 69, 0.14);">18+ Полный треш</span>`;
-        } else {
-            preview.innerHTML = `<span class="badge rounded-pill px-3 py-2" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12);">Базовая колода</span>`;
-        }
-
-        const summary = document.getElementById('pb-theme-scope-summary');
-        if (summary) {
-            const checkedModes = Array.from(document.querySelectorAll('.pb-mode-cb:checked')).map(cb => cb.value);
-            summary.innerHTML = this.renderThemeScopeSummary(val, checkedModes, true);
+        const text = document.getElementById('pb-theme-summary-text');
+        if (themeInput && text) {
+            text.innerText = themeInput.value === 'adult' ? '18+' : 'Базовая';
         }
     },
 
     updateModesPreview: function () {
-        const preview = document.getElementById('pb-selected-modes-preview');
-        if (!preview) return;
+        const checkboxes = document.querySelectorAll('.pb-mode-cb');
+        let checkedCount = 0;
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                if (cb.closest('.pb-mode-chip')) cb.closest('.pb-mode-chip').classList.add('active');
+                checkedCount++;
+            } else {
+                if (cb.closest('.pb-mode-chip')) cb.closest('.pb-mode-chip').classList.remove('active');
+            }
+        });
 
-        const labels = {
-            'meme': 'МемоБатл',
-            'joke': 'Добивка',
-            'whoami': 'Кто из нас?',
-            'advice': 'Вредные советы',
-            'acronym': 'Дешифратор',
-            'caption': 'Подпиши картинку',
-            'bluff': 'Блеф'
-        };
+        const countEl = document.getElementById('pb-selected-count');
+        if (countEl) countEl.innerText = checkedCount + ' выбрано';
 
-        const checked = Array.from(document.querySelectorAll('.pb-mode-cb:checked'));
-        if (checked.length === 0) {
-            preview.innerHTML = '<span class="text-danger small fw-bold">Выберите хотя бы один режим!</span>';
-            return;
-        }
-
-        preview.innerHTML = checked.map(cb => {
-            return `<span class="badge rounded-pill px-3 py-2 me-1 mb-1" style="background: rgba(90, 103, 255, 0.12); color:#4e5bf4; border: 1px solid rgba(90, 103, 255, 0.12); font-weight:700;">${labels[cb.value]}</span>`;
-        }).join('');
-
-        const summary = document.getElementById('pb-theme-scope-summary');
-        const themeInput = document.getElementById('pb-theme');
-        if (summary && themeInput) {
-            summary.innerHTML = this.renderThemeScopeSummary(themeInput.value, checked.map(cb => cb.value), true);
+        const btn = document.getElementById('pb-start-btn');
+        if (btn) {
+            if (checkedCount === 0) {
+                btn.disabled = true;
+                btn.innerText = 'Выберите режимы';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = 'Начать игру';
+            }
         }
     },
 
     renderThemeScopeSummary: function (selectedTheme, selectedModes, innerOnly = false) {
-        const labels = {
-            meme: 'МемоБатл',
-            joke: 'Добивка',
-            whoami: 'Кто из нас?',
-            advice: 'Вредные советы',
-            acronym: 'Дешифратор',
-            caption: 'Подпиши картинку',
-            bluff: 'Блеф'
-        };
-        const adultSupported = new Set(['meme', 'joke', 'advice', 'acronym', 'bluff', 'whoami']);
-        const modes = Array.isArray(selectedModes) ? selectedModes : [];
-
-        let body = '';
-        if (selectedTheme === 'adult') {
-            const adultModes = modes.filter(mode => adultSupported.has(mode));
-            const baseModes = modes.filter(mode => !adultSupported.has(mode));
-            body += `<div class="small text-muted mb-2" style="line-height:1.35;">18+ применяется только к режимам со взрослыми паками. Остальные выбранные режимы пойдут на базовой теме.</div>`;
-            if (adultModes.length > 0) {
-                body += `<div class="small fw-bold mb-1" style="color:var(--text-main);">Получат 18+:</div>`;
-                body += `<div class="d-flex flex-wrap gap-2 mb-2">${adultModes.map(mode => `<span class="badge rounded-pill px-3 py-2" style="background: rgba(220, 53, 69, 0.12); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.16);">${labels[mode] || mode}</span>`).join('')}</div>`;
-            }
-            if (baseModes.length > 0) {
-                body += `<div class="small fw-bold mb-1" style="color:var(--text-main);">Останутся на базе:</div>`;
-                body += `<div class="d-flex flex-wrap gap-2">${baseModes.map(mode => `<span class="badge rounded-pill px-3 py-2" style="background: rgba(108, 117, 125, 0.12); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.16);">${labels[mode] || mode}</span>`).join('')}</div>`;
-            }
-        } else {
-            body += `<div class="small text-muted" style="line-height:1.35;">Базовая тема работает для всех режимов без исключений.</div>`;
-        }
-
-        if (innerOnly) {
-            return body;
-        }
-
-        return `<div id="pb-theme-scope-summary" class="mb-3">${body}</div>`;
+        // Keep empty for compatibility if called elsewhere
+        return '';
     },
 
     selectRounds: function (val) {
         document.getElementById('pb-rounds').value = val;
         document.getElementById('pb-rounds-custom').value = '';
         document.querySelectorAll('.pb-round-btn').forEach(btn => {
-            btn.style.borderColor = '';
-            btn.style.background = '';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.background = 'rgba(255,255,255,0.05)';
             btn.classList.remove('active');
             if (parseInt(btn.dataset.rounds) === val) {
                 btn.classList.add('active');
                 btn.style.borderColor = 'var(--primary-color)';
-                btn.style.background = 'rgba(var(--primary-rgb), 0.1)';
+                btn.style.background = 'rgba(90, 103, 255, 0.2)';
             }
         });
     },
@@ -514,8 +500,8 @@ window.PartyBattleUI = {
         const hiddenInput = document.getElementById('pb-rounds');
 
         document.querySelectorAll('.pb-round-btn').forEach(btn => {
-            btn.style.borderColor = '';
-            btn.style.background = '';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.background = 'rgba(255,255,255,0.05)';
             btn.classList.remove('active');
         });
 

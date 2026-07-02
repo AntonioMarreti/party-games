@@ -2026,3 +2026,22 @@ body.thermal-safe #tab-games .rooms-empty-actions .btn-primary svg {
     fill: currentColor;
     stroke: currentColor;
 }
+
+.pb-mode-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+}
+.pb-mode-chip.active {
+    background: rgba(90, 103, 255, 0.2);
+    border-color: var(--primary-color);
+    color: #fff;
+    font-weight: 600;
+}
