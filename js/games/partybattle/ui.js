@@ -1139,6 +1139,19 @@ window.PartyBattleUI = {
         this.afterRender('round_results');
     },
 
+    scheduleNextGame: function () {
+        const select = document.getElementById('scheduled-game-type');
+        if (select) {
+            select.value = 'partybattle';
+            select.dispatchEvent(new Event('change'));
+        }
+        const modalEl = document.getElementById('scheduledGameModal');
+        if (modalEl && window.bootstrap) {
+            const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    },
+
     renderGameResults: function (gameState) {
         const gameArea = document.getElementById('game-area');
         if (!gameArea) return;
@@ -1146,8 +1159,6 @@ window.PartyBattleUI = {
         const scores = gameState.scores || {};
         const sortedIds = Object.keys(scores).sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
         const myId = String(pb_getMyId());
-        const myRank = sortedIds.findIndex(uid => String(uid) === myId);
-        const myScore = myRank >= 0 ? (scores[sortedIds[myRank]] || 0) : 0;
         const hasScores = sortedIds.length > 0;
         const safeName = (player) => window.safeHTML ? window.safeHTML(player?.display_name || player?.custom_name || player?.first_name || 'Игрок') : (player?.display_name || player?.custom_name || player?.first_name || 'Игрок');
         const postGameSummary = window.GameSummaryProvider
@@ -1155,19 +1166,12 @@ window.PartyBattleUI = {
             : null;
 
         let html = `
-            <div class="d-flex flex-column pb-results-screen" style="height: var(--pb-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px);">
+            <div class="d-flex flex-column pb-results-screen" style="height: var(--pb-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px); background-color: #121216; color: #ffffff;">
                 <div class="header-container text-center mb-3 mt-2 px-3">
-                    <div class="small text-uppercase fw-bold mb-2" style="color:var(--text-muted); letter-spacing:0.18em;">ФИНАЛ</div>
+                    <div class="small text-uppercase fw-bold mb-2 opacity-50" style="letter-spacing:0.18em;">Игра окончена</div>
                     <i class="bi bi-trophy-fill display-4 mb-2 animate__animated animate__bounceIn" style="color: var(--primary-color);"></i>
-                    <h2 class="fw-bold mb-2" style="color:var(--text-main);">Итоги игры</h2>
-                    <div class="text-muted fw-semibold">Финальный рейтинг после всех раундов.</div>
-                    ${myRank >= 0 ? `
-                        <div class="d-inline-flex align-items-center gap-2 rounded-pill px-3 py-2 mt-3" style="background: rgba(90, 103, 255, 0.08); border: 1px solid rgba(90, 103, 255, 0.1);">
-                            <span class="small fw-bold text-muted text-uppercase" style="letter-spacing:0.12em; font-size:0.66rem;">Ваш результат</span>
-                            <span class="fw-bold" style="color:var(--text-main); font-size:0.88rem;">#${myRank + 1}</span>
-                            <span class="small fw-bold" style="color:#4e5bf4;">${myScore} XP</span>
-                        </div>
-                    ` : ''}
+                    <h2 class="fw-bold mb-2">Итоги игры</h2>
+                    <div class="opacity-75 small">Финальный рейтинг после всех раундов.</div>
                 </div>
 
                 <div class="px-3 mb-4 pb-2">
@@ -1178,52 +1182,57 @@ window.PartyBattleUI = {
             const isMe = String(uid) === myId;
             return `
                             <div class="d-flex justify-content-between align-items-center p-3 mb-2 rounded-4 shadow-sm animate__animated animate__fadeInUp"
-                                    style="background: ${isWinner ? 'linear-gradient(135deg, #4a58f5, #6f63ff)' : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03))'}; border: 1px solid ${isWinner ? 'rgba(90, 103, 255, 0.18)' : (isMe ? 'rgba(90, 103, 255, 0.3)' : 'rgba(90, 103, 255, 0.08)')}; color: ${isWinner ? 'white' : 'var(--text-main)'}; transition-delay: ${index * 0.08}s; box-shadow:${isWinner ? '0 16px 34px rgba(90, 103, 255, 0.18)' : '0 10px 24px rgba(31, 38, 135, 0.04)'};">
+                                    style="background: ${isWinner ? 'linear-gradient(135deg, rgba(90,103,255, 0.4), rgba(90,103,255, 0.15))' : 'rgba(255,255,255,0.05)'}; border: 1px solid ${isWinner ? 'rgba(90,103,255,0.3)' : 'rgba(255,255,255,0.05)'}; color: #fff; transition-delay: ${index * 0.08}s;">
                                 <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:0;">
-                                    <div class="fw-bold flex-shrink-0" style="color:${isWinner ? 'white' : 'var(--text-main)'}; width: 28px;">#${index + 1}</div>
+                                    <div class="fw-bold flex-shrink-0" style="width: 28px;">#${index + 1}</div>
                                     <div class="flex-shrink-0" style="width:38px; height:38px;">${pb_renderAvatar(player, 'sm')}</div>
                                     <div class="d-flex flex-column min-w-0">
-                                        <div class="fw-bold text-truncate" style="color:${isWinner ? 'white' : 'var(--text-main)'}; max-width: 170px;">${safeName(player)}</div>
-                                        ${isWinner ? `<div class="small opacity-75">Победитель матча</div>` : ''}
+                                        <div class="fw-bold text-truncate" style="max-width: 170px;">${safeName(player)}</div>
+                                        ${isWinner ? `<div class="small opacity-75" style="color: #929cff;">Победитель матча</div>` : ''}
                                     </div>
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-2 flex-shrink-0 ms-2">
-                                    ${isMe ? `<span class="badge ${isWinner ? 'bg-white text-primary' : 'bg-primary text-white'}" style="font-size:10px;">ВЫ</span>` : ''}
-                                    <span class="badge ${isWinner ? 'bg-white text-primary' : 'bg-primary text-white'} rounded-pill px-3 py-2" style="font-size:0.78rem;">${score} XP</span>
+                                    ${isMe ? `<span class="badge bg-white text-dark" style="font-size:10px;">ВЫ</span>` : ''}
+                                    <span class="badge ${isWinner ? 'bg-primary text-white' : 'bg-white text-dark'} rounded-pill px-3 py-2" style="font-size:0.78rem;">${score} XP</span>
                                 </div>
                             </div>`;
         }).join('') : `
-                        <div class="rounded-4 p-4 text-center shadow-sm" style="background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(90, 103, 255, 0.03)); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
-                            <i class="bi bi-bar-chart-line text-primary opacity-50 d-block mb-3" style="font-size: 2rem;"></i>
-                            <div class="fw-bold mb-2" style="color:var(--text-main);">Рейтинг пока пуст</div>
-                            <div class="small text-muted">Очки появятся после завершения хотя бы одного раунда.</div>
+                        <div class="rounded-4 p-4 text-center" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                            <i class="bi bi-bar-chart-line opacity-50 d-block mb-3" style="font-size: 2rem;"></i>
+                            <div class="fw-bold mb-2">Рейтинг пока пуст</div>
+                            <div class="small opacity-50">Очки появятся после завершения хотя бы одного раунда.</div>
                         </div>
                     `}
-
-                    ${postGameSummary ? window.GameSummaryProvider.render(postGameSummary, {
-            playAgainLabel: isHost ? 'Сыграть ещё раз' : 'Ожидаем ведущего...',
-            playAgainAction: isHost ? 'play-again' : '',
-            playAgainDisabled: !isHost,
-            roomActionLabel: 'Сменить игру / В лобби',
-            roomAction: 'return-to-room',
-            nextGameLabel: 'Собрать следующую игру',
-            nextGameAction: 'schedule-partybattle'
-        }) : ''}
                 </div>
 
-                ${!postGameSummary ? `<div class="px-3 pb-3" style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important;">
-                    <div class="rounded-4 p-2 shadow-sm" style="background: #ffffff; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 6px 16px rgba(31, 38, 135, 0.03);">
-                        ${isHost ? `
-                            <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.92rem;" onclick="window.sendGameAction('back_to_lobby')">
-                                <i class="bi bi-arrow-repeat me-2"></i> СЫГРАТЬ ЕЩЁ
-                            </button>
-                        ` : `
-                            <button class="btn btn-outline-secondary w-100 py-2 rounded-4 fw-bold border-0" style="background: #f3f4f8; color: var(--text-main); min-height:42px; font-size:0.84rem;" onclick="window.sendGameAction('back_to_lobby')">
-                                <i class="bi bi-box-arrow-right me-1"></i> ВЫЙТИ В КОМНАТУ
-                            </button>
-                        `}
-                    </div>
-                </div>` : ''}
+                <div class="px-3 pb-3 mt-auto">
+                    ${isHost ? `
+                        <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm mb-2 pb-primary-action" style="font-size:0.95rem; border:none;" onclick="window.sendGameAction('rematch')">
+                            <i class="bi bi-arrow-repeat me-2"></i> СЫГРАТЬ ЕЩЁ РАЗ
+                        </button>
+                        <button class="btn w-100 py-2 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.88rem;" onclick="PartyBattleUI.scheduleNextGame()">
+                            <i class="bi bi-calendar-plus me-1"></i> Собрать следующую игру
+                        </button>
+                        ${postGameSummary && window.GameSummaryProvider ? `
+                        <button class="btn w-100 py-2 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.88rem;" onclick="window.GameSummaryProvider.share('partybattle')">
+                            <i class="bi bi-telegram me-1"></i> Поделиться
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-link w-100 py-2 rounded-4 fw-bold text-decoration-none text-light opacity-50 pb-secondary-action" style="font-size:0.85rem;" onclick="window.sendGameAction('back_to_lobby')">
+                            В лобби
+                        </button>
+                    ` : `
+                        <div class="text-center small opacity-50 mb-3">Ожидаем ведущего...</div>
+                        ${postGameSummary && window.GameSummaryProvider ? `
+                        <button class="btn w-100 py-3 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.9rem;" onclick="window.GameSummaryProvider.share('partybattle')">
+                            <i class="bi bi-telegram me-1"></i> Поделиться
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-link w-100 py-2 rounded-4 fw-bold text-decoration-none text-light opacity-50 pb-secondary-action" style="font-size:0.9rem;" onclick="window.sendGameAction('back_to_lobby')">
+                            В лобби
+                        </button>
+                    `}
+                </div>
             </div>
         `;
         gameArea.innerHTML = html;
