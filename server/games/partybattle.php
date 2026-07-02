@@ -139,8 +139,7 @@ function handleGameAction($pdo, $room, $user, $postData)
             }
         }
         $mixedDeck = pb_dedupeDeckCards($mixedDeck);
-        shuffle($mixedDeck);
-        $state['situations_deck'] = array_slice($mixedDeck, 0, $rounds);
+        $state['situations_deck'] = pb_mixDeckWithConstraints($mixedDeck, $rounds);
 
         $availableRounds = count($state['situations_deck']);
         if ($availableRounds > 0 && $availableRounds < $rounds) {
@@ -219,8 +218,7 @@ function handleGameAction($pdo, $room, $user, $postData)
             }
         }
         $mixedDeck = pb_dedupeDeckCards($mixedDeck);
-        shuffle($mixedDeck);
-        $state['situations_deck'] = array_slice($mixedDeck, 0, $rounds);
+        $state['situations_deck'] = pb_mixDeckWithConstraints($mixedDeck, $rounds);
 
         $availableRounds = count($state['situations_deck']);
         if ($availableRounds > 0 && $availableRounds < $rounds) {
@@ -2184,6 +2182,54 @@ function pb_dedupeDeckCards($cards)
         $deduped[] = $card;
     }
     return $deduped;
+}
+
+function pb_mixDeckWithConstraints($mixedDeck, $rounds)
+{
+    if (empty($mixedDeck) || $rounds <= 0) {
+        return [];
+    }
+
+    $grouped = [];
+    foreach ($mixedDeck as $card) {
+        $mode = $card['mode'] ?? 'unknown';
+        if (!isset($grouped[$mode])) {
+            $grouped[$mode] = [];
+        }
+        $grouped[$mode][] = $card;
+    }
+
+    foreach ($grouped as &$group) {
+        shuffle($group);
+    }
+    unset($group);
+
+    $result = [];
+    $lastMode = null;
+
+    for ($i = 0; $i < $rounds; $i++) {
+        $availableModes = array_keys(array_filter($grouped, function ($g) {
+            return !empty($g);
+        }));
+
+        if (empty($availableModes)) {
+            break;
+        }
+
+        $candidates = $availableModes;
+        if ($lastMode !== null && count($availableModes) > 1) {
+            $candidates = array_values(array_filter($availableModes, function ($m) use ($lastMode) {
+                return $m !== $lastMode;
+            }));
+        }
+
+        $chosenMode = $candidates[array_rand($candidates)];
+
+        $result[] = array_shift($grouped[$chosenMode]);
+        $lastMode = $chosenMode;
+    }
+
+    return $result;
 }
 
 function pb_getDeckCardKey($card)

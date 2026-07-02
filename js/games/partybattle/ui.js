@@ -183,14 +183,6 @@ window.PartyBattleUI = {
                     </button>
                 </div>
 
-                <div class="mb-3 rounded-4 p-3 shadow-sm" style="background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(255,255,255,0.92)); border: 1px solid rgba(var(--primary-rgb), 0.12); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
-                    <div class="small fw-bold mb-1 text-muted text-uppercase" style="letter-spacing:0.16em; font-size:0.72rem;">Быстрый прогон</div>
-                    <div class="small text-muted mb-3" style="line-height:1.35;">Короткий маршрут для ручного smoke-теста: советы, мемы, подписи и блеф без лишней настройки.</div>
-                    <button class="btn btn-outline-primary w-100 rounded-4 fw-bold" style="background: rgba(var(--primary-rgb), 0.08); border: 1px solid rgba(var(--primary-rgb), 0.18); min-height: 42px; font-size: 0.9rem;" onclick="PartyBattleUI.startQuickSmoke()">
-                        <i class="bi bi-lightning-charge me-2"></i> Быстрый прогон
-                    </button>
-                </div>
-
                 <div class="mb-3 rounded-4 p-3 shadow-sm" style="background: rgba(255,255,255,0.96); border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 10px 24px rgba(31, 38, 135, 0.04);">
                     <label class="small fw-bold mb-2 d-block text-muted text-uppercase" style="letter-spacing:0.14em; font-size:0.72rem;">Количество раундов</label>
                     <div class="d-flex gap-2 mb-3">
