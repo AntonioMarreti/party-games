@@ -1047,7 +1047,7 @@ window.PartyBattleUI = {
                     ${((mode === 'meme' || mode === 'caption') && winnerType !== 'truth') ? `
                         <div class="d-flex flex-column align-items-center animate__animated animate__fadeInUp w-100 mt-2 mb-2">
                             ${mode === 'meme' ? `
-                                <img src="${winnerContent}" class="rounded-4 shadow-sm" style="max-height: 45vh; max-width: 100%; object-fit: contain;" referrerpolicy="no-referrer">
+                                <img src="${winnerContent}" class="rounded-4 shadow-sm" style="width: 100%; max-width: 280px; height: auto; max-height: 40vh; object-fit: contain; display: block;" referrerpolicy="no-referrer">
                             ` : `
                                 ${pb_renderPromptImage(gameState.displayPrompt?.mediaUrl || '', 'rounded-4 shadow-sm', 'max-height: 45vh; max-width: 100%; object-fit: contain;')}
                                 <div class="mt-3 w-100 px-2">
