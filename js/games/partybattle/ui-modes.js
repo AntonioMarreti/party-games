@@ -134,11 +134,12 @@ window.PartyBattleModes = {
                 </div>
 
                 <div id="manual-search-div" class="mb-3" style="display:none;">
-                     <div class="input-group rounded-4 overflow-hidden pb-input-shell">
-                        <button class="btn btn-sm btn-link bg-transparent border-0 text-muted opacity-50 px-3" onclick="window.PartyBattleUI.closeMemeSearch()">
+                     <div class="d-flex align-items-center rounded-4 overflow-hidden pb-input-shell pb-meme-search-shell">
+                        <i class="bi bi-search text-muted opacity-50 ps-3 pe-2"></i>
+                        <input type="text" id="meme-search-input" class="form-control border-0 bg-transparent py-2 px-1 shadow-none" placeholder="Поиск по теме..." oninput="window.PartyBattleUI.searchGifsDebounced(this.value)">
+                        <button type="button" class="btn btn-link border-0 text-muted opacity-75 px-3 py-2 d-flex align-items-center text-decoration-none shadow-none" aria-label="Закрыть поиск" onclick="window.PartyBattleUI.closeMemeSearch()">
                             <i class="bi bi-x-lg"></i>
                         </button>
-                        <input type="text" id="meme-search-input" class="form-control border-0 bg-transparent py-2 ps-2" placeholder="Поиск по теме..." oninput="window.PartyBattleUI.searchGifsDebounced(this.value)">
                     </div>
                     <div id="meme-results" class="row g-2 mt-2"></div>
                 </div>
