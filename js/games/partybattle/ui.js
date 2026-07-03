@@ -148,13 +148,8 @@ window.PartyBattleUI = {
         const selectedRounds = parseInt(gameState.total_rounds, 10) || 5;
         const isAiMode = !!gameState.ai_mode;
         let html = `
-        <div class="d-flex flex-column h-100 pb-3" style="padding-top: calc(env(safe-area-inset-top) + 10px); background-color: var(--pb-bg-color, #1a1b26); color: var(--pb-text-color, #ffffff); background-image: radial-gradient(circle at top, rgba(90,103,255, 0.1), transparent 35%);">
+        <div class="d-flex flex-column pb-3" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px); background-color: var(--pb-bg-color, #1a1b26); color: var(--pb-text-color, #ffffff); background-image: radial-gradient(circle at top, rgba(90,103,255, 0.1), transparent 35%);">
             <div class="px-3 pt-2 position-relative">
-                <button class="btn btn-link position-absolute start-0 top-0 ms-1 text-light opacity-50 px-2"
-                        onclick="window.leaveRoom()"
-                        style="font-size: 1.4rem; z-index: 10; outline: none; box-shadow: none;">
-                    <i class="bi bi-x-lg"></i>
-                </button>
                 <div class="text-center mb-3">
                     <div class="game-page-title fw-black mb-1" style="font-size:1.8rem; letter-spacing:-0.045em; line-height:0.98; background: var(--primary-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Party Battle</div>
                     <div class="game-page-subtitle text-uppercase fw-bold small opacity-50" style="letter-spacing:0.18em; font-size:0.72rem;">${isHost ? 'Соберите свою игру' : 'Ведущий настраивает игру'}</div>
@@ -170,19 +165,20 @@ window.PartyBattleUI = {
                         <label class="small fw-bold text-uppercase opacity-50" style="letter-spacing:0.14em; font-size:0.75rem;">Режимы</label>
                         <span id="pb-selected-count" class="badge rounded-pill" style="background: rgba(90, 103, 255, 0.2); color: #929cff;">${selectedModes.length} выбрано</span>
                     </div>
-                    <div class="d-flex flex-wrap gap-2 pb-modes-container">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="pb-modes-container">
                         ${[
-                            { id: 'meme', label: 'МемоБатл' },
-                            { id: 'caption', label: 'Подпиши картинку' },
-                            { id: 'joke', label: 'Добивка' },
-                            { id: 'whoami', label: 'Кто из нас?' },
-                            { id: 'advice', label: 'Вредные советы' },
-                            { id: 'acronym', label: 'Дешифратор' },
-                            { id: 'bluff', label: 'Блеф' }
+                            { id: 'meme', label: 'МемоБатл', desc: 'Подбирай смешные реакции' },
+                            { id: 'caption', label: 'Подпиши картинку', desc: 'Смешная подпись к мему' },
+                            { id: 'joke', label: 'Добивка', desc: 'Заверши шутку смешнее всех' },
+                            { id: 'whoami', label: 'Кто из нас?', desc: 'Анонимное голосование' },
+                            { id: 'advice', label: 'Вредные советы', desc: 'Выход из неловких ситуаций' },
+                            { id: 'acronym', label: 'Дешифратор', desc: 'Смешная расшифровка' },
+                            { id: 'bluff', label: 'Блеф', desc: 'Напиши ложь, угадай правду' }
                         ].map(m => `
-                            <label class="pb-mode-chip ${selectedModes.includes(m.id) ? 'active' : ''}" style="cursor: pointer;">
+                            <label class="pb-mode-card ${selectedModes.includes(m.id) ? 'active' : ''} d-flex flex-column p-2" style="cursor: pointer; min-height: 70px;">
                                 <input class="d-none pb-mode-cb" type="checkbox" value="${m.id}" ${selectedModes.includes(m.id) ? 'checked' : ''} onchange="PartyBattleUI.updateModesPreview()">
-                                <span>${m.label}</span>
+                                <div class="fw-bold lh-sm mb-1 pb-mode-label" style="font-size: 0.85rem;">${m.label}</div>
+                                <div class="small opacity-75 lh-sm" style="font-size: 0.65rem;">${m.desc}</div>
                             </label>
                         `).join('')}
                     </div>
@@ -283,124 +279,8 @@ window.PartyBattleUI = {
         </div>
         `;
 
-        if (isHost) {
-            // Custom Modal Overlay for Modes
-            html += `
-            <div id="pbModesModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(17,20,36,0.46); backdrop-filter:blur(12px); align-items:flex-end; justify-content:center; opacity:0; transition: opacity 0.3s; padding: 16px;"
-                onclick="if(event.target===this) PartyBattleUI.closeModesModal()">
-            <div class="p-3 rounded-4 w-100 shadow-lg animate__animated animate__fadeInUp" style="background: rgba(255,255,255,0.98); max-width: 500px; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 18px 48px rgba(17,20,36,0.16) !important;">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <div class="small text-uppercase fw-bold text-muted mb-1" style="letter-spacing:0.16em; font-size:0.7rem;">Настройка</div>
-                        <h4 class="fw-bold m-0" style="color:var(--text-main); font-size:1.16rem;">Режимы игры</h4>
-                    </div>
-                    <button class="btn-close" style="filter: var(--invert-filter);" onclick="PartyBattleUI.closeModesModal()"></button>
-                </div>
-
-                <div class="d-flex flex-column gap-2 mb-4">
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="meme" ${selectedModes.includes('meme') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">МемоБатл (Гифки)</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Подбирай смешные реакции к ситуациям</div>
-                        </div>
-                    </label>
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="joke" ${selectedModes.includes('joke') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">Добивка (Шутки)</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Придумай самую смешную концовку</div>
-                        </div>
-                    </label>
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="whoami" ${selectedModes.includes('whoami') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">Кто из нас?</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Анонимное голосование друг за друга</div>
-                        </div>
-                    </label>
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="advice" ${selectedModes.includes('advice') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">Вредные советы</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Выходим из неловких ситуаций</div>
-                        </div>
-                    </label>
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="acronym" ${selectedModes.includes('acronym') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">Дешифратор</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Смешно расшифровываем аббревиатуры</div>
-                        </div>
-                    </label>
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="caption" ${selectedModes.includes('caption') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">Подпиши картинку</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Придумываем подпись к рандомному мему</div>
-                        </div>
-                    </label>
-                    <label class="form-check d-flex align-items-center py-2 px-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.08); cursor: pointer;">
-                        <input class="form-check-input pb-mode-cb m-0" type="checkbox" value="bluff" ${selectedModes.includes('bluff') ? 'checked' : ''} style="transform: scale(1.1);">
-                        <div class="ms-3">
-                            <div class="fw-bold lh-sm" style="color:var(--text-main); font-size: 1rem;">Блеф</div>
-                            <div class="text-muted lh-sm mt-1" style="font-size: 0.75rem;">Пишем ложь и пытаемся угадать правду</div>
-                        </div>
-                    </label>
-                </div>
-
-                <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.92rem;" onclick="PartyBattleUI.closeModesModal()">Применить</button>
-            </div>
-            </div>
-
-            <div id="pbThemeModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(17,20,36,0.46); backdrop-filter:blur(12px); align-items:flex-end; justify-content:center; opacity:0; transition: opacity 0.3s; padding: 16px;"
-                onclick="if(event.target===this) PartyBattleUI.closeThemeModal()">
-                <div class="p-3 rounded-4 w-100 shadow-lg animate__animated animate__fadeInUp" style="background: rgba(255,255,255,0.98); max-width: 500px; border: 1px solid rgba(90, 103, 255, 0.08); box-shadow: 0 18px 48px rgba(17,20,36,0.16) !important;">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <div class="small text-uppercase fw-bold text-muted mb-1" style="letter-spacing:0.16em; font-size:0.7rem;">Настройка</div>
-                            <h4 class="fw-bold m-0" style="color:var(--text-main); font-size:1.16rem;">Набор карточек</h4>
-                        </div>
-                        <button class="btn-close" style="filter: var(--invert-filter);" onclick="PartyBattleUI.closeThemeModal()"></button>
-                    </div>
-
-                    <div class="d-flex flex-column gap-3 mb-4">
-                        <label class="form-check d-flex align-items-center p-3 rounded-4 m-0" style="background: #f8f9fc; border: 1px solid rgba(90, 103, 255, 0.1); cursor: pointer;" onclick="PartyBattleUI.selectTheme('base')">
-                            <input class="form-check-input pb-theme-radio m-0" type="radio" name="pb-theme-radio" value="base" ${selectedTheme === 'base' ? 'checked' : ''} style="transform: scale(1.3);">
-                                <div class="ms-3">
-                                    <div class="fw-bold" style="color:var(--text-main); font-size: 1rem;">Базовая колода</div>
-                                    <div class="small text-muted">Стандартный набор ситуаций для всех режимов</div>
-                                </div>
-                        </label>
-                        <label class="form-check d-flex align-items-center p-3 rounded-4 m-0" style="background: #fff7f8; border: 1px solid rgba(220, 53, 69, 0.14); cursor: pointer;" onclick="PartyBattleUI.selectTheme('adult')">
-                            <input class="form-check-input pb-theme-radio m-0" type="radio" name="pb-theme-radio" value="adult" ${selectedTheme === 'adult' ? 'checked' : ''} style="transform: scale(1.3);">
-                                <div class="ms-3">
-                                    <div class="fw-bold text-danger" style="font-size: 1rem;">18+ Полный треш</div>
-                                    <div class="small text-muted">Жесткий юмор для режимов с adult-паками, остальные останутся на базе</div>
-                                </div>
-                        </label>
-                    </div>
-
-                    <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.92rem;" onclick="PartyBattleUI.closeThemeModal()">Применить</button>
-                </div>
-            </div>
-            `;
-        }
-
         document.getElementById('game-area').innerHTML = html;
         this.afterRender('lobby');
-
-        // Immediately hide the modal properly so display flex doesn't override it initially
-        const modalModes = document.getElementById('pbModesModal');
-        if (modalModes) {
-            modalModes.style.display = 'none';
-            modalModes.style.opacity = '1';
-        }
-        const modalTheme = document.getElementById('pbThemeModal');
-        if (modalTheme) {
-            modalTheme.style.display = 'none';
-            modalTheme.style.opacity = '1';
-        }
     },
 
     renderSelectedModeBadges: function (selectedModes) {
@@ -452,11 +332,12 @@ window.PartyBattleUI = {
         const checkboxes = document.querySelectorAll('.pb-mode-cb');
         let checkedCount = 0;
         checkboxes.forEach(cb => {
+            const card = cb.closest('.pb-mode-card');
             if (cb.checked) {
-                if (cb.closest('.pb-mode-chip')) cb.closest('.pb-mode-chip').classList.add('active');
+                if (card) card.classList.add('active');
                 checkedCount++;
             } else {
-                if (cb.closest('.pb-mode-chip')) cb.closest('.pb-mode-chip').classList.remove('active');
+                if (card) card.classList.remove('active');
             }
         });
 
@@ -1200,9 +1081,15 @@ window.PartyBattleUI = {
                             <i class="bi bi-calendar-plus me-1"></i> Собрать следующую игру
                         </button>
                         ${postGameSummary && window.GameSummaryProvider ? `
-                        <button class="btn w-100 py-2 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.88rem;" onclick="window.GameSummaryProvider.share('partybattle')">
-                            <i class="bi bi-telegram me-1"></i> Поделиться
-                        </button>
+                            ${window.Telegram?.WebApp?.shareToStory ? `
+                            <button class="btn w-100 py-2 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: linear-gradient(135deg, rgba(108, 92, 231, 0.4), rgba(54, 89, 245, 0.2)); border: 1px solid rgba(108, 92, 231, 0.3); font-size:0.88rem;" onclick="window.GameSummaryProvider.shareStory('partybattle')">
+                                <i class="bi bi-camera me-1"></i> В историю
+                            </button>
+                            ` : `
+                            <button class="btn w-100 py-2 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.88rem;" onclick="window.GameSummaryProvider.share('partybattle')">
+                                <i class="bi bi-telegram me-1"></i> Поделиться
+                            </button>
+                            `}
                         ` : ''}
                         <button class="btn btn-link w-100 py-2 rounded-4 fw-bold text-decoration-none text-light opacity-50 pb-secondary-action" style="font-size:0.85rem;" onclick="window.sendGameAction('back_to_lobby')">
                             В лобби
@@ -1210,9 +1097,15 @@ window.PartyBattleUI = {
                     ` : `
                         <div class="text-center small opacity-50 mb-3">Ожидаем ведущего...</div>
                         ${postGameSummary && window.GameSummaryProvider ? `
-                        <button class="btn w-100 py-3 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.9rem;" onclick="window.GameSummaryProvider.share('partybattle')">
-                            <i class="bi bi-telegram me-1"></i> Поделиться
-                        </button>
+                            ${window.Telegram?.WebApp?.shareToStory ? `
+                            <button class="btn w-100 py-3 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: linear-gradient(135deg, rgba(108, 92, 231, 0.4), rgba(54, 89, 245, 0.2)); border: 1px solid rgba(108, 92, 231, 0.3); font-size:0.9rem;" onclick="window.GameSummaryProvider.shareStory('partybattle')">
+                                <i class="bi bi-camera me-1"></i> В историю
+                            </button>
+                            ` : `
+                            <button class="btn w-100 py-3 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.9rem;" onclick="window.GameSummaryProvider.share('partybattle')">
+                                <i class="bi bi-telegram me-1"></i> Поделиться
+                            </button>
+                            `}
                         ` : ''}
                         <button class="btn btn-link w-100 py-2 rounded-4 fw-bold text-decoration-none text-light opacity-50 pb-secondary-action" style="font-size:0.9rem;" onclick="window.sendGameAction('back_to_lobby')">
                             В лобби
