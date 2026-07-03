@@ -592,3 +592,12 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
 
     /* Desktop room styling */
 }
+
+/* Defensive override for production cache/injection of dynamic island */
+@media (min-width: 1024px) {
+    body.tg-platform-unknown .device-content::before {
+        content: none !important;
+        display: none !important;
+        background: transparent !important;
+    }
+}
