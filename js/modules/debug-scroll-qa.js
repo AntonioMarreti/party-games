@@ -1049,29 +1049,56 @@
         });
         window.addEventListener('resize', clampButtonToViewport);
         window.visualViewport?.addEventListener('resize', clampButtonToViewport);
+        window.visualViewport?.addEventListener('scroll', clampButtonToViewport);
     }
 
     function getDefaultButtonPosition(button = null) {
         const width = button?.offsetWidth || 42;
         const viewport = getButtonViewport();
+        const safeTop = viewport.offsetTop + getTopSafeOffset() + 14;
         return {
-            left: 14,
-            top: Math.min(118, Math.max(14, viewport.height - getBottomSafeOffset() - (button?.offsetHeight || 34) - 14 - 160)),
+            left: viewport.offsetLeft + 14,
+            top: Math.max(safeTop, viewport.height - getBottomSafeOffset() - (button?.offsetHeight || 34) - 160),
             width
         };
     }
 
     function getButtonViewport() {
+        const vv = window.visualViewport;
         return {
-            width: Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth || 390)),
-            height: Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight || 700))
+            width: Math.max(1, Math.round(vv?.width || window.innerWidth || 390)),
+            height: Math.max(1, Math.round(vv?.height || window.innerHeight || 700)),
+            offsetTop: vv?.offsetTop || 0,
+            offsetLeft: vv?.offsetLeft || 0
         };
     }
 
+    function getTopSafeOffset() {
+        const dummy = document.createElement('div');
+        dummy.style.position = 'fixed';
+        dummy.style.top = '0';
+        dummy.style.paddingTop = 'env(safe-area-inset-top, 0px)';
+        dummy.style.visibility = 'hidden';
+        document.body.appendChild(dummy);
+        const safeTop = parseFloat(getComputedStyle(dummy).paddingTop) || 0;
+        dummy.remove();
+
+        return safeTop + 60;
+    }
+
     function getBottomSafeOffset() {
+        const dummy = document.createElement('div');
+        dummy.style.position = 'fixed';
+        dummy.style.bottom = '0';
+        dummy.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
+        dummy.style.visibility = 'hidden';
+        document.body.appendChild(dummy);
+        const safeBottom = parseFloat(getComputedStyle(dummy).paddingBottom) || 0;
+        dummy.remove();
+
         const nav = document.querySelector('.bottom-nav, .app-bottom-nav, .tabbar, .bottom-menu');
         const navHeight = nav ? Math.min(96, Math.round(nav.getBoundingClientRect().height || 0)) : 0;
-        return Math.max(18, navHeight + 10);
+        return Math.max(18, safeBottom + navHeight + 10);
     }
 
     function getSavedButtonPosition() {
@@ -1101,12 +1128,20 @@
         const viewport = getButtonViewport();
         const width = button?.offsetWidth || 42;
         const height = button?.offsetHeight || 34;
+
         const margin = 8;
-        const maxLeft = Math.max(margin, viewport.width - width - margin);
-        const maxTop = Math.max(margin, viewport.height - height - getBottomSafeOffset());
+        const safeTop = getTopSafeOffset() + margin;
+        const safeBottom = getBottomSafeOffset() + margin;
+
+        const minLeft = viewport.offsetLeft + margin;
+        const maxLeft = Math.max(minLeft, viewport.offsetLeft + viewport.width - width - margin);
+
+        const minTop = viewport.offsetTop + safeTop;
+        const maxTop = Math.max(minTop, viewport.offsetTop + viewport.height - height - safeBottom);
+
         return {
-            left: Math.round(Math.min(Math.max(left, margin), maxLeft)),
-            top: Math.round(Math.min(Math.max(top, margin), maxTop))
+            left: Math.round(Math.min(Math.max(left, minLeft), maxLeft)),
+            top: Math.round(Math.min(Math.max(top, minTop), maxTop))
         };
     }
 
