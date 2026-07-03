@@ -1071,18 +1071,20 @@ window.PartyBattleUI = {
             if (!uid) return '';
             const score = scores[uid];
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
-            const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
-            const scale = place === 1 ? 'transform: translateY(-10px) scale(1.1); z-index: 3;' : 'z-index: 1;';
             const isMe = String(uid) === myId;
+            const rankBadge = place === 1
+                ? `<div class="position-absolute d-flex justify-content-center align-items-center bg-warning text-dark fw-bold rounded-circle shadow-sm" style="width:18px; height:18px; font-size:0.6rem; top:-6px; left:-6px; z-index:2;">1</div>`
+                : `<div class="position-absolute d-flex justify-content-center align-items-center bg-secondary text-white fw-bold rounded-circle shadow-sm" style="width:18px; height:18px; font-size:0.6rem; top:-6px; left:-6px; z-index:2;">${place}</div>`;
+            const scale = place === 1 ? 'transform: scale(1.1); z-index: 3;' : 'z-index: 1;';
             return `
                 <div class="d-flex flex-column align-items-center text-center animate__animated animate__fadeInUp" style="width: 95px; ${scale} transition-delay: ${place * 0.1}s;">
-                    <div class="fs-4 mb-2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">${medal}</div>
-                    <div class="mb-2 position-relative" style="width: ${place === 1 ? '56px' : '44px'}; height: ${place === 1 ? '56px' : '44px'}; margin: 0 auto;">
+                    <div class="mb-1 position-relative" style="width: ${place === 1 ? '56px' : '44px'}; height: ${place === 1 ? '56px' : '44px'}; margin: 0 auto;">
+                        ${rankBadge}
                         ${pb_renderAvatar(player, place === 1 ? 'lg' : 'md')}
                         ${isMe ? `<span class="position-absolute start-50 translate-middle badge bg-white text-dark rounded-pill shadow-sm" style="font-size: 0.55rem; bottom: -12px;">ВЫ</span>` : ''}
                     </div>
-                    <div class="fw-bold text-truncate w-100 mb-1 mt-1" style="font-size: ${place === 1 ? '0.85rem' : '0.75rem'};">${safeName(player)}</div>
-                    <div class="badge rounded-pill bg-white text-dark shadow-sm" style="font-size: 0.7rem;">${score} XP</div>
+                    <div class="fw-bold text-truncate w-100 mb-0 mt-2" style="font-size: ${place === 1 ? '0.85rem' : '0.75rem'};">${safeName(player)}</div>
+                    <div class="small opacity-75 fw-semibold" style="font-size: 0.7rem;">${score} XP</div>
                 </div>
             `;
         };
@@ -1090,13 +1092,11 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column pb-results-screen" style="height: var(--pb-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px); background-color: #121216; color: #ffffff;">
                 <div class="header-container text-center mb-3 mt-2 px-3">
-                    <div class="small text-uppercase fw-bold mb-2 opacity-50" style="letter-spacing:0.18em;">Игра окончена</div>
-                    <h2 class="fw-bold mb-2">Итоги игры</h2>
-                    <div class="opacity-75 small mb-3">Финальный рейтинг после всех раундов.</div>
+                    <h2 class="fw-bold mb-0">Итоги игры</h2>
                 </div>
 
                 ${hasScores ? `
-                <div class="d-flex justify-content-center align-items-end mb-4 gap-2 px-2" style="margin-top: 10px; min-height: 140px;">
+                <div class="d-flex justify-content-center align-items-end mb-4 gap-2 px-2" style="margin-top: 10px;">
                     ${sortedIds.length > 1 ? renderPodiumPlayer(sortedIds[1], 2) : ''}
                     ${sortedIds.length > 0 ? renderPodiumPlayer(sortedIds[0], 1) : ''}
                     ${sortedIds.length > 2 ? renderPodiumPlayer(sortedIds[2], 3) : ''}
@@ -1110,19 +1110,15 @@ window.PartyBattleUI = {
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
             const isMe = String(uid) === myId;
             return `
-                            <div class="d-flex justify-content-between align-items-center p-3 mb-2 rounded-4 shadow-sm animate__animated animate__fadeInUp"
-                                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #fff; transition-delay: ${(remainingIndex) * 0.08}s;">
-                                <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:0;">
-                                    <div class="fw-bold flex-shrink-0" style="width: 28px;">#${index + 1}</div>
-                                    <div class="flex-shrink-0" style="width:38px; height:38px;">${pb_renderAvatar(player, 'sm')}</div>
-                                    <div class="d-flex flex-column min-w-0">
-                                        <div class="fw-bold text-truncate" style="max-width: 170px;">${safeName(player)}</div>
-                                    </div>
+                            <div class="d-flex align-items-center p-2 mb-1 rounded-3 animate__animated animate__fadeInUp"
+                                    style="background: rgba(255,255,255,0.03); color: #fff; transition-delay: ${(remainingIndex) * 0.08}s;">
+                                <div class="opacity-50 fw-bold text-center ms-1 me-2" style="width: 16px; font-size: 0.8rem;">${index + 1}</div>
+                                <div class="me-2 flex-shrink-0" style="width:28px; height:28px;">${pb_renderAvatar(player, 'sm')}</div>
+                                <div class="d-flex align-items-center flex-grow-1 min-w-0">
+                                    <div class="fw-bold text-truncate" style="font-size: 0.85rem; max-width: 140px;">${safeName(player)}</div>
+                                    ${isMe ? `<span class="badge bg-white text-dark rounded-pill ms-2 shadow-sm" style="font-size: 0.55rem; padding: 2px 6px;">ВЫ</span>` : ''}
                                 </div>
-                                <div class="d-flex flex-column align-items-end gap-2 flex-shrink-0 ms-2">
-                                    ${isMe ? `<span class="badge bg-white text-dark" style="font-size:10px;">ВЫ</span>` : ''}
-                                    <span class="badge bg-white text-dark rounded-pill px-3 py-2" style="font-size:0.78rem;">${score} XP</span>
-                                </div>
+                                <div class="opacity-75 small fw-semibold text-end ms-2" style="font-size: 0.75rem;">${score} XP</div>
                             </div>`;
         }).join('') : `
                         <div class="rounded-4 p-4 text-center" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
@@ -1133,7 +1129,7 @@ window.PartyBattleUI = {
                     `}
                 </div>
 
-                <div class="px-3 pb-3 mt-auto">
+                <div class="px-3 pb-3">
                     ${isHost ? `
                         <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm mb-2 pb-primary-action" style="font-size:0.95rem; border:none;" onclick="window.sendGameAction('rematch')">
                             <i class="bi bi-arrow-repeat me-2"></i> РЕВАНШ
