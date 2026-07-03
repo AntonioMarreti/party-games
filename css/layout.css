@@ -442,30 +442,7 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
         position: relative;
     }
 
-    /* Left Side Buttons (Volume) */
-    .device-wrapper::before {
-        content: '';
-        position: absolute;
-        top: 180px;
-        left: -8px;
-        width: 4px;
-        height: 50px;
-        background: #3a3a3c;
-        border-radius: 4px 0 0 4px;
-        box-shadow: 0 60px 0 #3a3a3c;
-    }
 
-    /* Right Side Button (Power) */
-    .device-wrapper::after {
-        content: '';
-        position: absolute;
-        top: 140px;
-        right: -8px;
-        width: 4px;
-        height: 80px;
-        background: #3a3a3c;
-        border-radius: 0 4px 4px 0;
-    }
 
 
     .device-content::-webkit-scrollbar {
