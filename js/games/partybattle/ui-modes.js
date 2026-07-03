@@ -126,7 +126,7 @@ window.PartyBattleModes = {
                             <i class="bi bi-arrow-clockwise me-1"></i> Обновить
                         </button>
                         <div id="search-toggle-div">
-                            <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center pb-meme-action" onclick="document.getElementById('manual-search-div').style.display='block'; document.getElementById('search-toggle-div').style.display='none'">
+                            <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0 d-flex align-items-center pb-meme-action" onclick="window.PartyBattleUI.openMemeSearch()">
                                 <i class="bi bi-search me-1"></i> Найти свой мем
                             </button>
                         </div>
@@ -135,7 +135,9 @@ window.PartyBattleModes = {
 
                 <div id="manual-search-div" class="mb-3" style="display:none;">
                      <div class="input-group rounded-4 overflow-hidden pb-input-shell">
-                        <span class="input-group-text bg-transparent border-0 pe-0"><i class="bi bi-search text-muted opacity-50"></i></span>
+                        <button class="btn btn-sm btn-link bg-transparent border-0 text-muted opacity-50 px-3" onclick="window.PartyBattleUI.closeMemeSearch()">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
                         <input type="text" id="meme-search-input" class="form-control border-0 bg-transparent py-2 ps-2" placeholder="Поиск по теме..." oninput="window.PartyBattleUI.searchGifsDebounced(this.value)">
                     </div>
                     <div id="meme-results" class="row g-2 mt-2"></div>

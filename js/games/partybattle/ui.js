@@ -35,6 +35,7 @@ window.pbConfirmLeaveGame = function() {
 window.PartyBattleUI = {
     _viewportSyncBound: false,
     _lastRenderedView: null,
+    _memeSearchState: { isOpen: false, query: '', results: null, hasFocus: false, requestToken: 0, isLoading: false, error: false },
 
     ensureViewportSync: function () {
         if (this._viewportSyncBound) {
@@ -227,7 +228,7 @@ window.PartyBattleUI = {
                                     </label>
                                     <input type="hidden" id="pb-theme" value="${selectedTheme}">
                                 </div>
-                                
+
                                 <div class="form-check form-switch p-3 rounded-4 d-flex align-items-center m-0" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);">
                                     <input class="form-check-input m-0 me-3 bg-secondary border-secondary" type="checkbox" id="pb-ai-mode" style="transform: scale(1.3);" ${isAiMode ? 'checked' : ''}>
                                     <label class="form-check-label text-light small opacity-75 m-0" for="pb-ai-mode">Генерация карточек через AI</label>
@@ -257,7 +258,7 @@ window.PartyBattleUI = {
                     <div class="small text-uppercase fw-bold opacity-50 mb-2" style="letter-spacing:0.1em;">Будем играть</div>
                     <div class="fw-bold text-light mb-1" style="font-size: 1.1rem;">${currentModesText || 'Режимы не выбраны'}</div>
                     <div class="text-light opacity-75 fw-semibold mb-4">${selectedRounds} раундов</div>
-                    
+
                     <div class="small opacity-50 text-uppercase" style="letter-spacing:0.1em;">Ожидаем старта</div>
                 </div>
             </div>
@@ -484,12 +485,16 @@ window.PartyBattleUI = {
     renderBottomActions: function (options = {}) {
         const primaryButton = options.primaryButton || '';
         const statusMarkup = options.statusMarkup || '';
+        const hasBackdrop = !!options.hasBackdrop;
         const hasPrimary = !!primaryButton;
         const barModeClass = hasPrimary ? 'pb-bottom-bar--with-primary' : 'pb-bottom-bar--secondary-only';
         const innerPaddingClass = hasPrimary ? 'p-2' : 'p-0';
+        const backdropStyle = (!hasPrimary && hasBackdrop) ? 'background: linear-gradient(to top, var(--bg-app) 50%, transparent) !important; pointer-events: none;' : '';
+        const pointerEvents = (!hasPrimary && hasBackdrop) ? 'pointer-events: auto;' : '';
+
         return `
-            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar ${barModeClass}" style="z-index: 1000;">
-                <div class="rounded-4 ${innerPaddingClass} text-center pb-bottom-bar-inner">
+            <div class="fixed-bottom px-3 pt-1 pb-2 pb-bottom-bar ${barModeClass}" style="z-index: 1000; ${backdropStyle}">
+                <div class="rounded-4 ${innerPaddingClass} text-center pb-bottom-bar-inner" style="${pointerEvents}">
                     ${statusMarkup}
                     ${primaryButton}
                     ${primaryButton ? '<div class="mb-1"></div>' : ''}
@@ -616,6 +621,14 @@ window.PartyBattleUI = {
             this.syncMemeSelection(gameState);
         }
 
+        const searchDiv = document.getElementById('manual-search-div');
+        const searchInput = document.getElementById('meme-search-input');
+        if (searchDiv && searchInput) {
+            this._memeSearchState.isOpen = searchDiv.style.display !== 'none';
+            this._memeSearchState.query = searchInput.value;
+            this._memeSearchState.hasFocus = document.activeElement === searchInput;
+        }
+
         let html = `
             <div class="d-flex flex-column pb-game-screen ${hasBottomPrimary ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
@@ -670,6 +683,24 @@ window.PartyBattleUI = {
         `;
         gameArea.innerHTML = html;
         this.afterRender('round_submission');
+
+        if (usesMemePicker && this._memeSearchState.isOpen) {
+            const newSearchDiv = document.getElementById('manual-search-div');
+            const newSearchToggle = document.getElementById('search-toggle-div');
+            const newSearchInput = document.getElementById('meme-search-input');
+
+            if (newSearchDiv) newSearchDiv.style.display = 'block';
+            if (newSearchToggle) newSearchToggle.style.display = 'none';
+            if (newSearchInput) {
+                newSearchInput.value = this._memeSearchState.query || '';
+                if (this._memeSearchState.hasFocus) {
+                    newSearchInput.focus();
+                    const len = newSearchInput.value.length;
+                    newSearchInput.setSelectionRange(len, len);
+                }
+            }
+            this.renderMemeSearchResults();
+        }
     },
 
     submitAnswer: function (memoUrl = null) {
@@ -757,6 +788,7 @@ window.PartyBattleUI = {
             this._selectedMemeRoundKey = roundKey;
             this._selectedMemeUrl = '';
             this._isSubmittingMemeAnswer = false;
+            this._memeSearchState = { isOpen: false, query: '', results: null, hasFocus: false, requestToken: 0, isLoading: false, error: false };
         }
     },
 
@@ -849,6 +881,7 @@ window.PartyBattleUI = {
                 </div>
 
                 ${this.renderBottomActions({
+                    hasBackdrop: true,
                     statusMarkup: `
                         <div class="d-flex align-items-center justify-content-center gap-2 mb-2 rounded-pill py-1 pb-status-pill">
                             <div class="spinner-grow spinner-grow-sm text-primary" role="status"></div>
@@ -991,7 +1024,7 @@ window.PartyBattleUI = {
                 ${this.renderBottomActions({
                     primaryButton: isHost
                         ? `<button class="btn btn-primary py-2 w-100 rounded-4 fw-bold shadow-sm" style="min-height:42px; font-size:0.92rem;" onclick="window.sendGameAction('next_round')">
-                            СЛЕДУЮЩИЙ РАУНД <i class="bi bi-chevron-right ms-2"></i>
+                            ${(gameState.current_round >= gameState.total_rounds) ? 'ПОСМОТРЕТЬ ИТОГИ ИГРЫ' : 'СЛЕДУЮЩИЙ РАУНД'} <i class="bi bi-chevron-right ms-2"></i>
                         </button>`
                         : '',
                     statusMarkup: !isHost
@@ -1103,7 +1136,7 @@ window.PartyBattleUI = {
                 <div class="px-3 pb-3 mt-auto">
                     ${isHost ? `
                         <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm mb-2 pb-primary-action" style="font-size:0.95rem; border:none;" onclick="window.sendGameAction('rematch')">
-                            <i class="bi bi-arrow-repeat me-2"></i> СЫГРАТЬ ЕЩЁ РАЗ
+                            <i class="bi bi-arrow-repeat me-2"></i> РЕВАНШ
                         </button>
                         <button class="btn w-100 py-2 rounded-4 fw-bold mb-2 text-white pb-secondary-action" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); font-size:0.88rem;" onclick="PartyBattleUI.scheduleNextGame()">
                             <i class="bi bi-calendar-plus me-1"></i> Собрать следующую игру
@@ -1171,35 +1204,96 @@ window.PartyBattleUI = {
     searchGifs: async function (query) {
         const container = document.getElementById('meme-results');
         if (!container) return;
-        if (!query || query.length < 2) return;
+        if (!query || query.length < 2) {
+             this._memeSearchState.results = null;
+             this.renderMemeSearchResults();
+             return;
+        }
 
-        container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div class="small fw-semibold text-muted">Ищем подходящие GIF...</div></div>`;
+        const token = ++this._memeSearchState.requestToken;
+        this._memeSearchState.query = query;
+        this._memeSearchState.isLoading = true;
+        this.renderMemeSearchResults();
+
         try {
             const res = await window.apiRequest({ action: 'game_action', type: 'search_gifs', query: query });
+            if (token !== this._memeSearchState.requestToken) return;
+            this._memeSearchState.isLoading = false;
+
             if (res.status === 'ok' && res.results && res.results.length > 0) {
-                const selectedUrl = this.getSelectedMemeUrl();
-                container.innerHTML = `
-                <div class="row g-2 p-1">
-                    ${res.results.map(gif => {
-                    const url = gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || gif.url;
-                    const isSelected = selectedUrl === url;
-                    return `
-                        <div class="col-6">
-                            <div class="rounded-3 overflow-hidden shadow-sm position-relative pb-meme-card ${isSelected ? 'is-selected' : ''}" data-meme-url="${url}" onclick="window.PartyBattleUI.selectMemeAnswer('${url}', this)">
-                                <img src="${url}" class="w-100 h-100 object-fit-cover" loading="lazy" referrerpolicy="no-referrer">
-                                <div class="position-absolute top-0 end-0 m-2 rounded-pill px-2 py-1 small fw-bold pb-meme-selected-badge ${isSelected ? '' : 'd-none'}" style="font-size:0.68rem;">
-                                    <i class="bi bi-check2 me-1"></i>Выбрано
-                                </div>
-                            </div>
-                        </div>`;
-                }).join('')}
-                </div>`;
+                this._memeSearchState.results = res.results;
             } else {
-                container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><i class="bi bi-search text-primary opacity-50 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Ничего не найдено</div><div class="small text-muted mt-1">Попробуй другой запрос или обнови формулировку.</div></div>`;
+                this._memeSearchState.results = [];
             }
+            this.renderMemeSearchResults();
         } catch (e) {
-            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><i class="bi bi-wifi-off text-danger opacity-75 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Поиск временно недоступен</div><div class="small text-muted mt-1">Повтори попытку через несколько секунд.</div></div>`;
+            if (token !== this._memeSearchState.requestToken) return;
+            this._memeSearchState.isLoading = false;
+            this._memeSearchState.results = [];
+            this._memeSearchState.error = true;
+            this.renderMemeSearchResults();
         }
+    },
+
+    renderMemeSearchResults: function() {
+        const container = document.getElementById('meme-results');
+        if (!container) return;
+
+        if (this._memeSearchState.isLoading) {
+            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div class="small fw-semibold text-muted">Ищем подходящие GIF...</div></div>`;
+            return;
+        }
+
+        if (this._memeSearchState.error) {
+            this._memeSearchState.error = false;
+            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><i class="bi bi-wifi-off text-danger opacity-75 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Поиск временно недоступен</div><div class="small text-muted mt-1">Повтори попытку через несколько секунд.</div></div>`;
+            return;
+        }
+
+        if (this._memeSearchState.results === null) {
+            container.innerHTML = '';
+            return;
+        }
+
+        if (this._memeSearchState.results.length === 0) {
+            container.innerHTML = `<div class="rounded-4 px-3 py-4 text-center mt-3 pb-surface-muted"><i class="bi bi-search text-primary opacity-50 d-block mb-2" style="font-size:1.2rem;"></i><div class="small fw-semibold text-muted">Ничего не найдено</div><div class="small text-muted mt-1">Попробуй другой запрос или обнови формулировку.</div></div>`;
+            return;
+        }
+
+        const selectedUrl = this.getSelectedMemeUrl();
+        container.innerHTML = `
+        <div class="row g-2 p-1">
+            ${this._memeSearchState.results.map(gif => {
+            const url = gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || gif.url;
+            const isSelected = selectedUrl === url;
+            return `
+                <div class="col-6">
+                    <div class="rounded-3 overflow-hidden shadow-sm position-relative pb-meme-card ${isSelected ? 'is-selected' : ''}" data-meme-url="${url}" onclick="window.PartyBattleUI.selectMemeAnswer('${url}', this)">
+                        <img src="${url}" class="w-100 h-100 object-fit-cover" loading="lazy" referrerpolicy="no-referrer">
+                        <div class="position-absolute top-0 end-0 m-2 rounded-pill px-2 py-1 small fw-bold pb-meme-selected-badge ${isSelected ? '' : 'd-none'}" style="font-size:0.68rem;">
+                            <i class="bi bi-check2 me-1"></i>Выбрано
+                        </div>
+                    </div>
+                </div>`;
+        }).join('')}
+        </div>`;
+    },
+
+    closeMemeSearch: function() {
+        this._memeSearchState.isOpen = false;
+        this._memeSearchState.query = '';
+        this._memeSearchState.results = null;
+        document.getElementById('manual-search-div').style.display = 'none';
+        document.getElementById('search-toggle-div').style.display = 'block';
+        document.getElementById('meme-search-input').value = '';
+        document.getElementById('meme-results').innerHTML = '';
+    },
+
+    openMemeSearch: function() {
+        this._memeSearchState.isOpen = true;
+        document.getElementById('manual-search-div').style.display = 'block';
+        document.getElementById('search-toggle-div').style.display = 'none';
+        document.getElementById('meme-search-input').focus();
     }
 };
 
