@@ -1072,9 +1072,16 @@ window.PartyBattleUI = {
             const score = scores[uid];
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
             const isMe = String(uid) === myId;
-            const rankBadge = place === 1
-                ? `<div class="position-absolute d-flex justify-content-center align-items-center bg-warning text-dark fw-bold rounded-circle shadow-sm" style="width:18px; height:18px; font-size:0.6rem; top:-6px; left:-6px; z-index:2;">1</div>`
-                : `<div class="position-absolute d-flex justify-content-center align-items-center bg-secondary text-white fw-bold rounded-circle shadow-sm" style="width:18px; height:18px; font-size:0.6rem; top:-6px; left:-6px; z-index:2;">${place}</div>`;
+            let badgeBg = '#ffd700';
+            let badgeColor = '#000';
+            if (place === 2) {
+                badgeBg = '#c0c0c0';
+                badgeColor = '#000';
+            } else if (place === 3) {
+                badgeBg = '#cd7f32';
+                badgeColor = '#fff';
+            }
+            const rankBadge = `<div class="position-absolute d-flex justify-content-center align-items-center fw-bold rounded-circle shadow-sm" style="width:18px; height:18px; font-size:0.6rem; top:-6px; left:-6px; z-index:2; background-color:${badgeBg}; color:${badgeColor};">${place}</div>`;
             const scale = place === 1 ? 'transform: scale(1.1); z-index: 3;' : 'z-index: 1;';
             return `
                 <div class="d-flex flex-column align-items-center text-center animate__animated animate__fadeInUp" style="width: 95px; ${scale} transition-delay: ${place * 0.1}s;">

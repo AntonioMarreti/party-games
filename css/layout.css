@@ -442,22 +442,6 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
         position: relative;
     }
 
-    /* Notch / Dynamic Island (Attached to Content) */
-    .device-content::before {
-        content: '';
-        position: absolute;
-        top: 12px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 120px;
-        height: 36px;
-        background: #000;
-        border-radius: 18px;
-        z-index: 3000;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        pointer-events: none;
-    }
-
     /* Left Side Buttons (Volume) */
     .device-wrapper::before {
         content: '';
@@ -552,19 +536,6 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
         opacity: 0.4;
     }
 
-    /* ADDED: Specific padding for desktop mockup */
-    #screen-settings .room-content-wrapper,
-    #screen-profile-edit .room-content-wrapper,
-    .friends-view-wrapper {
-        padding-top: calc(60px + env(safe-area-inset-top)) !important;
-        justify-content: flex-start !important;
-    }
-
-    /* Leaderboard HEADER needs the padding, not wrapper (since wrapper is gone) */
-    #screen-leaderboard .header-bg {
-        padding-top: calc(60px + env(safe-area-inset-top)) !important;
-    }
-
     /* Restore bottom padding lost from wrapper removal */
     #screen-leaderboard .content-wrapper {
         padding-bottom: 120px !important;
@@ -642,10 +613,5 @@ body.tg-dark-theme.dark-mode.thermal-safe .bottom-nav .nav-item.active {
         /* Disable click on desktop */
     }
 
-    /* Force space-between for header items on desktop to avoid notch area */
-    #screen-room .d-flex.justify-content-center.mb-3 {
-        justify-content: space-between !important;
-        align-items: center;
-        padding: 0 10px;
-    }
+    /* Desktop room styling */
 }
