@@ -2054,6 +2054,7 @@ body.thermal-safe #tab-games .rooms-empty-actions .btn-primary svg {
     padding: 10px 12px;
     transition: all 0.2s ease;
     user-select: none;
+    overflow: hidden;
 }
 .pb-mode-card.active {
     background: rgba(90, 103, 255, 0.2);

@@ -175,10 +175,10 @@ window.PartyBattleUI = {
                             { id: 'acronym', label: 'Дешифратор', desc: 'Смешная расшифровка' },
                             { id: 'bluff', label: 'Блеф', desc: 'Напиши ложь, угадай правду' }
                         ].map(m => `
-                            <label class="pb-mode-card ${selectedModes.includes(m.id) ? 'active' : ''} d-flex flex-column p-2" style="cursor: pointer; min-height: 70px;">
+                            <label class="pb-mode-card ${selectedModes.includes(m.id) ? 'active' : ''} d-flex flex-column justify-content-center" style="cursor: pointer; padding: 10px 12px; min-height: 64px;">
                                 <input class="d-none pb-mode-cb" type="checkbox" value="${m.id}" ${selectedModes.includes(m.id) ? 'checked' : ''} onchange="PartyBattleUI.updateModesPreview()">
-                                <div class="fw-bold lh-sm mb-1 pb-mode-label" style="font-size: 0.85rem;">${m.label}</div>
-                                <div class="small opacity-75 lh-sm" style="font-size: 0.65rem;">${m.desc}</div>
+                                <div class="fw-bold lh-sm mb-1 pb-mode-label text-truncate" style="font-size: 0.85rem; width: 100%;">${m.label}</div>
+                                <div class="small opacity-75 lh-sm text-truncate" style="font-size: 0.65rem; width: 100%;">${m.desc}</div>
                             </label>
                         `).join('')}
                     </div>
@@ -1031,36 +1031,64 @@ window.PartyBattleUI = {
         const postGameSummary = window.GameSummaryProvider
             ? window.GameSummaryProvider.remember('partybattle', gameState, { players: window.APP_STATE?.room?.players || [] })
             : null;
+        const top3Ids = sortedIds.slice(0, 3);
+        const remainingIds = sortedIds.slice(3);
+
+        const renderPodiumPlayer = (uid, place) => {
+            if (!uid) return '';
+            const score = scores[uid];
+            const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
+            const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
+            const scale = place === 1 ? 'transform: translateY(-10px) scale(1.1); z-index: 3;' : 'z-index: 1;';
+            const isMe = String(uid) === myId;
+            return `
+                <div class="d-flex flex-column align-items-center text-center animate__animated animate__fadeInUp" style="width: 95px; ${scale} transition-delay: ${place * 0.1}s;">
+                    <div class="fs-4 mb-2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">${medal}</div>
+                    <div class="mb-2 position-relative" style="width: ${place === 1 ? '56px' : '44px'}; height: ${place === 1 ? '56px' : '44px'}; margin: 0 auto;">
+                        ${pb_renderAvatar(player, place === 1 ? 'lg' : 'md')}
+                        ${isMe ? `<span class="position-absolute start-50 translate-middle badge bg-white text-dark rounded-pill shadow-sm" style="font-size: 0.55rem; bottom: -12px;">ВЫ</span>` : ''}
+                    </div>
+                    <div class="fw-bold text-truncate w-100 mb-1 mt-1" style="font-size: ${place === 1 ? '0.85rem' : '0.75rem'};">${safeName(player)}</div>
+                    <div class="badge rounded-pill bg-white text-dark shadow-sm" style="font-size: 0.7rem;">${score} XP</div>
+                </div>
+            `;
+        };
 
         let html = `
             <div class="d-flex flex-column pb-results-screen" style="height: var(--pb-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px); background-color: #121216; color: #ffffff;">
                 <div class="header-container text-center mb-3 mt-2 px-3">
                     <div class="small text-uppercase fw-bold mb-2 opacity-50" style="letter-spacing:0.18em;">Игра окончена</div>
-                    <i class="bi bi-trophy-fill display-4 mb-2 animate__animated animate__bounceIn" style="color: var(--primary-color);"></i>
                     <h2 class="fw-bold mb-2">Итоги игры</h2>
-                    <div class="opacity-75 small">Финальный рейтинг после всех раундов.</div>
+                    <div class="opacity-75 small mb-3">Финальный рейтинг после всех раундов.</div>
                 </div>
 
+                ${hasScores ? `
+                <div class="d-flex justify-content-center align-items-end mb-4 gap-2 px-2" style="margin-top: 10px; min-height: 140px;">
+                    ${sortedIds.length > 1 ? renderPodiumPlayer(sortedIds[1], 2) : ''}
+                    ${sortedIds.length > 0 ? renderPodiumPlayer(sortedIds[0], 1) : ''}
+                    ${sortedIds.length > 2 ? renderPodiumPlayer(sortedIds[2], 3) : ''}
+                </div>
+                ` : ''}
+
                 <div class="px-3 mb-4 pb-2">
-                    ${hasScores ? sortedIds.map((uid, index) => {
+                    ${hasScores ? remainingIds.map((uid, remainingIndex) => {
+            const index = remainingIndex + 3;
             const score = scores[uid];
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
-            const isWinner = index === 0;
             const isMe = String(uid) === myId;
             return `
                             <div class="d-flex justify-content-between align-items-center p-3 mb-2 rounded-4 shadow-sm animate__animated animate__fadeInUp"
-                                    style="background: ${isWinner ? 'linear-gradient(135deg, rgba(90,103,255, 0.4), rgba(90,103,255, 0.15))' : 'rgba(255,255,255,0.05)'}; border: 1px solid ${isWinner ? 'rgba(90,103,255,0.3)' : 'rgba(255,255,255,0.05)'}; color: #fff; transition-delay: ${index * 0.08}s;">
+                                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #fff; transition-delay: ${(remainingIndex) * 0.08}s;">
                                 <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:0;">
                                     <div class="fw-bold flex-shrink-0" style="width: 28px;">#${index + 1}</div>
                                     <div class="flex-shrink-0" style="width:38px; height:38px;">${pb_renderAvatar(player, 'sm')}</div>
                                     <div class="d-flex flex-column min-w-0">
                                         <div class="fw-bold text-truncate" style="max-width: 170px;">${safeName(player)}</div>
-                                        ${isWinner ? `<div class="small opacity-75" style="color: #929cff;">Победитель матча</div>` : ''}
                                     </div>
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-2 flex-shrink-0 ms-2">
                                     ${isMe ? `<span class="badge bg-white text-dark" style="font-size:10px;">ВЫ</span>` : ''}
-                                    <span class="badge ${isWinner ? 'bg-primary text-white' : 'bg-white text-dark'} rounded-pill px-3 py-2" style="font-size:0.78rem;">${score} XP</span>
+                                    <span class="badge bg-white text-dark rounded-pill px-3 py-2" style="font-size:0.78rem;">${score} XP</span>
                                 </div>
                             </div>`;
         }).join('') : `
