@@ -533,7 +533,7 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column pb-game-screen ${isHost ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
-                <div class="d-flex flex-column align-items-center flex-grow-1 pb-3 pt-2 animate__animated animate__fadeIn px-3 pb-active-content pb-situation-stage">
+                <div class="d-flex flex-column align-items-center flex-grow-1 pb-3 pt-2 px-3 pb-active-content pb-situation-stage">
         `;
 
         const sitText = gameState.displayPrompt.body || '';
@@ -564,7 +564,7 @@ window.PartyBattleUI = {
             else if (gameState.displayPrompt.kind === 'image') btnText = 'Начать сбор ответов';
             else if (gameState.roundFamily === 'creative_vote' || gameState.roundFamily === 'bluff') btnText = 'Начать сбор ответов';
 
-            primaryButton = `<button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm animate__animated animate__pulse animate__infinite"
+            primaryButton = `<button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm"
                 style="min-height:42px; font-size:0.94rem; box-shadow: 0 12px 28px rgba(var(--primary-rgb), 0.2) !important;"
                 onclick="window.sendGameAction('next_round')">
                 ${btnText} <i class="bi bi-arrow-right"></i>
@@ -586,7 +586,7 @@ window.PartyBattleUI = {
 
         // Auto progress bar animation
         setTimeout(() => {
-            const container = document.querySelector('.animate__fadeIn');
+            const container = document.querySelector('.pb-situation-stage');
             if (!container) return;
             const barContainer = document.createElement('div');
             barContainer.className = 'progress w-100 rounded-pill mt-4 mx-auto';
@@ -633,7 +633,7 @@ window.PartyBattleUI = {
             <div class="d-flex flex-column pb-game-screen ${hasBottomPrimary ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
 
-                <div class="px-3 pt-2 pb-1 animate__animated animate__fadeInDown">
+                <div class="px-3 pt-2 pb-1">
                     <div class="p-2 rounded-4 pb-surface">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
                             <div class="small text-muted fw-bold opacity-75 text-uppercase" style="font-size: 10px; letter-spacing: 0.14em;">${modeMeta.label}</div>
@@ -650,7 +650,7 @@ window.PartyBattleUI = {
         if (hasSubmitted) {
             html += `
                 <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center p-4">
-                    <div class="p-4 rounded-4 animate__animated animate__bounceIn mb-4 pb-surface">
+                    <div class="p-4 rounded-4 mb-4 pb-surface">
                         <i class="bi bi-check-circle-fill text-success display-1 mb-4 d-block"></i>
                         <h3 class="fw-bold" style="color:var(--text-main);">Принято!</h3>
                         <p class="text-muted small mb-4">${gameState.activeMode === 'bluff' ? 'Ложь записана. Ждем остальные ответы...' : 'Ответ отправлен. Ждем остальных игроков...'}</p>
@@ -854,7 +854,7 @@ window.PartyBattleUI = {
             <div class="d-flex flex-column pb-game-screen" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
 
-                <div class="flex-grow-1 px-3 animate__animated animate__fadeIn">
+                <div class="flex-grow-1 px-3">
                     <div class="p-3 mb-3 rounded-4 pb-surface">
                         <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
                             <div class="small text-muted fw-bold text-uppercase" style="letter-spacing:0.14em;">${modeMeta.label}</div>
@@ -866,7 +866,7 @@ window.PartyBattleUI = {
                     </div>
 
                     ${hasVoted ? `
-                        <div class="p-3 mb-3 mx-auto rounded-4 shadow-sm animate__animated animate__pulse text-center"
+                        <div class="p-3 mb-3 mx-auto rounded-4 shadow-sm text-center"
                              style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.9), rgba(34, 197, 94, 0.9)); color: white; border: none; max-width: 240px;">
                             <div class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i> Голос принят!</div>
                             <div class="small opacity-75">Ждем остальных...</div>
@@ -955,11 +955,11 @@ window.PartyBattleUI = {
         let html = `
             <div class="d-flex flex-column pb-game-screen ${isHost ? 'pb-game-screen--with-primary' : ''}" style="min-height: var(--pb-viewport-height, 100dvh); padding-top: calc(env(safe-area-inset-top) + 10px);">
                 ${this.renderHeader(gameState, { compact: true })}
-                <div class="flex-grow-1 d-flex flex-column align-items-center px-3 pt-2 pb-3 text-center position-relative animate__animated animate__fadeIn">
+                <div class="flex-grow-1 d-flex flex-column align-items-center px-3 pt-2 pb-3 text-center position-relative">
                     <h2 class="fw-bold mb-2 text-truncate" style="color:var(--text-main); line-height:1.05; max-width:420px; width:100%; font-size:clamp(1.35rem, 5vw, 1.8rem);">${title}</h2>
                     ${winnerType === 'truth' ? `<div class="text-muted fw-semibold mb-2" style="max-width:420px; font-size:0.9rem;">${subtitle}</div>` : ''}
                     ${((mode === 'meme' || mode === 'caption') && winnerType !== 'truth') ? `
-                        <div class="d-flex flex-column align-items-center animate__animated animate__fadeInUp w-100 mt-2 mb-2">
+                        <div class="d-flex flex-column align-items-center w-100 mt-2 mb-2">
                             ${mode === 'meme' ? `
                                 <img src="${winnerContent}" class="rounded-4 shadow-sm" style="width: 100%; max-width: 280px; height: auto; max-height: 40vh; object-fit: contain; display: block;" referrerpolicy="no-referrer">
                             ` : `
@@ -971,7 +971,7 @@ window.PartyBattleUI = {
                             <div class="fw-bold mt-3" style="color:var(--text-muted); font-size: 0.95rem;">${scoreLabel}</div>
                         </div>
                     ` : `
-                        <div class="p-3 rounded-4 animate__animated animate__fadeInUp pb-surface pb-round-result-card w-100 mt-2 mb-2">
+                        <div class="p-3 rounded-4 pb-surface pb-round-result-card w-100 mt-2 mb-2">
                             ${winnerType === 'truth' ? `
                                 <div class="d-flex align-items-center justify-content-center mb-2">
                                     <span class="badge rounded-pill px-3 py-2 pb-success-pill">Это была правда</span>
@@ -1084,7 +1084,7 @@ window.PartyBattleUI = {
             const rankBadge = `<div class="position-absolute d-flex justify-content-center align-items-center fw-bold rounded-circle shadow-sm" style="width:18px; height:18px; font-size:0.6rem; top:-6px; left:-6px; z-index:2; background-color:${badgeBg}; color:${badgeColor};">${place}</div>`;
             const scale = place === 1 ? 'transform: scale(1.1); z-index: 3;' : 'z-index: 1;';
             return `
-                <div class="d-flex flex-column align-items-center text-center animate__animated animate__fadeInUp" style="width: 95px; ${scale} transition-delay: ${place * 0.1}s;">
+                <div class="d-flex flex-column align-items-center text-center" style="width: 95px; ${scale}">
                     <div class="mb-1 position-relative" style="width: ${place === 1 ? '56px' : '44px'}; height: ${place === 1 ? '56px' : '44px'}; margin: 0 auto;">
                         ${rankBadge}
                         ${pb_renderAvatar(player, place === 1 ? 'lg' : 'md')}
@@ -1117,8 +1117,8 @@ window.PartyBattleUI = {
             const player = (window.APP_STATE?.room?.players || []).find(p => String(p.id) === String(uid));
             const isMe = String(uid) === myId;
             return `
-                            <div class="d-flex align-items-center p-2 mb-1 rounded-3 animate__animated animate__fadeInUp"
-                                    style="background: rgba(255,255,255,0.03); color: #fff; transition-delay: ${(remainingIndex) * 0.08}s;">
+                            <div class="d-flex align-items-center p-2 mb-1 rounded-3"
+                                    style="background: rgba(255,255,255,0.03); color: #fff;">
                                 <div class="opacity-50 fw-bold text-center ms-1 me-2" style="width: 16px; font-size: 0.8rem;">${index + 1}</div>
                                 <div class="me-2 flex-shrink-0" style="width:28px; height:28px;">${pb_renderAvatar(player, 'sm')}</div>
                                 <div class="d-flex align-items-center flex-grow-1 min-w-0">

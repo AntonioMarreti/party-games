@@ -6,7 +6,7 @@ window.PartyBattleModes = {
         if (gameState.roundFamily === 'creative_vote' || gameState.roundFamily === 'bluff') return this.renderJokeSubmission(gameState);
         if (gameState.roundFamily === 'direct_vote') {
             return `
-                <div class="px-2 pb-3 animate__animated animate__fadeIn">
+                <div class="px-2 pb-3">
                     <div class="rounded-4 p-4 text-center pb-surface">
                         <i class="bi bi-hourglass-split text-primary opacity-50 d-block mb-3" style="font-size: 1.8rem;"></i>
                         <div class="fw-bold mb-2" style="color:var(--text-main);">Сейчас начнётся голосование</div>
@@ -45,7 +45,7 @@ window.PartyBattleModes = {
         }
 
         return `
-            <div class="pb-composer-card px-2 pb-2 animate__animated animate__fadeIn">
+            <div class="pb-composer-card px-2 pb-2">
                 <div class="rounded-4 p-2 pb-surface">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
                         <label class="form-label fw-bold small text-muted text-uppercase m-0" style="letter-spacing: 0.14em; opacity: 0.78; font-size: 0.73rem;">${promptText}</label>
@@ -266,7 +266,7 @@ window.PartyBattleModes = {
             const isMe = String(entry.authorId) === myId;
 
             return `
-                        <div class="col-12 animate__animated animate__fadeInUp">
+                        <div class="col-12">
                             <div class="card rounded-4 pb-vote-card ${isMe ? 'is-mine' : ''}"
                                  style="${!hasVoted && !isMe ? 'cursor:pointer;' : ''}"
                                  ${!hasVoted && !isMe ? `onclick="window.PartyBattleUI.submitVote('${entry.id}', this.querySelector('button'))"` : ''}>
