@@ -327,6 +327,14 @@ $routes = [
     'db_doctor' => 'actions/admin.php', // NEW
     'db_repair' => 'actions/admin.php', // NEW
 
+    // QR Auth
+    'create_qr_login_intent' => 'actions/qr_auth.php',
+    'poll_qr_login_intent' => 'actions/qr_auth.php',
+    'scan_qr_login_intent' => 'actions/qr_auth.php',
+    'approve_qr_login_intent' => 'actions/qr_auth.php',
+    'deny_qr_login_intent' => 'actions/qr_auth.php',
+    'redeem_qr_login_intent' => 'actions/qr_auth.php',
+
     // AI
     'generate_content' => 'actions/ai.php',
 
