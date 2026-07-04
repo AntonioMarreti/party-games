@@ -528,6 +528,169 @@ if (!defined('TG_CLIENT_ID')) {
         }
     }
 
+    // === QR Login (Browser) ===
+    let qrAuthPollTimer = null;
+    let qrAuthTimeoutTimer = null;
+    let qrAuthData = null; // Stores intent_id and browser_secret in memory only
+
+    function setQrAuthStatus(message, showRefresh = false) {
+        const container = document.getElementById('qr-auth-container');
+        const statusEl = document.getElementById('qr-auth-status');
+        const refreshBtn = document.getElementById('qr-refresh-btn');
+        if (!container || !statusEl) return;
+
+        container.style.display = 'block';
+        statusEl.textContent = message || '';
+        if (refreshBtn) refreshBtn.style.display = showRefresh ? 'block' : 'none';
+    }
+
+    function clearQrAuthPolling() {
+        if (qrAuthPollTimer) clearInterval(qrAuthPollTimer);
+        if (qrAuthTimeoutTimer) clearTimeout(qrAuthTimeoutTimer);
+        qrAuthPollTimer = null;
+        qrAuthTimeoutTimer = null;
+        qrAuthData = null;
+    }
+
+    function handleQrExpired(message = 'QR код больше не действителен.') {
+        clearQrAuthPolling();
+        setQrAuthStatus(message, true);
+        const wrapper = document.getElementById('qr-code-wrapper');
+        if (wrapper) wrapper.style.opacity = '0.3';
+    }
+
+    async function startQrLogin() {
+        const wrapper = document.getElementById('qr-code-wrapper');
+        const loginLoading = document.getElementById('login-loading');
+
+        clearQrAuthPolling();
+        if (wrapper) wrapper.innerHTML = '';
+        if (wrapper) {
+            wrapper.style.display = 'none';
+            wrapper.style.opacity = '1';
+        }
+
+        setQrAuthStatus('Создаю код для входа...', false);
+        if (loginLoading) loginLoading.style.display = 'block';
+
+        try {
+            const res = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
+                method: 'POST',
+                body: new URLSearchParams({ action: 'create_qr_login_intent' })
+            }).then(r => r.json());
+
+            if (loginLoading) loginLoading.style.display = 'none';
+
+            if (res.status === 'ok' && res.qr_payload) {
+                qrAuthData = {
+                    intent_id: res.intent_id,
+                    browser_secret: res.browser_secret
+                };
+
+                if (wrapper) {
+                    wrapper.style.display = 'inline-block';
+                    new QRCode(wrapper, {
+                        text: res.qr_payload,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                }
+
+                setQrAuthStatus('Откройте Party Games в Telegram, выберите “Войти на компьютере” и отсканируйте код.', false);
+
+                qrAuthPollTimer = setInterval(pollQrLogin, 2000);
+
+                qrAuthTimeoutTimer = setTimeout(() => {
+                    handleQrExpired('Срок действия QR истёк.');
+                }, 90000);
+
+            } else {
+                setQrAuthStatus('Не удалось создать QR код. Попробуйте еще раз.', true);
+            }
+        } catch (e) {
+            if (loginLoading) loginLoading.style.display = 'none';
+            console.error(e);
+            setQrAuthStatus('Ошибка соединения при создании QR.', true);
+        }
+    }
+
+    async function pollQrLogin() {
+        if (!qrAuthData) return;
+
+        try {
+            const res = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    action: 'poll_qr_login_intent',
+                    intent_id: qrAuthData.intent_id,
+                    browser_secret: qrAuthData.browser_secret
+                })
+            }).then(r => r.json());
+
+            if (res.status === 'expired' || res.status === 'denied' || res.status === 'error' || res.status === 'consumed') {
+                handleQrExpired(res.status === 'denied' ? 'Вход отклонён на телефоне.' : 'Срок действия QR истёк.');
+                return;
+            }
+
+            if (res.status === 'scanned') {
+                setQrAuthStatus('Код отсканирован. Подтвердите вход на телефоне.', false);
+            }
+
+            if (res.status === 'approved') {
+                clearQrAuthPolling();
+                setQrAuthStatus('Вход подтверждён! Авторизация...', false);
+                redeemQrLogin();
+            }
+        } catch (e) {
+            console.warn('QR poll error', e);
+        }
+    }
+
+    async function redeemQrLogin() {
+        if (!qrAuthData) return;
+        const loginLoading = document.getElementById('login-loading');
+        if (loginLoading) loginLoading.style.display = 'block';
+
+        const intentId = qrAuthData.intent_id;
+        const browserSecret = qrAuthData.browser_secret;
+
+        // Clear immediately so we don't accidentally redeem twice
+        qrAuthData = null;
+
+        try {
+            const res = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    action: 'redeem_qr_login_intent',
+                    intent_id: intentId,
+                    browser_secret: browserSecret
+                })
+            }).then(r => r.json());
+
+            if (res.status === 'ok' && res.token) {
+                localStorage.setItem('pg_token', res.token);
+                if (window.AuthManager) window.AuthManager.setAuthToken(res.token);
+                window.location.reload();
+            } else {
+                if (loginLoading) loginLoading.style.display = 'none';
+                handleQrExpired('Не удалось получить сессию. Попробуйте ещё раз.');
+            }
+        } catch (e) {
+            if (loginLoading) loginLoading.style.display = 'none';
+            handleQrExpired('Ошибка сети при входе. Попробуйте ещё раз.');
+        }
+    }
+
+    window.addEventListener('beforeunload', clearQrAuthPolling);
+    window.addEventListener('screenChanged', (e) => {
+        if (e.detail && e.detail.screenId !== 'screen-login') {
+            clearQrAuthPolling();
+        }
+    });
+
     // === Sessions: TTL button selector ===
     function selectTtl(btn, days) {
         document.querySelectorAll('.ttl-btn').forEach(b => b.classList.remove('active'));

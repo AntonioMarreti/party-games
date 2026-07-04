@@ -26,7 +26,19 @@
                     Не работает? Войти через бота
                 </button>
 
+                <!-- New: Login via QR -->
+                <button class="btn-link-subtle mt-2" onclick="startQrLogin()"
+                    style="background:none; border:none; color:rgba(255,255,255,0.4); font-size:13px; cursor:pointer; text-decoration:underline; width:100%;">
+                    Войти по QR
+                </button>
+
                 <div id="bot-auth-status" class="mt-3 text-white-50" style="display:none; font-size:12px; line-height:1.45;">
+                </div>
+
+                <div id="qr-auth-container" class="mt-3 text-center" style="display:none; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 15px;">
+                    <div id="qr-code-wrapper" class="mb-3 d-inline-block bg-white p-2 rounded" style="display:none;"></div>
+                    <p id="qr-auth-status" class="text-white-50" style="font-size:12px; line-height:1.45;"></p>
+                    <button id="qr-refresh-btn" class="btn btn-sm btn-outline-light mt-2" style="display:none; margin: 0 auto;" onclick="startQrLogin()">Обновить QR</button>
                 </div>
             </div>
 
