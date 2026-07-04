@@ -1308,8 +1308,8 @@ function renderPlayerList(players, containerId) {
                 ${avatarHtml}
                 ${crown}
             </div>
-            ${botBadge}
             <div class="player-name">${window.safeHTML(p.custom_name) || window.safeHTML(p.first_name)}</div>
+            ${botBadge}
         `;
 
         if (amIHost && p.is_host != 1) {
