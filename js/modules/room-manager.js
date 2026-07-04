@@ -1300,15 +1300,15 @@ function renderPlayerList(players, containerId) {
                 hard: 'Сложный',
                 ai: 'AI'
             };
-            botBadge = `<span class="player-bot-badge player-bot-badge--${difficulty}">${difficultyLabelMap[difficulty] || 'AI'}</span>`;
+            botBadge = `<div class="player-bot-badge player-bot-badge--${difficulty}">${difficultyLabelMap[difficulty] || 'AI'}</div>`;
         }
 
         div.innerHTML = `
             <div class="avatar-slot position-relative d-inline-block">
                 ${avatarHtml}
                 ${crown}
-                ${botBadge}
             </div>
+            ${botBadge}
             <div class="player-name">${window.safeHTML(p.custom_name) || window.safeHTML(p.first_name)}</div>
         `;
 
