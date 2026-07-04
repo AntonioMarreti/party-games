@@ -158,6 +158,9 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
                     return `background-image: url('${String(path).replace(/'/g, "%27")}')`;
                 }
             }
+        } else if (user.is_bot == 1 || String(user.is_bot) === '1') {
+            const botSeed = String(user.id || 'bot');
+            return `background-image: url('https://api.dicebear.com/9.x/adventurer/svg?seed=${botSeed}')`;
         }
         return `background: ${palette};`;
     }
@@ -197,6 +200,12 @@ export function renderAvatar(user, sizeStr = 'md', isLink = false, disableClick 
     // 2. Photo URL (Telegram or External)
     else if (getSafeAvatarUrl(user.photo_url)) {
         innerContent = getAvatarImg(getSafeAvatarUrl(user.photo_url), imgStyle, altName);
+    }
+    // 3. Bot Fallback (from Party Battle logic)
+    else if (user.is_bot == 1 || String(user.is_bot) === '1') {
+        const botSeed = String(user.id || 'bot');
+        const botAvatarUrl = `https://api.dicebear.com/9.x/adventurer/svg?seed=${botSeed}`;
+        innerContent = getAvatarImg(botAvatarUrl, imgStyle, altName);
     }
 
     // Render Container
@@ -294,6 +303,10 @@ export function openAvatarViewer(uidOrStr) {
         }
     } else if (getSafeAvatarUrl(user.photo_url) && user.photo_url !== '🤖') {
         content = getAvatarImg(getSafeAvatarUrl(user.photo_url), viewerStyle, altName, fallbackOnerror, extraAttrs);
+    } else if (user.is_bot == 1 || String(user.is_bot) === '1') {
+        const botSeed = String(user.id || 'bot');
+        const botAvatarUrl = `https://api.dicebear.com/9.x/adventurer/svg?seed=${botSeed}`;
+        content = getAvatarImg(botAvatarUrl, viewerStyle, altName, fallbackOnerror, extraAttrs);
     }
 
     if (!content) {

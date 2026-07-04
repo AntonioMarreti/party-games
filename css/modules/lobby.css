@@ -1806,64 +1806,36 @@ body.dark-mode .player-score {
     min-height: 20px;
     padding: 3px 8px;
     border-radius: 999px;
-    font-size: 9px;
-    font-weight: 900;
-    line-height: 1;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
     margin-bottom: -7px;
-    border: 1px solid transparent;
+    border: 2px solid var(--bg-main);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     white-space: nowrap;
+    color: white;
 }
 
 .player-bot-badge--easy {
-    background: color-mix(in srgb, var(--status-success), white 82%);
-    border-color: color-mix(in srgb, var(--status-success), transparent 68%);
-    color: color-mix(in srgb, var(--status-success), #065f46 28%);
+    background: var(--status-success);
 }
 
 .player-bot-badge--medium {
-    background: color-mix(in srgb, var(--status-warning), white 78%);
-    border-color: color-mix(in srgb, var(--status-warning), transparent 62%);
-    color: color-mix(in srgb, var(--status-warning), #7a4a00 58%);
+    background: var(--status-warning);
 }
 
 .player-bot-badge--hard {
-    background: color-mix(in srgb, var(--status-error), white 88%);
-    border-color: color-mix(in srgb, var(--status-error), transparent 68%);
-    color: color-mix(in srgb, var(--status-error), #7f1d1d 24%);
+    background: var(--status-error);
 }
 
 .player-bot-badge--ai {
-    background: color-mix(in srgb, var(--primary-color), white 86%);
-    border-color: color-mix(in srgb, var(--primary-color), transparent 70%);
-    color: var(--primary-color);
-}
-
-/* Dark mode overrides for badges */
-body.dark-mode .player-bot-badge--easy {
-    background: color-mix(in srgb, var(--status-success), transparent 85%);
-    border-color: color-mix(in srgb, var(--status-success), transparent 70%);
-    color: var(--status-success);
-}
-body.dark-mode .player-bot-badge--medium {
-    background: color-mix(in srgb, var(--status-warning), transparent 85%);
-    border-color: color-mix(in srgb, var(--status-warning), transparent 70%);
-    color: var(--status-warning);
-}
-body.dark-mode .player-bot-badge--hard {
-    background: color-mix(in srgb, var(--status-error), transparent 85%);
-    border-color: color-mix(in srgb, var(--status-error), transparent 70%);
-    color: var(--status-error);
-}
-body.dark-mode .player-bot-badge--ai {
-    background: color-mix(in srgb, var(--primary-color), transparent 85%);
-    border-color: color-mix(in srgb, var(--primary-color), transparent 70%);
-    color: var(--primary-color);
+    background: var(--primary-color);
 }
 
 .host-crown {
     position: absolute;
-    top: -12px;
-    right: -8px;
+    top: -8px;
+    left: -8px;
     color: var(--accent-gold);
     /* Gold color for the star */
     display: flex;
