@@ -1097,7 +1097,7 @@ window.PartyBattleUI = {
         };
 
         let html = `
-            <div class="d-flex flex-column pb-results-screen" style="height: var(--pb-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px); background-color: #121216; color: #ffffff;">
+            <div class="d-flex flex-column pb-results-screen" style="min-height: var(--pb-viewport-height, 100dvh); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 18px); background-color: #121216; color: #ffffff;">
                 <div class="header-container text-center mb-3 mt-2 px-3">
                     <h2 class="fw-bold mb-0">Итоги игры</h2>
                 </div>
@@ -1136,7 +1136,7 @@ window.PartyBattleUI = {
                     `}
                 </div>
 
-                <div class="px-3 pb-3">
+                <div class="px-3 pb-3 mt-auto flex-shrink-0">
                     ${isHost ? `
                         <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm mb-2 pb-primary-action" style="font-size:0.95rem; border:none;" onclick="window.sendGameAction('rematch')">
                             <i class="bi bi-arrow-repeat me-2"></i> РЕВАНШ
