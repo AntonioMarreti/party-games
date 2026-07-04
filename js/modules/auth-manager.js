@@ -214,6 +214,12 @@ async function initApp(tg) {
             const target = (hash && hash !== 'splash' && hash !== 'login') ? hash : (localStorage.getItem('pg_token') ? 'lobby' : 'login');
             if (window.showScreen) window.showScreen(target);
         }
+
+        // Show QR scanner button if available
+        const qrScannerRow = document.getElementById('qr-login-scanner-row');
+        if (qrScannerRow && tg && typeof tg.showScanQrPopup === 'function' && tg.__PGB_MOCK !== true) {
+            qrScannerRow.style.display = 'flex';
+        }
     }
 }
 
@@ -387,6 +393,128 @@ function getGlobalUser() {
     return globalUser;
 }
 
+// === QR LOGIN (Mini App) ===
+
+let qrScanState = 'idle';
+
+function openQrLoginScanner() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg || typeof tg.showScanQrPopup !== 'function') return;
+    if (qrScanState !== 'idle') return;
+
+    qrScanState = 'scanning';
+
+    const onClose = () => {
+        if (qrScanState === 'scanning') {
+            qrScanState = 'idle';
+        }
+        tg.offEvent('scanQrPopupClosed', onClose);
+    };
+    tg.onEvent('scanQrPopupClosed', onClose);
+
+    tg.showScanQrPopup({
+        text: 'Отсканируйте QR-код на экране компьютера'
+    }, (text) => {
+        if (qrScanState !== 'scanning') return true;
+
+        if (typeof text !== 'string' || !text.startsWith('pgbqr:v1:')) {
+            if (window.showToast) window.showToast('Это не QR-код Party Games', 'error');
+            return false;
+        }
+
+        const parts = text.split(':');
+        if (parts.length !== 4) {
+            if (window.showToast) window.showToast('Это не QR-код Party Games', 'error');
+            return false;
+        }
+
+        const intentId = parts[2];
+        const scanSecret = parts[3];
+
+        qrScanState = 'confirming';
+        tg.closeScanQrPopup();
+
+        (async () => {
+            try {
+                if (window.showLoading) {
+                    window.__qrScanLoader = window.showLoading('Сканирование...', 'Проверка кода');
+                }
+
+                const res = await window.apiRequest({
+                    action: 'scan_qr_login_intent',
+                    intent_id: intentId,
+                    scan_secret: scanSecret
+                });
+
+                if (window.__qrScanLoader) {
+                    window.__qrScanLoader.close();
+                    window.__qrScanLoader = null;
+                }
+
+                if (res.status === 'ok') {
+                    const deviceLabel = res.device_label || 'Неизвестное устройство';
+
+                    if (window.showConfirmation) {
+                        window.showConfirmation(
+                            'Войти на компьютере?',
+                            deviceLabel,
+                            async () => {
+                                try {
+                                    if (window.showLoading) window.__qrApproveLoader = window.showLoading('Вход...', 'Подтверждаем');
+                                    const approveRes = await window.apiRequest({
+                                        action: 'approve_qr_login_intent',
+                                        intent_id: intentId
+                                    });
+                                    if (window.__qrApproveLoader) window.__qrApproveLoader.close();
+
+                                    if (approveRes.status === 'ok') {
+                                        if (window.showToast) window.showToast('Вход подтверждён на компьютере', 'success');
+                                    } else {
+                                        if (window.showToast) window.showToast('Ошибка при подтверждении', 'error');
+                                    }
+                                } catch (e) {
+                                    if (window.__qrApproveLoader) window.__qrApproveLoader.close();
+                                    if (window.showToast) window.showToast('Ошибка сети при подтверждении', 'error');
+                                } finally {
+                                    qrScanState = 'idle';
+                                }
+                            },
+                            {
+                                confirmText: 'Войти',
+                                cancelText: 'Отмена',
+                                onCancel: async () => {
+                                    try {
+                                        await window.apiRequest({
+                                            action: 'deny_qr_login_intent',
+                                            intent_id: intentId
+                                        });
+                                    } catch (e) {}
+                                    if (window.showToast) window.showToast('Вход отменён', 'info');
+                                    qrScanState = 'idle';
+                                }
+                            }
+                        );
+                    } else {
+                        qrScanState = 'idle';
+                    }
+                } else {
+                    qrScanState = 'idle';
+                    if (window.showToast) window.showToast('QR код недействителен или истёк', 'error');
+                }
+            } catch (e) {
+                qrScanState = 'idle';
+                if (window.__qrScanLoader) {
+                    window.__qrScanLoader.close();
+                    window.__qrScanLoader = null;
+                }
+                if (window.showToast) window.showToast('Ошибка сети. Попробуйте еще раз', 'error');
+            }
+        })();
+
+        return true;
+    });
+}
+
 // === EXPORT ===
 
 window.AuthManager = {
@@ -400,7 +528,8 @@ window.AuthManager = {
     setAuthToken,
     getAuthToken,
     setGlobalUser,
-    getGlobalUser
+    getGlobalUser,
+    openQrLoginScanner
 };
 
 // Global Aliases (for backward compatibility during migration)

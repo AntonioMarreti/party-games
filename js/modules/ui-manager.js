@@ -472,7 +472,7 @@ function showConfirmation(title, message, onConfirm, options = {}) {
                 <button class="glass-btn ${isDanger ? 'glass-btn-danger' : 'glass-btn-primary'} w-100 py-3" id="${confirmId}-yes">
                     ${confirmText}
                 </button>
-                <button class="glass-btn w-100 py-3" onclick="closeAlert('${confirmId}')" style="background: var(--divider);">
+                <button class="glass-btn w-100 py-3" id="${confirmId}-no" style="background: var(--divider);">
                     ${cancelText}
                 </button>
             </div>
@@ -488,6 +488,13 @@ function showConfirmation(title, message, onConfirm, options = {}) {
         yesBtn.onclick = () => {
             closeAlert(confirmId);
             if (typeof onConfirm === 'function') onConfirm();
+        };
+    }
+    const noBtn = document.getElementById(confirmId + '-no');
+    if (noBtn) {
+        noBtn.onclick = () => {
+            closeAlert(confirmId);
+            if (typeof options.onCancel === 'function') options.onCancel();
         };
     }
 }

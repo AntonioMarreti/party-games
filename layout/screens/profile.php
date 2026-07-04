@@ -128,6 +128,18 @@
                 <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
             </button>
 
+            <!-- QR Login Scanner -->
+            <button type="button" id="qr-login-scanner-row" class="btn-unstyled settings-item clickable profile-menu-row"
+                onclick="window.AuthManager?.openQrLoginScanner?.()" style="display:none;">
+                <div class="profile-menu-main">
+                    <div class="profile-menu-icon">
+                        <i class="bi bi-qr-code-scan fs-5" aria-hidden="true"></i>
+                    </div>
+                    <span class="profile-menu-title">Войти на компьютере</span>
+                </div>
+                <i class="bi bi-chevron-right profile-menu-chevron" aria-hidden="true"></i>
+            </button>
+
             <!-- Donate -->
             <button type="button" class="btn-unstyled settings-item clickable profile-menu-row" onclick="showScreen('donate')">
                 <div class="profile-menu-main">
