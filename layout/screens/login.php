@@ -41,6 +41,7 @@
                         <div id="qr-loading" class="spinner-border spinner-border-sm text-white-50" role="status" style="display:none;"></div>
                         <p id="qr-auth-status" class="text-white-50 mb-0" style="font-size:12px; line-height:1.45;"></p>
                     </div>
+                    <p id="qr-auth-countdown" class="text-white-50 mt-2 mb-0" style="font-size:12px; display:none;"></p>
                     <button id="qr-refresh-btn" class="btn btn-sm btn-outline-light mt-2" style="display:none; margin: 0 auto;" onclick="startQrLogin()">Обновить QR</button>
                 </div>
             </div>

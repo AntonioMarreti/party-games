@@ -531,6 +531,7 @@ if (!defined('TG_CLIENT_ID')) {
     let qrAuthPollTimer = null;
     let qrAuthTimeoutTimer = null;
     let qrAuthData = null; // Stores intent_id and browser_secret in memory only
+    let qrAuthCountdownTimer = null;
 
     function setQrAuthStatus(message, showRefresh = false) {
         const container = document.getElementById('qr-auth-container');
@@ -546,8 +547,14 @@ if (!defined('TG_CLIENT_ID')) {
     function clearQrAuthPolling(clearData = true) {
         if (qrAuthPollTimer) clearInterval(qrAuthPollTimer);
         if (qrAuthTimeoutTimer) clearTimeout(qrAuthTimeoutTimer);
+        if (qrAuthCountdownTimer) clearInterval(qrAuthCountdownTimer);
+
+        const countdownEl = document.getElementById('qr-auth-countdown');
+        if (countdownEl) countdownEl.style.display = 'none';
+
         qrAuthPollTimer = null;
         qrAuthTimeoutTimer = null;
+        qrAuthCountdownTimer = null;
         if (clearData) {
             qrAuthData = null;
         }
@@ -558,6 +565,36 @@ if (!defined('TG_CLIENT_ID')) {
         setQrAuthStatus(message, true);
         const wrapper = document.getElementById('qr-code-wrapper');
         if (wrapper) wrapper.style.opacity = '0.3';
+    }
+
+    function startQrCountdown(expiresAtStr) {
+        const countdownEl = document.getElementById('qr-auth-countdown');
+        if (!countdownEl || !expiresAtStr) return;
+
+        const expiresAtMs = new Date(expiresAtStr.replace(' ', 'T')).getTime();
+        countdownEl.style.display = 'block';
+
+        function update() {
+            const diffMs = expiresAtMs - Date.now();
+            if (diffMs <= 0) {
+                if (qrAuthCountdownTimer) clearInterval(qrAuthCountdownTimer);
+                countdownEl.style.display = 'none';
+                return;
+            }
+            const diffSec = Math.floor(diffMs / 1000);
+            const m = Math.floor(diffSec / 60);
+            const s = diffSec % 60;
+            const timeStr = m + ':' + (s < 10 ? '0' : '') + s;
+
+            if (diffSec <= 15) {
+                countdownEl.textContent = 'Осталось ' + timeStr;
+            } else {
+                countdownEl.textContent = 'Код действует ещё ' + timeStr;
+            }
+        }
+
+        update();
+        qrAuthCountdownTimer = setInterval(update, 1000);
     }
 
     async function startQrLogin() {
@@ -601,6 +638,10 @@ if (!defined('TG_CLIENT_ID')) {
                 }
 
                 setQrAuthStatus('Откройте Party Games в Telegram, выберите “Войти на компьютере” и отсканируйте код.', false);
+
+                if (res.expires_at) {
+                    startQrCountdown(res.expires_at);
+                }
 
                 qrAuthPollTimer = setInterval(pollQrLogin, 2000);
 
