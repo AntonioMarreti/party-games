@@ -41,7 +41,10 @@
                         <div id="qr-loading" class="spinner-border spinner-border-sm text-white-50" role="status" style="display:none;"></div>
                         <p id="qr-auth-status" class="text-white-50 mb-0" style="font-size:12px; line-height:1.45;"></p>
                     </div>
-                    <p id="qr-auth-countdown" class="text-white-50 mt-2 mb-0" style="font-size:12px; display:none;"></p>
+                    <div id="qr-auth-countdown" class="mt-3 align-items-center justify-content-center gap-2 rounded-pill px-3 py-1" style="display:none; font-size:13px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.9);">
+                        <i class="bi bi-clock-history"></i>
+                        <span id="qr-auth-countdown-text" class="fw-medium"></span>
+                    </div>
                     <button id="qr-refresh-btn" class="btn btn-sm btn-outline-light mt-2" style="display:none; margin: 0 auto;" onclick="startQrLogin()">Обновить QR</button>
                 </div>
             </div>

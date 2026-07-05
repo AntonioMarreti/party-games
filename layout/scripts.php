@@ -569,10 +569,11 @@ if (!defined('TG_CLIENT_ID')) {
 
     function startQrCountdown(expiresAtStr) {
         const countdownEl = document.getElementById('qr-auth-countdown');
-        if (!countdownEl || !expiresAtStr) return;
+        const textEl = document.getElementById('qr-auth-countdown-text');
+        if (!countdownEl || !textEl || !expiresAtStr) return;
 
         const expiresAtMs = new Date(expiresAtStr.replace(' ', 'T')).getTime();
-        countdownEl.style.display = 'block';
+        countdownEl.style.display = 'inline-flex';
 
         function update() {
             const diffMs = expiresAtMs - Date.now();
@@ -587,9 +588,9 @@ if (!defined('TG_CLIENT_ID')) {
             const timeStr = m + ':' + (s < 10 ? '0' : '') + s;
 
             if (diffSec <= 15) {
-                countdownEl.textContent = 'Осталось ' + timeStr;
+                textEl.textContent = 'Осталось ' + timeStr;
             } else {
-                countdownEl.textContent = 'Код действует ещё ' + timeStr;
+                textEl.textContent = 'Код действует ещё ' + timeStr;
             }
         }
 
