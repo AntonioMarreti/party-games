@@ -544,12 +544,14 @@ if (!defined('TG_CLIENT_ID')) {
         if (refreshBtn) refreshBtn.style.display = showRefresh ? 'block' : 'none';
     }
 
-    function clearQrAuthPolling() {
+    function clearQrAuthPolling(clearData = true) {
         if (qrAuthPollTimer) clearInterval(qrAuthPollTimer);
         if (qrAuthTimeoutTimer) clearTimeout(qrAuthTimeoutTimer);
         qrAuthPollTimer = null;
         qrAuthTimeoutTimer = null;
-        qrAuthData = null;
+        if (clearData) {
+            qrAuthData = null;
+        }
     }
 
     function handleQrExpired(message = 'QR код больше не действителен.') {
@@ -640,7 +642,7 @@ if (!defined('TG_CLIENT_ID')) {
             }
 
             if (res.status === 'approved') {
-                clearQrAuthPolling();
+                clearQrAuthPolling(false);
                 setQrAuthStatus('Вход подтверждён! Авторизация...', false);
                 redeemQrLogin();
             }
