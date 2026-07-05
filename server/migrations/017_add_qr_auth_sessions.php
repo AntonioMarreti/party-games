@@ -10,8 +10,6 @@ if (!isset($pdo) || !$pdo instanceof PDO) {
 }
 
 try {
-    $pdo->beginTransaction();
-
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS qr_auth_sessions (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,7 +31,6 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
-    $pdo->commit();
     echo "Migration 017: Created qr_auth_sessions table successfully.\n";
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {
