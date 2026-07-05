@@ -240,8 +240,14 @@ function sendError($message)
 
 // === AUTHENTICATION ===
 
+$publicActions = [
+    'create_qr_login_intent',
+    'poll_qr_login_intent',
+    'redeem_qr_login_intent'
+];
+
 $currentUser = getUserByToken($token);
-if (!$currentUser) {
+if (!$currentUser && !in_array($action, $publicActions)) {
     echo json_encode(['status' => 'auth_error']);
     exit;
 }
