@@ -395,7 +395,6 @@ if (!defined('TG_CLIENT_ID')) {
         }
 
         logAuthClientEvent('bot_fallback_available', { reason });
-        setBotAuthStatus('Telegram Desktop не завершил вход. Попробуйте вход через бота.', false);
     }
 
     function openBotAuthUrl(url) {
@@ -563,7 +562,7 @@ if (!defined('TG_CLIENT_ID')) {
 
     async function startQrLogin() {
         const wrapper = document.getElementById('qr-code-wrapper');
-        const loginLoading = document.getElementById('login-loading');
+        const loginLoading = document.getElementById('qr-loading');
 
         clearQrAuthPolling();
         if (wrapper) wrapper.innerHTML = '';
@@ -573,7 +572,7 @@ if (!defined('TG_CLIENT_ID')) {
         }
 
         setQrAuthStatus('Создаю код для входа...', false);
-        if (loginLoading) loginLoading.style.display = 'block';
+        if (loginLoading) loginLoading.style.display = 'inline-block';
 
         try {
             const res = await fetch((window.APP_BASE_PATH || '/') + 'server/api.php', {
@@ -653,8 +652,8 @@ if (!defined('TG_CLIENT_ID')) {
 
     async function redeemQrLogin() {
         if (!qrAuthData) return;
-        const loginLoading = document.getElementById('login-loading');
-        if (loginLoading) loginLoading.style.display = 'block';
+        const loginLoading = document.getElementById('qr-loading');
+        if (loginLoading) loginLoading.style.display = 'inline-block';
 
         const intentId = qrAuthData.intent_id;
         const browserSecret = qrAuthData.browser_secret;
