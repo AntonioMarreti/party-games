@@ -327,6 +327,11 @@
         return null;
     }
 
+    function resolveInsetValue(inset, side) {
+        const value = normalizeInsetValue(inset, side);
+        return value === null ? 0 : value;
+    }
+
     function applyTelegramCssVariables(shell, webApp, fallbackHeight) {
         const viewportHeight = normalizeViewportHeight(webApp) || fallbackHeight;
         shell.style.setProperty('--durak-viewport-height', `${Math.round(viewportHeight)}px`);
@@ -335,6 +340,8 @@
 
         const contentInset = webApp.contentSafeAreaInset || null;
         const safeInset = webApp.safeAreaInset || null;
+        const topInset = Math.max(resolveInsetValue(contentInset, 'top'), resolveInsetValue(safeInset, 'top'));
+        const topControlsClearance = webApp.platform === 'ios' ? topInset + 74 : topInset;
         const variables = [
             ['--durak-content-top', contentInset, 'top'],
             ['--durak-content-bottom', contentInset, 'bottom'],
@@ -346,6 +353,7 @@
             const value = normalizeInsetValue(inset, side);
             if (value !== null) shell.style.setProperty(name, `${value}px`);
         });
+        shell.style.setProperty('--durak-top-controls-clearance', `${Math.round(topControlsClearance)}px`);
 
         return viewportHeight;
     }
