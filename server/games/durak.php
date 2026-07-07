@@ -119,6 +119,16 @@ function getInitialState()
     return durakBuildInitialState($playerOrder);
 }
 
+function durakCreateInitialState(PDO $pdo, array $room): array
+{
+    $roomId = (int) ($room['id'] ?? 0);
+    if ($roomId <= 0) {
+        throw new RuntimeException('Durak room is missing');
+    }
+
+    return durakBuildInitialState(durakGetRoomPlayerOrder($pdo, $roomId));
+}
+
 function handleGameAction($pdo, $room, $user, $postData)
 {
     $state = json_decode($room['game_state'] ?? '', true);

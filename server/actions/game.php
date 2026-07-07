@@ -20,6 +20,7 @@ function getMinPlayersForGame(string $gameName): int
         'spyfall' => 3,
         'minesweeper_br' => 1,
         'backgammon_game' => 2,
+        'durak' => 2,
     ];
 
     return $minPlayers[$gameName] ?? 2;
@@ -87,13 +88,32 @@ function action_start_game($pdo, $user, $data)
             'humans_total' => $counts['human_players'],
         ]);
     }
+    if ($gameName === 'durak') {
+        $humanPlayers = (int) ($counts['human_players'] ?? 0);
+        $totalPlayers = (int) ($counts['total_players'] ?? 0);
+        if ($humanPlayers < 2 || $humanPlayers > 4 || $totalPlayers !== $humanPlayers) {
+            failGameLifecycle('Для Дурака нужно 2–4 живых игрока без ботов', [
+                'actor_user_id' => (int) $user['id'],
+                'room_id' => (int) $room['id'],
+                'room_code' => $room['room_code'] ?? null,
+                'requested_action' => 'start_game',
+                'game_type' => $gameName,
+                'players_total' => $totalPlayers,
+                'humans_total' => $humanPlayers,
+            ]);
+        }
+    }
 
     $gameFile = __DIR__ . "/../games/$gameName.php";
 
     if (file_exists($gameFile)) {
         require_once $gameFile;
         if (function_exists('getInitialState')) {
-            $initialState = getInitialState();
+            if ($gameName === 'durak' && function_exists('durakCreateInitialState')) {
+                $initialState = durakCreateInitialState($pdo, $room);
+            } else {
+                $initialState = getInitialState();
+            }
             if ($gameName === 'partybattle' && function_exists('pb_extractPersistedRecentCards')) {
                 $persistedRecentCards = pb_extractPersistedRecentCards($room['game_state'] ?? null);
                 if (!empty($persistedRecentCards)) {
@@ -261,6 +281,15 @@ function action_game_action($pdo, $user, $data)
         if (!function_exists('handleGameAction')) {
             TelegramLogger::log("API Error: handleGameAction not found after require", ['gameFile' => $gameFile]);
             throw new Exception('Game action handler missing');
+        }
+
+        if ($gameName === 'durak') {
+            $durakAction = $data['game_action'] ?? $data['type'] ?? '';
+            if (!in_array($durakAction, ['attack_card', 'defend_card', 'pass_throw_in', 'take_cards'], true)) {
+                $pdo->rollBack();
+                echo json_encode(['status' => 'error', 'message' => 'Unknown Durak action']);
+                return;
+            }
         }
 
         $result = handleGameAction($pdo, $room, $user, $data);

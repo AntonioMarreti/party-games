@@ -473,6 +473,14 @@ function action_get_state($pdo, $user, $data)
 
             $room['game_state'] = json_encode($state, JSON_UNESCAPED_UNICODE);
         }
+    } elseif ($gameType === 'durak' && !empty($room['game_state'])) {
+        $state = json_decode($room['game_state'], true);
+        if (is_array($state)) {
+            require_once __DIR__ . '/../games/durak.php';
+            if (function_exists('durakBuildPlayerProjection')) {
+                $room['game_state'] = json_encode(durakBuildPlayerProjection($state, $user['id']), JSON_UNESCAPED_UNICODE);
+            }
+        }
     }
 
     echo json_encode([
