@@ -13,6 +13,18 @@
         lastError: ''
     };
 
+    const resizeState = {
+        observer: null,
+        mutationObserver: null,
+        telegramWebApp: null,
+        observedElement: null,
+        rafId: 0,
+        listenersBound: false,
+        telegramListenersBound: false,
+        lastWidth: 0,
+        lastHeight: 0
+    };
+
     function parseState(res) {
         const raw = res?.room?.game_state || res?.game_state;
         if (!raw) return {};
@@ -284,6 +296,187 @@
         `;
     }
 
+    function getContainerSize(gameArea, shell) {
+        const rect = gameArea?.getBoundingClientRect ? gameArea.getBoundingClientRect() : null;
+        const width = Math.round(rect?.width || shell?.clientWidth || window.innerWidth || 0);
+        const height = Math.round(rect?.height || shell?.clientHeight || window.innerHeight || 0);
+        return { width, height };
+    }
+
+    function getTelegramWebApp() {
+        return window.Telegram?.WebApp || null;
+    }
+
+    function hasInsetValue(inset, side) {
+        return inset && Object.prototype.hasOwnProperty.call(inset, side);
+    }
+
+    function normalizeInsetValue(inset, side) {
+        if (!hasInsetValue(inset, side)) return null;
+        const value = Number(inset[side]);
+        return Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
+
+    function normalizeViewportHeight(webApp) {
+        const viewportHeight = Number(webApp?.viewportHeight);
+        if (Number.isFinite(viewportHeight) && viewportHeight > 0) return viewportHeight;
+
+        const stableHeight = Number(webApp?.viewportStableHeight);
+        if (Number.isFinite(stableHeight) && stableHeight > 0) return stableHeight;
+
+        return null;
+    }
+
+    function applyTelegramCssVariables(shell, webApp, fallbackHeight) {
+        const viewportHeight = normalizeViewportHeight(webApp) || fallbackHeight;
+        shell.style.setProperty('--durak-viewport-height', `${Math.round(viewportHeight)}px`);
+
+        if (!webApp) return viewportHeight;
+
+        const contentInset = webApp.contentSafeAreaInset || null;
+        const safeInset = webApp.safeAreaInset || null;
+        const variables = [
+            ['--durak-content-top', contentInset, 'top'],
+            ['--durak-content-bottom', contentInset, 'bottom'],
+            ['--durak-safe-top', safeInset, 'top'],
+            ['--durak-safe-bottom', safeInset, 'bottom']
+        ];
+
+        variables.forEach(([name, inset, side]) => {
+            const value = normalizeInsetValue(inset, side);
+            if (value !== null) shell.style.setProperty(name, `${value}px`);
+        });
+
+        return viewportHeight;
+    }
+
+    function applyContainerLayout(shell, gameArea) {
+        if (!shell || !gameArea || !document.body.contains(shell)) {
+            cleanupResizeHandling();
+            return;
+        }
+
+        const { width, height } = getContainerSize(gameArea, shell);
+        if (!width || !height) return;
+        const viewportHeight = applyTelegramCssVariables(shell, getTelegramWebApp(), height);
+        const effectiveHeight = Math.round(viewportHeight || height);
+
+        const layout = width >= 720 ? 'wide' : width <= 430 ? 'compact' : 'medium';
+        const heightMode = effectiveHeight <= 680 ? 'short' : 'regular';
+        const changed = resizeState.lastWidth !== width
+            || resizeState.lastHeight !== effectiveHeight
+            || shell.dataset.layout !== layout
+            || shell.dataset.height !== heightMode;
+
+        if (!changed) return;
+
+        resizeState.lastWidth = width;
+        resizeState.lastHeight = effectiveHeight;
+        shell.dataset.layout = layout;
+        shell.dataset.height = heightMode;
+        shell.style.setProperty('--durak-app-height', `${effectiveHeight}px`);
+    }
+
+    function scheduleContainerLayout() {
+        if (resizeState.rafId) return;
+
+        resizeState.rafId = window.requestAnimationFrame(() => {
+            resizeState.rafId = 0;
+            const shell = document.getElementById('durak-shell');
+            const gameArea = document.getElementById('game-area');
+            if (!shell || !gameArea) {
+                cleanupResizeHandling();
+                return;
+            }
+            applyContainerLayout(shell, gameArea);
+        });
+    }
+
+    function bindResizeFallbacks() {
+        if (resizeState.listenersBound) return;
+        window.addEventListener('resize', scheduleContainerLayout, { passive: true });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', scheduleContainerLayout, { passive: true });
+        }
+        resizeState.listenersBound = true;
+    }
+
+    function bindTelegramEvents() {
+        if (resizeState.telegramListenersBound) return;
+
+        const webApp = getTelegramWebApp();
+        if (!webApp || typeof webApp.onEvent !== 'function') return;
+
+        ['contentSafeAreaChanged', 'safeAreaChanged', 'viewportChanged'].forEach(eventName => {
+            webApp.onEvent(eventName, scheduleContainerLayout);
+        });
+        resizeState.telegramWebApp = webApp;
+        resizeState.telegramListenersBound = true;
+    }
+
+    function cleanupResizeHandling() {
+        if (resizeState.observer) {
+            resizeState.observer.disconnect();
+            resizeState.observer = null;
+        }
+        if (resizeState.mutationObserver) {
+            resizeState.mutationObserver.disconnect();
+            resizeState.mutationObserver = null;
+        }
+        resizeState.observedElement = null;
+
+        if (resizeState.rafId) {
+            window.cancelAnimationFrame(resizeState.rafId);
+            resizeState.rafId = 0;
+        }
+
+        if (resizeState.listenersBound) {
+            window.removeEventListener('resize', scheduleContainerLayout);
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', scheduleContainerLayout);
+            }
+            resizeState.listenersBound = false;
+        }
+
+        if (resizeState.telegramListenersBound && resizeState.telegramWebApp && typeof resizeState.telegramWebApp.offEvent === 'function') {
+            ['contentSafeAreaChanged', 'safeAreaChanged', 'viewportChanged'].forEach(eventName => {
+                resizeState.telegramWebApp.offEvent(eventName, scheduleContainerLayout);
+            });
+        }
+        resizeState.telegramWebApp = null;
+        resizeState.telegramListenersBound = false;
+    }
+
+    function watchDurakRemoval(gameArea) {
+        if (!('MutationObserver' in window) || resizeState.mutationObserver) return;
+
+        resizeState.mutationObserver = new MutationObserver(() => {
+            if (!document.getElementById('durak-shell')) {
+                cleanupResizeHandling();
+            }
+        });
+        resizeState.mutationObserver.observe(gameArea, { childList: true });
+    }
+
+    function setupResizeHandling(shell, gameArea) {
+        bindResizeFallbacks();
+        bindTelegramEvents();
+        watchDurakRemoval(gameArea);
+
+        if ('ResizeObserver' in window) {
+            if (!resizeState.observer) {
+                resizeState.observer = new ResizeObserver(scheduleContainerLayout);
+            }
+            if (resizeState.observedElement !== gameArea) {
+                resizeState.observer.disconnect();
+                resizeState.observer.observe(gameArea);
+                resizeState.observedElement = gameArea;
+            }
+        }
+
+        applyContainerLayout(shell, gameArea);
+    }
+
     function renderGame(res) {
         const state = parseState(res);
         if (!selectedAttackIsValid(state)) uiState.selectedAttackCardId = null;
@@ -293,6 +486,7 @@
         if (!gameArea) return;
 
         const shell = renderShell(gameArea);
+        setupResizeHandling(shell, gameArea);
         const status = shell.querySelector('#durak-status-pill');
         if (status) status.textContent = statusCopy(state, res);
 
@@ -411,4 +605,5 @@
     }
 
     window.renderDurakGame = renderGame;
+    window.cleanupDurakGame = cleanupResizeHandling;
 })();
