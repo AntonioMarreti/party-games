@@ -5,6 +5,17 @@
         D: { symbol: '♦', label: 'бубны', tone: 'red' },
         C: { symbol: '♣', label: 'трефы', tone: 'black' }
     };
+    const DURAK_RANK_VALUES = {
+        6: 6,
+        7: 7,
+        8: 8,
+        9: 9,
+        10: 10,
+        J: 11,
+        Q: 12,
+        K: 13,
+        A: 14
+    };
 
     const uiState = {
         selectedCardId: null,
@@ -110,6 +121,38 @@
         return openAttacks(state).some(pair => pair.attack === uiState.selectedAttackCardId);
     }
 
+    function cardCopy(cardId) {
+        const meta = suitMeta(cardId);
+        return `${cardRank(cardId)}${meta.symbol}`;
+    }
+
+    function cardRankValue(cardId) {
+        return DURAK_RANK_VALUES[cardRank(cardId)] || 0;
+    }
+
+    function canBeatCard(defenseCardId, attackCardId, trumpSuit) {
+        const defenseSuit = cardSuit(defenseCardId);
+        const attackSuit = cardSuit(attackCardId);
+        if (defenseSuit === attackSuit) {
+            return cardRankValue(defenseCardId) > cardRankValue(attackCardId);
+        }
+        return defenseSuit === trumpSuit && attackSuit !== trumpSuit;
+    }
+
+    function defenseTargetCard(state, res) {
+        if (!isMyDefenseTurn(state, res)) return '';
+        const attacks = openAttacks(state);
+        if (attacks.length === 1) return attacks[0].attack || '';
+        if (selectedAttackIsValid(state)) return uiState.selectedAttackCardId;
+        return '';
+    }
+
+    function canUseDefenseCard(state, res, cardId) {
+        const attackCardId = defenseTargetCard(state, res);
+        if (!attackCardId) return false;
+        return canBeatCard(cardId, attackCardId, state.trump?.suit || '');
+    }
+
     function statusCopy(state, res) {
         if (state.phase === 'finished') {
             if (state.result?.reason === 'all_finished') return 'Партия завершена без проигравшего';
@@ -160,7 +203,11 @@
             `is-${meta.tone}`,
             options.small ? 'is-small' : '',
             options.selected ? 'is-selected' : '',
-            options.ghost ? 'is-ghost' : ''
+            options.ghost ? 'is-ghost' : '',
+            options.defend ? 'is-defense-card' : '',
+            options.muted ? 'is-muted' : '',
+            options.defendable ? 'is-defendable' : '',
+            options.waitingTarget ? 'is-waiting-target' : ''
         ].filter(Boolean).join(' ');
         const attrs = options.button
             ? `button type="button" ${options.disabled ? 'disabled' : ''} data-card-id="${esc(cardId)}" class="${classes}"`
@@ -200,7 +247,15 @@
         }).join('');
     }
 
-    function renderTable(state) {
+    function defenseStatusCopy(state, res) {
+        if (!isMyDefenseTurn(state, res)) return '';
+        const attacks = openAttacks(state);
+        if (attacks.length <= 1) return '';
+        if (selectedAttackIsValid(state)) return `Бьёшь ${cardCopy(uiState.selectedAttackCardId)}`;
+        return 'Выбери карту атаки на столе';
+    }
+
+    function renderTable(state, res) {
         const table = state.table || [];
         if (!table.length) {
             return `
@@ -212,18 +267,22 @@
         }
 
         return `
+            ${defenseStatusCopy(state, res) ? `<div class="durak-defense-status">${esc(defenseStatusCopy(state, res))}</div>` : ''}
             <div class="durak-table-grid">
                 ${table.map(pair => {
                     const open = pair.attack && !pair.defend;
                     const selected = uiState.selectedAttackCardId === pair.attack;
+                    const canSelect = open && isMyDefenseTurn(state, res) && openAttacks(state).length > 1;
                     return `
                         <button type="button"
-                            class="durak-trick ${open ? 'is-open' : ''} ${selected ? 'is-selected' : ''}"
+                            class="durak-trick ${open ? 'is-open' : ''} ${selected ? 'is-selected' : ''} ${pair.defend ? 'is-covered' : ''}"
                             data-attack-card="${esc(pair.attack || '')}"
-                            ${open ? '' : 'disabled'}>
-                            ${pair.attack ? renderCard(pair.attack, { small: true }) : ''}
-                            <div class="durak-trick-arrow"></div>
-                            ${pair.defend ? renderCard(pair.defend, { small: true }) : '<div class="durak-card-slot">Защита</div>'}
+                            ${canSelect ? '' : 'disabled'}>
+                            <span class="durak-trick-cards">
+                                ${pair.attack ? renderCard(pair.attack, { small: true }) : ''}
+                                ${pair.defend ? renderCard(pair.defend, { small: true, defend: true }) : '<span class="durak-card-slot">Защита</span>'}
+                            </span>
+                            ${canSelect ? '<span class="durak-trick-prompt">Выбрать эту атаку</span>' : ''}
                         </button>
                     `;
                 }).join('')}
@@ -259,9 +318,12 @@
 
     function renderHand(state, res) {
         const cards = state.my_hand || [];
+        const defenseTurn = isMyDefenseTurn(state, res);
+        const defenseTarget = defenseTargetCard(state, res);
+        const needsDefenseTarget = defenseTurn && openAttacks(state).length > 1 && !defenseTarget;
         const disabled = !isMyTurn(state, res) || uiState.busy || state.phase === 'finished';
-        const actionHint = isMyDefenseTurn(state, res)
-            ? 'Выбери открытую атаку на столе, затем карту защиты'
+        const actionHint = defenseTurn
+            ? (needsDefenseTarget ? 'Выбери карту атаки на столе' : 'Выбери карту защиты')
             : canAttack(state, res)
                 ? ((state.table || []).length ? 'Подкинь карту совпадающего ранга или пасуй' : 'Выбери карту для атаки')
                 : 'Ждём ход соперника';
@@ -275,11 +337,18 @@
                 <div class="durak-hand-count">${cards.length}</div>
             </div>
             <div class="durak-hand" role="list">
-                ${cards.map(cardId => renderCard(cardId, {
-                    button: true,
-                    disabled,
-                    selected: uiState.selectedCardId === cardId
-                })).join('')}
+                ${cards.map(cardId => {
+                    const defensePlayable = defenseTurn && canUseDefenseCard(state, res, cardId);
+                    const defenseMuted = defenseTurn && (!defensePlayable || needsDefenseTarget);
+                    return renderCard(cardId, {
+                        button: true,
+                        disabled: disabled || (defenseTurn && !needsDefenseTarget && !defensePlayable),
+                        selected: uiState.selectedCardId === cardId,
+                        muted: defenseMuted,
+                        defendable: defensePlayable && !needsDefenseTarget,
+                        waitingTarget: needsDefenseTarget
+                    });
+                }).join('')}
             </div>
         `;
     }
@@ -288,10 +357,17 @@
         if (state.phase === 'finished') {
             return '<div class="durak-final">Партия завершена</div>';
         }
+        if (isMyDefenseTurn(state, res)) {
+            return `
+                <div class="durak-actions is-single is-defense">
+                    <button type="button" class="durak-action-btn is-danger" data-action="take" ${canTake(state, res) && !uiState.busy ? '' : 'disabled'}>Взять</button>
+                </div>
+            `;
+        }
+        if (!canPass(state, res)) return '';
         return `
-            <div class="durak-actions">
-                <button type="button" class="durak-action-btn" data-action="pass" ${canPass(state, res) && !uiState.busy ? '' : 'disabled'}>Пас</button>
-                <button type="button" class="durak-action-btn is-danger" data-action="take" ${canTake(state, res) && !uiState.busy ? '' : 'disabled'}>Взять</button>
+            <div class="durak-actions is-single">
+                <button type="button" class="durak-action-btn" data-action="pass" ${!uiState.busy ? '' : 'disabled'}>Пас</button>
             </div>
         `;
     }
@@ -487,7 +563,7 @@
 
     function renderGame(res) {
         const state = parseState(res);
-        if (!selectedAttackIsValid(state)) uiState.selectedAttackCardId = null;
+        if (!isMyDefenseTurn(state, res) || !selectedAttackIsValid(state)) uiState.selectedAttackCardId = null;
         if (!Array.isArray(state.my_hand) || !state.my_hand.includes(uiState.selectedCardId)) uiState.selectedCardId = null;
 
         const gameArea = document.getElementById('game-area');
@@ -510,7 +586,7 @@
                 <div class="durak-seats">${renderPlayers(res, state)}</div>
                 <div class="durak-center">
                     ${renderDeck(state)}
-                    ${renderTable(state)}
+                    ${renderTable(state, res)}
                     ${renderControls(state, res)}
                 </div>
             `;
@@ -564,7 +640,8 @@
         shell.querySelectorAll('[data-attack-card]').forEach(button => {
             button.onclick = () => {
                 if (!isMyDefenseTurn(state, res) || button.disabled) return;
-                uiState.selectedAttackCardId = button.dataset.attackCard || '';
+                const attackCardId = button.dataset.attackCard || '';
+                uiState.selectedAttackCardId = uiState.selectedAttackCardId === attackCardId ? null : attackCardId;
                 renderGame(res);
             };
         });
@@ -576,9 +653,14 @@
                 uiState.selectedCardId = cardId;
 
                 if (isMyDefenseTurn(state, res)) {
-                    const attackCardId = uiState.selectedAttackCardId || '';
+                    const attackCardId = defenseTargetCard(state, res);
                     if (!attackCardId) {
                         setError('Выбери карту атаки на столе');
+                        renderGame(res);
+                        return;
+                    }
+                    if (!canUseDefenseCard(state, res, cardId)) {
+                        setError('Эта карта не бьёт выбранную атаку');
                         renderGame(res);
                         return;
                     }

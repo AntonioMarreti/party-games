@@ -275,9 +275,10 @@
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.64);
     min-height: 112px;
-    display: grid;
-    grid-template-columns: 1fr 12px 1fr;
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     padding: 8px;
 }
@@ -291,11 +292,45 @@
     background: rgba(219, 234, 254, 0.74);
 }
 
-.durak-trick-arrow {
-    width: 12px;
-    height: 2px;
+.durak-trick-cards {
+    position: relative;
+    width: 82px;
+    height: 70px;
+    display: block;
+}
+
+.durak-trick-cards .durak-card,
+.durak-trick-cards .durak-card-slot {
+    position: absolute;
+}
+
+.durak-trick-cards .durak-card:first-child {
+    left: 0;
+    top: 0;
+}
+
+.durak-trick-cards .durak-card.is-defense-card,
+.durak-trick-cards .durak-card-slot {
+    right: 0;
+    bottom: 0;
+}
+
+.durak-trick-prompt {
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 850;
+    line-height: 1;
+}
+
+.durak-defense-status {
+    margin: -1px 0 1px;
     border-radius: 999px;
-    background: rgba(100, 116, 139, 0.34);
+    padding: 7px 10px;
+    background: rgba(219, 234, 254, 0.8);
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: center;
 }
 
 .durak-card,
@@ -328,6 +363,16 @@ button.durak-card:active:not(:disabled) {
 button.durak-card:disabled {
     cursor: default;
     opacity: 0.62;
+}
+
+button.durak-card.is-muted {
+    opacity: 0.38;
+    filter: grayscale(0.25);
+}
+
+button.durak-card.is-defendable {
+    border-color: rgba(37, 99, 235, 0.48);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
 }
 
 .durak-card.is-red {
@@ -378,6 +423,10 @@ button.durak-card:disabled {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+}
+
+.durak-actions.is-single {
+    grid-template-columns: 1fr;
 }
 
 .durak-action-btn {
