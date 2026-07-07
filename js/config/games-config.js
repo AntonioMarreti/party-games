@@ -477,6 +477,38 @@ window.AVAILABLE_GAMES = [
         ]
     },
     {
+        id: 'durak',
+        category: 'strategy',
+        name: 'Дурак',
+        icon: 'bi-suit-spade-fill',
+        color: '#2563eb',
+        bgColor: 'rgba(37, 99, 235, 0.12)',
+        promoImage: '',
+        description: 'Классическая подкидная карточная партия для 2–4 игроков.',
+        longDescription: `
+            <p><strong>Дурак</strong> — серверная версия подкидного Дурака для приватной комнаты. Игроки атакуют, защищаются, подкидывают карты и добирают из общей колоды.</p>
+            <p><strong>В MVP:</strong></p>
+            <ul>
+                <li><strong>Честные руки:</strong> сервер хранит все карты, а игрок видит только свою руку.</li>
+                <li><strong>Живые игроки:</strong> партия рассчитана на 2–4 участников без ботов.</li>
+                <li><strong>Колода 36 карт:</strong> классический набор от шестёрок до тузов.</li>
+            </ul>
+        `,
+        stats: { players: '2-4', time: '10-20 мин', difficulty: 'Средняя' },
+        rules: [
+            { icon: 'bi-shield-check', text: 'Защищайтесь старшей картой той же масти или козырем' },
+            { icon: 'bi-arrow-repeat', text: 'Подкидывайте только ранги, которые уже есть на столе' },
+            { icon: 'bi-eye-slash', text: 'Чужие руки скрыты и показываются только числом карт' },
+            { icon: 'bi-person-check', text: 'Ход строго один за другим через сервер' }
+        ],
+        files: [
+            'js/games/durak/durak.css',
+            'js/games/durak/ui.js',
+            'js/games/durak/index.js'
+        ],
+        renderFunction: 'render_durak'
+    },
+    {
         id: 'tictactoe',
         category: 'strategy',
         name: 'Крестики-Нолики',
