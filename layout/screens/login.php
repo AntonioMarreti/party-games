@@ -58,6 +58,29 @@
                 <p class="mt-3 text-white-50" style="font-size: 12px;">Похоже, возникла проблема с загрузкой данных Telegram.</p>
             </div>
 
+            <div id="dev-login-panel" class="mt-3 text-start" style="display:none; background: rgba(0,0,0,0.24); border: 1px solid rgba(255,255,255,0.16); border-radius: 12px; padding: 12px;">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <span class="text-white-50" style="font-size: 12px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase;">QA dev login</span>
+                    <span class="text-white-50" style="font-size: 11px;">debug only</span>
+                </div>
+                <label for="dev-login-secret" class="form-label text-white-50 mb-1" style="font-size: 12px;">QA/dev secret</label>
+                <input id="dev-login-secret" type="password" class="form-control form-control-sm mb-2" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Если требуется endpoint">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-sm btn-outline-light w-100" data-dev-login-index="1" onclick="handleDevLogin(1)">Dev 1</button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-sm btn-outline-light w-100" data-dev-login-index="2" onclick="handleDevLogin(2)">Dev 2</button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-sm btn-outline-light w-100" data-dev-login-index="3" onclick="handleDevLogin(3)">Dev 3</button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-sm btn-outline-light w-100" data-dev-login-index="4" onclick="handleDevLogin(4)">Dev 4</button>
+                    </div>
+                </div>
+                <div id="dev-login-status" class="mt-2" role="status" aria-live="polite" style="display:none; font-size: 12px; line-height: 1.35;"></div>
+            </div>
 
         </div>
     </div>

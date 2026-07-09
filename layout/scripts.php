@@ -305,9 +305,49 @@ if (!defined('TG_CLIENT_ID')) {
 
         const host = window.location.hostname;
         const params = new URLSearchParams(window.location.search);
-        const explicitDebug = params.get('debug_dev_login') === '1' || localStorage.getItem('DEBUG_DEV_LOGIN') === '1';
+        const explicitDebug = params.get('debug_dev_login') === '1';
         const localHost = ['localhost', '127.0.0.1', '::1'].includes(host);
         panel.style.display = (explicitDebug || localHost) ? 'block' : 'none';
+    }
+
+    function setDevLoginStatus(message, isError = false) {
+        const statusEl = document.getElementById('dev-login-status');
+        if (!statusEl) return;
+
+        statusEl.style.display = message ? 'block' : 'none';
+        statusEl.textContent = message || '';
+        statusEl.style.color = isError ? 'rgba(255, 184, 184, 0.95)' : 'rgba(255, 255, 255, 0.72)';
+    }
+
+    async function handleDevLogin(index) {
+        const panel = document.getElementById('dev-login-panel');
+        if (!panel || panel.style.display === 'none') return;
+
+        const secretInput = document.getElementById('dev-login-secret');
+        const secret = secretInput ? secretInput.value : '';
+        const buttons = Array.from(panel.querySelectorAll('[data-dev-login-index]'));
+
+        buttons.forEach(button => { button.disabled = true; });
+        setDevLoginStatus(`Вхожу как Dev ${index}...`);
+
+        try {
+            if (typeof window.devLogin !== 'function') {
+                setDevLoginStatus('Dev login недоступен на этой странице.', true);
+                return;
+            }
+
+            const result = await window.devLogin(index, secret, { silent: true });
+            if (result && result.status === 'ok') {
+                setDevLoginStatus(`Готово: Dev ${index}`);
+                return;
+            }
+
+            setDevLoginStatus((result && result.message) || 'Dev login не выполнен.', true);
+        } catch (e) {
+            setDevLoginStatus('Ошибка сети. Попробуйте ещё раз.', true);
+        } finally {
+            buttons.forEach(button => { button.disabled = false; });
+        }
     }
 
     let telegramLoginScriptPromise = null;

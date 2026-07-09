@@ -322,7 +322,14 @@ function logout() {
     }
 }
 
-async function devLogin(index = 1, secret = '') {
+async function devLogin(index = 1, secret = '', options = {}) {
+    const silent = options && options.silent === true;
+
+    function reportError(title, message) {
+        if (!silent && window.showAlert) window.showAlert(title, message, 'error');
+        return { status: 'error', message };
+    }
+
     try {
         const formData = new FormData();
         formData.append('action', 'dev_login');
@@ -341,9 +348,7 @@ async function devLogin(index = 1, secret = '') {
         if (window.API_URL) {
             response = await fetch(window.API_URL, { method: 'POST', body: formData });
         } else {
-            // Fallback or error
-            console.error("API_URL not found for devLogin");
-            return;
+            return reportError('Ошибка', 'Dev login недоступен.');
         }
 
         const data = await response.json();
@@ -362,12 +367,13 @@ async function devLogin(index = 1, secret = '') {
             }
 
             if (window.startPolling) window.startPolling();
-            if (window.showAlert) window.showAlert('Успех', 'Вы вошли как ' + (data.user.custom_name || data.user.first_name), 'success');
+            if (!silent && window.showAlert) window.showAlert('Успех', 'Вы вошли как ' + (data.user.custom_name || data.user.first_name), 'success');
+            return data;
         } else {
-            if (window.showAlert) window.showAlert('Ошибка', data.message, 'error');
+            return reportError('Ошибка', data.message || 'Dev login не выполнен.');
         }
     } catch (e) {
-        if (window.showAlert) window.showAlert('Ошибка сети', e.message, 'error');
+        return reportError('Ошибка сети', 'Ошибка сети. Попробуйте ещё раз.');
     }
 }
 
