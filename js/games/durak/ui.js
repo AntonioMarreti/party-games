@@ -117,6 +117,18 @@
         return (state.table || []).filter(pair => pair?.attack && !pair?.defend);
     }
 
+    function allAttacksCovered(state) {
+        return Array.isArray(state.table) && state.table.length > 0 && openAttacks(state).length === 0;
+    }
+
+    function isBeatContext(state) {
+        return state.defender_mode !== 'taking' && allAttacksCovered(state);
+    }
+
+    function passActionLabel(state) {
+        return isBeatContext(state) ? 'Бито' : 'Пас';
+    }
+
     function selectedAttackIsValid(state) {
         return openAttacks(state).some(pair => pair.attack === uiState.selectedAttackCardId);
     }
@@ -155,21 +167,21 @@
 
     function statusCopy(state, res) {
         if (state.phase === 'finished') {
-            if (state.result?.reason === 'all_finished') return 'Партия завершена без проигравшего';
-            const loser = getPlayer(res, state.result?.loser_id);
-            return loser ? `${playerName(loser)} остался с картами` : 'Партия завершена';
+            return 'Итог партии';
         }
 
         const actor = getPlayer(res, state.actor_id);
         const actorName = actor ? playerName(actor) : 'Игрок';
         if (isMyTurn(state, res)) {
             if (state.phase === 'defense') return 'Твоя защита';
-            if (state.defender_mode === 'taking') return 'Можно подкинуть или пасовать';
-            return (state.table || []).length ? 'Твой ход: подкинь или пасуй' : 'Твоя атака';
+            if (state.defender_mode === 'taking') return 'Можно подкинуть или сказать «Пас»';
+            if (isBeatContext(state)) return 'Можно подкинуть или сказать «Бито»';
+            return (state.table || []).length ? 'Можно подкинуть' : 'Твоя атака';
         }
-        if (state.phase === 'defense') return `${actorName} защищается`;
-        if (state.defender_mode === 'taking') return `${actorName} решает подкинуть`;
-        return `Ходит ${actorName}`;
+        if (state.phase === 'defense') return 'Соперник решает: бить или взять';
+        if (state.defender_mode === 'taking') return `${actorName} выбирает: подкинуть или пас`;
+        if (isBeatContext(state)) return `${actorName} выбирает: подкинуть или бито`;
+        return (state.table || []).length ? 'Ждём подкидывание' : `Ходит ${actorName}`;
     }
 
     function renderShell(container) {
@@ -316,17 +328,121 @@
         `;
     }
 
+    function playerNameById(res, id) {
+        const myId = getMyId(res);
+        if (String(id) === myId) return 'Ты';
+        const player = getPlayer(res, id);
+        return player ? playerName(player) : 'Игрок вышел';
+    }
+
+    function finalTitle(state, res) {
+        const myId = getMyId(res);
+        const loserId = state.result?.loser_id == null ? '' : String(state.result.loser_id);
+
+        if (state.result?.reason === 'all_finished' || !loserId) {
+            return 'Партия завершилась без проигравшего';
+        }
+        if (loserId === myId) return 'Ты остался дураком';
+
+        const loserName = playerNameById(res, loserId);
+        return `${loserName} остался дураком`;
+    }
+
+    function finalSubtitle(state, res) {
+        const myId = getMyId(res);
+        const playerOrder = (state.player_order || []).map(String);
+        const finishOrder = (state.finish_order || []).map(String);
+        const loserId = state.result?.loser_id == null ? '' : String(state.result.loser_id);
+
+        if (!playerOrder.includes(myId)) return 'Ты уже вышел из этой партии.';
+        if (state.result?.reason === 'all_finished' || !loserId) return 'Все игроки избавились от карт.';
+        if (loserId === myId) return 'У остальных игроков карты закончились раньше.';
+        if (finishOrder.includes(myId)) return 'Ты победил и вышел из партии раньше проигравшего.';
+        return 'Партия закончена.';
+    }
+
+    function renderFinishOrder(state, res) {
+        const finishOrder = (state.finish_order || []).map(String);
+        if ((state.player_order || []).length < 3 || !finishOrder.length) return '';
+
+        return `
+            <div class="durak-final-order">
+                <div class="durak-final-section-title">Порядок выхода</div>
+                <ol>
+                    ${finishOrder.map(playerId => `
+                        <li>
+                            <span class="durak-final-place">${esc(playerNameById(res, playerId))}</span>
+                        </li>
+                    `).join('')}
+                </ol>
+            </div>
+        `;
+    }
+
+    function renderFinalCardsSummary(state, res) {
+        const handCounts = new Map((state.opponent_hands || []).map(item => [String(item.player_id), Number(item.count || 0)]));
+        const myId = getMyId(res);
+        handCounts.set(myId, Array.isArray(state.my_hand) ? state.my_hand.length : 0);
+        const ids = (state.player_order || []).map(String);
+        if (!ids.length) return '';
+
+        return `
+            <div class="durak-final-hands">
+                <div class="durak-final-section-title">Карты на руках</div>
+                <div class="durak-final-hand-list">
+                    ${ids.map(playerId => `
+                        <div class="durak-final-hand-row">
+                            <span>${esc(playerNameById(res, playerId))}</span>
+                            <strong>${Number(handCounts.get(playerId) || 0)}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderFinalScreen(state, res) {
+        const canReturn = Number(res?.is_host || 0) === 1 && typeof window.finishGameSession === 'function';
+        return `
+            <div class="durak-final-screen">
+                <div class="durak-final-hero">
+                    <div class="durak-final-kicker">Финал</div>
+                    <div class="durak-final-title">${esc(finalTitle(state, res))}</div>
+                    <div class="durak-final-subtitle">${esc(finalSubtitle(state, res))}</div>
+                </div>
+                <div class="durak-final-grid">
+                    ${renderFinishOrder(state, res)}
+                    ${renderFinalCardsSummary(state, res)}
+                </div>
+                ${canReturn ? `
+                    <button type="button" class="durak-action-btn durak-return-btn" data-action="return-room">
+                        Вернуться в комнату
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }
+
     function renderHand(state, res) {
         const cards = state.my_hand || [];
+        if (state.phase === 'finished') return '';
+
         const defenseTurn = isMyDefenseTurn(state, res);
         const defenseTarget = defenseTargetCard(state, res);
         const needsDefenseTarget = defenseTurn && openAttacks(state).length > 1 && !defenseTarget;
         const disabled = !isMyTurn(state, res) || uiState.busy || state.phase === 'finished';
+        const waitingHint = state.phase === 'defense'
+            ? 'Ждём защиту'
+            : state.defender_mode === 'taking'
+                ? 'Ждём подкидывание'
+                : 'Ждём атаку';
         const actionHint = defenseTurn
             ? (needsDefenseTarget ? 'Выбери карту атаки на столе' : 'Выбери карту защиты')
             : canAttack(state, res)
-                ? ((state.table || []).length ? 'Подкинь карту совпадающего ранга или пасуй' : 'Выбери карту для атаки')
-                : 'Ждём ход соперника';
+                ? ((state.table || []).length
+                    ? (isBeatContext(state) ? 'Подкинь карту совпадающего ранга или скажи «Бито»' : 'Подкинь карту совпадающего ранга или скажи «Пас»')
+                    : 'Выбери карту для атаки')
+                : waitingHint;
 
         return `
             <div class="durak-hand-head">
@@ -354,9 +470,7 @@
     }
 
     function renderControls(state, res) {
-        if (state.phase === 'finished') {
-            return '<div class="durak-final">Партия завершена</div>';
-        }
+        if (state.phase === 'finished') return '';
         if (isMyDefenseTurn(state, res)) {
             return `
                 <div class="durak-actions is-single is-defense">
@@ -367,7 +481,7 @@
         if (!canPass(state, res)) return '';
         return `
             <div class="durak-actions is-single">
-                <button type="button" class="durak-action-btn" data-action="pass" ${!uiState.busy ? '' : 'disabled'}>Пас</button>
+                <button type="button" class="durak-action-btn" data-action="pass" ${!uiState.busy ? '' : 'disabled'}>${esc(passActionLabel(state))}</button>
             </div>
         `;
     }
@@ -571,6 +685,7 @@
 
         const shell = renderShell(gameArea);
         setupResizeHandling(shell, gameArea);
+        shell.classList.toggle('is-finished', state.phase === 'finished');
         const status = shell.querySelector('#durak-status-pill');
         if (status) status.textContent = statusCopy(state, res);
 
@@ -582,14 +697,16 @@
 
         const board = shell.querySelector('#durak-board');
         if (board) {
-            board.innerHTML = `
-                <div class="durak-seats">${renderPlayers(res, state)}</div>
-                <div class="durak-center">
-                    ${renderDeck(state)}
-                    ${renderTable(state, res)}
-                    ${renderControls(state, res)}
-                </div>
-            `;
+            board.innerHTML = state.phase === 'finished'
+                ? renderFinalScreen(state, res)
+                : `
+                    <div class="durak-seats">${renderPlayers(res, state)}</div>
+                    <div class="durak-center">
+                        ${renderDeck(state)}
+                        ${renderTable(state, res)}
+                        ${renderControls(state, res)}
+                    </div>
+                `;
         }
 
         const hand = shell.querySelector('#durak-hand-shell');
@@ -690,6 +807,13 @@
         if (takeBtn) {
             takeBtn.onclick = () => {
                 if (!takeBtn.disabled) sendDurakAction('take_cards');
+            };
+        }
+
+        const returnBtn = shell.querySelector('[data-action="return-room"]');
+        if (returnBtn) {
+            returnBtn.onclick = () => {
+                if (typeof window.finishGameSession === 'function') window.finishGameSession();
             };
         }
     }
