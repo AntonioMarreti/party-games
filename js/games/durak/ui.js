@@ -21,7 +21,8 @@
         selectedCardId: null,
         selectedAttackCardId: null,
         busy: false,
-        lastError: ''
+        lastError: '',
+        lastRes: null
     };
 
     const resizeState = {
@@ -676,6 +677,7 @@
     }
 
     function renderGame(res) {
+        uiState.lastRes = res;
         const state = parseState(res);
         if (!isMyDefenseTurn(state, res) || !selectedAttackIsValid(state)) uiState.selectedAttackCardId = null;
         if (!Array.isArray(state.my_hand) || !state.my_hand.includes(uiState.selectedCardId)) uiState.selectedCardId = null;
@@ -750,6 +752,7 @@
             return { status: 'error' };
         } finally {
             uiState.busy = false;
+            if (uiState.lastRes) renderGame(uiState.lastRes);
         }
     }
 
