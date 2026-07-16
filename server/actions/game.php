@@ -295,7 +295,7 @@ function action_game_action($pdo, $user, $data)
 
         if ($gameName === 'durak') {
             $durakAction = $data['game_action'] ?? $data['type'] ?? '';
-            if (!in_array($durakAction, ['attack_card', 'defend_card', 'pass_throw_in', 'take_cards'], true)) {
+            if (!in_array($durakAction, ['attack_card', 'defend_card', 'pass_throw_in', 'take_cards', 'transfer_card'], true)) {
                 $pdo->rollBack();
                 echo json_encode(['status' => 'error', 'message' => 'Unknown Durak action']);
                 return;
