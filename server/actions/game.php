@@ -110,7 +110,17 @@ function action_start_game($pdo, $user, $data)
         require_once $gameFile;
         if (function_exists('getInitialState')) {
             if ($gameName === 'durak' && function_exists('durakCreateInitialState')) {
-                $initialState = durakCreateInitialState($pdo, $room);
+                try {
+                    $initialState = durakCreateInitialState($pdo, $room, $data);
+                } catch (InvalidArgumentException $error) {
+                    failGameLifecycle($error->getMessage(), [
+                        'actor_user_id' => (int) $user['id'],
+                        'room_id' => (int) $room['id'],
+                        'room_code' => $room['room_code'] ?? null,
+                        'requested_action' => 'start_game',
+                        'game_type' => $gameName,
+                    ]);
+                }
             } else {
                 $initialState = getInitialState();
             }

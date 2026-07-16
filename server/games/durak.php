@@ -1,6 +1,6 @@
 <?php
 
-const DURAK_SCHEMA_VERSION = 1;
+const DURAK_SCHEMA_VERSION = 2;
 const DURAK_DECK_PROFILE_ID = 'durak_36';
 const DURAK_HAND_SIZE = 6;
 const DURAK_MIN_PLAYERS = 2;
@@ -53,7 +53,11 @@ function durakGetRoomPlayerOrder(PDO $pdo, int $roomId): array
     return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 }
 
-function durakBuildInitialState(array $playerOrder, string $profileId = DURAK_DECK_PROFILE_ID): array
+function durakBuildInitialState(
+    array $playerOrder,
+    string $profileId = DURAK_DECK_PROFILE_ID,
+    array $rules = ['allow_throw_in' => true, 'allow_transfer' => false]
+): array
 {
     $playerOrder = array_values(array_map('strval', $playerOrder));
     $playerCount = count($playerOrder);
@@ -79,6 +83,7 @@ function durakBuildInitialState(array $playerOrder, string $profileId = DURAK_DE
 
     return [
         'schema_version' => DURAK_SCHEMA_VERSION,
+        'rules' => durakNormalizeRules($rules),
         'phase' => 'attack',
         'deck_profile_id' => $profileId,
         'player_order' => $playerOrder,
@@ -119,14 +124,77 @@ function getInitialState()
     return durakBuildInitialState($playerOrder);
 }
 
-function durakCreateInitialState(PDO $pdo, array $room): array
+function durakCreateInitialState(PDO $pdo, array $room, array $data = []): array
 {
     $roomId = (int) ($room['id'] ?? 0);
     if ($roomId <= 0) {
         throw new RuntimeException('Durak room is missing');
     }
 
-    return durakBuildInitialState(durakGetRoomPlayerOrder($pdo, $roomId));
+    return durakBuildInitialState(
+        durakGetRoomPlayerOrder($pdo, $roomId),
+        DURAK_DECK_PROFILE_ID,
+        durakRulesFromInput($data)
+    );
+}
+
+function durakNormalizeBooleanValue($value, string $fieldName): bool
+{
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_int($value) && ($value === 0 || $value === 1)) {
+        return $value === 1;
+    }
+
+    if (is_string($value)) {
+        $normalized = strtolower(trim($value));
+        if ($normalized === '1' || $normalized === 'true') {
+            return true;
+        }
+        if ($normalized === '0' || $normalized === 'false') {
+            return false;
+        }
+    }
+
+    throw new InvalidArgumentException("Invalid boolean value for {$fieldName}");
+}
+
+function durakRulesFromInput(array $data): array
+{
+    return [
+        'allow_throw_in' => array_key_exists('allow_throw_in', $data)
+            ? durakNormalizeBooleanValue($data['allow_throw_in'], 'allow_throw_in')
+            : true,
+        'allow_transfer' => array_key_exists('allow_transfer', $data)
+            ? durakNormalizeBooleanValue($data['allow_transfer'], 'allow_transfer')
+            : false,
+    ];
+}
+
+function durakNormalizeRules($rules): array
+{
+    $defaults = [
+        'allow_throw_in' => true,
+        'allow_transfer' => false,
+    ];
+    if (!is_array($rules)) {
+        return $defaults;
+    }
+
+    foreach ($defaults as $fieldName => $defaultValue) {
+        if (!array_key_exists($fieldName, $rules)) {
+            continue;
+        }
+        try {
+            $defaults[$fieldName] = durakNormalizeBooleanValue($rules[$fieldName], $fieldName);
+        } catch (InvalidArgumentException $error) {
+            $defaults[$fieldName] = $defaultValue;
+        }
+    }
+
+    return $defaults;
 }
 
 function handleGameAction($pdo, $room, $user, $postData)
@@ -166,6 +234,10 @@ function handleGameAction($pdo, $room, $user, $postData)
         return durakHandleTakeCards($state, $userId);
     }
 
+    if ($action === 'transfer_card') {
+        return durakHandleTransferCard($state, $userId, (string) ($postData['card_id'] ?? ''));
+    }
+
     return durakError('Unknown Durak action');
 }
 
@@ -188,7 +260,8 @@ function durakBuildPlayerProjection(array $state, $viewerId): array
     }
 
     return [
-        'schema_version' => $state['schema_version'] ?? DURAK_SCHEMA_VERSION,
+        'schema_version' => DURAK_SCHEMA_VERSION,
+        'rules' => durakNormalizeRules($state['rules'] ?? null),
         'phase' => $state['phase'] ?? 'attack',
         'deck_profile_id' => $state['deck_profile_id'] ?? DURAK_DECK_PROFILE_ID,
         'player_order' => $state['player_order'] ?? [],
@@ -233,6 +306,9 @@ function durakHandleAttackCard(array $state, string $userId, string $cardId): ar
     }
     if (!$isOpeningAttack && in_array($userId, $state['passed_throwers'] ?? [], true)) {
         return durakError('You have already passed this trick');
+    }
+    if (!$isOpeningAttack && ($state['rules']['allow_throw_in'] ?? true) !== true) {
+        return durakError('Throw-in is not allowed in this game');
     }
     if (!$isOpeningAttack && !durakCardRankIsOnTable($state, $cardId)) {
         return durakError('Throw-in card rank must match the table');
@@ -289,7 +365,11 @@ function durakHandleDefendCard(array $state, string $userId, string $attackCardI
     $state['table'][$tableIndex]['defend'] = $defenseCardId;
 
     if (durakAllAttacksCovered($state)) {
-        durakSetNextThrowerOrComplete($state, null, false);
+        if (($state['rules']['allow_throw_in'] ?? true) === true) {
+            durakSetNextThrowerOrComplete($state, null, false);
+        } else {
+            durakCompleteTrick($state, false);
+        }
     } else {
         $state['phase'] = 'defense';
         $state['actor_id'] = $userId;
@@ -300,6 +380,9 @@ function durakHandleDefendCard(array $state, string $userId, string $attackCardI
 
 function durakHandlePassThrowIn(array $state, string $userId): array
 {
+    if (($state['rules']['allow_throw_in'] ?? true) !== true) {
+        return durakError('Throw-in is not allowed in this game');
+    }
     if (($state['phase'] ?? '') !== 'attack') {
         return durakError('You cannot pass now');
     }
@@ -338,7 +421,91 @@ function durakHandleTakeCards(array $state, string $userId): array
     }
 
     $state['defender_mode'] = 'taking';
-    durakSetNextThrowerOrComplete($state, null, true);
+    if (($state['rules']['allow_throw_in'] ?? true) === true) {
+        durakSetNextThrowerOrComplete($state, null, true);
+    } else {
+        durakCompleteTrick($state, true);
+    }
+
+    return ['status' => 'ok', 'state' => $state];
+}
+
+function durakHandleTransferCard(array $state, string $userId, string $cardId): array
+{
+    if (($state['rules']['allow_transfer'] ?? false) !== true) {
+        return durakError('Transfer is not allowed in this game');
+    }
+    if (($state['phase'] ?? '') !== 'defense') {
+        return durakError('You cannot transfer now');
+    }
+    if ((string) ($state['actor_id'] ?? '') !== $userId) {
+        return durakError('It is not your turn');
+    }
+    if ((string) ($state['roles']['defender_id'] ?? '') !== $userId) {
+        return durakError('Only defender can transfer');
+    }
+    if (($state['defender_mode'] ?? 'defending') !== 'defending') {
+        return durakError('Defender is already taking cards');
+    }
+
+    $table = $state['table'] ?? [];
+    if (empty($table)) {
+        return durakError('No attacks to transfer');
+    }
+    foreach ($table as $pair) {
+        if (!empty($pair['defend'])) {
+            return durakError('Cannot transfer after defending a card');
+        }
+    }
+
+    if (!durakHandHasCard($state, $userId, $cardId)) {
+        return durakError('Card is not in your hand');
+    }
+
+    $transferRank = durakCardRank($cardId);
+    foreach ($table as $pair) {
+        $attackCardId = (string) ($pair['attack'] ?? '');
+        if ($attackCardId === '' || durakCardRank($attackCardId) !== $transferRank) {
+            return durakError('Transfer card rank must match every attack card');
+        }
+    }
+
+    $inGamePlayers = array_values(array_map('strval', $state['in_game_players'] ?? []));
+    if (count($inGamePlayers) < 2) {
+        return durakError('No active player to transfer to');
+    }
+    $nextDefenderId = durakNextInGamePlayer(
+        $state['player_order'] ?? [],
+        $inGamePlayers,
+        $userId
+    );
+    if ($nextDefenderId === $userId || !in_array($nextDefenderId, $inGamePlayers, true)) {
+        return durakError('No active player to transfer to');
+    }
+
+    $attackCount = durakAttackCount($state) + 1;
+    $newDefenderHandCount = count($state['hands'][$nextDefenderId] ?? []);
+    if ($attackCount > DURAK_HAND_SIZE) {
+        return durakError('Attack limit reached');
+    }
+    if ($attackCount > $newDefenderHandCount) {
+        return durakError('Next defender does not have enough cards');
+    }
+
+    durakRemoveCardFromHand($state, $userId, $cardId);
+    $state['table'][] = [
+        'attack' => $cardId,
+        'defend' => null,
+    ];
+    $state['roles'] = [
+        'attacker_id' => $userId,
+        'defender_id' => $nextDefenderId,
+    ];
+    $state['actor_id'] = $nextDefenderId;
+    $state['phase'] = 'defense';
+    $state['defender_mode'] = 'defending';
+    $state['attack_limit'] = min(DURAK_HAND_SIZE, $newDefenderHandCount);
+    $state['passed_throwers'] = [];
 
     return ['status' => 'ok', 'state' => $state];
 }
@@ -547,7 +714,8 @@ function durakFirstInGameAtOrAfter(array $playerOrder, array $inGamePlayers, str
 
 function durakNormalizeState(array &$state): void
 {
-    $state['schema_version'] = (int) ($state['schema_version'] ?? DURAK_SCHEMA_VERSION);
+    $state['schema_version'] = DURAK_SCHEMA_VERSION;
+    $state['rules'] = durakNormalizeRules($state['rules'] ?? null);
     $state['phase'] = $state['phase'] ?? 'attack';
     $state['deck_profile_id'] = $state['deck_profile_id'] ?? DURAK_DECK_PROFILE_ID;
     $state['player_order'] = array_values(array_map('strval', $state['player_order'] ?? []));

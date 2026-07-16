@@ -1209,6 +1209,12 @@ function stopPolling() {
 
 // === RENDERING ===
 
+function renderDurakRuleSettings(selectedGameId, isHost) {
+    const settings = document.getElementById('durak-rule-settings');
+    if (!settings) return;
+    settings.hidden = !isHost || selectedGameId !== 'durak';
+}
+
 function renderLobby(res) {
     if (typeof window.document === 'undefined') return;
     document.body.classList.remove('wordclash-active'); // Cleanup WordClash state
@@ -1230,6 +1236,7 @@ function renderLobby(res) {
 
         const gameNameDisplay = document.getElementById('selected-game-name');
         const selectedGameId = window.selectedGameId;
+        renderDurakRuleSettings(selectedGameId, true);
         const currentGame = window.AVAILABLE_GAMES ? window.AVAILABLE_GAMES.find(g => g.id === selectedGameId) : null;
 
         if (gameNameDisplay) gameNameDisplay.innerText = currentGame ? currentGame.name : 'Выбрать игру';
@@ -1262,6 +1269,7 @@ function renderLobby(res) {
         }
 
     } else {
+        renderDurakRuleSettings('', false);
         if (hostControls) hostControls.style.display = 'none';
         if (guestMsg) guestMsg.style.display = 'block';
     }

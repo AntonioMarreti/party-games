@@ -1194,10 +1194,18 @@ async function tryGameNow(gameId) {
 async function startGame(gameName) {
     if (isStartGamePending) return { status: 'ignored' };
 
+    const startOptions = {};
+    if (gameName === 'durak') {
+        const allowThrowIn = document.getElementById('durak-allow-throw-in');
+        const allowTransfer = document.getElementById('durak-allow-transfer');
+        startOptions.allow_throw_in = allowThrowIn ? allowThrowIn.checked : true;
+        startOptions.allow_transfer = allowTransfer ? allowTransfer.checked : false;
+    }
+
     isStartGamePending = true;
     window.__pgSuspendPolling = true;
     try {
-        const res = await window.apiRequest({ action: 'start_game', game_name: gameName });
+        const res = await window.apiRequest({ action: 'start_game', game_name: gameName, ...startOptions });
         if (res.status === 'ok') {
             if (window.checkState) await window.checkState();
             return res;

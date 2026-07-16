@@ -429,6 +429,10 @@ button.durak-card.is-defendable {
     grid-template-columns: 1fr;
 }
 
+.durak-actions.is-triple {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .durak-action-btn {
     min-height: 42px;
     border: 1px solid rgba(37, 99, 235, 0.18);
