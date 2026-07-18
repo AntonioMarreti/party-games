@@ -44,24 +44,6 @@
                 </div>
                 <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
             </button>
-            <div id="durak-rule-settings" class="mb-3" hidden>
-                <div class="card border-0 shadow-sm rounded-4" style="background: var(--bg-secondary);">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-check-label fw-medium" for="durak-allow-throw-in">Подкидывание</label>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" id="durak-allow-throw-in" checked>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <label class="form-check-label fw-medium" for="durak-allow-transfer">Перевод</label>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" id="durak-allow-transfer">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <button class="btn-start-floating" id="btn-start-game">Начать игру</button>
         </div>
 

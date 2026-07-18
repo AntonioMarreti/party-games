@@ -23,7 +23,10 @@
         busy: false,
         lastError: '',
         lastRes: null,
-        roleKey: null
+        roleKey: null,
+        setupAllowThrowIn: true,
+        setupAllowTransfer: false,
+        setupInitialized: false
     };
 
     const resizeState = {
@@ -220,6 +223,9 @@
     }
 
     function statusCopy(state, res) {
+        if (state.phase === 'setup') {
+            return Number(res?.is_host || 0) === 1 ? 'Выбери правила' : 'Хост выбирает правила';
+        }
         if (state.phase === 'finished') {
             return 'Итог партии';
         }
@@ -473,6 +479,78 @@
                         Вернуться в комнату
                     </button>
                 ` : ''}
+            </div>
+        `;
+    }
+
+    function initializeSetupState(state) {
+        if (state.phase === 'setup') {
+            if (!uiState.setupInitialized) {
+                uiState.setupAllowThrowIn = state.rules?.allow_throw_in !== false;
+                uiState.setupAllowTransfer = state.rules?.allow_transfer === true;
+                uiState.setupInitialized = true;
+            }
+            return;
+        }
+
+        if (uiState.setupInitialized) {
+            uiState.setupAllowThrowIn = true;
+            uiState.setupAllowTransfer = false;
+            uiState.setupInitialized = false;
+        }
+    }
+
+    function renderSetupSwitch(name, title, description, checked) {
+        return `
+            <label class="durak-setup-option">
+                <span class="durak-setup-option-copy">
+                    <span class="durak-setup-option-title">${esc(title)}</span>
+                    <span class="durak-setup-option-description">${esc(description)}</span>
+                </span>
+                <span class="durak-setup-switch">
+                    <input type="checkbox" role="switch" data-setup-rule="${esc(name)}" ${checked ? 'checked' : ''}>
+                    <span class="durak-setup-switch-track" aria-hidden="true"></span>
+                </span>
+            </label>
+        `;
+    }
+
+    function renderSetupScreen(res) {
+        const isHost = Number(res?.is_host || 0) === 1;
+        if (!isHost) {
+            return `
+                <div class="durak-setup-screen is-guest">
+                    <div class="durak-setup-intro">
+                        <div class="durak-setup-game">Дурак, колода 36 карт</div>
+                        <div class="durak-setup-title">Настройка партии</div>
+                        <div class="durak-setup-description">Хост выбирает правила</div>
+                    </div>
+                    <div class="durak-setup-waiting" role="status">
+                        Ожидаем начала партии
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="durak-setup-screen">
+                <div class="durak-setup-intro">
+                    <div class="durak-setup-game">Дурак, колода 36 карт</div>
+                    <div class="durak-setup-title">Настройка партии</div>
+                    <div class="durak-setup-description">Выбери режимы перед раздачей карт.</div>
+                </div>
+                <div class="durak-setup-options">
+                    ${renderSetupSwitch('allow_throw_in', 'Подкидывание', 'Можно добавлять карты совпадающего ранга.', uiState.setupAllowThrowIn)}
+                    ${renderSetupSwitch('allow_transfer', 'Перевод', 'Защищающийся может перевести атаку дальше.', uiState.setupAllowTransfer)}
+                </div>
+                <div class="durak-setup-actions">
+                    <button type="button" class="durak-action-btn durak-setup-start" data-action="start-match" ${uiState.busy ? 'disabled aria-busy="true"' : ''}>
+                        ${uiState.busy ? 'Начинаем...' : 'Начать партию'}
+                    </button>
+                    <button type="button" class="durak-setup-return" data-action="return-room" ${uiState.busy ? 'disabled' : ''}>
+                        Вернуться в комнату
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -767,6 +845,7 @@
     function renderGame(res) {
         uiState.lastRes = res;
         const state = parseState(res);
+        initializeSetupState(state);
         const roleKey = [state.phase || '', state.roles?.attacker_id || '', state.roles?.defender_id || '', state.actor_id || ''].join(':');
         if (uiState.roleKey !== null && uiState.roleKey !== roleKey) {
             uiState.selectedCardId = null;
@@ -782,10 +861,11 @@
         const shell = renderShell(gameArea);
         setupResizeHandling(shell, gameArea);
         shell.classList.toggle('is-finished', state.phase === 'finished');
+        shell.classList.toggle('is-setup', state.phase === 'setup');
         const status = shell.querySelector('#durak-status-pill');
         if (status) status.textContent = statusCopy(state, res);
         const modeLabel = shell.querySelector('#durak-mode-label');
-        if (modeLabel) modeLabel.textContent = durakModeLabel(state);
+        if (modeLabel) modeLabel.textContent = state.phase === 'setup' ? 'Подготовка' : durakModeLabel(state);
 
         const error = shell.querySelector('#durak-error');
         if (error) {
@@ -795,7 +875,9 @@
 
         const board = shell.querySelector('#durak-board');
         if (board) {
-            board.innerHTML = state.phase === 'finished'
+            board.innerHTML = state.phase === 'setup'
+                ? renderSetupScreen(res)
+                : state.phase === 'finished'
                 ? renderFinalScreen(state, res)
                 : `
                     <div class="durak-seats">${renderPlayers(res, state)}</div>
@@ -808,7 +890,7 @@
         }
 
         const hand = shell.querySelector('#durak-hand-shell');
-        if (hand) hand.innerHTML = renderHand(state, res);
+        if (hand) hand.innerHTML = state.phase === 'setup' ? '' : renderHand(state, res);
 
         bindEvents(shell, state, res);
     }
@@ -852,7 +934,58 @@
         }
     }
 
+    async function startDurakMatch(res) {
+        if (uiState.busy || typeof window.apiRequest !== 'function') return null;
+
+        uiState.busy = true;
+        renderGame(res);
+        try {
+            const result = await window.apiRequest({
+                action: 'game_action',
+                type: 'start_match',
+                allow_throw_in: uiState.setupAllowThrowIn,
+                allow_transfer: uiState.setupAllowTransfer
+            });
+            if (result?.status === 'error') {
+                const message = result.message || 'Не удалось начать партию';
+                setError(message);
+                if (typeof window.showToast === 'function') window.showToast(message, 'warning');
+                return result;
+            }
+
+            setError('');
+            if (window.triggerHaptic) window.triggerHaptic('impact', 'light');
+            if (typeof window.checkState === 'function') await window.checkState();
+            return result;
+        } catch (error) {
+            const message = 'Нет связи с сервером';
+            setError(message);
+            if (typeof window.showToast === 'function') window.showToast(message, 'warning');
+            return { status: 'error' };
+        } finally {
+            uiState.busy = false;
+            if (uiState.lastRes) renderGame(uiState.lastRes);
+        }
+    }
+
     function bindEvents(shell, state, res) {
+        shell.querySelectorAll('[data-setup-rule]').forEach(input => {
+            input.onchange = () => {
+                if (input.dataset.setupRule === 'allow_throw_in') {
+                    uiState.setupAllowThrowIn = input.checked;
+                } else if (input.dataset.setupRule === 'allow_transfer') {
+                    uiState.setupAllowTransfer = input.checked;
+                }
+            };
+        });
+
+        const startMatchBtn = shell.querySelector('[data-action="start-match"]');
+        if (startMatchBtn) {
+            startMatchBtn.onclick = () => {
+                if (!startMatchBtn.disabled) startDurakMatch(res);
+            };
+        }
+
         shell.querySelectorAll('[data-attack-card]').forEach(button => {
             button.onclick = () => {
                 if (!isMyDefenseTurn(state, res) || button.disabled) return;

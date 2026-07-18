@@ -53,6 +53,76 @@ function durakGetRoomPlayerOrder(PDO $pdo, int $roomId): array
     return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 }
 
+function durakGetRoomPlayerRoster(PDO $pdo, int $roomId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT user_id, COALESCE(is_bot, 0) AS is_bot
+        FROM room_players
+        WHERE room_id = ?
+        ORDER BY id ASC
+    ");
+    $stmt->execute([$roomId]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function durakValidateLivePlayerRoster(array $roster): array
+{
+    $playerOrder = [];
+    $hasBots = false;
+
+    foreach ($roster as $player) {
+        if (!empty($player['is_bot'])) {
+            $hasBots = true;
+            continue;
+        }
+        $playerOrder[] = (string) ($player['user_id'] ?? '');
+    }
+
+    $playerOrder = array_values(array_filter($playerOrder, static fn(string $playerId): bool => $playerId !== ''));
+    $playerCount = count($playerOrder);
+    if ($hasBots || count($roster) !== $playerCount || $playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS) {
+        throw new RuntimeException('Для Дурака нужно 2-4 живых игрока без ботов');
+    }
+
+    return $playerOrder;
+}
+
+function durakBuildSetupState(array $playerOrder): array
+{
+    $playerOrder = array_values(array_map('strval', $playerOrder));
+
+    return [
+        'schema_version' => DURAK_SCHEMA_VERSION,
+        'rules' => durakNormalizeRules(null),
+        'phase' => 'setup',
+        'deck_profile_id' => DURAK_DECK_PROFILE_ID,
+        'player_order' => $playerOrder,
+        'in_game_players' => $playerOrder,
+        'finish_order' => [],
+        'hands' => [],
+        'draw_pile' => [],
+        'trump' => [
+            'suit' => null,
+            'card' => null,
+        ],
+        'table' => [],
+        'discard' => [],
+        'roles' => [
+            'attacker_id' => null,
+            'defender_id' => null,
+        ],
+        'actor_id' => null,
+        'passed_throwers' => [],
+        'defender_mode' => 'defending',
+        'attack_limit' => DURAK_HAND_SIZE,
+        'result' => [
+            'loser_id' => null,
+            'reason' => null,
+        ],
+    ];
+}
+
 function durakBuildInitialState(
     array $playerOrder,
     string $profileId = DURAK_DECK_PROFILE_ID,
@@ -121,7 +191,7 @@ function getInitialState()
 
     $playerOrder = durakGetRoomPlayerOrder($context['pdo'], (int) $context['room_id']);
 
-    return durakBuildInitialState($playerOrder);
+    return durakBuildSetupState($playerOrder);
 }
 
 function durakCreateInitialState(PDO $pdo, array $room, array $data = []): array
@@ -131,11 +201,7 @@ function durakCreateInitialState(PDO $pdo, array $room, array $data = []): array
         throw new RuntimeException('Durak room is missing');
     }
 
-    return durakBuildInitialState(
-        durakGetRoomPlayerOrder($pdo, $roomId),
-        DURAK_DECK_PROFILE_ID,
-        durakRulesFromInput($data)
-    );
+    return durakBuildSetupState(durakGetRoomPlayerOrder($pdo, $roomId));
 }
 
 function durakNormalizeBooleanValue($value, string $fieldName): bool
@@ -170,6 +236,20 @@ function durakRulesFromInput(array $data): array
         'allow_transfer' => array_key_exists('allow_transfer', $data)
             ? durakNormalizeBooleanValue($data['allow_transfer'], 'allow_transfer')
             : false,
+    ];
+}
+
+function durakRulesFromRequiredInput(array $data): array
+{
+    foreach (['allow_throw_in', 'allow_transfer'] as $fieldName) {
+        if (!array_key_exists($fieldName, $data)) {
+            throw new InvalidArgumentException("Missing boolean value for {$fieldName}");
+        }
+    }
+
+    return [
+        'allow_throw_in' => durakNormalizeBooleanValue($data['allow_throw_in'], 'allow_throw_in'),
+        'allow_transfer' => durakNormalizeBooleanValue($data['allow_transfer'], 'allow_transfer'),
     ];
 }
 
@@ -213,6 +293,10 @@ function handleGameAction($pdo, $room, $user, $postData)
         return durakError('Game is already finished');
     }
 
+    if ($action === 'start_match') {
+        return durakHandleStartMatch($pdo, $room, $state, $postData);
+    }
+
     if ($action === 'attack_card') {
         return durakHandleAttackCard($state, $userId, (string) ($postData['card_id'] ?? ''));
     }
@@ -239,6 +323,31 @@ function handleGameAction($pdo, $room, $user, $postData)
     }
 
     return durakError('Unknown Durak action');
+}
+
+function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postData): array
+{
+    if (($state['phase'] ?? '') !== 'setup') {
+        return durakError('Durak match is not in setup');
+    }
+    if (empty($room['is_host'])) {
+        return durakError('Only the host can start the match');
+    }
+
+    $roomId = (int) ($room['id'] ?? 0);
+    if ($roomId <= 0) {
+        return durakError('Durak room is missing');
+    }
+
+    try {
+        $playerOrder = durakValidateLivePlayerRoster(durakGetRoomPlayerRoster($pdo, $roomId));
+        $rules = durakRulesFromRequiredInput($postData);
+        $matchState = durakBuildInitialState($playerOrder, DURAK_DECK_PROFILE_ID, $rules);
+    } catch (InvalidArgumentException | RuntimeException $error) {
+        return durakError($error->getMessage());
+    }
+
+    return ['status' => 'ok', 'state' => $matchState];
 }
 
 function durakBuildPlayerProjection(array $state, $viewerId): array
