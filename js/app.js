@@ -206,23 +206,78 @@ function waitForTelegramWebApp(timeoutMs = 3500) {
     });
 }
 
-function updateTelegramViewportVars(tg) {
+const telegramViewportLifecycle = {
+    telegramWebApp: null,
+    telegramListenerBound: false,
+    windowResizeBound: false,
+    visualResizeBound: false,
+    visualScrollBound: false,
+    rafId: 0
+};
+
+function applyTelegramViewportHeight() {
+    const tg = telegramViewportLifecycle.telegramWebApp;
     const platform = String(getTelegramPlatformFallback(tg)).toLowerCase();
+    const isMobile = platform === 'android' || platform === 'ios';
+    const tmaHeight = isRealTelegramWebApp(tg) ? Number(tg.viewportStableHeight || tg.viewportHeight || 0) : 0;
+    const visualHeight = Number(window.visualViewport?.height || 0);
+    const browserHeight = visualHeight || Number(document.documentElement.clientHeight || window.innerHeight || 0);
+    const height = isMobile && tmaHeight > 0 && browserHeight > 0
+        ? Math.min(tmaHeight, browserHeight)
+        : (isMobile ? (tmaHeight || browserHeight) : (browserHeight || tmaHeight));
+    const roundedHeight = Math.round(height);
 
-    const applyHeight = () => {
-        const tmaHeight = isRealTelegramWebApp(tg) ? Number(tg.viewportStableHeight || tg.viewportHeight || 0) : 0;
-        const visualHeight = Number(window.visualViewport?.height || 0);
-        const height = Math.round(tmaHeight || visualHeight);
-        if (height > 0) {
-            document.documentElement.style.setProperty('--app-viewport-height', `${height}px`);
-        }
-    };
-
-    applyHeight();
-    if (window.visualViewport && (platform === 'android' || platform === 'ios')) {
-        window.visualViewport.addEventListener('resize', applyHeight);
-        window.visualViewport.addEventListener('scroll', applyHeight);
+    if (roundedHeight > 0) {
+        document.documentElement.style.setProperty('--app-viewport-height', `${roundedHeight}px`);
     }
+}
+
+function scheduleTelegramViewportUpdate() {
+    if (telegramViewportLifecycle.rafId) return;
+
+    telegramViewportLifecycle.rafId = window.requestAnimationFrame(() => {
+        telegramViewportLifecycle.rafId = 0;
+        applyTelegramViewportHeight();
+    });
+}
+
+function updateTelegramViewportVars(tg) {
+    const nextTelegramWebApp = isRealTelegramWebApp(tg) ? tg : null;
+    if (nextTelegramWebApp !== telegramViewportLifecycle.telegramWebApp) {
+        if (telegramViewportLifecycle.telegramListenerBound
+            && telegramViewportLifecycle.telegramWebApp
+            && typeof telegramViewportLifecycle.telegramWebApp.offEvent === 'function') {
+            telegramViewportLifecycle.telegramWebApp.offEvent('viewportChanged', scheduleTelegramViewportUpdate);
+        }
+        telegramViewportLifecycle.telegramWebApp = nextTelegramWebApp;
+        telegramViewportLifecycle.telegramListenerBound = false;
+    }
+
+    if (!telegramViewportLifecycle.windowResizeBound) {
+        window.addEventListener('resize', scheduleTelegramViewportUpdate, { passive: true });
+        telegramViewportLifecycle.windowResizeBound = true;
+    }
+
+    if (window.visualViewport && !telegramViewportLifecycle.visualResizeBound) {
+        window.visualViewport.addEventListener('resize', scheduleTelegramViewportUpdate, { passive: true });
+        telegramViewportLifecycle.visualResizeBound = true;
+    }
+
+    const platform = String(getTelegramPlatformFallback(nextTelegramWebApp)).toLowerCase();
+    const isMobile = platform === 'android' || platform === 'ios';
+    if (window.visualViewport && isMobile && !telegramViewportLifecycle.visualScrollBound) {
+        window.visualViewport.addEventListener('scroll', scheduleTelegramViewportUpdate, { passive: true });
+        telegramViewportLifecycle.visualScrollBound = true;
+    }
+
+    if (nextTelegramWebApp
+        && !telegramViewportLifecycle.telegramListenerBound
+        && typeof nextTelegramWebApp.onEvent === 'function') {
+        nextTelegramWebApp.onEvent('viewportChanged', scheduleTelegramViewportUpdate);
+        telegramViewportLifecycle.telegramListenerBound = true;
+    }
+
+    applyTelegramViewportHeight();
 }
 
 let telegramWebAppInitDone = false;
