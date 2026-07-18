@@ -550,10 +550,19 @@
         `;
     }
 
+    function getLayoutContainer(gameArea) {
+        return gameArea?.closest?.('#screen-game') || gameArea?.parentElement || gameArea;
+    }
+
     function getContainerSize(gameArea, shell) {
-        const rect = gameArea?.getBoundingClientRect ? gameArea.getBoundingClientRect() : null;
+        const layoutContainer = getLayoutContainer(gameArea);
+        const rect = layoutContainer?.getBoundingClientRect ? layoutContainer.getBoundingClientRect() : null;
+        const visualViewportHeight = Number(window.visualViewport?.height);
+        const measuredHeight = Number(rect?.height || shell?.clientHeight || window.innerHeight || 0);
+        const height = Number.isFinite(visualViewportHeight) && visualViewportHeight > 0
+            ? Math.min(measuredHeight, visualViewportHeight)
+            : measuredHeight;
         const width = Math.round(rect?.width || shell?.clientWidth || window.innerWidth || 0);
-        const height = Math.round(rect?.height || shell?.clientHeight || window.innerHeight || 0);
         return { width, height };
     }
 
@@ -586,16 +595,20 @@
         return value === null ? 0 : value;
     }
 
-    function applyTelegramCssVariables(shell, webApp, fallbackHeight) {
-        const viewportHeight = normalizeViewportHeight(webApp) || fallbackHeight;
-        shell.style.setProperty('--durak-viewport-height', `${Math.round(viewportHeight)}px`);
+    function resolveEffectiveHeight(webApp, availableHeight) {
+        const telegramHeight = normalizeViewportHeight(webApp);
+        const isMobileTelegram = webApp?.platform === 'ios' || webApp?.platform === 'android';
+        if (!isMobileTelegram || telegramHeight === null) return availableHeight;
+        return Math.min(availableHeight, telegramHeight);
+    }
 
-        if (!webApp) return viewportHeight;
+    function applyTelegramCssVariables(shell, webApp, effectiveHeight) {
+        shell.style.setProperty('--durak-viewport-height', `${Math.round(effectiveHeight)}px`);
 
-        const contentInset = webApp.contentSafeAreaInset || null;
-        const safeInset = webApp.safeAreaInset || null;
+        const contentInset = webApp?.contentSafeAreaInset || null;
+        const safeInset = webApp?.safeAreaInset || null;
         const topInset = Math.max(resolveInsetValue(contentInset, 'top'), resolveInsetValue(safeInset, 'top'));
-        const topControlsClearance = webApp.platform === 'ios' ? topInset + 74 : topInset;
+        const topControlsClearance = webApp?.platform === 'ios' ? topInset + 74 : topInset;
         const variables = [
             ['--durak-content-top', contentInset, 'top'],
             ['--durak-content-bottom', contentInset, 'bottom'],
@@ -605,11 +618,17 @@
 
         variables.forEach(([name, inset, side]) => {
             const value = normalizeInsetValue(inset, side);
-            if (value !== null) shell.style.setProperty(name, `${value}px`);
+            if (value === null) {
+                shell.style.removeProperty(name);
+            } else {
+                shell.style.setProperty(name, `${value}px`);
+            }
         });
-        shell.style.setProperty('--durak-top-controls-clearance', `${Math.round(topControlsClearance)}px`);
-
-        return viewportHeight;
+        if (webApp) {
+            shell.style.setProperty('--durak-top-controls-clearance', `${Math.round(topControlsClearance)}px`);
+        } else {
+            shell.style.removeProperty('--durak-top-controls-clearance');
+        }
     }
 
     function applyContainerLayout(shell, gameArea) {
@@ -620,8 +639,9 @@
 
         const { width, height } = getContainerSize(gameArea, shell);
         if (!width || !height) return;
-        const viewportHeight = applyTelegramCssVariables(shell, getTelegramWebApp(), height);
-        const effectiveHeight = Math.round(viewportHeight || height);
+        const webApp = getTelegramWebApp();
+        const effectiveHeight = Math.round(resolveEffectiveHeight(webApp, height));
+        applyTelegramCssVariables(shell, webApp, effectiveHeight);
 
         const layout = width >= 720 ? 'wide' : width <= 430 ? 'compact' : 'medium';
         const heightMode = effectiveHeight <= 680 ? 'short' : 'regular';
@@ -707,6 +727,9 @@
         }
         resizeState.telegramWebApp = null;
         resizeState.telegramListenersBound = false;
+
+        const gameArea = document.getElementById('game-area');
+        if (gameArea) gameArea.classList.remove('durak-active');
     }
 
     function watchDurakRemoval(gameArea) {
@@ -721,6 +744,7 @@
     }
 
     function setupResizeHandling(shell, gameArea) {
+        gameArea.classList.add('durak-active');
         bindResizeFallbacks();
         bindTelegramEvents();
         watchDurakRemoval(gameArea);
@@ -729,10 +753,11 @@
             if (!resizeState.observer) {
                 resizeState.observer = new ResizeObserver(scheduleContainerLayout);
             }
-            if (resizeState.observedElement !== gameArea) {
+            const layoutContainer = getLayoutContainer(gameArea);
+            if (resizeState.observedElement !== layoutContainer) {
                 resizeState.observer.disconnect();
-                resizeState.observer.observe(gameArea);
-                resizeState.observedElement = gameArea;
+                resizeState.observer.observe(layoutContainer);
+                resizeState.observedElement = layoutContainer;
             }
         }
 
