@@ -2,6 +2,7 @@
 
 const DURAK_SCHEMA_VERSION = 2;
 const DURAK_DECK_PROFILE_ID = 'durak_36';
+const DURAK_DECK_PROFILE_52_ID = 'durak_52';
 const DURAK_HAND_SIZE = 6;
 const DURAK_MIN_PLAYERS = 2;
 const DURAK_MAX_PLAYERS = 4;
@@ -13,16 +14,38 @@ if (isset($pdo) && $pdo instanceof PDO && isset($room) && is_array($room) && iss
     ];
 }
 
-function durakGetDeckProfile(string $profileId = DURAK_DECK_PROFILE_ID): array
+function durakNormalizeDeckProfileId($profileId, bool $fallbackToDefault = false): string
 {
-    if ($profileId !== DURAK_DECK_PROFILE_ID) {
-        throw new InvalidArgumentException('Unsupported Durak deck profile');
+    if (is_string($profileId) && in_array($profileId, [DURAK_DECK_PROFILE_ID, DURAK_DECK_PROFILE_52_ID], true)) {
+        return $profileId;
     }
 
+    if ($fallbackToDefault) {
+        return DURAK_DECK_PROFILE_ID;
+    }
+
+    throw new InvalidArgumentException('Unsupported Durak deck profile');
+}
+
+function durakDeckProfileFromInput(array $data): string
+{
+    if (!array_key_exists('deck_profile_id', $data)) {
+        return DURAK_DECK_PROFILE_ID;
+    }
+
+    return durakNormalizeDeckProfileId($data['deck_profile_id']);
+}
+
+function durakGetDeckProfile(string $profileId = DURAK_DECK_PROFILE_ID): array
+{
+    $profileId = durakNormalizeDeckProfileId($profileId);
+
     return [
-        'id' => DURAK_DECK_PROFILE_ID,
+        'id' => $profileId,
         'suits' => ['S', 'H', 'D', 'C'],
-        'ranks' => ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'],
+        'ranks' => $profileId === DURAK_DECK_PROFILE_52_ID
+            ? ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+            : ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'],
     ];
 }
 
@@ -130,6 +153,7 @@ function durakBuildInitialState(
 ): array
 {
     $playerOrder = array_values(array_map('strval', $playerOrder));
+    $profileId = durakNormalizeDeckProfileId($profileId);
     $playerCount = count($playerOrder);
 
     if ($playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS) {
@@ -340,9 +364,10 @@ function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postD
     }
 
     try {
-        $playerOrder = durakValidateLivePlayerRoster(durakGetRoomPlayerRoster($pdo, $roomId));
+        $profileId = durakDeckProfileFromInput($postData);
         $rules = durakRulesFromRequiredInput($postData);
-        $matchState = durakBuildInitialState($playerOrder, DURAK_DECK_PROFILE_ID, $rules);
+        $playerOrder = durakValidateLivePlayerRoster(durakGetRoomPlayerRoster($pdo, $roomId));
+        $matchState = durakBuildInitialState($playerOrder, $profileId, $rules);
     } catch (InvalidArgumentException | RuntimeException $error) {
         return durakError($error->getMessage());
     }
@@ -372,7 +397,7 @@ function durakBuildPlayerProjection(array $state, $viewerId): array
         'schema_version' => DURAK_SCHEMA_VERSION,
         'rules' => durakNormalizeRules($state['rules'] ?? null),
         'phase' => $state['phase'] ?? 'attack',
-        'deck_profile_id' => $state['deck_profile_id'] ?? DURAK_DECK_PROFILE_ID,
+        'deck_profile_id' => durakNormalizeDeckProfileId($state['deck_profile_id'] ?? null, true),
         'player_order' => $state['player_order'] ?? [],
         'in_game_players' => $state['in_game_players'] ?? [],
         'finish_order' => $state['finish_order'] ?? [],
@@ -826,7 +851,7 @@ function durakNormalizeState(array &$state): void
     $state['schema_version'] = DURAK_SCHEMA_VERSION;
     $state['rules'] = durakNormalizeRules($state['rules'] ?? null);
     $state['phase'] = $state['phase'] ?? 'attack';
-    $state['deck_profile_id'] = $state['deck_profile_id'] ?? DURAK_DECK_PROFILE_ID;
+    $state['deck_profile_id'] = durakNormalizeDeckProfileId($state['deck_profile_id'] ?? null, true);
     $state['player_order'] = array_values(array_map('strval', $state['player_order'] ?? []));
     $state['in_game_players'] = array_values(array_map('strval', $state['in_game_players'] ?? $state['player_order']));
     $state['finish_order'] = array_values(array_map('strval', $state['finish_order'] ?? []));
@@ -993,6 +1018,10 @@ function durakCardRank(string $cardId): string
 function durakCardRankValue(string $cardId): int
 {
     $values = [
+        '2' => 2,
+        '3' => 3,
+        '4' => 4,
+        '5' => 5,
         '6' => 6,
         '7' => 7,
         '8' => 8,

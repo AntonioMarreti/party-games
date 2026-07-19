@@ -928,6 +928,85 @@ button.durak-card.is-defendable {
     gap: 8px;
 }
 
+.durak-setup-deck {
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    padding: 0;
+}
+
+.durak-setup-deck legend {
+    margin-bottom: 7px;
+    padding: 0;
+    color: #172033;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.durak-setup-deck-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 14px;
+    padding: 4px;
+    background: rgba(226, 232, 240, 0.72);
+}
+
+.durak-setup-deck-option {
+    min-width: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.durak-setup-deck-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+}
+
+.durak-setup-deck-option span {
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.durak-setup-deck-option input:checked + span {
+    border-color: rgba(37, 99, 235, 0.28);
+    background: #ffffff;
+    color: #1d4ed8;
+    box-shadow: 0 5px 14px rgba(37, 99, 235, 0.1);
+}
+
+.durak-setup-deck-option input:focus-visible + span {
+    outline: 3px solid rgba(37, 99, 235, 0.24);
+    outline-offset: 2px;
+}
+
+.durak-setup-deck-option:active input:not(:disabled) + span {
+    transform: translateY(1px) scale(0.99);
+}
+
+.durak-setup-deck-option input:disabled + span {
+    cursor: default;
+    opacity: 0.45;
+}
+
 .durak-setup-option {
     min-height: 64px;
     min-width: 0;
@@ -1081,6 +1160,7 @@ button.durak-card.is-defendable {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .durak-setup-deck-option span,
     .durak-setup-switch-track,
     .durak-setup-switch-track::after {
         transition: none;

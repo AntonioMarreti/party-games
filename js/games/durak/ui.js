@@ -6,6 +6,10 @@
         C: { symbol: '♣', label: 'трефы', tone: 'black' }
     };
     const DURAK_RANK_VALUES = {
+        2: 2,
+        3: 3,
+        4: 4,
+        5: 5,
         6: 6,
         7: 7,
         8: 8,
@@ -26,6 +30,7 @@
         previousTrickState: null,
         lastTrickResult: null,
         roleKey: null,
+        setupDeckProfileId: 'durak_36',
         setupAllowThrowIn: true,
         setupAllowTransfer: false,
         setupInitialized: false
@@ -276,6 +281,18 @@
         return 'Без подкидывания и перевода';
     }
 
+    function normalizeDeckProfileId(profileId) {
+        return profileId === 'durak_52' ? 'durak_52' : 'durak_36';
+    }
+
+    function deckProfileLabel(profileId) {
+        return normalizeDeckProfileId(profileId) === 'durak_52' ? '52 карты' : '36 карт';
+    }
+
+    function durakActiveModeLabel(state) {
+        return `${durakModeLabel(state)} · ${deckProfileLabel(state.deck_profile_id)}`;
+    }
+
     function selectedAttackIsValid(state) {
         return openAttacks(state).some(pair => pair.attack === uiState.selectedAttackCardId);
     }
@@ -314,7 +331,9 @@
 
     function statusCopy(state, res) {
         if (state.phase === 'setup') {
-            return Number(res?.is_host || 0) === 1 ? 'Выбери правила' : 'Хост выбирает правила';
+            return Number(res?.is_host || 0) === 1
+                ? 'Выбери колоду и правила'
+                : 'Хост выбирает колоду и правила';
         }
         if (state.phase === 'finished') {
             return 'Итог партии';
@@ -597,6 +616,7 @@
     function initializeSetupState(state) {
         if (state.phase === 'setup') {
             if (!uiState.setupInitialized) {
+                uiState.setupDeckProfileId = normalizeDeckProfileId(state.deck_profile_id);
                 uiState.setupAllowThrowIn = state.rules?.allow_throw_in !== false;
                 uiState.setupAllowTransfer = state.rules?.allow_transfer === true;
                 uiState.setupInitialized = true;
@@ -605,6 +625,7 @@
         }
 
         if (uiState.setupInitialized) {
+            uiState.setupDeckProfileId = 'durak_36';
             uiState.setupAllowThrowIn = true;
             uiState.setupAllowTransfer = false;
             uiState.setupInitialized = false;
@@ -626,15 +647,28 @@
         `;
     }
 
+    function renderSetupDeckProfile(profileId, label) {
+        const selected = uiState.setupDeckProfileId === profileId;
+        return `
+            <label class="durak-setup-deck-option">
+                <input type="radio" name="durak-setup-deck-profile"
+                    data-setup-deck-profile="${esc(profileId)}"
+                    ${selected ? 'checked' : ''}
+                    ${uiState.busy ? 'disabled' : ''}>
+                <span>${esc(label)}</span>
+            </label>
+        `;
+    }
+
     function renderSetupScreen(res) {
         const isHost = Number(res?.is_host || 0) === 1;
         if (!isHost) {
             return `
                 <div class="durak-setup-screen is-guest">
                     <div class="durak-setup-intro">
-                        <div class="durak-setup-game">Дурак, колода 36 карт</div>
+                        <div class="durak-setup-game">Дурак</div>
                         <div class="durak-setup-title">Настройка партии</div>
-                        <div class="durak-setup-description">Хост выбирает правила</div>
+                        <div class="durak-setup-description">Хост выбирает колоду и правила</div>
                     </div>
                     <div class="durak-setup-waiting" role="status">
                         Ожидаем начала партии
@@ -646,10 +680,17 @@
         return `
             <div class="durak-setup-screen">
                 <div class="durak-setup-intro">
-                    <div class="durak-setup-game">Дурак, колода 36 карт</div>
+                    <div class="durak-setup-game">Дурак</div>
                     <div class="durak-setup-title">Настройка партии</div>
-                    <div class="durak-setup-description">Выбери режимы перед раздачей карт.</div>
+                    <div class="durak-setup-description">Выбери колоду и правила перед раздачей.</div>
                 </div>
+                <fieldset class="durak-setup-deck">
+                    <legend>Колода</legend>
+                    <div class="durak-setup-deck-options">
+                        ${renderSetupDeckProfile('durak_36', '36 карт')}
+                        ${renderSetupDeckProfile('durak_52', '52 карты')}
+                    </div>
+                </fieldset>
                 <div class="durak-setup-options">
                     ${renderSetupSwitch('allow_throw_in', 'Подкидывание', 'Можно добавлять карты совпадающего ранга.', uiState.setupAllowThrowIn)}
                     ${renderSetupSwitch('allow_transfer', 'Перевод', 'Защищающийся может перевести атаку дальше.', uiState.setupAllowTransfer)}
@@ -994,7 +1035,7 @@
             exitButton.title = 'Завершить игру';
         }
         const modeLabel = shell.querySelector('#durak-mode-label');
-        if (modeLabel) modeLabel.textContent = state.phase === 'setup' ? 'Подготовка' : durakModeLabel(state);
+        if (modeLabel) modeLabel.textContent = state.phase === 'setup' ? 'Подготовка' : durakActiveModeLabel(state);
 
         const error = shell.querySelector('#durak-error');
         if (error) {
@@ -1072,6 +1113,7 @@
             const result = await window.apiRequest({
                 action: 'game_action',
                 type: 'start_match',
+                deck_profile_id: uiState.setupDeckProfileId,
                 allow_throw_in: uiState.setupAllowThrowIn,
                 allow_transfer: uiState.setupAllowTransfer
             });
@@ -1114,6 +1156,13 @@
                 } else if (input.dataset.setupRule === 'allow_transfer') {
                     uiState.setupAllowTransfer = input.checked;
                 }
+            };
+        });
+
+        shell.querySelectorAll('[data-setup-deck-profile]').forEach(input => {
+            input.onchange = () => {
+                if (!input.checked || input.disabled) return;
+                uiState.setupDeckProfileId = normalizeDeckProfileId(input.dataset.setupDeckProfile);
             };
         });
 
