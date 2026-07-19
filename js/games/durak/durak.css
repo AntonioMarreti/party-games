@@ -307,6 +307,28 @@
     color: #64748b;
 }
 
+.durak-table-empty.is-trick-result {
+    border-style: solid;
+}
+
+.durak-table-empty.is-taking {
+    border-color: rgba(234, 88, 12, 0.24);
+    background: rgba(255, 247, 237, 0.82);
+}
+
+.durak-table-empty.is-taking .durak-empty-title {
+    color: #9a3412;
+}
+
+.durak-table-empty.is-beat {
+    border-color: rgba(22, 163, 74, 0.22);
+    background: rgba(240, 253, 244, 0.82);
+}
+
+.durak-table-empty.is-beat .durak-empty-title {
+    color: #166534;
+}
+
 .durak-empty-title {
     color: #334155;
     font-size: 16px;

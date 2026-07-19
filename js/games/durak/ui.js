@@ -23,6 +23,8 @@
         busy: false,
         lastError: '',
         lastRes: null,
+        previousTrickState: null,
+        lastTrickResult: null,
         roleKey: null,
         setupAllowThrowIn: true,
         setupAllowTransfer: false,
@@ -174,7 +176,95 @@
     }
 
     function passActionLabel(state) {
+        if (state.defender_mode === 'taking') return 'Больше не подкидывать';
         return isBeatContext(state) ? 'Бито' : 'Пас';
+    }
+
+    function cardCountWord(count) {
+        const value = Math.abs(Number(count || 0));
+        const lastTwoDigits = value % 100;
+        const lastDigit = value % 10;
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return 'карт';
+        if (lastDigit === 1) return 'карта';
+        if (lastDigit >= 2 && lastDigit <= 4) return 'карты';
+        return 'карт';
+    }
+
+    function tableCardCount(table) {
+        return (Array.isArray(table) ? table : []).reduce((count, pair) => {
+            return count + (pair?.attack ? 1 : 0) + (pair?.defend ? 1 : 0);
+        }, 0);
+    }
+
+    function visibleHandCount(state, res, playerId) {
+        const targetId = String(playerId || '');
+        if (!targetId) return null;
+        if (targetId === getMyId(res)) {
+            return Array.isArray(state.my_hand) ? state.my_hand.length : null;
+        }
+
+        const hand = (state.opponent_hands || []).find(item => String(item.player_id) === targetId);
+        if (!hand) return null;
+        const count = Number(hand.count);
+        return Number.isFinite(count) ? count : null;
+    }
+
+    function defenderName(state, res) {
+        const defender = getPlayer(res, state.roles?.defender_id);
+        return defender ? playerName(defender) : 'Игрок';
+    }
+
+    function trickStateSnapshot(state, res) {
+        const table = Array.isArray(state.table) ? state.table : [];
+        const defenderId = String(state.roles?.defender_id || '');
+        const defender = getPlayer(res, defenderId);
+        const discardCount = Number(state.discard_count);
+        return {
+            defenderId,
+            defenderName: defender ? playerName(defender) : 'Игрок',
+            defenderHandCount: visibleHandCount(state, res, defenderId),
+            discardCount: Number.isFinite(discardCount) ? discardCount : null,
+            tableCardCount: tableCardCount(table),
+        };
+    }
+
+    function updateLastTrickResult(previousState, state, res) {
+        const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
+        if (!isActivePhase) {
+            uiState.previousTrickState = null;
+            uiState.lastTrickResult = null;
+            return;
+        }
+
+        const currentState = trickStateSnapshot(state, res);
+        if (currentState.tableCardCount > 0) {
+            uiState.lastTrickResult = null;
+        } else if (previousState?.tableCardCount > 0) {
+            const discardDelta = previousState.discardCount !== null && currentState.discardCount !== null
+                ? currentState.discardCount - previousState.discardCount
+                : 0;
+            const currentDefenderHandCount = visibleHandCount(state, res, previousState.defenderId);
+            if (discardDelta > 0) {
+                const verb = discardDelta % 10 === 1 && discardDelta % 100 !== 11 ? 'ушла' : 'ушли';
+                uiState.lastTrickResult = {
+                    tone: 'beat',
+                    text: `Бито — ${discardDelta} ${cardCountWord(discardDelta)} ${verb} в отбой`
+                };
+            } else if (
+                previousState.defenderHandCount !== null
+                && currentDefenderHandCount !== null
+                && currentDefenderHandCount > previousState.defenderHandCount
+            ) {
+                uiState.lastTrickResult = {
+                    tone: 'taking',
+                    text: `${previousState.defenderName} забирает ${previousState.tableCardCount} ${cardCountWord(previousState.tableCardCount)}`
+                };
+            } else {
+                uiState.lastTrickResult = null;
+            }
+        }
+
+        uiState.previousTrickState = currentState;
     }
 
     function durakModeLabel(state) {
@@ -232,15 +322,20 @@
 
         const actor = getPlayer(res, state.actor_id);
         const actorName = actor ? playerName(actor) : 'Игрок';
+        const currentDefenderName = defenderName(state, res);
+        if (state.defender_mode === 'taking') {
+            return isMyTurn(state, res)
+                ? `${currentDefenderName} берёт — можно подкинуть`
+                : `${currentDefenderName} забирает карты`;
+        }
+        if (isBeatContext(state)) {
+            return isMyTurn(state, res) ? 'Можно подкинуть или завершить' : 'Все карты отбиты';
+        }
         if (isMyTurn(state, res)) {
             if (state.phase === 'defense') return 'Твоя защита';
-            if (state.defender_mode === 'taking') return 'Можно подкинуть или сказать «Пас»';
-            if (isBeatContext(state)) return 'Можно подкинуть или сказать «Бито»';
             return (state.table || []).length ? 'Можно подкинуть' : 'Твоя атака';
         }
         if (state.phase === 'defense') return 'Соперник решает: бить или взять';
-        if (state.defender_mode === 'taking') return `${actorName} выбирает: подкинуть или пас`;
-        if (isBeatContext(state)) return `${actorName} выбирает: подкинуть или бито`;
         return (state.table || []).length ? 'Ждём подкидывание' : `Ходит ${actorName}`;
     }
 
@@ -312,12 +407,15 @@
             const id = String(player.id);
             const active = String(state.actor_id || '') === id;
             const defender = String(state.roles?.defender_id || '') === id;
+            const defenderStatus = defender
+                ? (state.defender_mode === 'taking' ? 'берёт' : 'защита')
+                : '';
             return `
                 <div class="durak-seat ${active ? 'is-active' : ''}">
                     <div class="durak-avatar">${playerAvatar(player)}</div>
                     <div class="durak-seat-copy">
                         <div class="durak-seat-name">${esc(playerName(player))}</div>
-                        <div class="durak-seat-meta">${handCounts.get(id) || 0} карт${defender ? ' · защита' : ''}</div>
+                        <div class="durak-seat-meta">${handCounts.get(id) || 0} карт${defenderStatus ? ` · ${defenderStatus}` : ''}</div>
                     </div>
                 </div>
             `;
@@ -335,6 +433,14 @@
     function renderTable(state, res) {
         const table = state.table || [];
         if (!table.length) {
+            const result = uiState.lastTrickResult;
+            if (result) {
+                return `
+                    <div class="durak-table-empty is-trick-result is-${esc(result.tone)}" role="status">
+                        <div class="durak-empty-title">${esc(result.text)}</div>
+                    </div>
+                `;
+            }
             return `
                 <div class="durak-table-empty">
                     <div class="durak-empty-title">Стол чист</div>
@@ -568,11 +674,14 @@
         const defenseTarget = defenseTargetCard(state, res);
         const needsDefenseTarget = defenseTurn && openAttacks(state).length > 1 && !defenseTarget;
         const disabled = !isMyTurn(state, res) || uiState.busy || state.phase === 'finished';
+        const currentDefenderName = defenderName(state, res);
         const waitingHint = state.phase === 'defense'
             ? 'Ждём защиту'
             : state.defender_mode === 'taking'
-                ? 'Ждём подкидывание'
-                : 'Ждём атаку';
+                ? `${currentDefenderName} забирает карты — ждём подкидывание`
+                : isBeatContext(state)
+                    ? 'Все карты отбиты — ждём решения подкидывающего'
+                    : 'Ждём атаку';
         const transferAvailable = canTransfer(state, res);
         const actionHint = defenseTurn
             ? (transferAvailable
@@ -580,7 +689,11 @@
                 : (needsDefenseTarget ? 'Выбери карту атаки на столе' : 'Выбери карту защиты'))
             : canAttack(state, res)
                 ? ((state.table || []).length
-                    ? (isBeatContext(state) ? 'Подкинь карту совпадающего ранга или скажи «Бито»' : 'Подкинь карту совпадающего ранга или скажи «Пас»')
+                    ? (state.defender_mode === 'taking'
+                        ? 'Подкинь подходящую карту или закончи подкидывание'
+                        : isBeatContext(state)
+                            ? 'Подкинь подходящую карту или скажи «Бито»'
+                            : 'Подкинь карту совпадающего ранга')
                     : 'Выбери карту для атаки')
                 : waitingHint;
 
@@ -848,8 +961,10 @@
     }
 
     function renderGame(res) {
-        uiState.lastRes = res;
+        const previousTrickState = uiState.previousTrickState;
         const state = parseState(res);
+        updateLastTrickResult(previousTrickState, state, res);
+        uiState.lastRes = res;
         initializeSetupState(state);
         const roleKey = [state.phase || '', state.roles?.attacker_id || '', state.roles?.defender_id || '', state.actor_id || ''].join(':');
         if (uiState.roleKey !== null && uiState.roleKey !== roleKey) {
