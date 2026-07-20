@@ -437,16 +437,11 @@
             shell.innerHTML = `
                 <div class="durak-top">
                     <div class="durak-top-balance" aria-hidden="true"></div>
-                    <div class="durak-title-block">
-                        <h2>Дурак</h2>
-                        <div class="durak-game-meta" id="durak-mode-label"></div>
-                    </div>
+                    <h2 class="durak-title">Дурак</h2>
                     <div class="durak-top-actions">
                         <div class="durak-status-pill" id="durak-status-pill"></div>
-                        <button type="button" class="durak-exit-btn" id="durak-exit-btn" hidden>
-                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                        </button>
                     </div>
+                    <div class="durak-game-meta" id="durak-mode-label"></div>
                 </div>
                 <div class="durak-error" id="durak-error" hidden></div>
                 <div class="durak-board" id="durak-board"></div>
@@ -1257,15 +1252,6 @@
             status.textContent = compactStatusCopy(state, res);
             status.hidden = isActivePhase;
         }
-        const exitButton = shell.querySelector('#durak-exit-btn');
-        if (exitButton) {
-            const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
-            const canFinishGame = Number(res?.is_host || 0) === 1 && isActivePhase;
-            exitButton.hidden = !canFinishGame;
-            exitButton.disabled = !canFinishGame || uiState.busy;
-            exitButton.setAttribute('aria-label', 'Завершить игру');
-            exitButton.title = 'Завершить игру';
-        }
         const modeLabel = shell.querySelector('#durak-mode-label');
         if (modeLabel) modeLabel.textContent = state.phase === 'setup' ? 'Подготовка' : durakCompactMetaLabel(state);
 
@@ -1284,7 +1270,14 @@
                 : `
                     <div class="durak-context-row">
                         <div class="durak-seats">${renderPlayers(res, state)}</div>
-                        <div class="durak-context-status">${esc(compactStatusCopy(state, res))}</div>
+                        <div class="durak-context-actions">
+                            <div class="durak-context-status">${esc(compactStatusCopy(state, res))}</div>
+                            ${Number(res?.is_host || 0) === 1 ? `
+                                <button type="button" class="durak-exit-btn" id="durak-exit-btn" hidden>
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                     <div class="durak-center">
                         ${renderDeck(state)}
@@ -1292,6 +1285,16 @@
                         ${renderControls(state, res)}
                     </div>
                 `;
+        }
+
+        const exitButton = shell.querySelector('#durak-exit-btn');
+        if (exitButton) {
+            const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
+            const canFinishGame = Number(res?.is_host || 0) === 1 && isActivePhase;
+            exitButton.hidden = !canFinishGame;
+            exitButton.disabled = !canFinishGame || uiState.busy;
+            exitButton.setAttribute('aria-label', 'Завершить игру');
+            exitButton.title = 'Завершить игру';
         }
 
         const hand = shell.querySelector('#durak-hand-shell');
