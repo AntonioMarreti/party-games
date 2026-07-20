@@ -436,7 +436,8 @@
             shell.className = 'durak-shell';
             shell.innerHTML = `
                 <div class="durak-top">
-                    <div class="durak-heading">
+                    <div class="durak-top-balance" aria-hidden="true"></div>
+                    <div class="durak-title-block">
                         <h2>Дурак</h2>
                         <div class="durak-game-meta" id="durak-mode-label"></div>
                     </div>
@@ -1244,7 +1245,11 @@
         shell.classList.toggle('is-finished', state.phase === 'finished');
         shell.classList.toggle('is-setup', state.phase === 'setup');
         const status = shell.querySelector('#durak-status-pill');
-        if (status) status.textContent = compactStatusCopy(state, res);
+        if (status) {
+            const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
+            status.textContent = compactStatusCopy(state, res);
+            status.hidden = isActivePhase;
+        }
         const exitButton = shell.querySelector('#durak-exit-btn');
         if (exitButton) {
             const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
@@ -1270,7 +1275,10 @@
                 : state.phase === 'finished'
                 ? renderFinalScreen(state, res)
                 : `
-                    <div class="durak-seats">${renderPlayers(res, state)}</div>
+                    <div class="durak-context-row">
+                        <div class="durak-seats">${renderPlayers(res, state)}</div>
+                        <div class="durak-context-status">${esc(compactStatusCopy(state, res))}</div>
+                    </div>
                     <div class="durak-center">
                         ${renderDeck(state)}
                         ${renderTable(state, res)}
