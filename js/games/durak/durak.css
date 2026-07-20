@@ -37,13 +37,17 @@
     padding-top: max(14px, calc(var(--durak-top-controls-clearance) - 18px));
 }
 
+.tg-platform-ios #durak-shell.is-active {
+    padding-top: max(14px, calc(var(--durak-top-controls-clearance) - 32px));
+}
+
 .durak-top {
     min-width: 0;
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) 44px;
     align-items: start;
     gap: 4px;
-    padding: 0 0 4px;
+    padding: 0;
 }
 
 .durak-top-balance {
@@ -73,7 +77,7 @@
 }
 
 .durak-game-meta {
-    margin-top: 3px;
+    margin-top: 1px;
     max-width: 100%;
     color: #64748b;
     font-size: 12px;
@@ -296,18 +300,16 @@
     background: rgba(255, 255, 255, 0.66);
 }
 
-.durak-deck,
-.durak-trump,
-.durak-discard {
+.durak-deck-section {
     min-width: 0;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 56px 12px;
+    justify-items: center;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
+    gap: 5px;
     border: 0;
     border-radius: 0;
-    padding: 5px 7px;
+    padding: 6px 4px;
     background: transparent;
     box-shadow: none;
     text-align: center;
@@ -340,13 +342,13 @@
 
 .durak-deck-badge {
     position: absolute;
-    right: -4px;
-    bottom: -3px;
+    right: 2px;
+    bottom: 2px;
     min-width: 21px;
-    height: 19px;
+    height: 18px;
     display: grid;
     place-items: center;
-    border: 2px solid #ffffff;
+    border: 1px solid #ffffff;
     border-radius: 999px;
     padding: 0 4px;
     background: #172033;
@@ -636,23 +638,46 @@ button.durak-card.is-defendable {
 }
 
 .durak-card.is-small > .durak-card-corner:not(.is-bottom) {
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 5px;
+    left: 5px;
+    width: auto;
+    height: auto;
+    display: block;
+    transform: none;
 }
 
-.durak-card.is-small > .durak-card-center-suit,
+.durak-card.is-small > .durak-card-corner:not(.is-bottom) .durak-card-corner-suit,
 .durak-card.is-small > .durak-card-corner.is-bottom {
     display: none;
 }
 
 .durak-card.is-small .durak-card-corner-rank {
-    font-size: 14px;
+    font-size: 12px;
 }
 
-.durak-card.is-small .durak-card-corner-suit {
-    margin-top: 2px;
+.durak-card.is-small > .durak-card-center-suit {
+    top: 50%;
+    left: 50%;
+    display: block;
+    transform: translate(-50%, -45%);
+    font-size: 23px;
+}
+
+.durak-deck-row .durak-trump .durak-deck-visual > .durak-card.is-small {
+    width: 40px;
+    height: 56px;
+    min-width: 40px;
+    min-height: 56px;
+    padding: 4px;
+    border-radius: 9px;
+}
+
+.durak-deck-row .durak-trump .durak-card.is-small .durak-card-corner-rank {
     font-size: 11px;
+}
+
+.durak-deck-row .durak-trump .durak-card.is-small > .durak-card-center-suit {
+    font-size: 20px;
 }
 
 .durak-card-slot {
@@ -1293,6 +1318,10 @@ button.durak-card.is-defendable {
     padding-bottom: 3px;
 }
 
+#durak-shell[data-height="short"].is-active .durak-top {
+    padding-bottom: 0;
+}
+
 #durak-shell[data-height="short"] .durak-board {
     gap: 4px;
 }
@@ -1427,6 +1456,7 @@ button.durak-card.is-defendable {
 
 #durak-shell.is-setup .durak-game-meta,
 #durak-shell.is-finished .durak-game-meta {
+    margin-top: 3px;
     font-size: 11px;
 }
 
