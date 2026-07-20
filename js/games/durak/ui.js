@@ -20,6 +20,29 @@
         K: 13,
         A: 14
     };
+    const DURAK_SUIT_ORDER = ['S', 'H', 'D', 'C'];
+    const DURAK_HAND_SORT_STORAGE_KEY = 'party_games:durak:hand_sort_v1';
+    const DURAK_HAND_SORT_VALUES = ['strength', 'suit', 'dealt'];
+
+    function normalizeHandSort(value) {
+        return DURAK_HAND_SORT_VALUES.includes(value) ? value : 'strength';
+    }
+
+    function loadHandSortPreference() {
+        try {
+            return normalizeHandSort(window.localStorage?.getItem(DURAK_HAND_SORT_STORAGE_KEY));
+        } catch (error) {
+            return 'strength';
+        }
+    }
+
+    function saveHandSortPreference(value) {
+        try {
+            window.localStorage?.setItem(DURAK_HAND_SORT_STORAGE_KEY, normalizeHandSort(value));
+        } catch (error) {
+            // The preference is optional; storage failures must not affect play.
+        }
+    }
 
     const uiState = {
         selectedCardId: null,
@@ -35,7 +58,8 @@
         setupDeckProfileId: 'durak_36',
         setupAllowThrowIn: true,
         setupAllowTransfer: false,
-        setupInitialized: false
+        setupInitialized: false,
+        handSort: loadHandSortPreference()
     };
 
     const resizeState = {
@@ -308,6 +332,54 @@
         return DURAK_RANK_VALUES[cardRank(cardId)] || 0;
     }
 
+    function sortedHandCards(state) {
+        const trumpSuit = String(state.trump?.suit || '');
+        const sortMode = normalizeHandSort(uiState.handSort);
+        const cards = [...(state.my_hand || [])];
+        const indexedCards = cards.map((cardId, dealtIndex) => ({ cardId, dealtIndex }));
+
+        if (sortMode === 'strength') {
+            indexedCards.sort((left, right) => {
+                const leftTrump = cardSuit(left.cardId) === trumpSuit;
+                const rightTrump = cardSuit(right.cardId) === trumpSuit;
+                if (leftTrump !== rightTrump) return leftTrump ? -1 : 1;
+
+                const rankDifference = cardRankValue(right.cardId) - cardRankValue(left.cardId);
+                if (rankDifference !== 0) return rankDifference;
+
+                const suitDifference = DURAK_SUIT_ORDER.indexOf(cardSuit(left.cardId))
+                    - DURAK_SUIT_ORDER.indexOf(cardSuit(right.cardId));
+                return suitDifference || left.dealtIndex - right.dealtIndex;
+            });
+        } else if (sortMode === 'suit') {
+            const suitOrder = [trumpSuit, ...DURAK_SUIT_ORDER.filter(suit => suit !== trumpSuit)]
+                .filter((suit, index, allSuits) => suit && allSuits.indexOf(suit) === index);
+            indexedCards.sort((left, right) => {
+                const suitDifference = suitOrder.indexOf(cardSuit(left.cardId))
+                    - suitOrder.indexOf(cardSuit(right.cardId));
+                if (suitDifference !== 0) return suitDifference;
+
+                const rankDifference = cardRankValue(right.cardId) - cardRankValue(left.cardId);
+                return rankDifference || left.dealtIndex - right.dealtIndex;
+            });
+        }
+
+        return indexedCards.map((item, index, sortedCards) => {
+            const previousCardId = index > 0 ? sortedCards[index - 1].cardId : '';
+            const startsStrengthGroup = sortMode === 'strength'
+                && previousCardId
+                && cardSuit(previousCardId) === trumpSuit
+                && cardSuit(item.cardId) !== trumpSuit;
+            const startsSuitGroup = sortMode === 'suit'
+                && previousCardId
+                && cardSuit(previousCardId) !== cardSuit(item.cardId);
+            return {
+                cardId: item.cardId,
+                isGroupStart: Boolean(startsStrengthGroup || startsSuitGroup)
+            };
+        });
+    }
+
     function canBeatCard(defenseCardId, attackCardId, trumpSuit) {
         const defenseSuit = cardSuit(defenseCardId);
         const attackSuit = cardSuit(attackCardId);
@@ -400,17 +472,29 @@
             options.defend ? 'is-defense-card' : '',
             options.muted ? 'is-muted' : '',
             options.defendable ? 'is-defendable' : '',
-            options.waitingTarget ? 'is-waiting-target' : ''
+            options.waitingTarget ? 'is-waiting-target' : '',
+            options.trump ? 'is-trump' : '',
+            options.groupStart ? 'is-group-start' : ''
         ].filter(Boolean).join(' ');
+        const cardStyle = Number.isInteger(options.stackIndex)
+            ? ` style="--durak-card-index: ${options.stackIndex}"`
+            : '';
         const attrs = options.button
-            ? `button type="button" ${options.disabled ? 'disabled' : ''} data-card-id="${esc(cardId)}" class="${classes}"`
-            : `div class="${classes}"`;
+            ? `button type="button" ${options.disabled ? 'disabled' : ''} data-card-id="${esc(cardId)}" class="${classes}"${cardStyle}`
+            : `div class="${classes}"${cardStyle}`;
         const endTag = options.button ? 'button' : 'div';
 
         return `
             <${attrs} aria-label="${esc(cardRank(cardId) + ' ' + meta.label)}">
-                <span class="durak-card-rank">${esc(cardRank(cardId))}</span>
-                <span class="durak-card-suit">${esc(meta.symbol)}</span>
+                <span class="durak-card-corner">
+                    <span class="durak-card-corner-rank">${esc(cardRank(cardId))}</span>
+                    <span class="durak-card-corner-suit">${esc(meta.symbol)}</span>
+                </span>
+                <span class="durak-card-center-suit" aria-hidden="true">${esc(meta.symbol)}</span>
+                <span class="durak-card-corner is-bottom" aria-hidden="true">
+                    <span class="durak-card-corner-rank">${esc(cardRank(cardId))}</span>
+                    <span class="durak-card-corner-suit">${esc(meta.symbol)}</span>
+                </span>
             </${endTag}>
         `;
     }
@@ -765,7 +849,8 @@
     }
 
     function renderHand(state, res) {
-        const cards = state.my_hand || [];
+        const cards = [...(state.my_hand || [])];
+        const sortedCards = sortedHandCards(state);
         if (state.phase === 'finished') return '';
 
         const defenseTurn = isMyDefenseTurn(state, res);
@@ -797,26 +882,38 @@
 
         return `
             <div class="durak-hand-head">
-                <div>
+                <div class="durak-hand-copy">
                     <div class="durak-hand-title">Твоя рука</div>
                     <div class="durak-hand-hint">${esc(actionHint)}</div>
                 </div>
-                <div class="durak-hand-count">${cards.length}</div>
+                <div class="durak-hand-tools">
+                    <select class="durak-hand-sort" data-hand-sort aria-label="Сортировка карт">
+                        <option value="strength" ${uiState.handSort === 'strength' ? 'selected' : ''}>По силе</option>
+                        <option value="suit" ${uiState.handSort === 'suit' ? 'selected' : ''}>По мастям</option>
+                        <option value="dealt" ${uiState.handSort === 'dealt' ? 'selected' : ''}>Как пришли</option>
+                    </select>
+                    <div class="durak-hand-count">${cards.length}</div>
+                </div>
             </div>
             <div class="durak-hand" role="list">
-                ${cards.map(cardId => {
+                <div class="durak-hand-strip">
+                ${sortedCards.map(({ cardId, isGroupStart }, stackIndex) => {
                     const defensePlayable = defenseTurn && canUseDefenseCard(state, res, cardId);
                     const transferPlayable = defenseTurn && canTransferCard(state, res, cardId);
                     const defenseMuted = defenseTurn && !defensePlayable && !transferPlayable;
                     return renderCard(cardId, {
                         button: true,
                         disabled: disabled || (defenseTurn && !defensePlayable && !transferPlayable),
-                        selected: uiState.selectedCardId === cardId,
+                        selected: uiState.selectedCardId === cardId && !defenseMuted,
                         muted: defenseMuted,
                         defendable: defensePlayable && !needsDefenseTarget,
-                        waitingTarget: needsDefenseTarget
+                        waitingTarget: needsDefenseTarget,
+                        trump: cardSuit(cardId) === String(state.trump?.suit || ''),
+                        groupStart: isGroupStart,
+                        stackIndex
                     });
                 }).join('')}
+                </div>
             </div>
         `;
     }
@@ -1233,6 +1330,15 @@
         if (startMatchBtn) {
             startMatchBtn.onclick = () => {
                 if (!startMatchBtn.disabled) startDurakMatch(res);
+            };
+        }
+
+        const handSortSelect = shell.querySelector('[data-hand-sort]');
+        if (handSortSelect) {
+            handSortSelect.onchange = () => {
+                uiState.handSort = normalizeHandSort(handSortSelect.value);
+                saveHandSortPreference(uiState.handSort);
+                renderGame(res);
             };
         }
 

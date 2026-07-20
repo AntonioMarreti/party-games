@@ -425,13 +425,22 @@
     border: 1px solid rgba(148, 163, 184, 0.28);
     background: #ffffff;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.09);
-    display: grid;
-    grid-template-rows: 1fr auto;
-    align-items: center;
-    justify-items: center;
-    padding: 8px 6px;
     color: #111827;
     font-weight: 950;
+}
+
+.durak-card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    padding: 0;
+    text-align: left;
+}
+
+.durak-card-slot {
+    display: grid;
+    place-items: center;
+    padding: 8px 6px;
 }
 
 button.durak-card {
@@ -444,14 +453,19 @@ button.durak-card:active:not(:disabled) {
     transform: translateY(1px) scale(0.99);
 }
 
+button.durak-card:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.3);
+    outline-offset: 2px;
+}
+
 button.durak-card:disabled {
     cursor: default;
-    opacity: 0.62;
+    opacity: 1;
 }
 
 button.durak-card.is-muted {
-    opacity: 0.38;
-    filter: grayscale(0.25);
+    opacity: 0.4;
+    filter: grayscale(0.2);
 }
 
 button.durak-card.is-defendable {
@@ -461,6 +475,13 @@ button.durak-card.is-defendable {
 
 .durak-card.is-red {
     color: #dc2626;
+}
+
+.durak-card.is-trump {
+    border-color: rgba(202, 138, 4, 0.62);
+    box-shadow:
+        0 9px 20px rgba(146, 94, 8, 0.12),
+        inset 0 0 0 1px rgba(250, 204, 21, 0.16);
 }
 
 .durak-card.is-small,
@@ -477,22 +498,69 @@ button.durak-card.is-defendable {
     box-shadow: 0 16px 30px rgba(37, 99, 235, 0.18);
 }
 
-.durak-card-rank {
-    font-size: 20px;
+.durak-card-corner {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    display: grid;
+    justify-items: center;
+    gap: 0;
+    line-height: 0.86;
+}
+
+.durak-card-corner.is-bottom {
+    top: auto;
+    right: 7px;
+    bottom: 7px;
+    left: auto;
+    transform: rotate(180deg);
+}
+
+.durak-card-corner-rank {
+    font-size: 18px;
+    font-weight: 950;
+    letter-spacing: -0.05em;
+}
+
+.durak-card-corner-suit {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.durak-card-center-suit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 30px;
+    font-weight: 800;
     line-height: 1;
 }
 
-.durak-card.is-small .durak-card-rank {
-    font-size: 16px;
+.durak-card.is-small .durak-card-corner {
+    top: 4px;
+    left: 4px;
 }
 
-.durak-card-suit {
-    font-size: 22px;
-    line-height: 1;
+.durak-card.is-small .durak-card-corner.is-bottom {
+    top: auto;
+    right: 4px;
+    bottom: 4px;
+    left: auto;
 }
 
-.durak-card.is-small .durak-card-suit {
-    font-size: 17px;
+.durak-card.is-small .durak-card-corner-rank {
+    font-size: 13px;
+}
+
+.durak-card.is-small .durak-card-corner-suit {
+    margin-top: 1px;
+    font-size: 9px;
+}
+
+.durak-card.is-small .durak-card-center-suit {
+    font-size: 21px;
 }
 
 .durak-card-slot {
@@ -790,10 +858,16 @@ button.durak-card.is-defendable {
 
 .durak-hand-head {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
     padding: 0 2px 8px;
+}
+
+.durak-hand-copy {
+    min-width: 128px;
+    flex: 1 1 150px;
 }
 
 .durak-hand-title {
@@ -823,18 +897,76 @@ button.durak-card.is-defendable {
     font-weight: 900;
 }
 
-.durak-hand {
+.durak-hand-tools {
     min-width: 0;
+    flex: 0 1 auto;
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: visible;
-    padding: 14px 2px 4px;
-    scrollbar-width: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
 }
 
-.durak-hand .durak-card {
+.durak-hand-sort {
+    min-width: 0;
+    max-width: 118px;
+    min-height: 34px;
+    border: 1px solid rgba(100, 116, 139, 0.28);
+    border-radius: 10px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #334155;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.durak-hand-sort:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.24);
+    outline-offset: 2px;
+    border-color: rgba(37, 99, 235, 0.52);
+}
+
+.durak-hand {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px 2px 4px;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.durak-hand-strip {
+    width: max-content;
+    min-width: 100%;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 2px 2px;
+}
+
+.durak-hand-strip .durak-card {
+    width: 68px;
+    height: 96px;
     flex: 0 0 auto;
+    z-index: calc(var(--durak-card-index, 0) + 1);
+}
+
+.durak-hand-strip .durak-card + .durak-card {
+    margin-left: -24px;
+}
+
+.durak-hand-strip .durak-card.is-group-start {
+    margin-left: -22px;
+}
+
+.durak-hand-strip .durak-card.is-selected {
+    z-index: 100;
+}
+
+.durak-hand-strip button.durak-card.is-selected:active:not(:disabled) {
+    transform: translateY(-10px) scale(0.99);
 }
 
 #durak-shell[data-layout="wide"] {
@@ -869,7 +1001,7 @@ button.durak-card.is-defendable {
     align-content: center;
 }
 
-#durak-shell[data-layout="wide"] .durak-hand {
+#durak-shell[data-layout="wide"] .durak-hand-strip {
     justify-content: center;
 }
 
@@ -879,12 +1011,16 @@ button.durak-card.is-defendable {
 }
 
 #durak-shell[data-layout="wide"] .durak-hand .durak-card {
-    width: 64px;
-    height: 90px;
+    width: 74px;
+    height: 104px;
 }
 
-#durak-shell[data-layout="wide"] .durak-card-rank {
-    font-size: 22px;
+#durak-shell[data-layout="wide"] .durak-hand .durak-card-corner-rank {
+    font-size: 20px;
+}
+
+#durak-shell[data-layout="wide"] .durak-hand .durak-card-center-suit {
+    font-size: 34px;
 }
 
 #durak-shell[data-height="short"] .durak-top {
@@ -953,6 +1089,20 @@ button.durak-card.is-defendable {
     .durak-final-hand-row {
         padding-left: 8px;
         padding-right: 8px;
+    }
+
+    .durak-hand-head {
+        gap: 7px;
+    }
+
+    .durak-hand-copy {
+        min-width: 120px;
+    }
+
+    .durak-hand-sort {
+        max-width: 108px;
+        padding-left: 6px;
+        padding-right: 6px;
     }
 }
 
@@ -1259,6 +1409,7 @@ button.durak-card.is-defendable {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    button.durak-card,
     .durak-setup-deck-option span,
     .durak-setup-switch-track,
     .durak-setup-switch-track::after {
