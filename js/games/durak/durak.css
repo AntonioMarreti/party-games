@@ -24,6 +24,7 @@
         radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.12), transparent 36%);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
+    position: relative;
     overflow: hidden;
     padding: max(14px, var(--durak-top-controls-clearance)) 12px max(10px, calc(8px + var(--durak-bottom-inset)));
 }
@@ -464,8 +465,8 @@ button.durak-card:disabled {
 }
 
 button.durak-card.is-muted {
-    opacity: 0.4;
-    filter: grayscale(0.2);
+    opacity: 0.66;
+    filter: grayscale(0.06);
 }
 
 button.durak-card.is-defendable {
@@ -583,6 +584,13 @@ button.durak-card.is-defendable {
 
 .durak-actions.is-triple {
     grid-template-columns: repeat(3, 1fr);
+}
+
+.durak-actions.is-triple .durak-action-btn {
+    min-width: 0;
+    padding-right: 6px;
+    padding-left: 6px;
+    font-size: 12px;
 }
 
 .durak-action-btn {
@@ -906,25 +914,172 @@ button.durak-card.is-defendable {
     gap: 6px;
 }
 
-.durak-hand-sort {
-    min-width: 0;
-    max-width: 118px;
-    min-height: 34px;
+.durak-hand-settings-btn,
+.durak-hand-settings-close {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    appearance: none;
     border: 1px solid rgba(100, 116, 139, 0.28);
-    border-radius: 10px;
-    padding: 6px 8px;
-    background: rgba(255, 255, 255, 0.88);
+    border-radius: 12px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.9);
     color: #334155;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 800;
-    line-height: 1.1;
+    font-size: 17px;
 }
 
-.durak-hand-sort:focus-visible {
+.durak-hand-settings-btn:focus-visible,
+.durak-hand-settings-close:focus-visible,
+.durak-hand-settings-option:focus-visible {
     outline: 3px solid rgba(37, 99, 235, 0.24);
     outline-offset: 2px;
     border-color: rgba(37, 99, 235, 0.52);
+}
+
+.durak-hand-settings-layer {
+    position: absolute;
+    z-index: 40;
+    inset: 0;
+    display: grid;
+    align-items: end;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+    transition: visibility 0s linear 220ms;
+}
+
+.durak-hand-settings-layer.is-open {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+}
+
+.durak-hand-settings-backdrop {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    appearance: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: rgba(15, 23, 42, 0.48);
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+.durak-hand-settings-layer.is-open .durak-hand-settings-backdrop {
+    opacity: 1;
+}
+
+.durak-hand-settings-sheet {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 480px);
+    max-height: min(78%, 520px);
+    justify-self: center;
+    overflow-y: auto;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-bottom: 0;
+    border-radius: 22px 22px 0 0;
+    padding: 16px 14px max(18px, calc(14px + var(--durak-bottom-inset)));
+    background: #f8fafc;
+    box-shadow: 0 -18px 50px rgba(15, 23, 42, 0.2);
+    transform: translateY(105%);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.durak-hand-settings-layer.is-open .durak-hand-settings-sheet {
+    transform: translateY(0);
+}
+
+.durak-hand-settings-head {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.durak-hand-settings-head h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.durak-hand-settings-close {
+    border-color: transparent;
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.durak-hand-settings-label {
+    margin: 0 2px 8px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.durak-hand-settings-options {
+    display: grid;
+    gap: 7px;
+}
+
+.durak-hand-settings-option {
+    width: 100%;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    appearance: none;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 14px;
+    padding: 9px 12px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 850;
+    text-align: left;
+}
+
+.durak-hand-settings-option.is-selected {
+    border-color: rgba(37, 99, 235, 0.52);
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.durak-hand-settings-radio {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    display: grid;
+    place-items: center;
+    border: 2px solid #cbd5e1;
+    border-radius: 999px;
+    color: transparent;
+    font-size: 15px;
+}
+
+.durak-hand-settings-option.is-selected .durak-hand-settings-radio {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.durak-hand-settings-help {
+    margin: 13px 2px 0;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
 }
 
 .durak-hand {
@@ -953,12 +1108,16 @@ button.durak-card.is-defendable {
     z-index: calc(var(--durak-card-index, 0) + 1);
 }
 
+.durak-hand-strip .durak-card-corner.is-bottom {
+    display: none;
+}
+
 .durak-hand-strip .durak-card + .durak-card {
-    margin-left: -24px;
+    margin-left: -22px;
 }
 
 .durak-hand-strip .durak-card.is-group-start {
-    margin-left: -22px;
+    margin-left: -18px;
 }
 
 .durak-hand-strip .durak-card.is-selected {
@@ -1099,10 +1258,12 @@ button.durak-card.is-defendable {
         min-width: 120px;
     }
 
-    .durak-hand-sort {
-        max-width: 108px;
-        padding-left: 6px;
-        padding-right: 6px;
+    .durak-actions.is-triple {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .durak-actions.is-triple .durak-action-btn.is-danger:last-child {
+        grid-column: 1 / -1;
     }
 }
 
@@ -1410,6 +1571,8 @@ button.durak-card.is-defendable {
 
 @media (prefers-reduced-motion: reduce) {
     button.durak-card,
+    .durak-hand-settings-backdrop,
+    .durak-hand-settings-sheet,
     .durak-setup-deck-option span,
     .durak-setup-switch-track,
     .durak-setup-switch-track::after {

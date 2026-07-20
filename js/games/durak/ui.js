@@ -59,7 +59,9 @@
         setupAllowThrowIn: true,
         setupAllowTransfer: false,
         setupInitialized: false,
-        handSort: loadHandSortPreference()
+        handSort: loadHandSortPreference(),
+        handSettingsOpen: false,
+        handSettingsKeydownBound: false
     };
 
     const resizeState = {
@@ -455,10 +457,71 @@
                 <div class="durak-error" id="durak-error" hidden></div>
                 <div class="durak-board" id="durak-board"></div>
                 <div class="durak-hand-shell" id="durak-hand-shell"></div>
+                <div class="durak-hand-settings-layer" id="durak-hand-settings-layer" aria-hidden="true" inert>
+                    <button type="button" class="durak-hand-settings-backdrop" data-action="close-hand-settings" aria-label="Закрыть настройки руки"></button>
+                    <section class="durak-hand-settings-sheet" role="dialog" aria-modal="true" aria-labelledby="durak-hand-settings-title">
+                        <div class="durak-hand-settings-head">
+                            <h3 id="durak-hand-settings-title">Настройки руки</h3>
+                            <button type="button" class="durak-hand-settings-close" data-action="close-hand-settings" aria-label="Закрыть настройки руки">
+                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="durak-hand-settings-label">Сортировка</div>
+                        <div class="durak-hand-settings-options" role="radiogroup" aria-label="Сортировка карт">
+                            <button type="button" class="durak-hand-settings-option" data-hand-sort-option="strength" role="radio">
+                                <span class="durak-hand-settings-radio" aria-hidden="true"><i class="bi bi-check"></i></span>
+                                <span>По силе</span>
+                            </button>
+                            <button type="button" class="durak-hand-settings-option" data-hand-sort-option="suit" role="radio">
+                                <span class="durak-hand-settings-radio" aria-hidden="true"><i class="bi bi-check"></i></span>
+                                <span>По мастям</span>
+                            </button>
+                            <button type="button" class="durak-hand-settings-option" data-hand-sort-option="dealt" role="radio">
+                                <span class="durak-hand-settings-radio" aria-hidden="true"><i class="bi bi-check"></i></span>
+                                <span>Как пришли</span>
+                            </button>
+                        </div>
+                        <p class="durak-hand-settings-help">Порядок сохраняется на этом устройстве.</p>
+                    </section>
+                </div>
             `;
             container.appendChild(shell);
         }
+        if (!uiState.handSettingsKeydownBound) {
+            document.addEventListener('keydown', handleHandSettingsKeydown);
+            uiState.handSettingsKeydownBound = true;
+        }
         return shell;
+    }
+
+    function handleHandSettingsKeydown(event) {
+        if (event.key !== 'Escape' || !uiState.handSettingsOpen) return;
+        const shell = document.getElementById('durak-shell');
+        if (!shell) return;
+        closeHandSettings(shell, true);
+    }
+
+    function syncHandSettingsLayer(shell) {
+        const layer = shell.querySelector('#durak-hand-settings-layer');
+        if (!layer) return;
+
+        layer.classList.toggle('is-open', uiState.handSettingsOpen);
+        layer.setAttribute('aria-hidden', uiState.handSettingsOpen ? 'false' : 'true');
+        layer.inert = !uiState.handSettingsOpen;
+        layer.querySelectorAll('[data-hand-sort-option]').forEach(button => {
+            const selected = normalizeHandSort(button.dataset.handSortOption) === uiState.handSort;
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        });
+    }
+
+    function closeHandSettings(shell, restoreFocus = false) {
+        uiState.handSettingsOpen = false;
+        syncHandSettingsLayer(shell);
+        if (restoreFocus) {
+            const settingsButton = shell.querySelector('[data-action="open-hand-settings"]');
+            if (settingsButton) settingsButton.focus({ preventScroll: true });
+        }
     }
 
     function renderCard(cardId, options = {}) {
@@ -887,11 +950,9 @@
                     <div class="durak-hand-hint">${esc(actionHint)}</div>
                 </div>
                 <div class="durak-hand-tools">
-                    <select class="durak-hand-sort" data-hand-sort aria-label="Сортировка карт">
-                        <option value="strength" ${uiState.handSort === 'strength' ? 'selected' : ''}>По силе</option>
-                        <option value="suit" ${uiState.handSort === 'suit' ? 'selected' : ''}>По мастям</option>
-                        <option value="dealt" ${uiState.handSort === 'dealt' ? 'selected' : ''}>Как пришли</option>
-                    </select>
+                    <button type="button" class="durak-hand-settings-btn" data-action="open-hand-settings" aria-label="Настройки руки" title="Настройки руки">
+                        <i class="bi bi-gear" aria-hidden="true"></i>
+                    </button>
                     <div class="durak-hand-count">${cards.length}</div>
                 </div>
             </div>
@@ -900,10 +961,10 @@
                 ${sortedCards.map(({ cardId, isGroupStart }, stackIndex) => {
                     const defensePlayable = defenseTurn && canUseDefenseCard(state, res, cardId);
                     const transferPlayable = defenseTurn && canTransferCard(state, res, cardId);
-                    const defenseMuted = defenseTurn && !defensePlayable && !transferPlayable;
+                    const defenseMuted = defenseTurn && !needsDefenseTarget && !defensePlayable && !transferPlayable;
                     return renderCard(cardId, {
                         button: true,
-                        disabled: disabled || (defenseTurn && !defensePlayable && !transferPlayable),
+                        disabled: disabled || defenseMuted,
                         selected: uiState.selectedCardId === cardId && !defenseMuted,
                         muted: defenseMuted,
                         defendable: defensePlayable && !needsDefenseTarget,
@@ -923,20 +984,25 @@
         if (isMyDefenseTurn(state, res)) {
             const selectedCardId = uiState.selectedCardId;
             const transferAvailable = canTransferCard(state, res, selectedCardId);
-            const defendAvailable = transferAvailable && canUseDefenseCard(state, res, selectedCardId);
+            const defendAvailable = canUseDefenseCard(state, res, selectedCardId);
             const actionCount = 1 + (transferAvailable ? 1 : 0) + (defendAvailable ? 1 : 0);
             return `
                 <div class="durak-actions ${actionCount === 1 ? 'is-single' : ''} ${actionCount === 3 ? 'is-triple' : ''} is-defense">
-                    ${defendAvailable ? '<button type="button" class="durak-action-btn" data-action="defend" ' + (uiState.busy ? 'disabled' : '') + '>Отбиться</button>' : ''}
-                    ${transferAvailable ? '<button type="button" class="durak-action-btn" data-action="transfer" ' + (uiState.busy ? 'disabled' : '') + '>Перевести</button>' : ''}
+                    ${defendAvailable ? '<button type="button" class="durak-action-btn" data-action="defend" ' + (uiState.busy ? 'disabled' : '') + '>Отбиться ' + esc(cardCopy(selectedCardId)) + '</button>' : ''}
+                    ${transferAvailable ? '<button type="button" class="durak-action-btn" data-action="transfer" ' + (uiState.busy ? 'disabled' : '') + '>Перевести ' + esc(cardCopy(selectedCardId)) + '</button>' : ''}
                     <button type="button" class="durak-action-btn is-danger" data-action="take" ${canTake(state, res) && !uiState.busy ? '' : 'disabled'}>Взять</button>
                 </div>
             `;
         }
-        if (!canPass(state, res)) return '';
+        const attackAvailable = canAttack(state, res) && Boolean(uiState.selectedCardId);
+        const passAvailable = canPass(state, res);
+        if (!attackAvailable && !passAvailable) return '';
+        const actionCount = (attackAvailable ? 1 : 0) + (passAvailable ? 1 : 0);
+        const attackLabel = (state.table || []).length ? 'Подкинуть' : 'Сходить';
         return `
-            <div class="durak-actions is-single">
-                <button type="button" class="durak-action-btn" data-action="pass" ${!uiState.busy ? '' : 'disabled'}>${esc(passActionLabel(state))}</button>
+            <div class="durak-actions ${actionCount === 1 ? 'is-single' : ''}">
+                ${attackAvailable ? `<button type="button" class="durak-action-btn" data-action="confirm-attack" ${!uiState.busy ? '' : 'disabled'}>${attackLabel} ${esc(cardCopy(uiState.selectedCardId))}</button>` : ''}
+                ${passAvailable ? `<button type="button" class="durak-action-btn" data-action="pass" ${!uiState.busy ? '' : 'disabled'}>${esc(passActionLabel(state))}</button>` : ''}
             </div>
         `;
     }
@@ -1118,6 +1184,12 @@
         }
         resizeState.telegramWebApp = null;
         resizeState.telegramListenersBound = false;
+        uiState.handSettingsOpen = false;
+
+        if (uiState.handSettingsKeydownBound) {
+            document.removeEventListener('keydown', handleHandSettingsKeydown);
+            uiState.handSettingsKeydownBound = false;
+        }
 
         const gameArea = document.getElementById('game-area');
         if (gameArea) gameArea.classList.remove('durak-active');
@@ -1158,13 +1230,14 @@
     function renderGame(res) {
         const previousTrickState = uiState.previousTrickState;
         const state = parseState(res);
+        if (state.phase === 'setup' || state.phase === 'finished') uiState.handSettingsOpen = false;
         if (state.phase === 'finished' && window.GameSummaryProvider) {
             window.GameSummaryProvider.remember('durak', state, { players: res.players || [] });
         }
         updateLastTrickResult(previousTrickState, state, res);
         uiState.lastRes = res;
         initializeSetupState(state);
-        const roleKey = [state.phase || '', state.roles?.attacker_id || '', state.roles?.defender_id || '', state.actor_id || ''].join(':');
+        const roleKey = [state.phase || '', state.roles?.attacker_id || '', state.roles?.defender_id || ''].join(':');
         if (uiState.roleKey !== null && uiState.roleKey !== roleKey) {
             uiState.selectedCardId = null;
             uiState.selectedAttackCardId = null;
@@ -1219,6 +1292,7 @@
         const hand = shell.querySelector('#durak-hand-shell');
         if (hand) hand.innerHTML = state.phase === 'setup' ? '' : renderHand(state, res);
 
+        syncHandSettingsLayer(shell);
         bindEvents(shell, state, res);
     }
 
@@ -1305,6 +1379,7 @@
             exitButton.onclick = () => {
                 if (exitButton.disabled || uiState.busy || Number(res?.is_host || 0) !== 1) return;
                 if (state.phase !== 'attack' && state.phase !== 'defense') return;
+                uiState.handSettingsOpen = false;
                 if (typeof window.finishGameSession === 'function') window.finishGameSession();
             };
         }
@@ -1333,60 +1408,81 @@
             };
         }
 
-        const handSortSelect = shell.querySelector('[data-hand-sort]');
-        if (handSortSelect) {
-            handSortSelect.onchange = () => {
-                uiState.handSort = normalizeHandSort(handSortSelect.value);
-                saveHandSortPreference(uiState.handSort);
-                renderGame(res);
+        const openHandSettingsButton = shell.querySelector('[data-action="open-hand-settings"]');
+        if (openHandSettingsButton) {
+            openHandSettingsButton.onclick = () => {
+                if (uiState.busy) return;
+                uiState.handSettingsOpen = true;
+                syncHandSettingsLayer(shell);
+                const closeButton = shell.querySelector('.durak-hand-settings-close');
+                if (closeButton) closeButton.focus({ preventScroll: true });
             };
         }
+
+        shell.querySelectorAll('[data-action="close-hand-settings"]').forEach(button => {
+            button.onclick = () => closeHandSettings(shell, true);
+        });
+
+        shell.querySelectorAll('[data-hand-sort-option]').forEach(button => {
+            button.onclick = () => {
+                uiState.handSort = normalizeHandSort(button.dataset.handSortOption);
+                saveHandSortPreference(uiState.handSort);
+                syncHandSettingsLayer(shell);
+                renderGame(res);
+            };
+        });
 
         shell.querySelectorAll('[data-attack-card]').forEach(button => {
             button.onclick = () => {
                 if (!isMyDefenseTurn(state, res) || button.disabled) return;
                 const attackCardId = button.dataset.attackCard || '';
                 uiState.selectedAttackCardId = uiState.selectedAttackCardId === attackCardId ? null : attackCardId;
+                if (uiState.selectedAttackCardId && uiState.selectedCardId
+                    && !canUseDefenseCard(state, res, uiState.selectedCardId)
+                    && !canTransferCard(state, res, uiState.selectedCardId)) {
+                    uiState.selectedCardId = null;
+                }
                 renderGame(res);
             };
         });
 
         shell.querySelectorAll('.durak-hand .durak-card').forEach(button => {
-            button.onclick = async () => {
+            button.onclick = () => {
                 if (button.disabled) return;
                 const cardId = button.dataset.cardId || '';
+                if (uiState.selectedCardId === cardId) {
+                    uiState.selectedCardId = null;
+                    setError('');
+                    renderGame(res);
+                    return;
+                }
                 uiState.selectedCardId = cardId;
 
                 if (isMyDefenseTurn(state, res)) {
-                    if (canTransferCard(state, res, cardId)) {
-                        renderGame(res);
-                        return;
-                    }
                     const attackCardId = defenseTargetCard(state, res);
-                    if (!attackCardId) {
-                        setError('Выбери карту атаки на столе');
-                        renderGame(res);
-                        return;
+                    if (!attackCardId && !canTransferCard(state, res, cardId)) {
+                        setError('Сначала выбери карту атаки на столе');
+                    } else {
+                        setError('');
                     }
-                    if (!canUseDefenseCard(state, res, cardId)) {
-                        setError('Эта карта не бьёт выбранную атаку');
-                        renderGame(res);
-                        return;
-                    }
-                    await sendDurakAction('defend_card', { attack_card_id: attackCardId, card_id: cardId });
-                    uiState.selectedCardId = null;
-                    return;
-                }
-
-                if (canAttack(state, res)) {
-                    await sendDurakAction('attack_card', { card_id: cardId });
-                    uiState.selectedCardId = null;
-                    return;
                 }
 
                 renderGame(res);
             };
         });
+
+        const confirmAttackBtn = shell.querySelector('[data-action="confirm-attack"]');
+        if (confirmAttackBtn) {
+            confirmAttackBtn.onclick = async () => {
+                const cardId = uiState.selectedCardId;
+                if (confirmAttackBtn.disabled || !cardId || !canAttack(state, res)) return;
+                const result = await sendDurakAction('attack_card', { card_id: cardId });
+                if (result && result.status !== 'error') {
+                    uiState.selectedCardId = null;
+                    if (uiState.lastRes) renderGame(uiState.lastRes);
+                }
+            };
+        }
 
         const passBtn = shell.querySelector('[data-action="pass"]');
         if (passBtn) {
@@ -1408,8 +1504,11 @@
                 const attackCardId = defenseTargetCard(state, res);
                 const cardId = uiState.selectedCardId;
                 if (defendBtn.disabled || !attackCardId || !cardId) return;
-                uiState.selectedCardId = null;
-                await sendDurakAction('defend_card', { attack_card_id: attackCardId, card_id: cardId });
+                const result = await sendDurakAction('defend_card', { attack_card_id: attackCardId, card_id: cardId });
+                if (result && result.status !== 'error') {
+                    uiState.selectedCardId = null;
+                    if (uiState.lastRes) renderGame(uiState.lastRes);
+                }
             };
         }
 
@@ -1418,9 +1517,12 @@
             transferBtn.onclick = async () => {
                 const cardId = uiState.selectedCardId;
                 if (transferBtn.disabled || !cardId) return;
-                uiState.selectedCardId = null;
-                uiState.selectedAttackCardId = null;
-                await sendDurakAction('transfer_card', { card_id: cardId });
+                const result = await sendDurakAction('transfer_card', { card_id: cardId });
+                if (result && result.status !== 'error') {
+                    uiState.selectedCardId = null;
+                    uiState.selectedAttackCardId = null;
+                    if (uiState.lastRes) renderGame(uiState.lastRes);
+                }
             };
         }
 
@@ -1462,6 +1564,7 @@
         const returnBtn = shell.querySelector('[data-action="return-room"]');
         if (returnBtn) {
             returnBtn.onclick = () => {
+                uiState.handSettingsOpen = false;
                 if (typeof window.finishGameSession === 'function') window.finishGameSession();
             };
         }
