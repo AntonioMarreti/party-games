@@ -123,6 +123,7 @@ function durakBuildSetupState(array $playerOrder): array
         'player_order' => $playerOrder,
         'in_game_players' => $playerOrder,
         'finish_order' => [],
+        'rematch_requests' => [],
         'hands' => [],
         'draw_pile' => [],
         'trump' => [
@@ -183,6 +184,7 @@ function durakBuildInitialState(
         'player_order' => $playerOrder,
         'in_game_players' => $playerOrder,
         'finish_order' => [],
+        'rematch_requests' => [],
         'hands' => $hands,
         'draw_pile' => $deck,
         'trump' => [
@@ -313,8 +315,22 @@ function handleGameAction($pdo, $room, $user, $postData)
     $action = $postData['game_action'] ?? $postData['type'] ?? '';
     $userId = (string) ($user['id'] ?? '');
 
+    $rematchActions = ['request_rematch', 'start_rematch', 'decline_rematch'];
     if (($state['phase'] ?? '') === 'finished') {
+        if ($action === 'request_rematch') {
+            return durakHandleRequestRematch($room, $state, $userId);
+        }
+        if ($action === 'start_rematch') {
+            return durakHandleStartRematch($pdo, $room, $state);
+        }
+        if ($action === 'decline_rematch') {
+            return durakHandleDeclineRematch($room, $state);
+        }
         return durakError('Game is already finished');
+    }
+
+    if (in_array($action, $rematchActions, true)) {
+        return durakError('Rematch is only available after the game');
     }
 
     if ($action === 'start_match') {
@@ -375,6 +391,65 @@ function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postD
     return ['status' => 'ok', 'state' => $matchState];
 }
 
+function durakHandleRequestRematch(array $room, array $state, string $userId): array
+{
+    if (($state['phase'] ?? '') !== 'finished') {
+        return durakError('Rematch is only available after the game');
+    }
+    if (empty($userId) || !in_array($userId, $state['player_order'] ?? [], true)) {
+        return durakError('Only match participants can request a rematch');
+    }
+    if (!empty($room['is_host'])) {
+        return durakError('The host can start a rematch directly');
+    }
+
+    if (!in_array($userId, $state['rematch_requests'] ?? [], true)) {
+        $state['rematch_requests'][] = $userId;
+    }
+
+    return ['status' => 'ok', 'state' => $state];
+}
+
+function durakHandleStartRematch(PDO $pdo, array $room, array $state): array
+{
+    if (($state['phase'] ?? '') !== 'finished') {
+        return durakError('Rematch is only available after the game');
+    }
+    if (empty($room['is_host'])) {
+        return durakError('Only the host can start a rematch');
+    }
+
+    $roomId = (int) ($room['id'] ?? 0);
+    if ($roomId <= 0) {
+        return durakError('Durak room is missing');
+    }
+
+    try {
+        $profileId = durakNormalizeDeckProfileId($state['deck_profile_id'] ?? null);
+        $rules = durakNormalizeRules($state['rules'] ?? null);
+        $playerOrder = durakValidateLivePlayerRoster(durakGetRoomPlayerRoster($pdo, $roomId));
+        $matchState = durakBuildInitialState($playerOrder, $profileId, $rules);
+    } catch (InvalidArgumentException | RuntimeException $error) {
+        return durakError($error->getMessage());
+    }
+
+    return ['status' => 'ok', 'state' => $matchState];
+}
+
+function durakHandleDeclineRematch(array $room, array $state): array
+{
+    if (($state['phase'] ?? '') !== 'finished') {
+        return durakError('Rematch is only available after the game');
+    }
+    if (empty($room['is_host'])) {
+        return durakError('Only the host can decline a rematch');
+    }
+
+    $state['rematch_requests'] = [];
+
+    return ['status' => 'ok', 'state' => $state];
+}
+
 function durakBuildPlayerProjection(array $state, $viewerId): array
 {
     $viewerId = (string) $viewerId;
@@ -401,6 +476,7 @@ function durakBuildPlayerProjection(array $state, $viewerId): array
         'player_order' => $state['player_order'] ?? [],
         'in_game_players' => $state['in_game_players'] ?? [],
         'finish_order' => $state['finish_order'] ?? [],
+        'rematch_requests' => $state['rematch_requests'] ?? [],
         'my_hand' => array_values($hands[$viewerId] ?? []),
         'opponent_hands' => $opponentHands,
         'draw_count' => count($state['draw_pile'] ?? []),
@@ -855,6 +931,17 @@ function durakNormalizeState(array &$state): void
     $state['player_order'] = array_values(array_map('strval', $state['player_order'] ?? []));
     $state['in_game_players'] = array_values(array_map('strval', $state['in_game_players'] ?? $state['player_order']));
     $state['finish_order'] = array_values(array_map('strval', $state['finish_order'] ?? []));
+    $rematchRequests = [];
+    foreach (is_array($state['rematch_requests'] ?? null) ? $state['rematch_requests'] : [] as $playerId) {
+        if (!is_string($playerId) && !is_int($playerId)) {
+            continue;
+        }
+        $playerId = trim((string) $playerId);
+        if ($playerId !== '' && !in_array($playerId, $rematchRequests, true)) {
+            $rematchRequests[] = $playerId;
+        }
+    }
+    $state['rematch_requests'] = $rematchRequests;
     $state['hands'] = is_array($state['hands'] ?? null) ? $state['hands'] : [];
     $state['draw_pile'] = is_array($state['draw_pile'] ?? null) ? $state['draw_pile'] : [];
     $state['table'] = is_array($state['table'] ?? null) ? $state['table'] : [];

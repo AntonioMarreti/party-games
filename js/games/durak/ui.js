@@ -25,6 +25,8 @@
         selectedCardId: null,
         selectedAttackCardId: null,
         busy: false,
+        busyAction: null,
+        storyBusy: false,
         lastError: '',
         lastRes: null,
         previousTrickState: null,
@@ -591,8 +593,67 @@
         `;
     }
 
+    function rematchRequesterIds(state) {
+        return [...new Set((state.rematch_requests || []).map(String).filter(Boolean))];
+    }
+
+    function renderRematchOffer(state, res) {
+        const requesterIds = rematchRequesterIds(state);
+        if (!requesterIds.length) return '';
+
+        const copy = requesterIds.length === 1
+            ? `${playerNameById(res, requesterIds[0])} предлагает реванш`
+            : `${requesterIds.length} игрока хотят реванш`;
+        const startBusy = uiState.busy && uiState.busyAction === 'start_rematch';
+        const declineBusy = uiState.busy && uiState.busyAction === 'decline_rematch';
+
+        return `
+            <div class="durak-rematch-offer">
+                <div class="durak-rematch-offer-copy">${esc(copy)}</div>
+                <div class="durak-rematch-offer-actions">
+                    <button type="button" class="durak-rematch-small-btn is-accept" data-action="start-rematch" ${uiState.busy ? 'disabled' : ''}>
+                        ${startBusy ? 'Начинаем…' : 'Принять'}
+                    </button>
+                    <button type="button" class="durak-rematch-small-btn is-decline" data-action="decline-rematch" ${uiState.busy ? 'disabled' : ''}>
+                        ${declineBusy ? 'Отклоняем…' : 'Отклонить'}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderFinalActions(state, res) {
+        const isHost = Number(res?.is_host || 0) === 1;
+        const myRequestSent = rematchRequesterIds(state).includes(getMyId(res));
+        const startBusy = uiState.busy && uiState.busyAction === 'start_rematch';
+        const requestBusy = uiState.busy && uiState.busyAction === 'request_rematch';
+        const canReturn = isHost && typeof window.finishGameSession === 'function';
+
+        return `
+            <div class="durak-final-actions">
+                ${isHost ? renderRematchOffer(state, res) : ''}
+                ${isHost ? `
+                    <button type="button" class="durak-action-btn durak-rematch-btn" data-action="start-rematch" ${uiState.busy ? 'disabled' : ''}>
+                        ${startBusy ? 'Начинаем…' : 'Реванш'}
+                    </button>
+                ` : `
+                    <button type="button" class="durak-action-btn durak-rematch-btn" data-action="request-rematch" ${uiState.busy || myRequestSent ? 'disabled' : ''}>
+                        ${requestBusy ? 'Отправляем…' : myRequestSent ? 'Предложение отправлено' : 'Предложить реванш'}
+                    </button>
+                `}
+                <button type="button" class="durak-action-btn durak-story-btn" data-action="share-story" ${uiState.busy || uiState.storyBusy ? 'disabled' : ''}>
+                    ${uiState.storyBusy ? 'Готовим…' : 'Поделиться в истории'}
+                </button>
+                ${canReturn ? `
+                    <button type="button" class="durak-action-btn durak-return-btn" data-action="return-room" ${uiState.busy ? 'disabled' : ''}>
+                        Вернуться в комнату
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }
+
     function renderFinalScreen(state, res) {
-        const canReturn = Number(res?.is_host || 0) === 1 && typeof window.finishGameSession === 'function';
         return `
             <div class="durak-final-screen">
                 <div class="durak-final-hero">
@@ -604,11 +665,7 @@
                     ${renderFinishOrder(state, res)}
                     ${renderFinalCardsSummary(state, res)}
                 </div>
-                ${canReturn ? `
-                    <button type="button" class="durak-action-btn durak-return-btn" data-action="return-room">
-                        Вернуться в комнату
-                    </button>
-                ` : ''}
+                ${renderFinalActions(state, res)}
             </div>
         `;
     }
@@ -1004,6 +1061,9 @@
     function renderGame(res) {
         const previousTrickState = uiState.previousTrickState;
         const state = parseState(res);
+        if (state.phase === 'finished' && window.GameSummaryProvider) {
+            window.GameSummaryProvider.remember('durak', state, { players: res.players || [] });
+        }
         updateLastTrickResult(previousTrickState, state, res);
         uiState.lastRes = res;
         initializeSetupState(state);
@@ -1083,6 +1143,8 @@
     async function sendDurakAction(type, payload = {}) {
         if (uiState.busy || typeof window.apiRequest !== 'function') return null;
         uiState.busy = true;
+        uiState.busyAction = type;
+        if (uiState.lastRes) renderGame(uiState.lastRes);
         try {
             const res = await window.apiRequest({ action: 'game_action', type, ...payload });
             if (res?.status === 'error') {
@@ -1100,6 +1162,7 @@
             return { status: 'error' };
         } finally {
             uiState.busy = false;
+            uiState.busyAction = null;
             if (uiState.lastRes) renderGame(uiState.lastRes);
         }
     }
@@ -1255,12 +1318,80 @@
             };
         }
 
+        shell.querySelectorAll('[data-action="start-rematch"]').forEach(button => {
+            button.onclick = () => {
+                if (!button.disabled) sendDurakAction('start_rematch');
+            };
+        });
+
+        const requestRematchBtn = shell.querySelector('[data-action="request-rematch"]');
+        if (requestRematchBtn) {
+            requestRematchBtn.onclick = () => {
+                if (!requestRematchBtn.disabled) sendDurakAction('request_rematch');
+            };
+        }
+
+        const declineRematchBtn = shell.querySelector('[data-action="decline-rematch"]');
+        if (declineRematchBtn) {
+            declineRematchBtn.onclick = () => {
+                if (!declineRematchBtn.disabled) sendDurakAction('decline_rematch');
+            };
+        }
+
+        const shareStoryBtn = shell.querySelector('[data-action="share-story"]');
+        if (shareStoryBtn) {
+            shareStoryBtn.onclick = async () => {
+                if (shareStoryBtn.disabled || uiState.storyBusy || !window.GameSummaryProvider) return;
+                uiState.storyBusy = true;
+                renderGame(res);
+                try {
+                    await window.GameSummaryProvider.shareStory('durak');
+                } finally {
+                    uiState.storyBusy = false;
+                    if (uiState.lastRes) renderGame(uiState.lastRes);
+                }
+            };
+        }
+
         const returnBtn = shell.querySelector('[data-action="return-room"]');
         if (returnBtn) {
             returnBtn.onclick = () => {
                 if (typeof window.finishGameSession === 'function') window.finishGameSession();
             };
         }
+    }
+
+    if (window.GameSummaryProvider) {
+        window.GameSummaryProvider.register('durak', {
+            buildSummary: function (gameState, context = {}) {
+                const playerIds = (gameState?.player_order || []).map(String);
+                const players = (context.players || []).filter(player => playerIds.includes(String(player.id)));
+                const loserId = gameState?.result?.loser_id == null ? '' : String(gameState.result.loser_id);
+                const loser = players.find(player => String(player.id) === loserId) || null;
+                const winner = players.length === 2 && loserId
+                    ? players.find(player => String(player.id) !== loserId) || null
+                    : null;
+                const loserName = loser ? playerName(loser) : 'Игрок';
+                const outcome = gameState?.result?.reason === 'all_finished' || !loserId
+                    ? 'Партия завершилась без проигравшего'
+                    : `${loserName} остался дураком`;
+                const mode = durakModeLabel(gameState || {});
+                const deck = deckProfileLabel(gameState?.deck_profile_id);
+
+                return {
+                    gameId: 'durak',
+                    gameTitle: 'Дурак',
+                    participants: players,
+                    winner,
+                    outcome,
+                    awards: [
+                        { iconClass: 'bi bi-controller', title: 'Режим', player: mode },
+                        { iconClass: 'bi bi-suit-spade-fill', title: 'Колода', player: deck }
+                    ],
+                    shareText: `${outcome}\n${mode} · ${deck}`
+                };
+            }
+        });
     }
 
     window.renderDurakGame = renderGame;
