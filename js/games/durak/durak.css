@@ -465,8 +465,17 @@ button.durak-card:disabled {
 }
 
 button.durak-card.is-muted {
-    opacity: 0.66;
-    filter: grayscale(0.06);
+    opacity: 1;
+    filter: none;
+    background: #f8fafc;
+}
+
+button.durak-card.is-muted .durak-card-corner {
+    opacity: 0.64;
+}
+
+button.durak-card.is-muted .durak-card-center-suit {
+    opacity: 0.4;
 }
 
 button.durak-card.is-defendable {
