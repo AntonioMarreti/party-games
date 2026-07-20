@@ -317,8 +317,12 @@
         return normalizeDeckProfileId(profileId) === 'durak_52' ? '52 карты' : '36 карт';
     }
 
-    function durakActiveModeLabel(state) {
-        return `${durakModeLabel(state)} · ${deckProfileLabel(state.deck_profile_id)}`;
+    function durakCompactMetaLabel(state) {
+        const ruleLabels = [];
+        if (state.rules?.allow_throw_in !== false) ruleLabels.push('подкидной');
+        if (state.rules?.allow_transfer === true) ruleLabels.push('переводной');
+        const rulesLabel = ruleLabels.length ? ruleLabels.join(' · ') : 'без подкидывания и перевода';
+        return `${deckProfileLabel(state.deck_profile_id)} · ${rulesLabel}`;
     }
 
     function selectedAttackIsValid(state) {
@@ -405,33 +409,22 @@
         return canBeatCard(cardId, attackCardId, state.trump?.suit || '');
     }
 
-    function statusCopy(state, res) {
-        if (state.phase === 'setup') {
-            return Number(res?.is_host || 0) === 1
-                ? 'Выбери колоду и правила'
-                : 'Хост выбирает колоду и правила';
-        }
-        if (state.phase === 'finished') {
-            return 'Итог партии';
-        }
+    function compactStatusCopy(state, res) {
+        if (state.phase === 'setup') return 'Настройка';
+        if (state.phase === 'finished') return 'Финал';
 
-        const actor = getPlayer(res, state.actor_id);
-        const actorName = actor ? playerName(actor) : 'Игрок';
-        const currentDefenderName = defenderName(state, res);
         if (state.defender_mode === 'taking') {
-            return isMyTurn(state, res)
-                ? `${currentDefenderName} берёт — можно подкинуть`
-                : `${currentDefenderName} забирает карты`;
+            if (String(state.roles?.defender_id || '') === getMyId(res)) return 'Берёт';
+            return isMyTurn(state, res) ? 'Подкидывание' : 'Ход соперника';
         }
         if (isBeatContext(state)) {
-            return isMyTurn(state, res) ? 'Можно подкинуть или завершить' : 'Все карты отбиты';
+            return isMyTurn(state, res) ? 'Решение' : 'Бито';
         }
+        if (isMyDefenseTurn(state, res)) return 'Защита';
         if (isMyTurn(state, res)) {
-            if (state.phase === 'defense') return 'Твоя защита';
-            return (state.table || []).length ? 'Можно подкинуть' : 'Твоя атака';
+            return (state.table || []).length ? 'Подкидывание' : 'Атака';
         }
-        if (state.phase === 'defense') return 'Соперник решает: бить или взять';
-        return (state.table || []).length ? 'Ждём подкидывание' : `Ходит ${actorName}`;
+        return 'Ход соперника';
     }
 
     function renderShell(container) {
@@ -443,9 +436,9 @@
             shell.className = 'durak-shell';
             shell.innerHTML = `
                 <div class="durak-top">
-                    <div>
-                        <div class="durak-kicker" id="durak-mode-label">Подкидной</div>
+                    <div class="durak-heading">
                         <h2>Дурак</h2>
+                        <div class="durak-game-meta" id="durak-mode-label"></div>
                     </div>
                     <div class="durak-top-actions">
                         <div class="durak-status-pill" id="durak-status-pill"></div>
@@ -575,15 +568,16 @@
             const id = String(player.id);
             const active = String(state.actor_id || '') === id;
             const defender = String(state.roles?.defender_id || '') === id;
-            const defenderStatus = defender
-                ? (state.defender_mode === 'taking' ? 'берёт' : 'защита')
-                : '';
+            const handCount = handCounts.get(id) || 0;
+            const playerStatus = defender
+                ? (state.defender_mode === 'taking' ? 'берёт' : 'защищается')
+                : (active ? 'ходит' : '');
             return `
                 <div class="durak-seat ${active ? 'is-active' : ''}">
                     <div class="durak-avatar">${playerAvatar(player)}</div>
                     <div class="durak-seat-copy">
                         <div class="durak-seat-name">${esc(playerName(player))}</div>
-                        <div class="durak-seat-meta">${handCounts.get(id) || 0} карт${defenderStatus ? ` · ${defenderStatus}` : ''}</div>
+                        <div class="durak-seat-meta">${handCount} ${cardCountWord(handCount)}${playerStatus ? ` · ${playerStatus}` : ''}</div>
                     </div>
                 </div>
             `;
@@ -611,8 +605,7 @@
             }
             return `
                 <div class="durak-table-empty">
-                    <div class="durak-empty-title">Стол чист</div>
-                    <div class="durak-empty-text">Первая карта начнёт взятку.</div>
+                    <div class="durak-empty-title">Стол пуст</div>
                 </div>
             `;
         }
@@ -644,22 +637,19 @@
     function renderDeck(state) {
         const trump = state.trump || {};
         return `
-            <div class="durak-deck-row">
-                <div class="durak-deck" aria-label="Колода">
+            <div class="durak-deck-row" aria-label="Колода, козырь и сброс">
+                <div class="durak-deck durak-deck-section" aria-label="Колода">
                     <div class="durak-card-back"></div>
-                    <div>
+                    <div class="durak-deck-copy">
                         <div class="durak-deck-count">${Number(state.draw_count || 0)}</div>
                         <div class="durak-deck-label">в колоде</div>
                     </div>
                 </div>
-                <div class="durak-trump">
-                    ${trump.card ? renderCard(trump.card, { small: true }) : '<div class="durak-card-slot">Козырь</div>'}
-                    <div>
-                        <div class="durak-deck-label">козырь</div>
-                        <div class="durak-trump-suit">${esc((DURAK_SUITS[trump.suit] || {}).symbol || trump.suit || '-')}</div>
-                    </div>
+                <div class="durak-trump durak-deck-section" aria-label="Козырь">
+                    ${trump.card ? renderCard(trump.card, { small: true }) : '<div class="durak-card-slot" aria-label="Козырь не определён">-</div>'}
+                    <div class="durak-deck-label">козырь</div>
                 </div>
-                <div class="durak-discard">
+                <div class="durak-discard durak-deck-section" aria-label="Сброс">
                     <div class="durak-deck-count">${Number(state.discard_count || 0)}</div>
                     <div class="durak-deck-label">сброс</div>
                 </div>
@@ -1254,7 +1244,7 @@
         shell.classList.toggle('is-finished', state.phase === 'finished');
         shell.classList.toggle('is-setup', state.phase === 'setup');
         const status = shell.querySelector('#durak-status-pill');
-        if (status) status.textContent = statusCopy(state, res);
+        if (status) status.textContent = compactStatusCopy(state, res);
         const exitButton = shell.querySelector('#durak-exit-btn');
         if (exitButton) {
             const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
@@ -1265,7 +1255,7 @@
             exitButton.title = 'Завершить игру';
         }
         const modeLabel = shell.querySelector('#durak-mode-label');
-        if (modeLabel) modeLabel.textContent = state.phase === 'setup' ? 'Подготовка' : durakActiveModeLabel(state);
+        if (modeLabel) modeLabel.textContent = state.phase === 'setup' ? 'Подготовка' : durakCompactMetaLabel(state);
 
         const error = shell.querySelector('#durak-error');
         if (error) {

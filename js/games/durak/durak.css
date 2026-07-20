@@ -35,32 +35,28 @@
 
 .durak-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    padding: 2px 2px 10px;
+    gap: 8px;
+    padding: 1px 2px 7px;
 }
 
 .durak-top > :first-child {
     min-width: 0;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
 }
 
 .durak-top-actions {
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
 }
 
-.durak-kicker {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #64748b;
+.durak-heading {
+    min-width: 0;
 }
 
 .durak-top h2 {
@@ -71,24 +67,34 @@
     color: #111827;
 }
 
+.durak-game-meta {
+    margin-top: 3px;
+    max-width: 100%;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
 .durak-status-pill {
     min-width: 0;
-    flex: 0 1 190px;
-    max-width: 190px;
-    min-height: 34px;
+    flex: 0 1 auto;
+    max-width: 112px;
+    min-height: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: right;
     border: 1px solid rgba(37, 99, 235, 0.18);
     border-radius: 999px;
-    padding: 7px 11px;
+    padding: 6px 10px;
     background: rgba(255, 255, 255, 0.74);
     color: #1d4ed8;
     font-size: 12px;
     font-weight: 800;
     line-height: 1.15;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
     box-shadow: 0 10px 30px rgba(37, 99, 235, 0.08);
 }
 
@@ -148,15 +154,15 @@
     min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 10px;
+    gap: 6px;
     overflow: hidden;
 }
 
 .durak-seats {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     overflow-x: auto;
-    padding: 1px 1px 4px;
+    padding: 0 1px 2px;
     scrollbar-width: none;
 }
 
@@ -167,34 +173,35 @@
 
 .durak-seat {
     flex: 0 0 auto;
-    min-width: 122px;
-    max-width: 158px;
+    width: 146px;
+    min-width: 146px;
+    max-width: 146px;
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 30px minmax(0, 1fr);
     align-items: center;
-    gap: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.24);
-    border-radius: 14px;
-    padding: 7px;
-    background: rgba(255, 255, 255, 0.72);
+    gap: 7px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    padding: 5px 6px;
+    background: rgba(255, 255, 255, 0.46);
 }
 
 .durak-seat.is-active {
-    border-color: rgba(37, 99, 235, 0.5);
-    background: rgba(219, 234, 254, 0.84);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08) inset;
+    border-color: rgba(37, 99, 235, 0.46);
+    background: rgba(219, 234, 254, 0.66);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.06) inset;
 }
 
 .durak-avatar {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     overflow: hidden;
     display: grid;
     place-items: center;
     background: #dbeafe;
     color: #1d4ed8;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 900;
 }
 
@@ -214,34 +221,43 @@
     text-overflow: ellipsis;
 }
 
+.durak-seat-copy {
+    min-width: 0;
+}
+
 .durak-seat-meta {
-    margin-top: 3px;
+    margin-top: 2px;
     color: #64748b;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .durak-center {
     min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 10px;
+    gap: 8px;
     overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 20px;
-    padding: 12px;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(241, 245, 249, 0.82)),
-        repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.018) 0 1px, transparent 1px 18px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    border: 0;
+    border-radius: 0;
+    padding: 0 2px;
+    background: transparent;
+    box-shadow: none;
 }
 
 .durak-deck-row {
+    min-width: 0;
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(70px, 0.9fr) minmax(54px, 0.7fr);
+    gap: 0;
     align-items: stretch;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.66);
 }
 
 .durak-deck,
@@ -250,29 +266,40 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-    border-radius: 14px;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.74);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 0;
+    padding: 5px 7px;
+    background: transparent;
+    box-shadow: none;
 }
 
+.durak-trump,
 .durak-discard {
-    min-width: 62px;
-    display: grid;
-    place-items: center;
+    flex-direction: column;
+    gap: 3px;
     text-align: center;
 }
 
+.durak-deck-section + .durak-deck-section {
+    border-left: 1px solid rgba(148, 163, 184, 0.2);
+}
+
 .durak-card-back {
-    width: 34px;
-    height: 48px;
-    border-radius: 8px;
+    width: 30px;
+    height: 42px;
+    flex: 0 0 auto;
+    border-radius: 7px;
     background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 40%),
         repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.22) 0 4px, transparent 4px 8px),
         #2563eb;
     box-shadow: 0 6px 14px rgba(37, 99, 235, 0.22);
+}
+
+.durak-deck-copy {
+    min-width: 0;
 }
 
 .durak-deck-count {
@@ -289,11 +316,23 @@
     line-height: 1.1;
 }
 
-.durak-trump-suit {
-    color: #1d4ed8;
-    font-size: 18px;
-    font-weight: 900;
-    line-height: 1;
+.durak-deck-row .durak-trump .durak-card,
+.durak-deck-row .durak-trump .durak-card-slot {
+    width: 40px;
+    height: 56px;
+    flex: 0 0 auto;
+}
+
+.durak-deck-row .durak-trump .durak-card-center-suit {
+    font-size: 19px;
+}
+
+.durak-deck-row .durak-trump .durak-card-corner-rank {
+    font-size: 12px;
+}
+
+.durak-deck-row .durak-trump .durak-card-corner-suit {
+    font-size: 9px;
 }
 
 .durak-table-empty {
@@ -1161,7 +1200,7 @@ button.durak-card.is-defendable {
 }
 
 #durak-shell[data-layout="wide"] .durak-center {
-    padding: 14px;
+    padding: 0 2px;
 }
 
 #durak-shell[data-layout="wide"] .durak-table-grid {
@@ -1237,8 +1276,15 @@ button.durak-card.is-defendable {
     }
 
     .durak-status-pill {
-        max-width: 158px;
+        max-width: 112px;
         font-size: 11px;
+    }
+
+    .durak-deck,
+    .durak-trump,
+    .durak-discard {
+        padding-right: 6px;
+        padding-left: 6px;
     }
 
     .durak-table-grid {
