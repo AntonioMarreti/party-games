@@ -637,21 +637,27 @@
 
     function renderDeck(state) {
         const trump = state.trump || {};
+        const drawCount = Number(state.draw_count || 0);
+        const discardCount = Number(state.discard_count || 0);
         return `
             <div class="durak-deck-row" aria-label="Колода, козырь и сброс">
-                <div class="durak-deck durak-deck-section" aria-label="Колода">
-                    <div class="durak-card-back"></div>
-                    <div class="durak-deck-copy">
-                        <div class="durak-deck-count">${Number(state.draw_count || 0)}</div>
-                        <div class="durak-deck-label">в колоде</div>
+                <div class="durak-deck durak-deck-section" aria-label="${drawCount} ${cardCountWord(drawCount)} в колоде">
+                    <div class="durak-deck-visual">
+                        <div class="durak-card-back" aria-hidden="true"></div>
+                        <div class="durak-deck-badge" aria-hidden="true">${drawCount}</div>
                     </div>
+                    <div class="durak-deck-label">в колоде</div>
                 </div>
                 <div class="durak-trump durak-deck-section" aria-label="Козырь">
-                    ${trump.card ? renderCard(trump.card, { small: true }) : '<div class="durak-card-slot" aria-label="Козырь не определён">-</div>'}
+                    <div class="durak-deck-visual">
+                        ${trump.card ? renderCard(trump.card, { small: true }) : '<div class="durak-card-slot" aria-label="Козырь не определён">-</div>'}
+                    </div>
                     <div class="durak-deck-label">козырь</div>
                 </div>
-                <div class="durak-discard durak-deck-section" aria-label="Сброс">
-                    <div class="durak-deck-count">${Number(state.discard_count || 0)}</div>
+                <div class="durak-discard durak-deck-section" aria-label="${discardCount} ${cardCountWord(discardCount)} в сбросе">
+                    <div class="durak-deck-visual durak-discard-visual" aria-hidden="true">
+                        <div class="durak-discard-count">${discardCount}</div>
+                    </div>
                     <div class="durak-deck-label">сброс</div>
                 </div>
             </div>
@@ -1244,6 +1250,7 @@
         setupResizeHandling(shell, gameArea);
         shell.classList.toggle('is-finished', state.phase === 'finished');
         shell.classList.toggle('is-setup', state.phase === 'setup');
+        shell.classList.toggle('is-active', state.phase === 'attack' || state.phase === 'defense');
         const status = shell.querySelector('#durak-status-pill');
         if (status) {
             const isActivePhase = state.phase === 'attack' || state.phase === 'defense';
