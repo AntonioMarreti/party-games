@@ -203,8 +203,8 @@ window.BB_MECHANICS.simon_says = function (wrapper, task) {
                 <h4 id="simon-status" class="bb-question-text bb-question-text--small">ЗАПОМНИ ЭТУ ПОСЛЕДОВАТЕЛЬНОСТЬ</h4>
             </div>
             
-            <div id="simon-display" class="mb-5 mx-auto rounded-circle shadow-sm d-flex align-items-center justify-content-center animate__animated" 
-                 style="width: 140px; height: 140px; background: white; border: 4px solid #f1f2f6;">
+            <div id="simon-display" class="bb-simon-display mb-5 mx-auto rounded-circle shadow-sm d-flex align-items-center justify-content-center animate__animated"
+                 style="background: white; border: 4px solid #f1f2f6;">
                  <i class="bi bi-eye-fill" style="font-size: 3rem; color:var(--text-muted);"></i>
             </div>
 

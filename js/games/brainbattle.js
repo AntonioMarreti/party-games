@@ -20,6 +20,30 @@
     let activeRoundId = '';
     const BRAINBATTLE_SUMMARY_VERSION = 2;
     const BRAINBATTLE_AUTO_TICK_MS = 8000;
+    const BRAINBATTLE_TASK_INSTRUCTIONS = Object.freeze({
+        math_blitz: 'Реши пример и выбери правильный ответ.',
+        greater_less: 'Сравни два значения и выбери большее.',
+        dice_sum: 'Сложи значения на костях и выбери сумму.',
+        alchemy: 'Определи результат комбинации и выбери ответ.',
+        number_sequence: 'Найди закономерность и выбери продолжение ряда.',
+        color_chaos: 'Выбери цвет, которым написано слово.',
+        odd_one_out: 'Найди элемент, который отличается от остальных.',
+        find_duplicate: 'Найди повторяющийся элемент в сетке.',
+        count_objects: 'Посчитай указанные объекты и выбери число.',
+        thimbles: 'Запомни, где шарик, следи за стаканами и выбери стакан.',
+        reaction_test: 'Дождись зелёного сигнала и нажми как можно быстрее.',
+        defuse_numbers: 'Нажми цифры по порядку от 1 до 9.',
+        timing_safe: 'Останови бегунок внутри зелёной зоны.',
+        photo_memory: 'Запомни показанные элементы, затем ответь на вопрос.',
+        blind_timer: 'Запусти таймер, отсчитай нужное время про себя и останови.',
+        simon_says: 'Запомни порядок цветов, затем повтори его кнопками.',
+        secret_code: 'Запомни код, затем введи его на клавиатуре.',
+        edible_inedible: 'Определи, съедобен ли показанный предмет.',
+        fact_check: 'Реши, правда это или выдумка.',
+        flags: 'Узнай страну по флагу и выбери ответ.',
+        ai_quiz: 'Прочитай вопрос и выбери правильный ответ.'
+    });
+    const BRAINBATTLE_TASK_INSTRUCTION_FALLBACK = 'Прочитай задание и выбери подходящий ответ.';
     const brainBattleTimeouts = new Set();
     const brainBattleIntervals = new Set();
     const brainBattleAnimationFrames = new Set();
@@ -130,6 +154,10 @@
                 reportBrainBattleRenderError('invalid_state', new Error(validation.reason), res, state);
                 renderBrainBattleFallback(container, res);
                 return;
+            }
+
+            if (state.phase !== 'game_over' || brainBattleViewState.reviewMode) {
+                clearBrainBattleFinalActions();
             }
 
             // CLEANUP OVERLAYS
@@ -933,11 +961,11 @@
 
     function bbGetCategoryLabelByGameType(gameType) {
         const categories = {
-            logic: ['math_blitz', 'greater_less'],
+            logic: ['math_blitz', 'greater_less', 'dice_sum', 'number_sequence'],
             attention: ['color_chaos', 'odd_one_out', 'count_objects', 'find_duplicate', 'thimbles'],
             motor: ['reaction_test', 'timing_safe', 'defuse_numbers'],
-            memory: ['photo_memory', 'blind_timer', 'simon_says'],
-            erudition: ['edible_inedible', 'alchemy', 'ai_quiz', 'fact_check']
+            memory: ['photo_memory', 'blind_timer', 'simon_says', 'secret_code'],
+            erudition: ['edible_inedible', 'alchemy', 'ai_quiz', 'fact_check', 'flags']
         };
         const labels = {
             logic: 'Логика',
@@ -1260,16 +1288,14 @@
 
         const header = document.createElement('div');
         header.id = 'bb-round-context';
-        header.className = 'bb-round-context animate__animated animate__fadeInDown';
+        header.className = 'bb-round-context';
         header.innerHTML = `
-            <div class="bb-round-context__row">
-                <div class="bb-round-context__badge">Раунд ${state.current_round}/${state.total_rounds}</div>
-                <div class="bb-round-context__meta">${escapeHtml(bbGetCategoryLabelByGameType(task.type || state.previous_game_type))}</div>
-            </div>
+            <div class="bb-round-context__round">Раунд ${state.current_round} из ${state.total_rounds}</div>
             <div class="bb-round-context__title">${escapeHtml(task.title || 'Раунд')}</div>
-            <div class="bb-round-context__row">
-                <div class="bb-round-context__meta">${myRank ? `Вы #${myRank}` : 'Матч идет'}</div>
-                <div class="bb-round-context__meta">${myScore} очков</div>
+            <div class="bb-round-context__meta">
+                ${escapeHtml(bbGetCategoryLabelByGameType(task.type || state.previous_game_type))}
+                · ${myRank ? `вы #${myRank}` : 'матч идет'}
+                · ${myScore} очков
             </div>
         `;
 
@@ -1520,6 +1546,7 @@
     }
 
     function clearBrainBattleScreenModes() {
+        cleanupBrainBattleRound();
         setBrainBattleFinalScrollMode(false);
         setBrainBattleScreenMode(false);
         removeBrainBattleTouchDebugOverlay();
@@ -1860,6 +1887,11 @@
     window.bbSubmit = submitAnswer;
     window.brainBattleRoundState = brainBattleRoundState;
 
+    function getBrainBattleTaskInstruction(taskType) {
+        return BRAINBATTLE_TASK_INSTRUCTIONS[String(taskType || '')]
+            || BRAINBATTLE_TASK_INSTRUCTION_FALLBACK;
+    }
+
     // === ОТСЧЕТ И ЗАПУСК ===
     function runGameSequence(wrapper, task, state, res) {
         const roundId = String(state?.round_id || '');
@@ -1875,12 +1907,13 @@
         brainBattleViewState.submittedRoundId = '';
 
         wrapper.innerHTML = `
-        <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 h-100">
-            <h5 class="bb-subtitle mb-4">Готовьтесь...</h5>
-            <div id="cnt-number" class="display-1 fw-bold animate__animated animate__pulse animate__infinite" style="font-size: 100px; color: var(--primary-color); text-shadow: var(--shadow-sm);">3</div>
-            <div class="bb-glass-card px-4 py-2 mt-4">
-                <p class="mb-0 text-primary fw-bold fs-4 text-center" style="color:var(--primary-color) !important;">${task.title || 'Задание'}</p>
+        <div class="bb-round-intro">
+            <h5 class="bb-subtitle bb-round-intro__kicker">Готовьтесь...</h5>
+            <div class="bb-glass-card bb-round-intro__copy">
+                <div class="bb-round-intro__title">${escapeHtml(task.title || 'Задание')}</div>
+                <p class="bb-round-intro__instruction">${escapeHtml(getBrainBattleTaskInstruction(task.type))}</p>
             </div>
+            <div id="cnt-number" class="bb-round-intro__count animate__animated animate__pulse animate__infinite">3</div>
         </div>
     `;
 
