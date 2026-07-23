@@ -4,6 +4,12 @@
 if (!defined('BRAINBATTLE_ROUND_TIMEOUT_SECONDS')) {
     define('BRAINBATTLE_ROUND_TIMEOUT_SECONDS', 30);
 }
+if (!defined('BRAINBATTLE_TASK_GENERATION_ATTEMPTS')) {
+    define('BRAINBATTLE_TASK_GENERATION_ATTEMPTS', 8);
+}
+if (!defined('BRAINBATTLE_TASK_SIGNATURE_HISTORY_LIMIT')) {
+    define('BRAINBATTLE_TASK_SIGNATURE_HISTORY_LIMIT', 100);
+}
 
 function getGameLibrary()
 {
@@ -28,6 +34,7 @@ function getInitialState()
         'round_data' => null,
         'round_results' => [],
         'round_history' => [],
+        'task_signature_history' => [],
         'selected_categories' => ['logic', 'attention', 'motor', 'memory', 'erudition'],
         'previous_game_type' => null,
         'round_chat_sent' => false,
@@ -60,8 +67,273 @@ function bbNormalizeState($state)
     if (!is_array($state['round_history'])) {
         $state['round_history'] = [];
     }
+    if (!is_array($state['task_signature_history'])) {
+        $state['task_signature_history'] = [];
+    }
+
+    $allowedGameTypes = [];
+    foreach (getGameLibrary() as $games) {
+        foreach ($games as $gameType) {
+            $allowedGameTypes[$gameType] = true;
+        }
+    }
+
+    $normalizedTaskHistory = [];
+    foreach ($state['task_signature_history'] as $gameType => $signatures) {
+        $gameType = (string) $gameType;
+        if (empty($allowedGameTypes[$gameType]) || !is_array($signatures)) {
+            continue;
+        }
+
+        $cleanSignatures = [];
+        foreach ($signatures as $signature) {
+            $signature = strtolower(trim((string) $signature));
+            if (preg_match('/^[a-f0-9]{64}$/', $signature)) {
+                $cleanSignatures[] = $signature;
+            }
+        }
+
+        $cleanSignatures = array_values(array_unique($cleanSignatures));
+        $normalizedTaskHistory[$gameType] = array_slice(
+            $cleanSignatures,
+            -BRAINBATTLE_TASK_SIGNATURE_HISTORY_LIMIT
+        );
+    }
+    $state['task_signature_history'] = $normalizedTaskHistory;
 
     return $state;
+}
+
+function bbNormalizeTaskSignatureValue($value)
+{
+    if (is_array($value)) {
+        $normalized = [];
+        foreach ($value as $key => $item) {
+            $normalized[$key] = bbNormalizeTaskSignatureValue($item);
+        }
+
+        $isList = empty($normalized) || array_keys($normalized) === range(0, count($normalized) - 1);
+        if (!$isList) {
+            ksort($normalized);
+        }
+        return $normalized;
+    }
+
+    if (is_string($value)) {
+        $value = preg_replace('/\s+/u', ' ', trim($value));
+        return mb_strtolower($value, 'UTF-8');
+    }
+
+    return $value;
+}
+
+function bbSortedTaskSignatureList($values)
+{
+    $normalized = array_map('bbNormalizeTaskSignatureValue', is_array($values) ? $values : []);
+    usort($normalized, function ($left, $right) {
+        return strcmp(
+            json_encode($left, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            json_encode($right, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+    });
+    return $normalized;
+}
+
+function bbBuildTaskSignature($gameType, $task)
+{
+    $gameType = (string) $gameType;
+    $task = is_array($task) ? $task : [];
+
+    switch ($gameType) {
+        case 'math_blitz':
+            $payload = ['question' => $task['question'] ?? '', 'correct' => $task['correct_val'] ?? null];
+            break;
+        case 'greater_less':
+            $payload = [
+                'items' => bbSortedTaskSignatureList([
+                    [$task['n1_text'] ?? '', $task['n1_val'] ?? null],
+                    [$task['n2_text'] ?? '', $task['n2_val'] ?? null]
+                ]),
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'simon_says':
+            $payload = ['sequence' => $task['sequence'] ?? []];
+            break;
+        case 'color_chaos':
+            $payload = [
+                'text' => $task['text'] ?? '',
+                'color' => $task['color'] ?? '',
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'odd_one_out':
+            $payload = [
+                'items' => bbSortedTaskSignatureList($task['options'] ?? []),
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'reaction_test':
+            $payload = ['type' => $gameType];
+            break;
+        case 'photo_memory':
+            $payload = [
+                'shown' => bbSortedTaskSignatureList($task['shown_items'] ?? []),
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'dice_sum':
+            $payload = [
+                'dice' => bbSortedTaskSignatureList($task['icons'] ?? []),
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'alchemy':
+            $payload = ['question' => $task['question'] ?? '', 'correct' => $task['correct_val'] ?? null];
+            break;
+        case 'find_duplicate':
+            $payload = [
+                'grid' => bbSortedTaskSignatureList($task['grid'] ?? []),
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'defuse_numbers':
+            $payload = ['grid' => $task['grid'] ?? []];
+            break;
+        case 'timing_safe':
+            $payload = ['speed' => $task['speed'] ?? null];
+            break;
+        case 'blind_timer':
+            $payload = ['target' => $task['target'] ?? null];
+            break;
+        case 'edible_inedible':
+            $payload = [
+                'item' => $task['item_name'] ?? '',
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'fact_check':
+            $payload = ['fact' => $task['fact'] ?? '', 'correct' => $task['correct_val'] ?? null];
+            break;
+        case 'count_objects':
+            $payload = [
+                'target' => $task['target'] ?? '',
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'thimbles':
+            $payload = [
+                'initial_ball' => $task['initial_ball'] ?? null,
+                'swaps' => $task['swaps'] ?? [],
+                'correct' => $task['correct_val'] ?? null
+            ];
+            break;
+        case 'ai_quiz':
+            $payload = ['question' => $task['question'] ?? '', 'correct' => $task['correct_val'] ?? null];
+            break;
+        default:
+            $payload = $task;
+            unset(
+                $payload['round_id'],
+                $payload['created_at'],
+                $payload['generated_at'],
+                $payload['timestamp'],
+                $payload['delay_ms']
+            );
+            if (isset($payload['options'])) {
+                $payload['options'] = bbSortedTaskSignatureList($payload['options']);
+            }
+            break;
+    }
+
+    return hash('sha256', json_encode(
+        bbNormalizeTaskSignatureValue(['type' => $gameType, 'content' => $payload]),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    ));
+}
+
+function bbRememberTaskSignature(&$state, $gameType, $signature)
+{
+    if (!is_array($state['task_signature_history'] ?? null)) {
+        $state['task_signature_history'] = [];
+    }
+
+    $gameType = (string) $gameType;
+    $history = is_array($state['task_signature_history'][$gameType] ?? null)
+        ? $state['task_signature_history'][$gameType]
+        : [];
+    $history = array_values(array_filter($history, function ($storedSignature) use ($signature) {
+        return $storedSignature !== $signature;
+    }));
+    $history[] = $signature;
+    $state['task_signature_history'][$gameType] = array_slice(
+        $history,
+        -BRAINBATTLE_TASK_SIGNATURE_HISTORY_LIMIT
+    );
+}
+
+function bbPickTaskSource($gameType, $sources, $taskBuilder, $excludedSignatures = [])
+{
+    $sources = is_array($sources) ? array_values($sources) : [];
+    if (empty($sources)) {
+        return null;
+    }
+
+    if (!empty($excludedSignatures)) {
+        $sourcesBySignature = [];
+        foreach ($sources as $source) {
+            $task = $taskBuilder($source);
+            $sourcesBySignature[bbBuildTaskSignature($gameType, $task)] = $source;
+        }
+        ksort($sourcesBySignature, SORT_STRING);
+
+        $lastSignature = end($excludedSignatures);
+        if ($lastSignature !== false && isset($sourcesBySignature[$lastSignature])) {
+            $orderedSignatures = array_keys($sourcesBySignature);
+            $lastIndex = array_search($lastSignature, $orderedSignatures, true);
+            $nextIndex = ($lastIndex + 1) % count($orderedSignatures);
+            return $sourcesBySignature[$orderedSignatures[$nextIndex]];
+        }
+
+        $unseenSources = array_diff_key($sourcesBySignature, array_flip($excludedSignatures));
+        if (!empty($unseenSources)) {
+            $sources = array_values($unseenSources);
+        }
+    }
+
+    return $sources[array_rand($sources)];
+}
+
+function bbGenerateTaskDataWithHistory(&$state, $gameType)
+{
+    $gameType = (string) $gameType;
+    $history = is_array($state['task_signature_history'][$gameType] ?? null)
+        ? $state['task_signature_history'][$gameType]
+        : [];
+    $selectedTask = null;
+    $selectedSignature = null;
+
+    for ($attempt = 0; $attempt < BRAINBATTLE_TASK_GENERATION_ATTEMPTS; $attempt++) {
+        $skipExternalGeneration = $gameType === 'ai_quiz' && $attempt > 0;
+        $candidate = generateTaskData($gameType, $skipExternalGeneration, $history);
+        if (!is_array($candidate) || empty($candidate['type'])) {
+            continue;
+        }
+
+        $selectedTask = $candidate;
+        $selectedSignature = bbBuildTaskSignature($gameType, $candidate);
+        if (!in_array($selectedSignature, $history, true)) {
+            break;
+        }
+    }
+
+    if (!is_array($selectedTask)) {
+        $selectedTask = generateTaskData($gameType, true, $history);
+        $selectedSignature = bbBuildTaskSignature($gameType, $selectedTask);
+    }
+
+    bbRememberTaskSignature($state, $gameType, $selectedSignature);
+    return $selectedTask;
 }
 
 function bbGetPlayerIds($pdo, $roomId)
@@ -835,10 +1107,10 @@ function startNextRound(&$state)
 
     $gameType = array_shift($state['remaining_games']);
     $state['previous_game_type'] = $gameType;
-    $state['round_data'] = generateTaskData($gameType);
+    $state['round_data'] = bbGenerateTaskDataWithHistory($state, $gameType);
 }
 
-function generateTaskData($type)
+function generateTaskData($type, $skipExternalGeneration = false, $excludedSignatures = [])
 {
     // 1. МАТЕМАТИКА
     if ($type === 'math_blitz') {
@@ -978,20 +1250,62 @@ function generateTaskData($type)
             ['bi-brightness-high-fill', 'bi-moon-fill'],
             ['bi-check-circle-fill', 'bi-x-circle-fill'],
             ['bi-bell-fill', 'bi-bell-slash-fill'],
-            ['bi-bookmark-fill', 'bi-bookmark']
+            ['bi-bookmark-fill', 'bi-bookmark'],
+            ['bi-camera', 'bi-camera-fill'],
+            ['bi-cloud', 'bi-cloud-fill'],
+            ['bi-folder', 'bi-folder-fill'],
+            ['bi-flag', 'bi-flag-fill'],
+            ['bi-house', 'bi-house-fill'],
+            ['bi-lightbulb', 'bi-lightbulb-fill'],
+            ['bi-pin', 'bi-pin-fill'],
+            ['bi-shield', 'bi-shield-fill'],
+            ['bi-telephone', 'bi-telephone-fill'],
+            ['bi-trash', 'bi-trash-fill'],
+            ['bi-trophy', 'bi-trophy-fill'],
+            ['bi-emoji-smile', 'bi-emoji-frown'],
+            ['bi-hand-index', 'bi-hand-index-fill'],
+            ['bi-eye', 'bi-eye-slash'],
+            ['bi-calendar', 'bi-calendar-fill'],
+            ['bi-cart', 'bi-cart-fill'],
+            ['bi-briefcase', 'bi-briefcase-fill'],
+            ['bi-gift', 'bi-gift-fill'],
+            ['bi-gear', 'bi-gear-fill'],
+            ['bi-key', 'bi-key-fill'],
+            ['bi-lamp', 'bi-lamp-fill'],
+            ['bi-mouse', 'bi-mouse-fill'],
+            ['bi-palette', 'bi-palette-fill'],
+            ['bi-pencil', 'bi-pencil-fill'],
+            ['bi-phone', 'bi-phone-fill'],
+            ['bi-printer', 'bi-printer-fill'],
+            ['bi-send', 'bi-send-fill'],
+            ['bi-speaker', 'bi-speaker-fill'],
+            ['bi-suit-club', 'bi-suit-club-fill'],
+            ['bi-suit-diamond', 'bi-suit-diamond-fill'],
+            ['bi-suit-heart', 'bi-suit-heart-fill'],
+            ['bi-suit-spade', 'bi-suit-spade-fill'],
+            ['bi-cup-hot', 'bi-cup-hot-fill'],
+            ['bi-droplet', 'bi-droplet-fill'],
+            ['bi-lightning', 'bi-lightning-fill'],
+            ['bi-bag', 'bi-bag-fill'],
+            ['bi-basket', 'bi-basket-fill'],
+            ['bi-box', 'bi-box-fill'],
+            ['bi-clipboard', 'bi-clipboard-fill'],
+            ['bi-clock', 'bi-clock-fill']
         ];
-        $p = $pairs[array_rand($pairs)];
-
-        // Majority is usually p[0], Minority is p[1] or vice versa? 
-        // Logic: array_fill with p[0], one p[1].
-        // Ensuring random role assignment
-        if (rand(0, 1)) {
-            $maj = $p[0];
-            $min = $p[1];
-        } else {
-            $maj = $p[1];
-            $min = $p[0];
+        $variants = [];
+        foreach ($pairs as $pair) {
+            $variants[] = ['majority' => $pair[0], 'minority' => $pair[1]];
+            $variants[] = ['majority' => $pair[1], 'minority' => $pair[0]];
         }
+        $variant = bbPickTaskSource($type, $variants, function ($source) use ($type) {
+            return [
+                'type' => $type,
+                'options' => array_merge(array_fill(0, 15, $source['majority']), [$source['minority']]),
+                'correct_val' => $source['minority']
+            ];
+        }, $excludedSignatures);
+        $maj = $variant['majority'];
+        $min = $variant['minority'];
 
         // Увеличиваем до 16 элементов (сетка 4x4)
         $opts = array_fill(0, 15, $maj);
@@ -1011,10 +1325,21 @@ function generateTaskData($type)
     if ($type === 'photo_memory') {
         $icons = [
             'bi-hammer', 'bi-airplane-fill', 'bi-robot', 'bi-controller', 'bi-gift-fill',
-            'bi-moon-stars-fill', 'bi-star-fill', 'bi-heart-fill', 'bi-bicycle', 'bi-anchor',
+            'bi-moon-stars-fill', 'bi-star-fill', 'bi-heart-fill', 'bi-bicycle', 'bi-life-preserver',
             'bi-umbrella-fill', 'bi-cloud-rain-fill', 'bi-music-note-beamed', 'bi-puzzle-fill', 'bi-palette-fill',
             'bi-trophy-fill', 'bi-bug-fill', 'bi-tree-fill', 'bi-alarm-fill', 'bi-camera-fill',
-            'bi-emoji-smile-fill', 'bi-brightness-high-fill', 'bi-lightning-charge-fill', 'bi-apple', 'bi-egg-fill'
+            'bi-emoji-smile-fill', 'bi-brightness-high-fill', 'bi-lightning-charge-fill', 'bi-apple', 'bi-egg-fill',
+            'bi-balloon-fill', 'bi-basket-fill', 'bi-bell-fill', 'bi-binoculars-fill', 'bi-boombox-fill',
+            'bi-book-fill', 'bi-box-seam-fill', 'bi-briefcase-fill', 'bi-cake2-fill', 'bi-calculator-fill',
+            'bi-calendar-heart-fill', 'bi-car-front-fill', 'bi-cassette-fill', 'bi-clock-fill', 'bi-cloud-snow-fill',
+            'bi-compass-fill', 'bi-cup-hot-fill', 'bi-dice-5-fill', 'bi-disc-fill', 'bi-door-open-fill',
+            'bi-droplet-fill', 'bi-ear-fill', 'bi-envelope-paper-fill', 'bi-feather', 'bi-film',
+            'bi-fire', 'bi-flower1', 'bi-flower2', 'bi-flower3', 'bi-gem',
+            'bi-globe-americas', 'bi-handbag-fill', 'bi-headphones', 'bi-house-heart-fill', 'bi-hourglass-split',
+            'bi-key-fill', 'bi-lamp-fill', 'bi-lightbulb-fill', 'bi-magnet-fill', 'bi-map-fill',
+            'bi-megaphone-fill', 'bi-mortarboard-fill', 'bi-mouse-fill', 'bi-piggy-bank-fill', 'bi-pin-map-fill',
+            'bi-postcard-fill', 'bi-printer-fill', 'bi-radioactive', 'bi-rocket-takeoff-fill', 'bi-safe-fill',
+            'bi-scissors', 'bi-snow2', 'bi-speaker-fill', 'bi-stopwatch-fill', 'bi-suitcase-lg-fill'
         ];
         shuffle($icons);
         $shown = array_slice($icons, 0, 4); // Показываем 4
@@ -1081,11 +1406,93 @@ function generateTaskData($type)
             ['items' => ['👓', '☀️'], 'res' => '😎', 'name' => 'Очки'],
             ['items' => ['🌲', '🪓'], 'res' => '🪵', 'name' => 'Дрова'],
             ['items' => ['✉️', '📫'], 'res' => '📬', 'name' => 'Почта'],
+            ['items' => ['🐝', '🌸'], 'res' => '🍯', 'name' => 'Мед'],
+            ['items' => ['🥛', '❄️'], 'res' => '🍦', 'name' => 'Мороженое'],
+            ['items' => ['🧶', '🪡'], 'res' => '🧣', 'name' => 'Шарф'],
+            ['items' => ['🌾', '💧'], 'res' => '🥖', 'name' => 'Хлеб'],
+            ['items' => ['🔑', '🚪'], 'res' => '🔓', 'name' => 'Открыто'],
+            ['items' => ['📚', '🧠'], 'res' => '🎓', 'name' => 'Знания'],
+            ['items' => ['🎁', '🎂'], 'res' => '🎉', 'name' => 'Праздник'],
+            ['items' => ['🎸', '🎤'], 'res' => '🎵', 'name' => 'Песня'],
+            ['items' => ['🔨', '🪨'], 'res' => '🗿', 'name' => 'Скульптура'],
+            ['items' => ['🍎', '🔥'], 'res' => '🥧', 'name' => 'Пирог'],
+            ['items' => ['🪵', '🔥'], 'res' => '🔥', 'name' => 'Костер'],
+            ['items' => ['🪨', '⛏️'], 'res' => '💎', 'name' => 'Самоцвет'],
+            ['items' => ['🌱', '☀️'], 'res' => '🌿', 'name' => 'Росток'],
+            ['items' => ['🍋', '💧'], 'res' => '🧃', 'name' => 'Лимонад'],
+            ['items' => ['🍫', '🥛'], 'res' => '☕', 'name' => 'Какао'],
+            ['items' => ['🥔', '🔥'], 'res' => '🍟', 'name' => 'Картофель фри'],
+            ['items' => ['🍗', '🔥'], 'res' => '🍖', 'name' => 'Жаркое'],
+            ['items' => ['🍅', '🥒'], 'res' => '🥗', 'name' => 'Салат'],
+            ['items' => ['🍓', '🫐'], 'res' => '🫙', 'name' => 'Варенье'],
+            ['items' => ['🥚', '🥛'], 'res' => '🥞', 'name' => 'Блины'],
+            ['items' => ['🥞', '🍯'], 'res' => '😋', 'name' => 'Сладкий завтрак'],
+            ['items' => ['🍚', '🥕'], 'res' => '🍛', 'name' => 'Плов'],
+            ['items' => ['🍉', '🧊'], 'res' => '🍧', 'name' => 'Фруктовый лед'],
+            ['items' => ['🥐', '☕'], 'res' => '🍽️', 'name' => 'Завтрак'],
+            ['items' => ['🍒', '🥧'], 'res' => '🍰', 'name' => 'Десерт'],
+            ['items' => ['🫘', '🥣'], 'res' => '🍲', 'name' => 'Суп'],
+            ['items' => ['🥛', '🦠'], 'res' => '🥣', 'name' => 'Йогурт'],
+            ['items' => ['🍊', '🫙'], 'res' => '🍬', 'name' => 'Мармелад'],
+            ['items' => ['🍌', '🥛'], 'res' => '🧋', 'name' => 'Смузи'],
+            ['items' => ['🍅', '🔥'], 'res' => '🥫', 'name' => 'Томатный соус'],
+            ['items' => ['📄', '🖊️'], 'res' => '📝', 'name' => 'Заметка'],
+            ['items' => ['📖', '🔍'], 'res' => '🔎', 'name' => 'Исследование'],
+            ['items' => ['📷', '🌄'], 'res' => '📸', 'name' => 'Фотография'],
+            ['items' => ['🎬', '🍿'], 'res' => '🎟️', 'name' => 'Киносеанс'],
+            ['items' => ['🎵', '🕺'], 'res' => '💃', 'name' => 'Танец'],
+            ['items' => ['⚽', '🥅'], 'res' => '🏆', 'name' => 'Победа'],
+            ['items' => ['🏀', '👐'], 'res' => '⛹️', 'name' => 'Баскетбол'],
+            ['items' => ['🛞', '🚗'], 'res' => '🚙', 'name' => 'Автомобиль'],
+            ['items' => ['🔧', '🚗'], 'res' => '🛠️', 'name' => 'Ремонт'],
+            ['items' => ['🧶', '🪝'], 'res' => '🧤', 'name' => 'Варежка'],
+            ['items' => ['🪵', '🪚'], 'res' => '🛏️', 'name' => 'Кровать'],
+            ['items' => ['🧱', '🔨'], 'res' => '🏗️', 'name' => 'Стройка'],
+            ['items' => ['🧭', '🚢'], 'res' => '🗺️', 'name' => 'Морской маршрут'],
+            ['items' => ['💨', '⛵'], 'res' => '🚤', 'name' => 'Плавание'],
+            ['items' => ['🗺️', '🧭'], 'res' => '📍', 'name' => 'Маршрут'],
+            ['items' => ['🏕️', '🔥'], 'res' => '⛺', 'name' => 'Лагерь'],
+            ['items' => ['🌙', '⭐'], 'res' => '🌌', 'name' => 'Ночное небо'],
+            ['items' => ['☀️', '🌊'], 'res' => '🏖️', 'name' => 'Пляж'],
+            ['items' => ['🌊', '🏄'], 'res' => '🏄‍♂️', 'name' => 'Серфинг'],
+            ['items' => ['❄️', '⛄'], 'res' => '☃️', 'name' => 'Снеговик'],
+            ['items' => ['☁️', '⚡'], 'res' => '⛈️', 'name' => 'Гроза'],
+            ['items' => ['🌸', '🌿'], 'res' => '💐', 'name' => 'Букет'],
+            ['items' => ['🌹', '🎀'], 'res' => '🎁', 'name' => 'Подарок'],
+            ['items' => ['👶', '⏳'], 'res' => '🧑', 'name' => 'Взросление'],
+            ['items' => ['🧑', '⏳'], 'res' => '👴', 'name' => 'Старость'],
+            ['items' => ['🖨️', '📄'], 'res' => '📑', 'name' => 'Копии'],
+            ['items' => ['📦', '📮'], 'res' => '📤', 'name' => 'Отправка'],
+            ['items' => ['📨', '💻'], 'res' => '📧', 'name' => 'Электронная почта'],
+            ['items' => ['☎️', '💬'], 'res' => '📞', 'name' => 'Звонок'],
+            ['items' => ['🎈', '🎁'], 'res' => '🥳', 'name' => 'Вечеринка'],
+            ['items' => ['🎭', '🎫'], 'res' => '👏', 'name' => 'Аплодисменты'],
+            ['items' => ['🎨', '🧑'], 'res' => '🧑‍🎨', 'name' => 'Художник'],
+            ['items' => ['🔬', '🧪'], 'res' => '🧬', 'name' => 'Наука'],
+            ['items' => ['🩺', '🏥'], 'res' => '👩‍⚕️', 'name' => 'Врач'],
+            ['items' => ['🚒', '🔥'], 'res' => '🧯', 'name' => 'Тушение'],
+            ['items' => ['🚑', '🏥'], 'res' => '🩹', 'name' => 'Помощь'],
+            ['items' => ['🚓', '🚨'], 'res' => '👮', 'name' => 'Полиция'],
+            ['items' => ['✈️', '🗺️'], 'res' => '🧳', 'name' => 'Путешествие'],
+            ['items' => ['🚂', '🛤️'], 'res' => '🚉', 'name' => 'Станция'],
+            ['items' => ['🚲', '⛰️'], 'res' => '🚵', 'name' => 'Велопоход'],
+            ['items' => ['🏃', '🏁'], 'res' => '🥇', 'name' => 'Финиш'],
+            ['items' => ['🐣', '⏳'], 'res' => '🐔', 'name' => 'Курица'],
+            ['items' => ['🐑', '✂️'], 'res' => '🧶', 'name' => 'Шерсть'],
+            ['items' => ['🐄', '🌾'], 'res' => '🥛', 'name' => 'Молоко'],
+            ['items' => ['🌰', '🌱'], 'res' => '🌳', 'name' => 'Дерево'],
+            ['items' => ['🪶', '🖋️'], 'res' => '✍️', 'name' => 'Письмо'],
         ];
-        $r = $recipes[array_rand($recipes)];
+        $r = bbPickTaskSource($type, $recipes, function ($recipe) use ($type) {
+            return [
+                'type' => $type,
+                'question' => "{$recipe['items'][0]} + {$recipe['items'][1]} = ?",
+                'correct_val' => $recipe['res']
+            ];
+        }, $excludedSignatures);
         $all_res = array_column($recipes, 'res');
         $wrong = ['💀', '👽', '🤖', '🎃', '💩', '🤡', '👻', '🌵', '🍄', '🕸️'];
-        $wrong = array_merge($wrong, array_diff($all_res, [$r['res']]));
+        $wrong = array_values(array_unique(array_merge($wrong, array_diff($all_res, [$r['res']]))));
         shuffle($wrong);
         $opts = [$r['res'], $wrong[0], $wrong[1], $wrong[2]];
         shuffle($opts);
@@ -1102,7 +1509,18 @@ function generateTaskData($type)
             'bi-house-fill', 'bi-key-fill', 'bi-lamp-fill', 'bi-lightbulb-fill', 'bi-lock-fill', 
             'bi-magic', 'bi-magnet-fill', 'bi-mic-fill', 'bi-mouse-fill', 'bi-music-note', 
             'bi-paint-bucket', 'bi-pencil-fill', 'bi-phone-fill', 'bi-pin-map-fill', 'bi-printer-fill', 
-            'bi-search', 'bi-send-fill', 'bi-shield-fill', 'bi-speaker-fill', 'bi-suit-spade-fill'
+            'bi-search', 'bi-send-fill', 'bi-shield-fill', 'bi-speaker-fill', 'bi-suit-spade-fill',
+            'bi-airplane-fill', 'bi-alarm-fill', 'bi-life-preserver', 'bi-award-fill', 'bi-bag-fill',
+            'bi-balloon-heart-fill', 'bi-bank2', 'bi-basket-fill', 'bi-bell-fill', 'bi-bicycle',
+            'bi-binoculars-fill', 'bi-book-fill', 'bi-bookmark-star-fill', 'bi-boombox-fill', 'bi-box-seam-fill',
+            'bi-briefcase-fill', 'bi-brightness-high-fill', 'bi-cake2-fill', 'bi-calculator-fill', 'bi-calendar-heart-fill',
+            'bi-car-front-fill', 'bi-cassette-fill', 'bi-clock-fill', 'bi-cloud-rain-fill', 'bi-cloud-snow-fill',
+            'bi-compass-fill', 'bi-controller', 'bi-cup-straw', 'bi-dice-6-fill', 'bi-disc-fill',
+            'bi-door-open-fill', 'bi-droplet-fill', 'bi-egg-fill', 'bi-emoji-sunglasses-fill', 'bi-feather',
+            'bi-film', 'bi-fire', 'bi-flower1', 'bi-gem', 'bi-gift-fill',
+            'bi-globe-asia-australia', 'bi-hammer', 'bi-handbag-fill', 'bi-headphones', 'bi-heart-fill',
+            'bi-house-heart-fill', 'bi-hourglass-split', 'bi-lightning-charge-fill', 'bi-map-fill', 'bi-megaphone-fill',
+            'bi-moon-stars-fill', 'bi-mortarboard-fill', 'bi-palette-fill', 'bi-piggy-bank-fill', 'bi-puzzle-fill'
         ];
         shuffle($set);
         $target = $set[0];
@@ -1229,9 +1647,132 @@ function generateTaskData($type)
             ['name' => 'Киви', 'type' => 'yes'],
             ['name' => 'Диван', 'type' => 'no'],
             ['name' => 'Виноград', 'type' => 'yes'],
-            ['name' => 'Шуруп', 'type' => 'no']
+            ['name' => 'Шуруп', 'type' => 'no'],
+            ['name' => 'Персик', 'type' => 'yes'],
+            ['name' => 'Нектарин', 'type' => 'yes'],
+            ['name' => 'Слива', 'type' => 'yes'],
+            ['name' => 'Вишня', 'type' => 'yes'],
+            ['name' => 'Черешня', 'type' => 'yes'],
+            ['name' => 'Лимон', 'type' => 'yes'],
+            ['name' => 'Мандарин', 'type' => 'yes'],
+            ['name' => 'Грейпфрут', 'type' => 'yes'],
+            ['name' => 'Гранат', 'type' => 'yes'],
+            ['name' => 'Дыня', 'type' => 'yes'],
+            ['name' => 'Хурма', 'type' => 'yes'],
+            ['name' => 'Инжир', 'type' => 'yes'],
+            ['name' => 'Финик', 'type' => 'yes'],
+            ['name' => 'Кокос', 'type' => 'yes'],
+            ['name' => 'Папайя', 'type' => 'yes'],
+            ['name' => 'Гуава', 'type' => 'yes'],
+            ['name' => 'Маракуйя', 'type' => 'yes'],
+            ['name' => 'Крыжовник', 'type' => 'yes'],
+            ['name' => 'Смородина', 'type' => 'yes'],
+            ['name' => 'Брусника', 'type' => 'yes'],
+            ['name' => 'Клюква', 'type' => 'yes'],
+            ['name' => 'Голубика', 'type' => 'yes'],
+            ['name' => 'Ежевика', 'type' => 'yes'],
+            ['name' => 'Кабачок', 'type' => 'yes'],
+            ['name' => 'Тыква', 'type' => 'yes'],
+            ['name' => 'Картофель', 'type' => 'yes'],
+            ['name' => 'Свекла', 'type' => 'yes'],
+            ['name' => 'Репа', 'type' => 'yes'],
+            ['name' => 'Капуста', 'type' => 'yes'],
+            ['name' => 'Цветная капуста', 'type' => 'yes'],
+            ['name' => 'Перец', 'type' => 'yes'],
+            ['name' => 'Горох', 'type' => 'yes'],
+            ['name' => 'Фасоль', 'type' => 'yes'],
+            ['name' => 'Чечевица', 'type' => 'yes'],
+            ['name' => 'Кукуруза', 'type' => 'yes'],
+            ['name' => 'Рис', 'type' => 'yes'],
+            ['name' => 'Гречка', 'type' => 'yes'],
+            ['name' => 'Овсянка', 'type' => 'yes'],
+            ['name' => 'Хлеб', 'type' => 'yes'],
+            ['name' => 'Батон', 'type' => 'yes'],
+            ['name' => 'Бублик', 'type' => 'yes'],
+            ['name' => 'Вафля', 'type' => 'yes'],
+            ['name' => 'Печенье', 'type' => 'yes'],
+            ['name' => 'Кекс', 'type' => 'yes'],
+            ['name' => 'Пастила', 'type' => 'yes'],
+            ['name' => 'Мармелад', 'type' => 'yes'],
+            ['name' => 'Мороженое', 'type' => 'yes'],
+            ['name' => 'Омлет', 'type' => 'yes'],
+            ['name' => 'Яичница', 'type' => 'yes'],
+            ['name' => 'Сосиска', 'type' => 'yes'],
+            ['name' => 'Ветчина', 'type' => 'yes'],
+            ['name' => 'Лосось', 'type' => 'yes'],
+            ['name' => 'Тунец', 'type' => 'yes'],
+            ['name' => 'Сельдь', 'type' => 'yes'],
+            ['name' => 'Кальмар', 'type' => 'yes'],
+            ['name' => 'Мидии', 'type' => 'yes'],
+            ['name' => 'Устрица', 'type' => 'yes'],
+            ['name' => 'Лаваш', 'type' => 'yes'],
+            ['name' => 'Хумус', 'type' => 'yes'],
+            ['name' => 'Гайка', 'type' => 'no'],
+            ['name' => 'Болт', 'type' => 'no'],
+            ['name' => 'Доска', 'type' => 'no'],
+            ['name' => 'Бетон', 'type' => 'no'],
+            ['name' => 'Цемент', 'type' => 'no'],
+            ['name' => 'Пластилин', 'type' => 'no'],
+            ['name' => 'Ручка', 'type' => 'no'],
+            ['name' => 'Маркер', 'type' => 'no'],
+            ['name' => 'Тетрадь', 'type' => 'no'],
+            ['name' => 'Альбом', 'type' => 'no'],
+            ['name' => 'Папка', 'type' => 'no'],
+            ['name' => 'Конверт', 'type' => 'no'],
+            ['name' => 'Степлер', 'type' => 'no'],
+            ['name' => 'Кнопка', 'type' => 'no'],
+            ['name' => 'Игла', 'type' => 'no'],
+            ['name' => 'Нитка', 'type' => 'no'],
+            ['name' => 'Веревка', 'type' => 'no'],
+            ['name' => 'Цепь', 'type' => 'no'],
+            ['name' => 'Замок', 'type' => 'no'],
+            ['name' => 'Расческа', 'type' => 'no'],
+            ['name' => 'Зубная щетка', 'type' => 'no'],
+            ['name' => 'Полотенце', 'type' => 'no'],
+            ['name' => 'Простыня', 'type' => 'no'],
+            ['name' => 'Одеяло', 'type' => 'no'],
+            ['name' => 'Матрас', 'type' => 'no'],
+            ['name' => 'Табурет', 'type' => 'no'],
+            ['name' => 'Стол', 'type' => 'no'],
+            ['name' => 'Стул', 'type' => 'no'],
+            ['name' => 'Кресло', 'type' => 'no'],
+            ['name' => 'Полка', 'type' => 'no'],
+            ['name' => 'Зеркало', 'type' => 'no'],
+            ['name' => 'Ваза', 'type' => 'no'],
+            ['name' => 'Тарелка', 'type' => 'no'],
+            ['name' => 'Кружка', 'type' => 'no'],
+            ['name' => 'Стакан', 'type' => 'no'],
+            ['name' => 'Кастрюля', 'type' => 'no'],
+            ['name' => 'Сковорода', 'type' => 'no'],
+            ['name' => 'Дуршлаг', 'type' => 'no'],
+            ['name' => 'Терка', 'type' => 'no'],
+            ['name' => 'Венчик', 'type' => 'no'],
+            ['name' => 'Пылесос', 'type' => 'no'],
+            ['name' => 'Фен', 'type' => 'no'],
+            ['name' => 'Вентилятор', 'type' => 'no'],
+            ['name' => 'Обогреватель', 'type' => 'no'],
+            ['name' => 'Будильник', 'type' => 'no'],
+            ['name' => 'Калькулятор', 'type' => 'no'],
+            ['name' => 'Ноутбук', 'type' => 'no'],
+            ['name' => 'Планшет', 'type' => 'no'],
+            ['name' => 'Клавиатура', 'type' => 'no'],
+            ['name' => 'Мышь', 'type' => 'no'],
+            ['name' => 'Наушники', 'type' => 'no'],
+            ['name' => 'Колонка', 'type' => 'no'],
+            ['name' => 'Кабель', 'type' => 'no'],
+            ['name' => 'Розетка', 'type' => 'no'],
+            ['name' => 'Выключатель', 'type' => 'no'],
+            ['name' => 'Рюкзак', 'type' => 'no'],
+            ['name' => 'Чемодан', 'type' => 'no'],
+            ['name' => 'Перчатка', 'type' => 'no']
         ];
-        $item = $items[array_rand($items)];
+        $item = bbPickTaskSource($type, $items, function ($source) {
+            return [
+                'type' => 'edible_inedible',
+                'item_name' => $source['name'],
+                'correct_val' => ($source['type'] === 'yes' ? 'Съедобное' : 'Несъедобное')
+            ];
+        }, $excludedSignatures);
         return [
             'type' => 'edible_inedible',
             'title' => 'Съедобное?',
@@ -1283,10 +1824,22 @@ function generateTaskData($type)
             ['text' => 'У Наполеона был комплекс маленького роста (он был выше среднего).', 'is_true' => false],
             ['text' => 'Стекло — это сверхвязкая жидкость.', 'is_true' => false],
             ['text' => 'В космосе нет гравитации.', 'is_true' => false],
-            ['text' => 'Мы глотаем 8 пауков в год во сне.', 'is_true' => false]
+            ['text' => 'Мы глотаем 8 пауков в год во сне.', 'is_true' => false],
+            ['text' => 'Звук распространяется быстрее света.', 'is_true' => false],
+            ['text' => 'Меркурий — самая горячая планета Солнечной системы.', 'is_true' => false],
+            ['text' => 'Все пустыни на Земле жаркие.', 'is_true' => false],
+            ['text' => 'Киты относятся к рыбам.', 'is_true' => false],
+            ['text' => 'Смена времен года происходит из-за расстояния от Земли до Солнца.', 'is_true' => false],
+            ['text' => 'Пауки относятся к насекомым.', 'is_true' => false],
+            ['text' => 'Луна излучает собственный свет.', 'is_true' => false],
+            ['text' => 'Кровь человека внутри вен имеет синий цвет.', 'is_true' => false],
+            ['text' => 'Страус — самая крупная летающая птица.', 'is_true' => false],
+            ['text' => 'Белые медведи и пингвины живут рядом в дикой природе.', 'is_true' => false],
+            ['text' => 'Солнце вращается вокруг Земли.', 'is_true' => false],
+            ['text' => 'Все млекопитающие рождают живых детенышей.', 'is_true' => false]
         ];
 
-        // Добавляем еще немного правды для баланса
+        // Дополняем правдивыми утверждениями для баланса
         $trueFacts = [
             ['text' => 'W — единственная буква в английском алфавите, в которой больше одного слога.', 'is_true' => true],
             ['text' => 'У кошек нет ключиц.', 'is_true' => true],
@@ -1296,13 +1849,178 @@ function generateTaskData($type)
             ['text' => 'Ковбойские шляпы были изобретены не ковбоями, а Джоном Стетсоном.', 'is_true' => true],
             ['text' => 'Австралия одновременно является страной и континентом.', 'is_true' => true],
             ['text' => 'На флаге Японии изображен круг.', 'is_true' => true],
+            ['text' => 'Дельфины относятся к млекопитающим.', 'is_true' => true],
+            ['text' => 'Свет от Солнца достигает Земли примерно за восемь минут.', 'is_true' => true],
+            ['text' => 'У пауков восемь ног.', 'is_true' => true],
+            ['text' => 'Средняя плотность Сатурна меньше плотности воды.', 'is_true' => true],
+            ['text' => 'Синий кит — крупнейшее известное животное.', 'is_true' => true],
+            ['text' => 'В скелете взрослого человека обычно 206 костей.', 'is_true' => true],
+            ['text' => 'Пингвины относятся к птицам.', 'is_true' => true],
+            ['text' => 'На Луне практически нет атмосферы.', 'is_true' => true],
+            ['text' => 'Вода кипит при 100 °C при нормальном атмосферном давлении.', 'is_true' => true],
+            ['text' => 'Земля обращается вокруг Солнца.', 'is_true' => true],
+            ['text' => 'Кровь осьминога имеет голубой цвет.', 'is_true' => true],
+            ['text' => 'Бамбук относится к травам.', 'is_true' => true],
+            ['text' => 'Морские коньки относятся к рыбам.', 'is_true' => true],
+            ['text' => 'У взрослой бабочки шесть ног.', 'is_true' => true],
         ];
         $facts = array_merge($facts, $trueFacts);
+        $moreTrueFacts = [
+            ['text' => 'Меркурий — ближайшая к Солнцу планета.', 'is_true' => true],
+            ['text' => 'У Земли один естественный спутник.', 'is_true' => true],
+            ['text' => 'Юпитер относится к газовым гигантам.', 'is_true' => true],
+            ['text' => 'Кольца Сатурна состоят в основном из льда и камней.', 'is_true' => true],
+            ['text' => 'Ось вращения Урана сильно наклонена.', 'is_true' => true],
+            ['text' => 'Нептун — самая дальняя от Солнца планета.', 'is_true' => true],
+            ['text' => 'У Марса два естественных спутника.', 'is_true' => true],
+            ['text' => 'Солнце является звездой.', 'is_true' => true],
 
-        // Чтобы вопросы не повторялись постоянно (хотя выборка уже 40+)
-        $idx = array_rand($facts);
-        // Можно было бы хранить history в $state, но для начала расширим базу
-        $fact = $facts[$idx];
+            ['text' => 'Свет распространяется быстрее звука.', 'is_true' => true],
+            ['text' => 'В вакууме звук не распространяется.', 'is_true' => true],
+            ['text' => 'При нормальном давлении вода замерзает при 0 °C.', 'is_true' => true],
+            ['text' => 'Алмаз состоит из углерода.', 'is_true' => true],
+            ['text' => 'Химический символ кислорода — O.', 'is_true' => true],
+            ['text' => 'Химический символ золота — Au.', 'is_true' => true],
+            ['text' => 'Поваренная соль — это хлорид натрия.', 'is_true' => true],
+            ['text' => 'В атмосфере Земли больше азота, чем кислорода.', 'is_true' => true],
+
+            ['text' => 'При фотосинтезе растения выделяют кислород.', 'is_true' => true],
+            ['text' => 'Лед менее плотный, чем жидкая вода.', 'is_true' => true],
+            ['text' => 'Сердце человека состоит из четырех камер.', 'is_true' => true],
+            ['text' => 'В легких происходит обмен кислорода и углекислого газа.', 'is_true' => true],
+            ['text' => 'Кожа является органом человека.', 'is_true' => true],
+            ['text' => 'Киты дышат атмосферным воздухом.', 'is_true' => true],
+            ['text' => 'Акулы относятся к рыбам.', 'is_true' => true],
+            ['text' => 'Осьминоги относятся к моллюскам.', 'is_true' => true],
+
+            ['text' => 'У насекомых шесть ног.', 'is_true' => true],
+            ['text' => 'Перья есть только у птиц.', 'is_true' => true],
+            ['text' => 'Лягушки относятся к земноводным.', 'is_true' => true],
+            ['text' => 'Летучие мыши способны к длительному активному полету.', 'is_true' => true],
+            ['text' => 'Утконос откладывает яйца.', 'is_true' => true],
+            ['text' => 'Пингвины не умеют летать.', 'is_true' => true],
+            ['text' => 'Колибри умеют зависать в воздухе.', 'is_true' => true],
+            ['text' => 'Пчелы участвуют в опылении растений.', 'is_true' => true],
+
+            ['text' => 'Коралловые полипы относятся к животным.', 'is_true' => true],
+            ['text' => 'Морские звезды относятся к иглокожим.', 'is_true' => true],
+            ['text' => 'В горбах верблюда накапливается жир.', 'is_true' => true],
+            ['text' => 'В хоботе слона нет костей.', 'is_true' => true],
+            ['text' => 'Сова может повернуть голову примерно на 270 градусов.', 'is_true' => true],
+            ['text' => 'У змей нет наружных ушей.', 'is_true' => true],
+            ['text' => 'Крокодилы относятся к пресмыкающимся.', 'is_true' => true],
+            ['text' => 'Черепахи относятся к пресмыкающимся.', 'is_true' => true],
+
+            ['text' => 'Антарктида является континентом.', 'is_true' => true],
+            ['text' => 'Пустыня Сахара находится в Африке.', 'is_true' => true],
+            ['text' => 'Река Нил протекает по Африке.', 'is_true' => true],
+            ['text' => 'Река Амазонка находится в Южной Америке.', 'is_true' => true],
+            ['text' => 'Альпы находятся в Европе.', 'is_true' => true],
+            ['text' => 'Япония является островным государством.', 'is_true' => true],
+            ['text' => 'Исландия находится в северной части Атлантики.', 'is_true' => true],
+            ['text' => 'Экватор делит Землю на Северное и Южное полушария.', 'is_true' => true],
+
+            ['text' => 'Тихий океан больше Атлантического.', 'is_true' => true],
+            ['text' => 'Мертвое море является озером.', 'is_true' => true],
+            ['text' => 'Каспийское море является замкнутым водоемом.', 'is_true' => true],
+            ['text' => 'Столица Австралии — Канберра.', 'is_true' => true],
+            ['text' => 'Столица Канады — Оттава.', 'is_true' => true],
+            ['text' => 'Официальный язык Бразилии — португальский.', 'is_true' => true],
+            ['text' => 'Большая часть Египта находится в Африке.', 'is_true' => true],
+            ['text' => 'Гренландия — крупнейший остров мира.', 'is_true' => true],
+
+            ['text' => 'Бумагу изобрели в Древнем Китае.', 'is_true' => true],
+            ['text' => 'В римской системе счисления нет отдельного знака нуля.', 'is_true' => true],
+            ['text' => 'Книгопечатание Гутенберга появилось в Европе в XV веке.', 'is_true' => true],
+            ['text' => 'Античные Олимпийские игры зародились в Греции.', 'is_true' => true],
+            ['text' => 'Внутри фортепиано есть струны.', 'is_true' => true],
+            ['text' => 'У классической скрипки четыре струны.', 'is_true' => true],
+            ['text' => '«Мону Лизу» написал Леонардо да Винчи.', 'is_true' => true],
+            ['text' => 'Трагедию «Гамлет» написал Уильям Шекспир.', 'is_true' => true],
+        ];
+        $moreFalseFacts = [
+            ['text' => 'Земля имеет форму плоского диска.', 'is_true' => false],
+            ['text' => 'Солнце относится к планетам.', 'is_true' => false],
+            ['text' => 'Луна относится к планетам.', 'is_true' => false],
+            ['text' => 'Юпитер имеет твердую каменную поверхность.', 'is_true' => false],
+            ['text' => 'Сатурн — единственная планета с кольцами.', 'is_true' => false],
+            ['text' => 'У Меркурия плотная кислородная атмосфера.', 'is_true' => false],
+            ['text' => 'Марс больше Земли.', 'is_true' => false],
+            ['text' => 'Нептун находится ближе к Солнцу, чем Земля.', 'is_true' => false],
+
+            ['text' => 'У Венеры есть два естественных спутника.', 'is_true' => false],
+            ['text' => 'У Земли два Солнца.', 'is_true' => false],
+            ['text' => 'Свет распространяется медленнее звука.', 'is_true' => false],
+            ['text' => 'Звук свободно распространяется в полном вакууме.', 'is_true' => false],
+            ['text' => 'При нормальном давлении вода замерзает при 10 °C.', 'is_true' => false],
+            ['text' => 'Обычный лед тонет в пресной воде.', 'is_true' => false],
+            ['text' => 'Химический символ золота — Go.', 'is_true' => false],
+            ['text' => 'Поваренная соль имеет формулу CO2.', 'is_true' => false],
+
+            ['text' => 'В атмосфере Земли больше кислорода, чем азота.', 'is_true' => false],
+            ['text' => 'Растения получают всю пищу только из почвы.', 'is_true' => false],
+            ['text' => 'Сердце человека состоит из двух камер.', 'is_true' => false],
+            ['text' => 'Легкие перекачивают кровь по всему телу.', 'is_true' => false],
+            ['text' => 'Кожа человека не является органом.', 'is_true' => false],
+            ['text' => 'Киты дышат жабрами.', 'is_true' => false],
+            ['text' => 'Дельфины относятся к рыбам.', 'is_true' => false],
+            ['text' => 'Акулы относятся к млекопитающим.', 'is_true' => false],
+
+            ['text' => 'Осьминоги относятся к позвоночным.', 'is_true' => false],
+            ['text' => 'У насекомых восемь ног.', 'is_true' => false],
+            ['text' => 'У пауков шесть ног.', 'is_true' => false],
+            ['text' => 'Все птицы умеют летать.', 'is_true' => false],
+            ['text' => 'Пингвины относятся к млекопитающим.', 'is_true' => false],
+            ['text' => 'Летучие мыши относятся к птицам.', 'is_true' => false],
+            ['text' => 'Утконос всегда рождает живых детенышей.', 'is_true' => false],
+            ['text' => 'Лягушки относятся к пресмыкающимся.', 'is_true' => false],
+
+            ['text' => 'Кораллы относятся к растениям.', 'is_true' => false],
+            ['text' => 'Морские звезды относятся к рыбам.', 'is_true' => false],
+            ['text' => 'В горбах верблюда хранится вода.', 'is_true' => false],
+            ['text' => 'Внутри хобота слона находится длинная кость.', 'is_true' => false],
+            ['text' => 'Змеи моргают подвижными веками.', 'is_true' => false],
+            ['text' => 'Крокодилы относятся к земноводным.', 'is_true' => false],
+            ['text' => 'Черепахи относятся к насекомым.', 'is_true' => false],
+            ['text' => 'Антарктида находится в Северном полушарии.', 'is_true' => false],
+
+            ['text' => 'Пустыня Сахара находится в Южной Америке.', 'is_true' => false],
+            ['text' => 'Река Амазонка протекает по Африке.', 'is_true' => false],
+            ['text' => 'Альпы находятся в Азии.', 'is_true' => false],
+            ['text' => 'Япония является отдельным континентом.', 'is_true' => false],
+            ['text' => 'Исландия находится в Тихом океане.', 'is_true' => false],
+            ['text' => 'Экватор проходит через Северный и Южный полюса.', 'is_true' => false],
+            ['text' => 'Атлантический океан больше Тихого.', 'is_true' => false],
+            ['text' => 'Мертвое море является океаном.', 'is_true' => false],
+
+            ['text' => 'Каспийское море соединено с океаном естественным проливом.', 'is_true' => false],
+            ['text' => 'Столица Австралии — Сидней.', 'is_true' => false],
+            ['text' => 'Столица Канады — Торонто.', 'is_true' => false],
+            ['text' => 'Официальный язык Бразилии — испанский.', 'is_true' => false],
+            ['text' => 'Египет целиком находится в Южной Америке.', 'is_true' => false],
+            ['text' => 'Гренландия является отдельным континентом.', 'is_true' => false],
+            ['text' => 'Бумагу изобрели в Древнем Риме.', 'is_true' => false],
+            ['text' => 'В римской системе счисления есть знак нуля.', 'is_true' => false],
+
+            ['text' => 'Печатный станок Гутенберга появился в XX веке.', 'is_true' => false],
+            ['text' => 'Античные Олимпийские игры зародились в Канаде.', 'is_true' => false],
+            ['text' => 'Внутри фортепиано нет струн.', 'is_true' => false],
+            ['text' => 'У классической скрипки шесть струн.', 'is_true' => false],
+            ['text' => '«Мону Лизу» написал Винсент ван Гог.', 'is_true' => false],
+            ['text' => 'Трагедию «Гамлет» написал Лев Толстой.', 'is_true' => false],
+            ['text' => 'Флейта относится к ударным инструментам.', 'is_true' => false],
+            ['text' => 'Шахматная доска состоит из 100 клеток.', 'is_true' => false],
+        ];
+        $facts = array_merge($facts, $moreTrueFacts, $moreFalseFacts);
+
+        // Общий генератор раунда проверит сигнатуру выбранного утверждения.
+        $fact = bbPickTaskSource($type, $facts, function ($source) {
+            return [
+                'type' => 'fact_check',
+                'fact' => $source['text'],
+                'correct_val' => ($source['is_true'] ? 'Правда' : 'Ложь')
+            ];
+        }, $excludedSignatures);
         return [
             'type' => 'fact_check',
             'title' => 'Правда или Ложь?',
@@ -1313,7 +2031,14 @@ function generateTaskData($type)
 
     // 9. СЧЕТ ОБЪЕКТОВ (Attention)
     if ($type === 'count_objects') {
-        $icons = ['bi-apple', 'bi-car-front-fill', 'bi-bug-fill', 'bi-egg-fill', 'bi-gem', 'bi-star-fill', 'bi-rocket-takeoff-fill', 'bi-heart-fill'];
+        $icons = [
+            'bi-apple', 'bi-car-front-fill', 'bi-bug-fill', 'bi-egg-fill', 'bi-gem',
+            'bi-star-fill', 'bi-rocket-takeoff-fill', 'bi-heart-fill', 'bi-airplane-fill', 'bi-balloon-fill',
+            'bi-basket-fill', 'bi-bell-fill', 'bi-bicycle', 'bi-book-fill', 'bi-boombox-fill',
+            'bi-camera-fill', 'bi-cake2-fill', 'bi-cloud-fill', 'bi-controller', 'bi-cup-hot-fill',
+            'bi-dice-5-fill', 'bi-droplet-fill', 'bi-fire', 'bi-flower1', 'bi-gift-fill',
+            'bi-lightbulb-fill', 'bi-moon-stars-fill', 'bi-palette-fill', 'bi-tree-fill', 'bi-trophy-fill'
+        ];
         $target = $icons[array_rand($icons)];
         $count = rand(3, 7);
         $grid = array_fill(0, $count, $target);
@@ -1377,9 +2102,6 @@ function generateTaskData($type)
 
     // 10. AI QUIZ
     if ($type === 'ai_quiz') {
-        // require_once __DIR__ . '/../lib/GigaChat.php'; // Deprecated
-        require_once __DIR__ . '/../lib/AI/AIService.php';
-
         $topics = ['История', 'Наука', 'Космос', 'Кино', 'Животные', 'Интернет', 'Игры'];
         $topic = $topics[array_rand($topics)];
 
@@ -1388,13 +2110,193 @@ function generateTaskData($type)
             ['question' => 'Сколько планет в Солнечной системе?', 'options' => ['8', '9', '7', '10'], 'correct_val' => '8'],
             ['question' => 'Самое глубокое озеро?', 'options' => ['Байкал', 'Виктория', 'Танганьика', 'Гурон'], 'correct_val' => 'Байкал'],
             ['question' => 'Химическая формула воды?', 'options' => ['H2O', 'CO2', 'O2', 'NaCl'], 'correct_val' => 'H2O'],
-            ['question' => 'Кто написал "Войну и мир"?', 'options' => ['Толстой', 'Достоевский', 'Пушкин', 'Лермонтов'], 'correct_val' => 'Толстой']
+            ['question' => 'Кто написал "Войну и мир"?', 'options' => ['Толстой', 'Достоевский', 'Пушкин', 'Лермонтов'], 'correct_val' => 'Толстой'],
+            ['question' => 'Какой океан самый большой?', 'options' => ['Тихий', 'Атлантический', 'Индийский', 'Северный Ледовитый'], 'correct_val' => 'Тихий'],
+            ['question' => 'Кто написал "Маленького принца"?', 'options' => ['Сент-Экзюпери', 'Жюль Верн', 'Виктор Гюго', 'Александр Дюма'], 'correct_val' => 'Сент-Экзюпери'],
+            ['question' => 'Единица измерения силы тока?', 'options' => ['Ампер', 'Вольт', 'Ватт', 'Ом'], 'correct_val' => 'Ампер'],
+            ['question' => 'Какую планету называют Красной?', 'options' => ['Марс', 'Венера', 'Юпитер', 'Нептун'], 'correct_val' => 'Марс'],
+            ['question' => 'Какое животное откладывает яйца?', 'options' => ['Утконос', 'Дельфин', 'Кит', 'Летучая мышь'], 'correct_val' => 'Утконос'],
+            ['question' => 'Самое высокое наземное животное?', 'options' => ['Жираф', 'Слон', 'Верблюд', 'Лось'], 'correct_val' => 'Жираф'],
+            ['question' => 'Какой металл жидкий при комнатной температуре?', 'options' => ['Ртуть', 'Железо', 'Алюминий', 'Медь'], 'correct_val' => 'Ртуть'],
+            ['question' => 'Какой океан лежит между Африкой и Австралией?', 'options' => ['Индийский', 'Тихий', 'Атлантический', 'Северный Ледовитый'], 'correct_val' => 'Индийский'],
+            ['question' => 'Чем измеряют температуру?', 'options' => ['Термометром', 'Барометром', 'Компасом', 'Секундомером'], 'correct_val' => 'Термометром'],
+            ['question' => 'Какой месяц открывает календарный год?', 'options' => ['Январь', 'Март', 'Июнь', 'Декабрь'], 'correct_val' => 'Январь'],
+            ['question' => 'Сколько будет 12 × 12?', 'options' => ['144', '124', '132', '154'], 'correct_val' => '144'],
+            ['question' => 'Какой газ поглощают растения при фотосинтезе?', 'options' => ['Углекислый газ', 'Кислород', 'Азот', 'Водород'], 'correct_val' => 'Углекислый газ'],
+            ['question' => 'Самая большая планета Солнечной системы?', 'options' => ['Юпитер', 'Сатурн', 'Земля', 'Нептун'], 'correct_val' => 'Юпитер'],
+            ['question' => 'На флаге какой страны изображен кленовый лист?', 'options' => ['Канада', 'США', 'Австралия', 'Норвегия'], 'correct_val' => 'Канада'],
+            ['question' => 'На каком языке говорят в Бразилии?', 'options' => ['Португальский', 'Испанский', 'Французский', 'Итальянский'], 'correct_val' => 'Португальский'],
+            ['question' => 'Сколько фигур у игрока в начале шахматной партии?', 'options' => ['16', '12', '18', '20'], 'correct_val' => '16'],
+            ['question' => 'На каком материке находится Сахара?', 'options' => ['Африка', 'Азия', 'Австралия', 'Южная Америка'], 'correct_val' => 'Африка'],
+            ['question' => 'Какая звезда ближе всего к Земле?', 'options' => ['Солнце', 'Сириус', 'Полярная', 'Вега'], 'correct_val' => 'Солнце'],
+            ['question' => 'Кто написал "Капитанскую дочку"?', 'options' => ['Пушкин', 'Гоголь', 'Чехов', 'Тургенев'], 'correct_val' => 'Пушкин'],
+            ['question' => 'Самый большой орган человека?', 'options' => ['Кожа', 'Печень', 'Легкие', 'Сердце'], 'correct_val' => 'Кожа']
         ];
-        $bk = $backups[array_rand($backups)];
+        $backups = array_merge($backups, [
+            // История
+            ['question' => 'Кто был первым императором Рима?', 'options' => ['Август', 'Нерон', 'Траян', 'Цезарь'], 'correct_val' => 'Август'],
+            ['question' => 'В какой стране подписали Великую хартию вольностей?', 'options' => ['Англия', 'Франция', 'Испания', 'Греция'], 'correct_val' => 'Англия'],
+            ['question' => 'Какая цивилизация построила пирамиды в Гизе?', 'options' => ['Древний Египет', 'Древний Рим', 'Майя', 'Финикия'], 'correct_val' => 'Древний Египет'],
+            ['question' => 'В каком городе находится Колизей?', 'options' => ['Рим', 'Афины', 'Париж', 'Каир'], 'correct_val' => 'Рим'],
+            ['question' => 'Кто связан с изобретением европейского печатного станка?', 'options' => ['Гутенберг', 'Ньютон', 'Эдисон', 'Галилей'], 'correct_val' => 'Гутенберг'],
+            ['question' => 'Какой народ построил Мачу-Пикчу?', 'options' => ['Инки', 'Ацтеки', 'Римляне', 'Викинги'], 'correct_val' => 'Инки'],
+            ['question' => 'Где зародились античные Олимпийские игры?', 'options' => ['В Греции', 'В Египте', 'В Китае', 'В Персии'], 'correct_val' => 'В Греции'],
+            ['question' => 'В каком году пала Берлинская стена?', 'options' => ['1989', '1975', '1999', '1961'], 'correct_val' => '1989'],
+            ['question' => 'Какой регион считают родиной викингов?', 'options' => ['Скандинавия', 'Балканы', 'Сибирь', 'Сахара'], 'correct_val' => 'Скандинавия'],
+            ['question' => 'В какой стране началось Возрождение?', 'options' => ['Италия', 'Швеция', 'Индия', 'Канада'], 'correct_val' => 'Италия'],
 
-        try {
-            $system = "Ты генератор быстрых и понятных вопросов для мобильной викторины. Тема: $topic. Нужен только короткий, однозначный, проверяемый вопрос без подвохов, без оценочных формулировок и без спорных фактов. Ответь только JSON.";
-            $prompt = "Сформируй 1 вопрос для быстрой игры.
+            // География
+            ['question' => 'Столица Японии?', 'options' => ['Токио', 'Киото', 'Осака', 'Сеул'], 'correct_val' => 'Токио'],
+            ['question' => 'Самая длинная река Европы?', 'options' => ['Волга', 'Дунай', 'Рейн', 'Темза'], 'correct_val' => 'Волга'],
+            ['question' => 'В какой стране находится гора Фудзи?', 'options' => ['Япония', 'Китай', 'Непал', 'Индия'], 'correct_val' => 'Япония'],
+            ['question' => 'На каком материке находятся Анды?', 'options' => ['Южная Америка', 'Африка', 'Европа', 'Австралия'], 'correct_val' => 'Южная Америка'],
+            ['question' => 'По какой части света течет Дунай?', 'options' => ['Европа', 'Азия', 'Африка', 'Австралия'], 'correct_val' => 'Европа'],
+            ['question' => 'Какая жаркая пустыня самая большая?', 'options' => ['Сахара', 'Гоби', 'Калахари', 'Атакама'], 'correct_val' => 'Сахара'],
+            ['question' => 'Какую страну сравнивают с сапогом?', 'options' => ['Италия', 'Португалия', 'Чили', 'Норвегия'], 'correct_val' => 'Италия'],
+            ['question' => 'Какой город стоит на берегах Босфора?', 'options' => ['Стамбул', 'Мадрид', 'Прага', 'Вена'], 'correct_val' => 'Стамбул'],
+            ['question' => 'Столица Аргентины?', 'options' => ['Буэнос-Айрес', 'Лима', 'Сантьяго', 'Кито'], 'correct_val' => 'Буэнос-Айрес'],
+            ['question' => 'У берегов какой страны расположен Большой Барьерный риф?', 'options' => ['Австралия', 'Канада', 'Исландия', 'Япония'], 'correct_val' => 'Австралия'],
+
+            // Наука
+            ['question' => 'Химический символ железа?', 'options' => ['Fe', 'Ir', 'Ag', 'Zn'], 'correct_val' => 'Fe'],
+            ['question' => 'Самый твердый природный материал?', 'options' => ['Алмаз', 'Кварц', 'Гранит', 'Стекло'], 'correct_val' => 'Алмаз'],
+            ['question' => 'Какой газ нужен человеку для дыхания?', 'options' => ['Кислород', 'Гелий', 'Метан', 'Неон'], 'correct_val' => 'Кислород'],
+            ['question' => 'Единица электрического сопротивления?', 'options' => ['Ом', 'Ватт', 'Ампер', 'Джоуль'], 'correct_val' => 'Ом'],
+            ['question' => 'Что находится в центре атома?', 'options' => ['Ядро', 'Молекула', 'Клетка', 'Кристалл'], 'correct_val' => 'Ядро'],
+            ['question' => 'Какой pH считается нейтральным?', 'options' => ['7', '1', '5', '12'], 'correct_val' => '7'],
+            ['question' => 'При какой температуре вода кипит при нормальном давлении?', 'options' => ['100 °C', '50 °C', '80 °C', '120 °C'], 'correct_val' => '100 °C'],
+            ['question' => 'Что хранит наследственную информацию?', 'options' => ['ДНК', 'Крахмал', 'Кислород', 'Кальций'], 'correct_val' => 'ДНК'],
+            ['question' => 'В чем измеряют уровень громкости?', 'options' => ['Децибелы', 'Метры', 'Литры', 'Вольты'], 'correct_val' => 'Децибелы'],
+            ['question' => 'Какой орган перекачивает кровь?', 'options' => ['Сердце', 'Желудок', 'Печень', 'Почка'], 'correct_val' => 'Сердце'],
+
+            // Космос
+            ['question' => 'Кто первым полетел в космос?', 'options' => ['Юрий Гагарин', 'Нил Армстронг', 'Алексей Леонов', 'Джон Гленн'], 'correct_val' => 'Юрий Гагарин'],
+            ['question' => 'Естественный спутник Земли?', 'options' => ['Луна', 'Фобос', 'Титан', 'Европа'], 'correct_val' => 'Луна'],
+            ['question' => 'Крупнейший спутник Сатурна?', 'options' => ['Титан', 'Ио', 'Луна', 'Фобос'], 'correct_val' => 'Титан'],
+            ['question' => 'В какой галактике находится Солнечная система?', 'options' => ['Млечный Путь', 'Андромеда', 'Треугольник', 'Водоворот'], 'correct_val' => 'Млечный Путь'],
+            ['question' => 'Чем наблюдают далекие небесные объекты?', 'options' => ['Телескопом', 'Микроскопом', 'Барометром', 'Компасом'], 'correct_val' => 'Телескопом'],
+            ['question' => 'Куда направлен хвост кометы?', 'options' => ['От Солнца', 'К Солнцу', 'К Земле', 'К Полярной звезде'], 'correct_val' => 'От Солнца'],
+            ['question' => 'Какая планета известна заметными кольцами?', 'options' => ['Сатурн', 'Марс', 'Венера', 'Меркурий'], 'correct_val' => 'Сатурн'],
+            ['question' => 'Вокруг чего обращается МКС?', 'options' => ['Вокруг Земли', 'Вокруг Луны', 'Вокруг Марса', 'Вокруг Солнца'], 'correct_val' => 'Вокруг Земли'],
+            ['question' => 'В каком созвездии находится Полярная звезда?', 'options' => ['Малая Медведица', 'Орион', 'Лира', 'Кассиопея'], 'correct_val' => 'Малая Медведица'],
+            ['question' => 'Что вызывает смену дня и ночи?', 'options' => ['Вращение Земли', 'Фазы Луны', 'Ветер', 'Приливы'], 'correct_val' => 'Вращение Земли'],
+
+            // Природа
+            ['question' => 'Как называется превращение воды в пар?', 'options' => ['Испарение', 'Замерзание', 'Плавление', 'Конденсация'], 'correct_val' => 'Испарение'],
+            ['question' => 'На каком дереве растут желуди?', 'options' => ['Дуб', 'Береза', 'Клен', 'Сосна'], 'correct_val' => 'Дуб'],
+            ['question' => 'Какое дерево имеет длинные иголки?', 'options' => ['Сосна', 'Липа', 'Осина', 'Яблоня'], 'correct_val' => 'Сосна'],
+            ['question' => 'Какой влажный тропический лес крупнейший?', 'options' => ['Амазонские леса', 'Шервудский лес', 'Черный лес', 'Беловежская пуща'], 'correct_val' => 'Амазонские леса'],
+            ['question' => 'Какое время года идет после весны?', 'options' => ['Лето', 'Осень', 'Зима', 'Весна'], 'correct_val' => 'Лето'],
+            ['question' => 'Сколько цветов традиционно выделяют в радуге?', 'options' => ['7', '5', '6', '8'], 'correct_val' => '7'],
+            ['question' => 'Как называются замерзшие осадки в хлопьях?', 'options' => ['Снег', 'Роса', 'Туман', 'Иней'], 'correct_val' => 'Снег'],
+            ['question' => 'Как называется магма после выхода на поверхность?', 'options' => ['Лава', 'Гейзер', 'Глина', 'Гранит'], 'correct_val' => 'Лава'],
+            ['question' => 'Что сильнее всего влияет на земные приливы?', 'options' => ['Луна', 'Марс', 'Ветер', 'Облака'], 'correct_val' => 'Луна'],
+            ['question' => 'Как называется плодородная часть почвы?', 'options' => ['Гумус', 'Гранит', 'Лава', 'Лед'], 'correct_val' => 'Гумус'],
+
+            // Животные
+            ['question' => 'Самое быстрое наземное животное?', 'options' => ['Гепард', 'Лев', 'Лошадь', 'Антилопа'], 'correct_val' => 'Гепард'],
+            ['question' => 'Какой вид диких кошек самый крупный?', 'options' => ['Тигр', 'Лев', 'Леопард', 'Рысь'], 'correct_val' => 'Тигр'],
+            ['question' => 'С какой страной чаще связывают кенгуру?', 'options' => ['Австралия', 'Индия', 'Канада', 'Норвегия'], 'correct_val' => 'Австралия'],
+            ['question' => 'Чем в основном питается большая панда?', 'options' => ['Бамбуком', 'Рыбой', 'Орехами', 'Травой саванны'], 'correct_val' => 'Бамбуком'],
+            ['question' => 'Что хранится в горбах верблюда?', 'options' => ['Жир', 'Вода', 'Воздух', 'Кровь'], 'correct_val' => 'Жир'],
+            ['question' => 'Какая птица чаще активна ночью?', 'options' => ['Сова', 'Ласточка', 'Чайка', 'Журавль'], 'correct_val' => 'Сова'],
+            ['question' => 'Как называют личинку лягушки?', 'options' => ['Головастик', 'Гусеница', 'Малек', 'Нимфа'], 'correct_val' => 'Головастик'],
+            ['question' => 'Как называется дом пчел?', 'options' => ['Улей', 'Нора', 'Берлога', 'Гнездо'], 'correct_val' => 'Улей'],
+            ['question' => 'Как называют группу львов?', 'options' => ['Прайд', 'Стая', 'Табун', 'Косяк'], 'correct_val' => 'Прайд'],
+            ['question' => 'К какой группе относится тюлень?', 'options' => ['Млекопитающие', 'Рыбы', 'Птицы', 'Земноводные'], 'correct_val' => 'Млекопитающие'],
+
+            // Технологии
+            ['question' => 'Какие цифры использует двоичная система?', 'options' => ['0 и 1', '1 и 2', '0 и 9', '2 и 8'], 'correct_val' => '0 и 1'],
+            ['question' => 'Что означает CPU в компьютере?', 'options' => ['Процессор', 'Монитор', 'Клавиатура', 'Накопитель'], 'correct_val' => 'Процессор'],
+            ['question' => 'Какое устройство вводит текст?', 'options' => ['Клавиатура', 'Монитор', 'Колонка', 'Проектор'], 'correct_val' => 'Клавиатура'],
+            ['question' => 'Какая система помогает определить координаты?', 'options' => ['GPS', 'PDF', 'HTML', 'JPEG'], 'correct_val' => 'GPS'],
+            ['question' => 'Что соединяют через USB?', 'options' => ['Устройства', 'Улицы', 'Континенты', 'Созвездия'], 'correct_val' => 'Устройства'],
+            ['question' => 'Минимальный элемент растрового изображения?', 'options' => ['Пиксель', 'Кадр', 'Символ', 'Байт'], 'correct_val' => 'Пиксель'],
+            ['question' => 'Что из этого является браузером?', 'options' => ['Firefox', 'Excel', 'Photoshop', 'Telegram'], 'correct_val' => 'Firefox'],
+            ['question' => 'Какая технология создает беспроводную локальную сеть?', 'options' => ['Wi-Fi', 'HDMI', 'VGA', 'SATA'], 'correct_val' => 'Wi-Fi'],
+            ['question' => 'Какую форму обычно имеет QR-код?', 'options' => ['Квадрат', 'Круг', 'Треугольник', 'Овал'], 'correct_val' => 'Квадрат'],
+            ['question' => 'Что из этого является операционной системой?', 'options' => ['Linux', 'Bluetooth', 'JPEG', 'YouTube'], 'correct_val' => 'Linux'],
+
+            // Культура и литература
+            ['question' => 'Кто написал «Евгения Онегина»?', 'options' => ['Пушкин', 'Чехов', 'Гоголь', 'Некрасов'], 'correct_val' => 'Пушкин'],
+            ['question' => 'Автор романа «Преступление и наказание»?', 'options' => ['Достоевский', 'Толстой', 'Тургенев', 'Бунин'], 'correct_val' => 'Достоевский'],
+            ['question' => 'Кто написал «Мастера и Маргариту»?', 'options' => ['Булгаков', 'Пастернак', 'Набоков', 'Куприн'], 'correct_val' => 'Булгаков'],
+            ['question' => 'Автор пьесы «Ромео и Джульетта»?', 'options' => ['Шекспир', 'Мольер', 'Гете', 'Байрон'], 'correct_val' => 'Шекспир'],
+            ['question' => 'Кому приписывают поэму «Одиссея»?', 'options' => ['Гомер', 'Сократ', 'Платон', 'Вергилий'], 'correct_val' => 'Гомер'],
+            ['question' => 'Кто создал Дон Кихота?', 'options' => ['Сервантес', 'Данте', 'Бальзак', 'Кафка'], 'correct_val' => 'Сервантес'],
+            ['question' => 'Кто придумал Шерлока Холмса?', 'options' => ['Конан Дойл', 'Агата Кристи', 'Жюль Верн', 'Эдгар По'], 'correct_val' => 'Конан Дойл'],
+            ['question' => 'Автор романа «Моби Дик»?', 'options' => ['Мелвилл', 'Хемингуэй', 'Твен', 'Лондон'], 'correct_val' => 'Мелвилл'],
+            ['question' => 'Кто написал сказку «Русалочка»?', 'options' => ['Андерсен', 'Перро', 'Гримм', 'Линдгрен'], 'correct_val' => 'Андерсен'],
+            ['question' => 'Кто написал «Алису в Стране чудес»?', 'options' => ['Льюис Кэрролл', 'Редьярд Киплинг', 'Оскар Уайльд', 'Даниэль Дефо'], 'correct_val' => 'Льюис Кэрролл'],
+            ['question' => 'Автор «Робинзона Крузо»?', 'options' => ['Даниэль Дефо', 'Джонатан Свифт', 'Вальтер Скотт', 'Чарльз Диккенс'], 'correct_val' => 'Даниэль Дефо'],
+            ['question' => 'Кто написал «Трех мушкетеров»?', 'options' => ['Александр Дюма', 'Виктор Гюго', 'Оноре де Бальзак', 'Эмиль Золя'], 'correct_val' => 'Александр Дюма'],
+            ['question' => 'Автор романа «1984»?', 'options' => ['Джордж Оруэлл', 'Олдос Хаксли', 'Рэй Брэдбери', 'Курт Воннегут'], 'correct_val' => 'Джордж Оруэлл'],
+            ['question' => 'Кто создал книги о Гарри Поттере?', 'options' => ['Джоан Роулинг', 'Сьюзен Коллинз', 'Урсула Ле Гуин', 'Диана Уинн Джонс'], 'correct_val' => 'Джоан Роулинг'],
+            ['question' => 'Кто написал «Приключения Тома Сойера»?', 'options' => ['Марк Твен', 'Джек Лондон', 'О. Генри', 'Эдгар По'], 'correct_val' => 'Марк Твен'],
+
+            // Кино
+            ['question' => 'Кто снял фильм «Титаник»?', 'options' => ['Джеймс Кэмерон', 'Стивен Спилберг', 'Ридли Скотт', 'Питер Джексон'], 'correct_val' => 'Джеймс Кэмерон'],
+            ['question' => 'Какого комика связывают с образом Бродяги?', 'options' => ['Чарли Чаплин', 'Бастер Китон', 'Луи де Фюнес', 'Роуэн Аткинсон'], 'correct_val' => 'Чарли Чаплин'],
+            ['question' => 'Какая студия создала «Историю игрушек»?', 'options' => ['Pixar', 'DreamWorks', 'Ghibli', 'Aardman'], 'correct_val' => 'Pixar'],
+            ['question' => 'Где происходят события «Властелина колец»?', 'options' => ['Средиземье', 'Нарния', 'Вестерос', 'Атлантида'], 'correct_val' => 'Средиземье'],
+            ['question' => 'В какой школе учился Гарри Поттер?', 'options' => ['Хогвартс', 'Кэмп-Хафблад', 'Шармбатон', 'Невермор'], 'correct_val' => 'Хогвартс'],
+            ['question' => 'Кто играл Терминатора в первых фильмах серии?', 'options' => ['Арнольд Шварценеггер', 'Сильвестр Сталлоне', 'Брюс Уиллис', 'Жан-Клод Ван Дамм'], 'correct_val' => 'Арнольд Шварценеггер'],
+            ['question' => 'Какая машина служила машиной времени в «Назад в будущее»?', 'options' => ['DeLorean', 'Mustang', 'Mini', 'Volvo'], 'correct_val' => 'DeLorean'],
+            ['question' => 'Какие животные главные в «Парке юрского периода»?', 'options' => ['Динозавры', 'Драконы', 'Акулы', 'Роботы'], 'correct_val' => 'Динозавры'],
+            ['question' => 'Как зовут главного героя «Матрицы»?', 'options' => ['Нео', 'Рокки', 'Индиана', 'Рэмбо'], 'correct_val' => 'Нео'],
+            ['question' => 'Кто главный злодей оригинальной трилогии «Звездных войн»?', 'options' => ['Дарт Вейдер', 'Танос', 'Саурон', 'Волан-де-Морт'], 'correct_val' => 'Дарт Вейдер'],
+
+            // Музыка
+            ['question' => 'Кто написал цикл «Времена года»?', 'options' => ['Вивальди', 'Бах', 'Шопен', 'Верди'], 'correct_val' => 'Вивальди'],
+            ['question' => 'Кто написал «Лунную сонату»?', 'options' => ['Бетховен', 'Моцарт', 'Шуберт', 'Лист'], 'correct_val' => 'Бетховен'],
+            ['question' => 'Кто написал оперу «Волшебная флейта»?', 'options' => ['Моцарт', 'Вагнер', 'Пуччини', 'Бизе'], 'correct_val' => 'Моцарт'],
+            ['question' => 'Кто написал балет «Лебединое озеро»?', 'options' => ['Чайковский', 'Римский-Корсаков', 'Рахманинов', 'Мусоргский'], 'correct_val' => 'Чайковский'],
+            ['question' => 'У какого инструмента обычно 88 клавиш?', 'options' => ['Фортепиано', 'Аккордеон', 'Орган', 'Ксилофон'], 'correct_val' => 'Фортепиано'],
+            ['question' => 'Какой инструмент относится к медным духовым?', 'options' => ['Труба', 'Скрипка', 'Арфа', 'Флейта'], 'correct_val' => 'Труба'],
+            ['question' => 'Какой смычковый инструмент имеет четыре струны?', 'options' => ['Скрипка', 'Флейта', 'Тромбон', 'Фагот'], 'correct_val' => 'Скрипка'],
+            ['question' => 'К какой группе относятся барабаны?', 'options' => ['Ударные', 'Струнные', 'Духовые', 'Клавишные'], 'correct_val' => 'Ударные'],
+            ['question' => 'Кто руководит оркестром?', 'options' => ['Дирижер', 'Редактор', 'Хореограф', 'Суфлер'], 'correct_val' => 'Дирижер'],
+            ['question' => 'Что объединяет музыку и театральное действие?', 'options' => ['Опера', 'Натюрморт', 'Роман', 'Скульптура'], 'correct_val' => 'Опера'],
+
+            // Спорт
+            ['question' => 'Сколько игроков одной команды на поле в футболе?', 'options' => ['11', '9', '10', '12'], 'correct_val' => '11'],
+            ['question' => 'Сколько очков дает штрафной бросок в баскетболе?', 'options' => ['1', '2', '3', '4'], 'correct_val' => '1'],
+            ['question' => 'Как в теннисе называют счет ноль?', 'options' => ['Love', 'Ace', 'Set', 'Break'], 'correct_val' => 'Love'],
+            ['question' => 'Как называется шах, от которого нельзя защититься?', 'options' => ['Мат', 'Фол', 'Аут', 'Офсайд'], 'correct_val' => 'Мат'],
+            ['question' => 'Сколько касаний обычно есть у команды в волейболе?', 'options' => ['3', '2', '4', '5'], 'correct_val' => '3'],
+            ['question' => 'Сколько колец на олимпийском символе?', 'options' => ['5', '4', '6', '7'], 'correct_val' => '5'],
+            ['question' => 'Чем играют в хоккей с шайбой?', 'options' => ['Шайбой', 'Воланом', 'Мячом для регби', 'Фрисби'], 'correct_val' => 'Шайбой'],
+            ['question' => 'Какова официальная длина марафона?', 'options' => ['42,195 км', '40 км', '45 км', '50 км'], 'correct_val' => '42,195 км'],
+            ['question' => 'Чем играют в бадминтон?', 'options' => ['Воланом', 'Шайбой', 'Битой', 'Клюшкой'], 'correct_val' => 'Воланом'],
+            ['question' => 'Как называется площадка для бокса?', 'options' => ['Ринг', 'Корт', 'Трек', 'Татами'], 'correct_val' => 'Ринг'],
+
+            // Бытовые знания
+            ['question' => 'Чем измеряют атмосферное давление?', 'options' => ['Барометром', 'Термометром', 'Весами', 'Линейкой'], 'correct_val' => 'Барометром'],
+            ['question' => 'Какое направление обозначают буквой N на компасе?', 'options' => ['Север', 'Юг', 'Запад', 'Восток'], 'correct_val' => 'Север'],
+            ['question' => 'Сколько дней в високосном году?', 'options' => ['366', '365', '364', '367'], 'correct_val' => '366'],
+            ['question' => 'Сколько предметов в дюжине?', 'options' => ['12', '10', '20', '24'], 'correct_val' => '12'],
+            ['question' => 'Сколько лет в одном веке?', 'options' => ['100', '10', '50', '1000'], 'correct_val' => '100'],
+            ['question' => 'Сколько граммов в килограмме?', 'options' => ['1000', '100', '500', '10'], 'correct_val' => '1000'],
+            ['question' => 'Сколько секунд в минуте?', 'options' => ['60', '100', '30', '90'], 'correct_val' => '60'],
+            ['question' => 'Чему равна сумма углов треугольника?', 'options' => ['180°', '90°', '270°', '360°'], 'correct_val' => '180°'],
+            ['question' => 'Какой прибор сохраняет продукты холодными?', 'options' => ['Холодильник', 'Тостер', 'Чайник', 'Пылесос'], 'correct_val' => 'Холодильник'],
+            ['question' => 'Что означает красный сигнал светофора?', 'options' => ['Стой', 'Иди', 'Ускорься', 'Поверни'], 'correct_val' => 'Стой'],
+        ]);
+        $bk = bbPickTaskSource($type, $backups, function ($source) {
+            return [
+                'type' => 'ai_quiz',
+                'question' => $source['question'],
+                'correct_val' => $source['correct_val']
+            ];
+        }, $skipExternalGeneration ? $excludedSignatures : []);
+
+        if (!$skipExternalGeneration) {
+            // require_once __DIR__ . '/../lib/GigaChat.php'; // Deprecated
+            require_once __DIR__ . '/../lib/AI/AIService.php';
+
+            try {
+                $system = "Ты генератор быстрых и понятных вопросов для мобильной викторины. Тема: $topic. Нужен только короткий, однозначный, проверяемый вопрос без подвохов, без оценочных формулировок и без спорных фактов. Ответь только JSON.";
+                $prompt = "Сформируй 1 вопрос для быстрой игры.
 Требования:
 - вопрос до 90 символов;
 - 4 коротких варианта ответа;
@@ -1405,47 +2307,48 @@ function generateTaskData($type)
 - correct_index только от 0 до 3.
 JSON: {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"correct_index\": 0}";
 
-            // $response = GigaChat::getInstance()->chat([['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]], 0.8);
-            $response = AIService::getProvider('text')->text([['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]], ['temperature' => 0.8]);
+                // $response = GigaChat::getInstance()->chat([['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]], 0.8);
+                $response = AIService::getProvider('text')->text([['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]], ['temperature' => 0.8]);
 
-            if (isset($response['content'])) {
-                $content = $response['content'];
-                if (preg_match('/```json(.*?)```/s', $content, $matches)) {
-                    $content = trim($matches[1]);
-                } elseif (preg_match('/\{.*\}/s', $content, $matches)) {
-                    $content = $matches[0];
-                }
+                if (isset($response['content'])) {
+                    $content = $response['content'];
+                    if (preg_match('/```json(.*?)```/s', $content, $matches)) {
+                        $content = trim($matches[1]);
+                    } elseif (preg_match('/\{.*\}/s', $content, $matches)) {
+                        $content = $matches[0];
+                    }
 
-                $json = json_decode($content, true);
+                    $json = json_decode($content, true);
 
-                if (
-                    $json
-                    && isset($json['question'], $json['options'], $json['correct_index'])
-                    && is_array($json['options'])
-                    && count($json['options']) === 4
-                    && isset($json['options'][(int) $json['correct_index']])
-                    && mb_strlen(trim((string) $json['question'])) <= 90
-                ) {
-                    $options = array_map(fn($opt) => trim((string) $opt), $json['options']);
-                    $question = trim((string) $json['question']);
-                    $correctIndex = (int) $json['correct_index'];
-                    $uniqueOptions = array_unique($options);
+                    if (
+                        $json
+                        && isset($json['question'], $json['options'], $json['correct_index'])
+                        && is_array($json['options'])
+                        && count($json['options']) === 4
+                        && isset($json['options'][(int) $json['correct_index']])
+                        && mb_strlen(trim((string) $json['question'])) <= 90
+                    ) {
+                        $options = array_map(fn($opt) => trim((string) $opt), $json['options']);
+                        $question = trim((string) $json['question']);
+                        $correctIndex = (int) $json['correct_index'];
+                        $uniqueOptions = array_unique($options);
 
-                    if (count($uniqueOptions) === 4 && $correctIndex >= 0 && $correctIndex < 4) {
-                    return [
-                        'type' => 'ai_quiz',
-                        'title' => 'AI: ' . $topic,
-                        'question' => $question,
-                        'options' => $options,
-                        'correct_val' => $options[$correctIndex],
-                        'is_ai' => true
-                    ];
+                        if (count($uniqueOptions) === 4 && $correctIndex >= 0 && $correctIndex < 4) {
+                            return [
+                                'type' => 'ai_quiz',
+                                'title' => 'AI: ' . $topic,
+                                'question' => $question,
+                                'options' => $options,
+                                'correct_val' => $options[$correctIndex],
+                                'is_ai' => true
+                            ];
+                        }
                     }
                 }
+            } catch (Exception $e) {
+                if (class_exists('TelegramLogger'))
+                    TelegramLogger::logError('ai_fail', ['m' => $e->getMessage()]);
             }
-        } catch (Exception $e) {
-            if (class_exists('TelegramLogger'))
-                TelegramLogger::logError('ai_fail', ['m' => $e->getMessage()]);
         }
         return ['type' => 'ai_quiz', 'title' => 'AI: ' . $topic . ' (Backup)', 'question' => $bk['question'], 'options' => $bk['options'], 'correct_val' => $bk['correct_val']];
     }
