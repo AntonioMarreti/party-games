@@ -311,12 +311,23 @@ function action_game_action($pdo, $user, $data)
 
         // Persist the state if the game handler returned it
         if (isset($result['state'])) {
+            if ($gameName === 'durak' && ($result['state']['phase'] ?? '') === 'finished' && empty($result['state']['stats_recorded'])) {
+                require_once __DIR__ . '/stats.php';
+                $playersData = durakBuildResultPlayersData($result['state']);
+                recordGameStats($pdo, $room, $playersData, 0);
+                $result['state']['stats_recorded'] = true;
+            }
+
             $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
                 ->execute([json_encode($result['state']), $room['id']]);
         }
 
         $pdo->commit();
-        echo json_encode($result ?? ['status' => 'ok']);
+        $response = $result ?? ['status' => 'ok'];
+        if ($gameName === 'durak' && isset($response['state']) && function_exists('durakBuildPlayerProjection')) {
+            $response['state'] = durakBuildPlayerProjection($response['state'], $user['id']);
+        }
+        echo json_encode($response);
     } catch (Exception $e) {
         if ($pdo->inTransaction())
             $pdo->rollBack();

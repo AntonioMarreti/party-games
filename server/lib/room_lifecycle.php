@@ -108,9 +108,26 @@ function clearUserRooms($pdo, $userId)
             continue;
         }
 
-        $roomSnapshotStmt = $pdo->prepare("SELECT room_code, host_user_id, status FROM rooms WHERE id = ?");
+        $roomSnapshotStmt = $pdo->prepare("SELECT room_code, host_user_id, status, game_type, game_state FROM rooms WHERE id = ? FOR UPDATE");
         $roomSnapshotStmt->execute([$roomId]);
         $roomSnapshot = $roomSnapshotStmt->fetch() ?: ['room_code' => null, 'host_user_id' => null, 'status' => null];
+
+        if (($roomSnapshot['game_type'] ?? '') === 'durak' && ($roomSnapshot['status'] ?? '') === 'playing') {
+            $state = json_decode($roomSnapshot['game_state'] ?? '', true);
+            if (!is_array($state) || ($state['phase'] ?? '') !== 'finished') {
+                $pdo->prepare("UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")
+                    ->execute([$roomId]);
+                $roomSnapshot['game_type'] = 'lobby';
+                $roomSnapshot['status'] = 'waiting';
+                $roomSnapshot['game_state'] = null;
+                logRoomLifecycle('durak_match_aborted', [
+                    'room_id' => $roomId,
+                    'room_code' => $roomSnapshot['room_code'],
+                    'actor_user_id' => $userId,
+                    'reason' => 'participant_left',
+                ], 'Durak match aborted after participant left');
+            }
+        }
 
         $botCountStmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ? AND is_bot = 1");
         $botCountStmt->execute([$roomId]);

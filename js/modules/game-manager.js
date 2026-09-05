@@ -1194,6 +1194,18 @@ async function tryGameNow(gameId) {
 async function startGame(gameName) {
     if (isStartGamePending) return { status: 'ignored' };
 
+    if (gameName === 'durak') {
+        const game = window.AVAILABLE_GAMES?.find(item => item.id === gameName);
+        const maxPlayers = getCatalogMaxPlayers(game);
+        const players = Array.isArray(window.currentGamePlayers) ? window.currentGamePlayers : [];
+        const livePlayers = players.filter(player => Number(player.is_bot || 0) !== 1);
+        if (livePlayers.length > maxPlayers) {
+            const message = 'Дурак — для 2–4 игроков. Уберите лишних игроков из комнаты.';
+            if (window.showAlert) window.showAlert('Нельзя начать Дурака', message, 'warning');
+            return { status: 'error', message };
+        }
+    }
+
     isStartGamePending = true;
     window.__pgSuspendPolling = true;
     try {

@@ -124,6 +124,7 @@ function durakBuildSetupState(array $playerOrder): array
         'in_game_players' => $playerOrder,
         'finish_order' => [],
         'rematch_requests' => [],
+        'stats_recorded' => false,
         'hands' => [],
         'draw_pile' => [],
         'trump' => [
@@ -185,6 +186,7 @@ function durakBuildInitialState(
         'in_game_players' => $playerOrder,
         'finish_order' => [],
         'rematch_requests' => [],
+        'stats_recorded' => false,
         'hands' => $hands,
         'draw_pile' => $deck,
         'trump' => [
@@ -490,6 +492,47 @@ function durakBuildPlayerProjection(array $state, $viewerId): array
         'attack_limit' => (int) ($state['attack_limit'] ?? DURAK_HAND_SIZE),
         'result' => $state['result'] ?? ['loser_id' => null, 'reason' => null],
     ];
+}
+
+function durakBuildResultPlayersData(array $state): array
+{
+    $playerOrder = [];
+    foreach (is_array($state['player_order'] ?? null) ? $state['player_order'] : [] as $playerId) {
+        $playerId = trim((string) $playerId);
+        if ($playerId !== '' && !in_array($playerId, $playerOrder, true)) {
+            $playerOrder[] = $playerId;
+        }
+    }
+
+    $rankedPlayerIds = [];
+    foreach (is_array($state['finish_order'] ?? null) ? $state['finish_order'] : [] as $playerId) {
+        $playerId = trim((string) $playerId);
+        if ($playerId !== '' && in_array($playerId, $playerOrder, true) && !in_array($playerId, $rankedPlayerIds, true)) {
+            $rankedPlayerIds[] = $playerId;
+        }
+    }
+
+    $loserId = trim((string) ($state['result']['loser_id'] ?? ''));
+    if ($loserId !== '' && in_array($loserId, $playerOrder, true) && !in_array($loserId, $rankedPlayerIds, true)) {
+        $rankedPlayerIds[] = $loserId;
+    }
+
+    foreach ($playerOrder as $playerId) {
+        if (!in_array($playerId, $rankedPlayerIds, true)) {
+            $rankedPlayerIds[] = $playerId;
+        }
+    }
+
+    $playersData = [];
+    foreach ($rankedPlayerIds as $index => $playerId) {
+        $playersData[] = [
+            'user_id' => (int) $playerId,
+            'rank' => $index + 1,
+            'score' => 0,
+        ];
+    }
+
+    return $playersData;
 }
 
 function durakHandleAttackCard(array $state, string $userId, string $cardId): array
@@ -942,6 +985,11 @@ function durakNormalizeState(array &$state): void
         }
     }
     $state['rematch_requests'] = $rematchRequests;
+    try {
+        $state['stats_recorded'] = durakNormalizeBooleanValue($state['stats_recorded'] ?? false, 'stats_recorded');
+    } catch (InvalidArgumentException $error) {
+        $state['stats_recorded'] = false;
+    }
     $state['hands'] = is_array($state['hands'] ?? null) ? $state['hands'] : [];
     $state['draw_pile'] = is_array($state['draw_pile'] ?? null) ? $state['draw_pile'] : [];
     $state['table'] = is_array($state['table'] ?? null) ? $state['table'] : [];

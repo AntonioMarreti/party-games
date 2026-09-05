@@ -100,7 +100,7 @@ class RoomLifecycleSmokePdo
             return array_map(static fn($rp) => ['room_id' => $rp['room_id'], 'is_host' => $rp['is_host']], $rows);
         }
 
-        if (str_contains($sql, 'SELECT room_code, host_user_id, status FROM rooms WHERE id = ?')) {
+        if (str_contains($sql, 'SELECT room_code, host_user_id, status') && str_contains($sql, 'FROM rooms WHERE id = ? FOR UPDATE')) {
             $roomId = (int) $params[0];
             return isset($this->rooms[$roomId]) ? [$this->rooms[$roomId]] : [];
         }
@@ -221,6 +221,16 @@ class RoomLifecycleSmokePdo
             return [];
         }
 
+        if (str_contains($sql, "UPDATE rooms SET game_type = 'lobby', status = 'waiting', game_state = NULL WHERE id = ?")) {
+            $roomId = (int) $params[0];
+            if (isset($this->rooms[$roomId])) {
+                $this->rooms[$roomId]['game_type'] = 'lobby';
+                $this->rooms[$roomId]['status'] = 'waiting';
+                $this->rooms[$roomId]['game_state'] = null;
+            }
+            return [];
+        }
+
         if (str_contains($sql, 'INSERT INTO room_players (room_id, user_id) VALUES (?, ?)')) {
             $this->roomPlayers[] = [
                 'id' => $this->nextRoomPlayerId++,
@@ -333,6 +343,34 @@ function makePdoForJoinScenarios(): RoomLifecycleSmokePdo
     );
 }
 
+function makePdoForDurakAbort(): RoomLifecycleSmokePdo
+{
+    $now = date('Y-m-d H:i:s');
+
+    return new RoomLifecycleSmokePdo(
+        rooms: [
+            50 => [
+                'id' => 50,
+                'room_code' => 'DURAK50',
+                'host_user_id' => 1,
+                'status' => 'playing',
+                'game_type' => 'durak',
+                'game_state' => json_encode(['phase' => 'defense']),
+            ],
+        ],
+        roomPlayers: [
+            ['id' => 1, 'room_id' => 50, 'user_id' => 1, 'is_host' => 1, 'is_bot' => 0, 'last_active' => $now],
+            ['id' => 2, 'room_id' => 50, 'user_id' => 2, 'is_host' => 0, 'is_bot' => 0, 'last_active' => $now],
+            ['id' => 3, 'room_id' => 50, 'user_id' => 3, 'is_host' => 0, 'is_bot' => 0, 'last_active' => $now],
+        ],
+        users: [
+            1 => ['id' => 1, 'is_bot' => 0],
+            2 => ['id' => 2, 'is_bot' => 0],
+            3 => ['id' => 3, 'is_bot' => 0],
+        ]
+    );
+}
+
 echo ">>> ROOM LIFECYCLE SMOKE <<<\n";
 
 try {
@@ -355,6 +393,15 @@ try {
     assertTrue(!isset($pdo->rooms[20]), 'Repeated leave should remain a noop after cleanup');
     assertTrue(count($pdo->roomPlayers) === 0, 'Repeated leave should not recreate memberships');
     echo "[+] Repeated leave noop scenario passed\n";
+
+    $pdo = makePdoForDurakAbort();
+    clearUserRooms($pdo, 2);
+    assertTrue(($pdo->rooms[50]['game_type'] ?? null) === 'lobby', 'Leaving active Durak should return the room to the lobby');
+    assertTrue(($pdo->rooms[50]['status'] ?? null) === 'waiting', 'Aborted Durak should return the room to waiting state');
+    assertTrue(array_key_exists('game_state', $pdo->rooms[50]) && $pdo->rooms[50]['game_state'] === null, 'Aborted Durak should clear the game state');
+    assertTrue(count(array_filter($pdo->roomPlayers, static fn($rp) => (int) $rp['user_id'] === 2)) === 0, 'Leaving Durak player should be removed from membership');
+    assertTrue(count($pdo->roomPlayers) === 2, 'Remaining Durak players should stay in the room');
+    echo "[+] Durak abort-on-leave scenario passed\n";
 
     $pdo = makePdoForJoinScenarios();
     $result = performRoomJoin($pdo, ['id' => 1], 'ROOM30');
