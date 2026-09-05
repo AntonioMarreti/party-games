@@ -118,24 +118,120 @@ if [ "$MODE" == "apply" ]; then
         exit 1
     fi
 
+    MAX_SSH_ATTEMPTS=3
+    RETRY_DELAY_SECONDS=2
+    RETRY_OUTPUT=""
+
+    is_transient_connection_failure() {
+        local status="$1"
+        local output="$2"
+
+        if [ "$status" -eq 255 ]; then
+            return 0
+        fi
+
+        case "$output" in
+            *"Connection closed"*|\
+            *"Connection reset"*|\
+            *"kex_exchange_identification"*|\
+            *"banner exchange"*|\
+            *"Connection timed out"*|\
+            *"Operation timed out"*|\
+            *"unexpected end of file"*)
+                return 0
+                ;;
+        esac
+
+        return 1
+    }
+
+    run_with_retry() {
+        local label="$1"
+        shift
+        local attempt
+        local output
+        local status
+
+        for ((attempt = 1; attempt <= MAX_SSH_ATTEMPTS; attempt++)); do
+            if output=$("$@" 2>&1); then
+                RETRY_OUTPUT="$output"
+                return 0
+            else
+                status=$?
+            fi
+
+            if [ -n "$output" ]; then
+                printf '%s\n' "$output" >&2
+            fi
+
+            if [ "$attempt" -lt "$MAX_SSH_ATTEMPTS" ] && \
+               is_transient_connection_failure "$status" "$output"; then
+                echo "$label attempt $attempt/$MAX_SSH_ATTEMPTS failed, retrying..." >&2
+                sleep "$RETRY_DELAY_SECONDS"
+                continue
+            fi
+
+            return "$status"
+        done
+    }
+
     echo "Deploying..."
-    for f in "${VALID_FILES[@]}"; do
+    if run_with_retry "Deploy" \
         rsync -azR \
             -e "ssh -o StrictHostKeyChecking=accept-new -i ${DEPLOY_KEY}" \
-            "$f" "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}"
-    done
+            "${VALID_FILES[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}"; then
+        if [ -n "$RETRY_OUTPUT" ]; then
+            printf '%s\n' "$RETRY_OUTPUT"
+        fi
+    else
+        exit $?
+    fi
     echo "Deployment sync complete."
 
     echo "Verifying SHA-256..."
-    for f in "${VALID_FILES[@]}"; do
+    run_remote_verification() {
+        {
+            printf 'set -euo pipefail\n'
+            printf 'deploy_path=%q\n' "$DEPLOY_PATH"
+            printf 'files=('
+            printf ' %q' "${VALID_FILES[@]}"
+            printf ' )\n'
+            printf 'for f in "${files[@]}"; do\n'
+            printf '    shasum -a 256 "$deploy_path/$f"\n'
+            printf 'done\n'
+        } | ssh -o StrictHostKeyChecking=accept-new -i "${DEPLOY_KEY}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s
+    }
+
+    if run_with_retry "Verification" run_remote_verification; then
+        VERIFY_OUTPUT="$RETRY_OUTPUT"
+    else
+        exit $?
+    fi
+
+    REMOTE_SHAS=()
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^([[:xdigit:]]{64})[[:space:]] ]]; then
+            REMOTE_SHAS+=("${BASH_REMATCH[1]}")
+        fi
+    done <<< "$VERIFY_OUTPUT"
+
+    VERIFY_FAILED=0
+    for i in "${!VALID_FILES[@]}"; do
+        f="${VALID_FILES[$i]}"
         LOCAL_SHA=$(shasum -a 256 "$f" | awk '{print $1}')
-        REMOTE_SHA=$(ssh -o StrictHostKeyChecking=accept-new -i "${DEPLOY_KEY}" "${DEPLOY_USER}@${DEPLOY_HOST}" "shasum -a 256 \"${DEPLOY_PATH}/$f\"" | awk '{print $1}')
+        REMOTE_SHA="${REMOTE_SHAS[$i]:-}"
         if [ "$LOCAL_SHA" == "$REMOTE_SHA" ]; then
             echo "$f: OK"
         else
             echo "$f: MISMATCH"
+            VERIFY_FAILED=1
         fi
     done
+
+    if [ "$VERIFY_FAILED" -ne 0 ]; then
+        exit 1
+    fi
 else
     echo "Dry run complete. No files were transferred."
 fi
