@@ -91,8 +91,8 @@ function action_start_game($pdo, $user, $data)
     if ($gameName === 'durak') {
         $humanPlayers = (int) ($counts['human_players'] ?? 0);
         $totalPlayers = (int) ($counts['total_players'] ?? 0);
-        if ($humanPlayers < 2 || $humanPlayers > 4 || $totalPlayers !== $humanPlayers) {
-            failGameLifecycle('Для Дурака нужно 2–4 живых игрока без ботов', [
+        if ($humanPlayers < 1 || $totalPlayers < 2 || $totalPlayers > 4) {
+            failGameLifecycle('Для Дурака нужно 2–4 участника и хотя бы один живой игрок', [
                 'actor_user_id' => (int) $user['id'],
                 'room_id' => (int) $room['id'],
                 'room_code' => $room['room_code'] ?? null,
@@ -307,6 +307,20 @@ function action_game_action($pdo, $user, $data)
             $pdo->rollBack();
             echo json_encode($result);
             return;
+        }
+
+        if ($gameName === 'durak' && isset($result['state']) && in_array(
+            $data['game_action'] ?? $data['type'] ?? '',
+            ['start_match', 'attack_card', 'defend_card', 'pass_throw_in', 'take_cards', 'transfer_card', 'start_rematch'],
+            true
+        )) {
+            $botResult = durakAdvanceBots($pdo, $room, $result['state']);
+            if (($botResult['status'] ?? 'ok') === 'error') {
+                $pdo->rollBack();
+                echo json_encode($botResult);
+                return;
+            }
+            $result['state'] = $botResult['state'];
         }
 
         // Persist the state if the game handler returned it

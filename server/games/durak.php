@@ -68,7 +68,7 @@ function durakGetRoomPlayerOrder(PDO $pdo, int $roomId): array
     $stmt = $pdo->prepare("
         SELECT user_id
         FROM room_players
-        WHERE room_id = ? AND COALESCE(is_bot, 0) = 0
+        WHERE room_id = ?
         ORDER BY id ASC
     ");
     $stmt->execute([$roomId]);
@@ -79,7 +79,7 @@ function durakGetRoomPlayerOrder(PDO $pdo, int $roomId): array
 function durakGetRoomPlayerRoster(PDO $pdo, int $roomId): array
 {
     $stmt = $pdo->prepare("
-        SELECT user_id, COALESCE(is_bot, 0) AS is_bot
+        SELECT user_id, COALESCE(is_bot, 0) AS is_bot, COALESCE(bot_difficulty, 'medium') AS bot_difficulty
         FROM room_players
         WHERE room_id = ?
         ORDER BY id ASC
@@ -92,28 +92,66 @@ function durakGetRoomPlayerRoster(PDO $pdo, int $roomId): array
 function durakValidateLivePlayerRoster(array $roster): array
 {
     $playerOrder = [];
-    $hasBots = false;
+    $humanCount = 0;
 
     foreach ($roster as $player) {
-        if (!empty($player['is_bot'])) {
-            $hasBots = true;
+        $playerId = trim((string) ($player['user_id'] ?? ''));
+        if ($playerId === '' || in_array($playerId, $playerOrder, true)) {
             continue;
         }
-        $playerOrder[] = (string) ($player['user_id'] ?? '');
+        $playerOrder[] = $playerId;
+        if (empty($player['is_bot'])) {
+            $humanCount++;
+        }
     }
 
-    $playerOrder = array_values(array_filter($playerOrder, static fn(string $playerId): bool => $playerId !== ''));
     $playerCount = count($playerOrder);
-    if ($hasBots || count($roster) !== $playerCount || $playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS) {
-        throw new RuntimeException('Для Дурака нужно 2-4 живых игрока без ботов');
+    if ($playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS || $humanCount < 1) {
+        throw new RuntimeException('Для Дурака нужно 2–4 участника и хотя бы один живой игрок');
     }
 
     return $playerOrder;
 }
 
-function durakBuildSetupState(array $playerOrder): array
+function durakBotDifficulty(string $difficulty): string
+{
+    return in_array($difficulty, ['easy', 'medium', 'hard'], true) ? $difficulty : 'medium';
+}
+
+function durakGetBotDifficultiesFromRoster(array $roster): array
+{
+    $difficulties = [];
+    foreach ($roster as $player) {
+        if (empty($player['is_bot'])) {
+            continue;
+        }
+
+        $playerId = trim((string) ($player['user_id'] ?? ''));
+        if ($playerId !== '') {
+            $difficulties[$playerId] = durakBotDifficulty((string) ($player['bot_difficulty'] ?? 'medium'));
+        }
+    }
+
+    return $difficulties;
+}
+
+function durakNormalizeBotDifficulties(array $playerOrder, array $botDifficulties): array
+{
+    $normalizedDifficulties = [];
+    foreach ($botDifficulties as $playerId => $difficulty) {
+        $playerId = trim((string) $playerId);
+        if ($playerId !== '' && in_array($playerId, $playerOrder, true)) {
+            $normalizedDifficulties[$playerId] = durakBotDifficulty((string) $difficulty);
+        }
+    }
+
+    return $normalizedDifficulties;
+}
+
+function durakBuildSetupState(array $playerOrder, array $botDifficulties = []): array
 {
     $playerOrder = array_values(array_map('strval', $playerOrder));
+    $normalizedDifficulties = durakNormalizeBotDifficulties($playerOrder, $botDifficulties);
 
     return [
         'schema_version' => DURAK_SCHEMA_VERSION,
@@ -122,6 +160,7 @@ function durakBuildSetupState(array $playerOrder): array
         'deck_profile_id' => DURAK_DECK_PROFILE_ID,
         'player_order' => $playerOrder,
         'in_game_players' => $playerOrder,
+        'bot_difficulties' => $normalizedDifficulties,
         'finish_order' => [],
         'rematch_requests' => [],
         'stats_recorded' => false,
@@ -151,10 +190,12 @@ function durakBuildSetupState(array $playerOrder): array
 function durakBuildInitialState(
     array $playerOrder,
     string $profileId = DURAK_DECK_PROFILE_ID,
-    array $rules = ['allow_throw_in' => true, 'allow_transfer' => false]
+    array $rules = ['allow_throw_in' => true, 'allow_transfer' => false],
+    array $botDifficulties = []
 ): array
 {
     $playerOrder = array_values(array_map('strval', $playerOrder));
+    $botDifficulties = durakNormalizeBotDifficulties($playerOrder, $botDifficulties);
     $profileId = durakNormalizeDeckProfileId($profileId);
     $playerCount = count($playerOrder);
 
@@ -184,6 +225,7 @@ function durakBuildInitialState(
         'deck_profile_id' => $profileId,
         'player_order' => $playerOrder,
         'in_game_players' => $playerOrder,
+        'bot_difficulties' => $botDifficulties,
         'finish_order' => [],
         'rematch_requests' => [],
         'stats_recorded' => false,
@@ -217,9 +259,10 @@ function getInitialState()
         throw new RuntimeException('Durak start context missing');
     }
 
-    $playerOrder = durakGetRoomPlayerOrder($context['pdo'], (int) $context['room_id']);
+    $roster = durakGetRoomPlayerRoster($context['pdo'], (int) $context['room_id']);
+    $playerOrder = durakValidateLivePlayerRoster($roster);
 
-    return durakBuildSetupState($playerOrder);
+    return durakBuildSetupState($playerOrder, durakGetBotDifficultiesFromRoster($roster));
 }
 
 function durakCreateInitialState(PDO $pdo, array $room, array $data = []): array
@@ -229,7 +272,11 @@ function durakCreateInitialState(PDO $pdo, array $room, array $data = []): array
         throw new RuntimeException('Durak room is missing');
     }
 
-    return durakBuildSetupState(durakGetRoomPlayerOrder($pdo, $roomId));
+    $roster = durakGetRoomPlayerRoster($pdo, $roomId);
+    return durakBuildSetupState(
+        durakValidateLivePlayerRoster($roster),
+        durakGetBotDifficultiesFromRoster($roster)
+    );
 }
 
 function durakNormalizeBooleanValue($value, string $fieldName): bool
@@ -367,6 +414,237 @@ function handleGameAction($pdo, $room, $user, $postData)
     return durakError('Unknown Durak action');
 }
 
+function durakGetBotDifficulties(PDO $pdo, int $roomId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT user_id, COALESCE(bot_difficulty, 'medium') AS bot_difficulty
+        FROM room_players
+        WHERE room_id = ? AND COALESCE(is_bot, 0) = 1
+        ORDER BY id ASC
+    ");
+    $stmt->execute([$roomId]);
+
+    $difficulties = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $bot) {
+        $botId = trim((string) ($bot['user_id'] ?? ''));
+        if ($botId !== '') {
+            $difficulties[$botId] = durakBotDifficulty((string) ($bot['bot_difficulty'] ?? 'medium'));
+        }
+    }
+
+    return $difficulties;
+}
+
+function durakListLegalBotActions(array $state, string $botId): array
+{
+    durakNormalizeState($state);
+    $botId = (string) $botId;
+    if (($state['phase'] ?? '') === 'finished' || (string) ($state['actor_id'] ?? '') !== $botId) {
+        return [];
+    }
+
+    $actions = [];
+    $hand = array_values($state['hands'][$botId] ?? []);
+    if (($state['phase'] ?? '') === 'attack') {
+        foreach ($hand as $cardId) {
+            $candidate = ['type' => 'attack_card', 'card_id' => (string) $cardId];
+            $result = durakHandleAttackCard($state, $botId, $candidate['card_id']);
+            if (($result['status'] ?? '') === 'ok') {
+                $actions[] = $candidate;
+            }
+        }
+
+        if (!empty($state['table'])) {
+            $result = durakHandlePassThrowIn($state, $botId);
+            if (($result['status'] ?? '') === 'ok') {
+                $actions[] = ['type' => 'pass_throw_in'];
+            }
+        }
+    } elseif (($state['phase'] ?? '') === 'defense') {
+        foreach ($state['table'] as $pair) {
+            $attackCardId = (string) ($pair['attack'] ?? '');
+            if ($attackCardId === '' || !empty($pair['defend'])) {
+                continue;
+            }
+            foreach ($hand as $cardId) {
+                $candidate = [
+                    'type' => 'defend_card',
+                    'attack_card_id' => $attackCardId,
+                    'card_id' => (string) $cardId,
+                ];
+                $result = durakHandleDefendCard(
+                    $state,
+                    $botId,
+                    $candidate['attack_card_id'],
+                    $candidate['card_id']
+                );
+                if (($result['status'] ?? '') === 'ok') {
+                    $actions[] = $candidate;
+                }
+            }
+        }
+
+        $result = durakHandleTakeCards($state, $botId);
+        if (($result['status'] ?? '') === 'ok') {
+            $actions[] = ['type' => 'take_cards'];
+        }
+
+        foreach ($hand as $cardId) {
+            $candidate = ['type' => 'transfer_card', 'card_id' => (string) $cardId];
+            $result = durakHandleTransferCard($state, $botId, $candidate['card_id']);
+            if (($result['status'] ?? '') === 'ok') {
+                $actions[] = $candidate;
+            }
+        }
+    }
+
+    return $actions;
+}
+
+function durakBotCardCost(string $cardId, string $trumpSuit, ?string $attackCardId = null): int
+{
+    $cost = durakCardRankValue($cardId);
+    $suit = durakCardSuit($cardId);
+    if ($suit === $trumpSuit) {
+        $cost += 100;
+    }
+    if ($attackCardId !== null && $suit === durakCardSuit($attackCardId)) {
+        $cost -= 5;
+    }
+
+    return $cost;
+}
+
+function durakBotActionScore(array $state, array $action, string $difficulty): int
+{
+    $type = (string) ($action['type'] ?? '');
+    $trumpSuit = (string) ($state['trump']['suit'] ?? '');
+    $cardId = (string) ($action['card_id'] ?? '');
+    $score = 1000;
+
+    if ($type === 'attack_card') {
+        $score = durakCardRankValue($cardId);
+        if (durakCardSuit($cardId) === $trumpSuit) {
+            $score += $difficulty === 'hard' ? 70 : 30;
+        }
+        $rankCount = 0;
+        foreach ($state['hands'][(string) ($state['actor_id'] ?? '')] ?? [] as $handCardId) {
+            if (durakCardRank($handCardId) === durakCardRank($cardId)) {
+                $rankCount++;
+            }
+        }
+        if ($difficulty === 'hard') {
+            $score -= $rankCount * 4;
+            if (count($state['draw_pile'] ?? []) <= 8) {
+                $score -= durakCardRankValue($cardId);
+            }
+        }
+    } elseif ($type === 'defend_card') {
+        $score = durakBotCardCost($cardId, $trumpSuit, (string) ($action['attack_card_id'] ?? ''));
+        if ($difficulty === 'hard' && durakCardSuit($cardId) === $trumpSuit) {
+            $score += 30;
+        }
+    } elseif ($type === 'transfer_card') {
+        $score = $difficulty === 'hard' ? 1 : 8;
+        $score += $difficulty === 'hard' ? 0 : durakCardRankValue($cardId);
+    } elseif ($type === 'pass_throw_in') {
+        $score = $difficulty === 'hard' ? 14 : 16;
+    } elseif ($type === 'take_cards') {
+        $score = $difficulty === 'hard' ? 55 : 50;
+    }
+
+    return $score;
+}
+
+function durakChooseBotAction(array $state, string $botId, string $difficulty = 'medium'): ?array
+{
+    $actions = durakListLegalBotActions($state, $botId);
+    if (empty($actions)) {
+        return null;
+    }
+
+    $difficulty = durakBotDifficulty($difficulty);
+    if ($difficulty === 'easy') {
+        return $actions[array_rand($actions)];
+    }
+
+    $scored = [];
+    foreach ($actions as $index => $action) {
+        $scored[] = [
+            'score' => durakBotActionScore($state, $action, $difficulty),
+            'index' => $index,
+        ];
+    }
+    usort($scored, static function (array $left, array $right): int {
+        return $left['score'] <=> $right['score'] ?: $left['index'] <=> $right['index'];
+    });
+
+    return $actions[$scored[0]['index']];
+}
+
+function durakApplyBotAction(array $state, string $botId, array $action): array
+{
+    switch ($action['type'] ?? '') {
+        case 'attack_card':
+            return durakHandleAttackCard($state, $botId, (string) ($action['card_id'] ?? ''));
+        case 'defend_card':
+            return durakHandleDefendCard(
+                $state,
+                $botId,
+                (string) ($action['attack_card_id'] ?? ''),
+                (string) ($action['card_id'] ?? '')
+            );
+        case 'pass_throw_in':
+            return durakHandlePassThrowIn($state, $botId);
+        case 'take_cards':
+            return durakHandleTakeCards($state, $botId);
+        case 'transfer_card':
+            return durakHandleTransferCard($state, $botId, (string) ($action['card_id'] ?? ''));
+        default:
+            return durakError('Unknown Durak bot action');
+    }
+}
+
+function durakAdvanceBots(?PDO $pdo, array $room, array $state): array
+{
+    durakNormalizeState($state);
+    $botDifficulties = is_array($state['bot_difficulties'] ?? null) ? $state['bot_difficulties'] : [];
+    $roomId = (int) ($room['id'] ?? 0);
+    if ($pdo instanceof PDO && $roomId > 0) {
+        $botDifficulties = durakGetBotDifficulties($pdo, $roomId);
+    }
+
+    $maxSteps = max(64, count($state['player_order'] ?? []) * 64);
+    for ($step = 0; $step < $maxSteps; $step++) {
+        if (($state['phase'] ?? '') === 'finished') {
+            return ['status' => 'ok', 'state' => $state];
+        }
+
+        $actorId = (string) ($state['actor_id'] ?? '');
+        if ($actorId === '' || !array_key_exists($actorId, $botDifficulties)) {
+            return ['status' => 'ok', 'state' => $state];
+        }
+
+        $before = serialize($state);
+        $action = durakChooseBotAction($state, $actorId, $botDifficulties[$actorId]);
+        if ($action === null) {
+            return durakError('Durak bot has no legal action');
+        }
+
+        $result = durakApplyBotAction($state, $actorId, $action);
+        if (($result['status'] ?? '') !== 'ok' || !isset($result['state'])) {
+            return durakError('Durak bot action was rejected by the game engine');
+        }
+        $state = $result['state'];
+        durakNormalizeState($state);
+        if (serialize($state) === $before) {
+            return durakError('Durak bot action did not advance the game state');
+        }
+    }
+
+    return durakError('Durak bot turn limit exceeded');
+}
+
 function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postData): array
 {
     if (($state['phase'] ?? '') !== 'setup') {
@@ -384,8 +662,14 @@ function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postD
     try {
         $profileId = durakDeckProfileFromInput($postData);
         $rules = durakRulesFromRequiredInput($postData);
-        $playerOrder = durakValidateLivePlayerRoster(durakGetRoomPlayerRoster($pdo, $roomId));
-        $matchState = durakBuildInitialState($playerOrder, $profileId, $rules);
+        $roster = durakGetRoomPlayerRoster($pdo, $roomId);
+        $playerOrder = durakValidateLivePlayerRoster($roster);
+        $matchState = durakBuildInitialState(
+            $playerOrder,
+            $profileId,
+            $rules,
+            durakGetBotDifficultiesFromRoster($roster)
+        );
     } catch (InvalidArgumentException | RuntimeException $error) {
         return durakError($error->getMessage());
     }
@@ -429,8 +713,14 @@ function durakHandleStartRematch(PDO $pdo, array $room, array $state): array
     try {
         $profileId = durakNormalizeDeckProfileId($state['deck_profile_id'] ?? null);
         $rules = durakNormalizeRules($state['rules'] ?? null);
-        $playerOrder = durakValidateLivePlayerRoster(durakGetRoomPlayerRoster($pdo, $roomId));
-        $matchState = durakBuildInitialState($playerOrder, $profileId, $rules);
+        $roster = durakGetRoomPlayerRoster($pdo, $roomId);
+        $playerOrder = durakValidateLivePlayerRoster($roster);
+        $matchState = durakBuildInitialState(
+            $playerOrder,
+            $profileId,
+            $rules,
+            durakGetBotDifficultiesFromRoster($roster)
+        );
     } catch (InvalidArgumentException | RuntimeException $error) {
         return durakError($error->getMessage());
     }
@@ -973,6 +1263,10 @@ function durakNormalizeState(array &$state): void
     $state['deck_profile_id'] = durakNormalizeDeckProfileId($state['deck_profile_id'] ?? null, true);
     $state['player_order'] = array_values(array_map('strval', $state['player_order'] ?? []));
     $state['in_game_players'] = array_values(array_map('strval', $state['in_game_players'] ?? $state['player_order']));
+    $state['bot_difficulties'] = durakNormalizeBotDifficulties(
+        $state['player_order'],
+        is_array($state['bot_difficulties'] ?? null) ? $state['bot_difficulties'] : []
+    );
     $state['finish_order'] = array_values(array_map('strval', $state['finish_order'] ?? []));
     $rematchRequests = [];
     foreach (is_array($state['rematch_requests'] ?? null) ? $state['rematch_requests'] : [] as $playerId) {

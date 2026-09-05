@@ -167,4 +167,179 @@ $rematchState = durakBuildInitialState(['1', '2', '3'], DURAK_DECK_PROFILE_52_ID
 durakTestAssert($rematchState['finish_order'] === [] && $rematchState['rematch_requests'] === [], 'New match resets finish and rematch state');
 durakTestAssert($rematchState['stats_recorded'] === false, 'New match resets the stats marker');
 
+function durakTestExpectRosterError(array $roster, string $message): void
+{
+    try {
+        durakValidateLivePlayerRoster($roster);
+    } catch (RuntimeException $error) {
+        return;
+    }
+
+    throw new RuntimeException($message);
+}
+
+$mixedRoster = [
+    ['user_id' => 10, 'is_bot' => 0],
+    ['user_id' => 200, 'is_bot' => 1, 'bot_difficulty' => 'easy'],
+];
+durakTestAssert(durakValidateLivePlayerRoster($mixedRoster) === ['10', '200'], 'One human and one bot are valid');
+durakTestAssert(durakGetBotDifficultiesFromRoster($mixedRoster) === ['200' => 'easy'], 'Bot difficulty is kept in roster order');
+
+$fourPlayerRoster = [
+    ['user_id' => 10, 'is_bot' => 0],
+    ['user_id' => 201, 'is_bot' => 1, 'bot_difficulty' => 'easy'],
+    ['user_id' => 202, 'is_bot' => 1, 'bot_difficulty' => 'medium'],
+    ['user_id' => 203, 'is_bot' => 1, 'bot_difficulty' => 'hard'],
+];
+durakTestAssert(durakValidateLivePlayerRoster($fourPlayerRoster) === ['10', '201', '202', '203'], 'One human and three bots are valid');
+durakTestAssert(durakValidateLivePlayerRoster([
+    ['user_id' => 10, 'is_bot' => 0],
+    ['user_id' => 11, 'is_bot' => 0],
+    ['user_id' => 201, 'is_bot' => 1],
+    ['user_id' => 202, 'is_bot' => 1],
+]) === ['10', '11', '201', '202'], 'Two humans and two bots are valid');
+durakTestExpectRosterError(array_merge($fourPlayerRoster, [['user_id' => 204, 'is_bot' => 1]]), 'More than four total participants must be rejected');
+durakTestExpectRosterError([
+    ['user_id' => 201, 'is_bot' => 1],
+    ['user_id' => 202, 'is_bot' => 1],
+], 'A bot-only Durak roster must be rejected');
+
+$botAttackState = durakTestState([
+    'player_order' => ['1', '2', '3'],
+    'in_game_players' => ['1', '2', '3'],
+    'actor_id' => '1',
+    'bot_difficulties' => ['1' => 'easy'],
+]);
+$attackActions = durakListLegalBotActions($botAttackState, '1');
+durakTestAssert(count($attackActions) >= 1, 'Bot attack actions are available');
+
+$botDefenseState = durakTestState([
+    'phase' => 'defense',
+    'actor_id' => '2',
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'hands' => ['1' => ['6C'], '2' => ['7S', 'AD'], '3' => ['8C', '9D']],
+    'table' => [['attack' => '6S', 'defend' => null]],
+    'trump' => ['suit' => 'D', 'card' => '6D'],
+    'bot_difficulties' => ['2' => 'medium'],
+]);
+$defenseActions = durakListLegalBotActions($botDefenseState, '2');
+durakTestAssert(count(array_filter($defenseActions, static fn($action) => $action['type'] === 'defend_card')) === 2, 'Bot defense candidates use the defense handler');
+durakTestAssert(count(array_filter($defenseActions, static fn($action) => $action['type'] === 'take_cards')) === 1, 'Bot can take cards');
+
+$botThrowInState = durakTestState([
+    'phase' => 'attack',
+    'actor_id' => '3',
+    'hands' => ['1' => ['8C'], '2' => ['7S'], '3' => ['6H', '9D']],
+    'table' => [['attack' => '6S', 'defend' => '7S']],
+    'bot_difficulties' => ['3' => 'hard'],
+]);
+$throwInActions = durakListLegalBotActions($botThrowInState, '3');
+durakTestAssert(count(array_filter($throwInActions, static fn($action) => $action['type'] === 'attack_card')) === 1, 'Bot can throw in a matching rank');
+durakTestAssert(count(array_filter($throwInActions, static fn($action) => $action['type'] === 'pass_throw_in')) === 1, 'Bot can pass a throw-in');
+
+$botTransferState = durakTestState([
+    'phase' => 'defense',
+    'actor_id' => '2',
+    'rules' => ['allow_throw_in' => true, 'allow_transfer' => true],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'hands' => ['1' => ['8C'], '2' => ['6H', '7S'], '3' => ['9D', '10C']],
+    'table' => [['attack' => '6S', 'defend' => null]],
+    'bot_difficulties' => ['2' => 'hard'],
+]);
+$transferActions = durakListLegalBotActions($botTransferState, '2');
+durakTestAssert(count(array_filter($transferActions, static fn($action) => $action['type'] === 'transfer_card')) === 1, 'Bot can transfer an attack');
+
+foreach (['easy', 'medium', 'hard'] as $difficulty) {
+    $chosenAttack = durakChooseBotAction($botAttackState, '1', $difficulty);
+    durakTestAssert(in_array($chosenAttack, $attackActions, true), "{$difficulty} attack choice is legal");
+    $chosenDefense = durakChooseBotAction($botDefenseState, '2', $difficulty);
+    durakTestAssert(in_array($chosenDefense, $defenseActions, true), "{$difficulty} defense choice is legal");
+    $chosenThrowIn = durakChooseBotAction($botThrowInState, '3', $difficulty);
+    durakTestAssert(in_array($chosenThrowIn, $throwInActions, true), "{$difficulty} throw-in choice is legal");
+    $chosenTransfer = durakChooseBotAction($botTransferState, '2', $difficulty);
+    durakTestAssert(in_array($chosenTransfer, $transferActions, true), "{$difficulty} transfer choice is legal");
+}
+
+$mediumDefenseChoice = durakChooseBotAction($botDefenseState, '2', 'medium');
+durakTestAssert($mediumDefenseChoice['type'] === 'defend_card' && $mediumDefenseChoice['card_id'] === '7S', 'Medium chooses the cheaper non-trump defense');
+durakTestAssert(durakChooseBotAction($botDefenseState, '2', 'medium')['card_id'] !== 'AD', 'Medium saves the available trump');
+$hardTransferChoice = durakChooseBotAction($botTransferState, '2', 'hard');
+$mediumTransferChoice = durakChooseBotAction($botTransferState, '2', 'medium');
+durakTestAssert($hardTransferChoice['type'] === 'transfer_card', 'Hard chooses the strategic transfer');
+durakTestAssert($mediumTransferChoice['type'] !== 'transfer_card', 'Medium keeps the simpler defense heuristic');
+
+$botStartsState = durakTestState([
+    'player_order' => ['1', '2'],
+    'in_game_players' => ['1', '2'],
+    'hands' => ['1' => ['6S'], '2' => ['7S', '8C']],
+    'draw_pile' => ['9D'],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'attack_limit' => 2,
+    'bot_difficulties' => ['1' => 'easy'],
+]);
+$advanced = durakAdvanceBots(null, [], $botStartsState);
+durakTestAssert($advanced['status'] === 'ok' && $advanced['state']['phase'] === 'defense', 'A bot opening attack advances automatically');
+durakTestAssert($advanced['state']['actor_id'] === '2', 'Auto advancement stops at the human defender');
+
+$humanThenBotState = durakTestState([
+    'player_order' => ['1', '2', '3'],
+    'in_game_players' => ['1', '2', '3'],
+    'hands' => ['1' => ['6S', '8C'], '2' => ['7S'], '3' => ['9D']],
+    'draw_pile' => ['10C'],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'bot_difficulties' => ['2' => 'medium'],
+]);
+$humanMove = durakHandleAttackCard($humanThenBotState, '1', '6S');
+$advanced = durakAdvanceBots(null, [], $humanMove['state']);
+durakTestAssert($advanced['status'] === 'ok' && $advanced['state']['actor_id'] === '1', 'Human action advances through a bot defender back to the human');
+
+$severalBotsState = durakTestState([
+    'player_order' => ['1', '2', '3'],
+    'in_game_players' => ['1', '2', '3'],
+    'hands' => ['1' => ['6S'], '2' => ['7S'], '3' => ['8C']],
+    'draw_pile' => ['9D'],
+    'table' => [],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'attack_limit' => 2,
+    'bot_difficulties' => ['1' => 'medium', '2' => 'hard'],
+]);
+$advanced = durakAdvanceBots(null, [], $severalBotsState);
+durakTestAssert($advanced['status'] === 'ok' && $advanced['state']['actor_id'] === '3', 'Several consecutive bot turns are drained automatically');
+
+$botFinishState = durakTestState([
+    'player_order' => ['1', '2'],
+    'in_game_players' => ['1', '2'],
+    'hands' => ['1' => ['8H'], '2' => ['9H']],
+    'draw_pile' => [],
+    'table' => [['attack' => '7S', 'defend' => '8S']],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'attack_limit' => 2,
+    'bot_difficulties' => ['1' => 'hard', '2' => 'medium'],
+]);
+$advanced = durakAdvanceBots(null, [], $botFinishState);
+durakTestAssert($advanced['status'] === 'ok' && in_array('1', $advanced['state']['finish_order'], true), 'A bot can finish its cards');
+
+$allFinishedBotState = durakTestState([
+    'player_order' => ['1', '2', '3'],
+    'in_game_players' => ['1', '2', '3'],
+    'hands' => ['1' => ['8H'], '2' => ['9H'], '3' => []],
+    'draw_pile' => [],
+    'table' => [['attack' => '7S', 'defend' => '8S']],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'attack_limit' => 2,
+    'bot_difficulties' => ['1' => 'hard', '2' => 'medium'],
+]);
+$advanced = durakAdvanceBots(null, [], $allFinishedBotState);
+durakTestAssert($advanced['status'] === 'ok' && $advanced['state']['phase'] === 'finished', 'A bot-only tail can finish the match');
+
+$botProjection = durakBuildPlayerProjection($advanced['state'], '3');
+durakTestAssert(isset($advanced['state']['hands'], $advanced['state']['draw_pile']), 'Authoritative state retains bot hands and draw pile');
+durakTestAssert(!isset($botProjection['hands'], $botProjection['draw_pile'], $botProjection['bot_difficulties']), 'Human projection does not expose bot internals');
+durakTestAssert(isset($botProjection['opponent_hands']) && count($botProjection['opponent_hands']) === 2, 'Human projection exposes only opponent card counts');
+
 echo "Durak rules tests passed\n";
