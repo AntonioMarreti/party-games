@@ -177,99 +177,140 @@ function action_leave_room($pdo, $user, $data)
     }
 }
 
+function lockRoomForRosterMutation($pdo, $userId)
+{
+    $stmt = $pdo->prepare("
+        SELECT r.*, rp.is_host
+        FROM room_players rp
+        JOIN rooms r ON r.id = rp.room_id
+        WHERE rp.user_id = ?
+        ORDER BY rp.id DESC
+        LIMIT 1
+        FOR UPDATE
+    ");
+    $stmt->execute([$userId]);
+    return $stmt->fetch();
+}
+
+function isDurakRosterFrozen($room)
+{
+    return ($room['game_type'] ?? '') === 'durak'
+        && ($room['status'] ?? '') === 'playing';
+}
+
 function action_kick_player($pdo, $user, $data)
 {
-    $room = getRoom($user['id']);
-    if (!$room)
-        sendError('No room');
-    if (!$room['is_host'])
-        sendError('Not host');
+    $room = null;
+    try {
+        $pdo->beginTransaction();
 
-    $targetId = $data['target_id'] ?? 0;
-    if ($targetId == $user['id'])
-        return; // Cannot kick self here, use leave
+        $room = lockRoomForRosterMutation($pdo, $user['id']);
+        if (!$room) {
+            $pdo->rollBack();
+            sendError('No room');
+        }
+        if (!(int) ($room['is_host'] ?? 0)) {
+            $pdo->rollBack();
+            sendError('Not host');
+        }
+        if (isDurakRosterFrozen($room)) {
+            $pdo->rollBack();
+            sendError('Durak roster is frozen while the match is active');
+        }
 
-    $stmt = $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?");
-    $stmt->execute([$room['id'], $targetId]);
+        $targetId = $data['target_id'] ?? 0;
+        if ($targetId == $user['id']) {
+            $pdo->commit();
+            return; // Cannot kick self here, use leave
+        }
 
-    logRoomLifecycle('member_kicked', [
-        'room_id' => (int) $room['id'],
-        'room_code' => $room['room_code'] ?? null,
-        'actor_user_id' => (int) $user['id'],
-        'target_user_id' => (int) $targetId,
-        'status' => $room['status'] ?? null,
-    ], 'Room member kicked');
+        $stmt = $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?");
+        $stmt->execute([$room['id'], $targetId]);
+        $pdo->commit();
 
-    echo json_encode(['status' => 'ok']);
+        logRoomLifecycle('member_kicked', [
+            'room_id' => (int) $room['id'],
+            'room_code' => $room['room_code'] ?? null,
+            'actor_user_id' => (int) $user['id'],
+            'target_user_id' => (int) $targetId,
+            'status' => $room['status'] ?? null,
+        ], 'Room member kicked');
+
+        echo json_encode(['status' => 'ok']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        TelegramLogger::log("Kick Player Error", ['error' => $e->getMessage()]);
+        sendError('Could not kick player');
+    }
 }
 
 function action_add_bot($pdo, $user, $data)
 {
-    global $currentUser;
-    $room = getRoom($user['id']);
-    if (!$room)
-        sendError('No room');
-    if (!$room['is_host'])
-        sendError('Not host');
-
-    // Check limit
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ?");
-    $stmt->execute([$room['id']]);
-    if ($stmt->fetchColumn() >= 12)
-        sendError('Room is full (Max 12)');
-
-    $difficulty = $data['difficulty'] ?? 'medium';
-    if (!in_array($difficulty, ['easy', 'medium', 'hard']))
-        $difficulty = 'medium';
-
-    // Bot Pool Ranges
-    $ranges = [
-        'easy' => [-100, -109],
-        'medium' => [-200, -209],
-        'hard' => [-300, -309]
-    ];
-
-    $range = $ranges[$difficulty];
-    $start = $range[0]; // e.g. -100
-    $end = $range[1];   // e.g. -109
-
-    // We need to find valid USERS that have telegram_id in this range.
-    // AND are not already in the room.
-
-    // 1. Get List of Bots currently in the room (user_id list)
-    $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
-    $stmt->execute([$room['id']]);
-    $existingBotUserIds = $stmt->fetchAll(PDO::FETCH_COLUMN); // These are users.id
-
-    // 2. Find Available Candidates from Users table
-    // We search by telegram_id range, but select users.id
-    // Note: SQL BETWEEN is inclusive and usually expects min AND max.
-    // Since IDs are negative: -109 is min, -100 is max.
-    $min = min($start, $end);
-    $max = max($start, $end);
-
-    $sql = "SELECT id FROM users WHERE telegram_id BETWEEN ? AND ? AND is_bot = 1";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$min, $max]);
-    $allPoolIds = $stmt->fetchAll(PDO::FETCH_COLUMN); // These are users.id
-
-    $candidates = array_diff($allPoolIds, $existingBotUserIds);
-
-    if (empty($candidates)) {
-        sendError("No more $difficulty bots available in pool!");
-    }
-
-    // 3. Pick Random Candidate
-    // array_diff preserves keys, so re-index or use array_rand carefully
-    $botUserId = $candidates[array_rand($candidates)];
-
+    $room = null;
     try {
         $pdo->beginTransaction();
 
+        $room = lockRoomForRosterMutation($pdo, $user['id']);
+        if (!$room) {
+            $pdo->rollBack();
+            sendError('No room');
+        }
+        if (!(int) ($room['is_host'] ?? 0)) {
+            $pdo->rollBack();
+            sendError('Not host');
+        }
+        if (isDurakRosterFrozen($room)) {
+            $pdo->rollBack();
+            sendError('Durak roster is frozen while the match is active');
+        }
+
+        // Check limit
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM room_players WHERE room_id = ?");
+        $stmt->execute([$room['id']]);
+        if ($stmt->fetchColumn() >= 12) {
+            $pdo->rollBack();
+            sendError('Room is full (Max 12)');
+        }
+
+        $difficulty = $data['difficulty'] ?? 'medium';
+        if (!in_array($difficulty, ['easy', 'medium', 'hard']))
+            $difficulty = 'medium';
+
+        // Bot Pool Ranges
+        $ranges = [
+            'easy' => [-100, -109],
+            'medium' => [-200, -209],
+            'hard' => [-300, -309]
+        ];
+
+        $range = $ranges[$difficulty];
+        $start = $range[0];
+        $end = $range[1];
+
+        // Get the bot users already in the room.
+        $stmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ? AND is_bot = 1");
+        $stmt->execute([$room['id']]);
+        $existingBotUserIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Find an unused bot from the selected difficulty pool.
+        $min = min($start, $end);
+        $max = max($start, $end);
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id BETWEEN ? AND ? AND is_bot = 1");
+        $stmt->execute([$min, $max]);
+        $allPoolIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $candidates = array_diff($allPoolIds, $existingBotUserIds);
+
+        if (empty($candidates)) {
+            $pdo->rollBack();
+            sendError("No more $difficulty bots available in pool!");
+        }
+
+        $botUserId = $candidates[array_rand($candidates)];
         $pdo->prepare("INSERT INTO room_players (room_id, user_id, is_bot, bot_difficulty) VALUES (?, ?, 1, ?)")
             ->execute([$room['id'], $botUserId, $difficulty]);
 
-        // Log it
         logRoomLifecycle('bot_added', [
             'room_id' => (int) $room['id'],
             'room_code' => $room['room_code'] ?? null,
@@ -280,9 +321,10 @@ function action_add_bot($pdo, $user, $data)
 
         $pdo->commit();
         echo json_encode(['status' => 'ok', 'user_id' => $botUserId]);
-
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         TelegramLogger::log("Add Bot Error", ['error' => $e->getMessage()]);
         sendError('Could not add bot');
     }
@@ -290,37 +332,58 @@ function action_add_bot($pdo, $user, $data)
 
 function action_remove_bot($pdo, $user, $data)
 {
-    $room = getRoom($user['id']);
-    if (!$room)
-        sendError('No room');
-    if (!$room['is_host'])
-        sendError('Not host');
+    $room = null;
+    try {
+        $pdo->beginTransaction();
 
-    $targetId = $data['target_id'] ?? 0;
+        $room = lockRoomForRosterMutation($pdo, $user['id']);
+        if (!$room) {
+            $pdo->rollBack();
+            sendError('No room');
+        }
+        if (!(int) ($room['is_host'] ?? 0)) {
+            $pdo->rollBack();
+            sendError('Not host');
+        }
+        if (isDurakRosterFrozen($room)) {
+            $pdo->rollBack();
+            sendError('Durak roster is frozen while the match is active');
+        }
 
-    // Verify it is a bot
-    $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
-    $stmt->execute([$room['id'], $targetId]);
-    $isBot = $stmt->fetchColumn();
+        $targetId = $data['target_id'] ?? 0;
 
-    $stmt = $pdo->prepare("SELECT is_bot FROM users WHERE id = ?");
-    $stmt->execute([$targetId]);
-    $globalIsBot = $stmt->fetchColumn();
+        // Verify it is a bot
+        $stmt = $pdo->prepare("SELECT is_bot FROM room_players WHERE room_id = ? AND user_id = ?");
+        $stmt->execute([$room['id'], $targetId]);
+        $isBot = $stmt->fetchColumn();
 
-    if (!$isBot && !$globalIsBot) {
-        sendError('Target is not a bot');
+        $stmt = $pdo->prepare("SELECT is_bot FROM users WHERE id = ?");
+        $stmt->execute([$targetId]);
+        $globalIsBot = $stmt->fetchColumn();
+
+        if (!$isBot && !$globalIsBot) {
+            $pdo->rollBack();
+            sendError('Target is not a bot');
+        }
+
+        $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?")->execute([$room['id'], $targetId]);
+
+        logRoomLifecycle('bot_removed', [
+            'room_id' => (int) $room['id'],
+            'room_code' => $room['room_code'] ?? null,
+            'actor_user_id' => (int) $user['id'],
+            'target_user_id' => (int) $targetId,
+        ], 'Bot removed from room');
+
+        $pdo->commit();
+        echo json_encode(['status' => 'ok']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        TelegramLogger::log("Remove Bot Error", ['error' => $e->getMessage()]);
+        sendError('Could not remove bot');
     }
-
-    $pdo->prepare("DELETE FROM room_players WHERE room_id = ? AND user_id = ?")->execute([$room['id'], $targetId]);
-
-    logRoomLifecycle('bot_removed', [
-        'room_id' => (int) $room['id'],
-        'room_code' => $room['room_code'] ?? null,
-        'actor_user_id' => (int) $user['id'],
-        'target_user_id' => (int) $targetId,
-    ], 'Bot removed from room');
-
-    echo json_encode(['status' => 'ok']);
 }
 
 function action_get_state($pdo, $user, $data)

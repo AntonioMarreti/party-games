@@ -8,12 +8,6 @@ function action_game_finished($pdo, $user, $data)
 {
     $room = null;
     $gameType = null;
-    $playersData = $data['players_data'] ?? []; // Array of {user_id, rank, score, ...}
-
-    // If sent as JSON string from client
-    if (is_string($playersData)) {
-        $playersData = json_decode($playersData, true) ?? [];
-    }
 
     try {
         $pdo->beginTransaction();
@@ -39,6 +33,18 @@ function action_game_finished($pdo, $user, $data)
         if (!$room['is_host']) {
             $pdo->rollBack();
             sendError('Only host can submit results');
+        }
+
+        if (($room['game_type'] ?? '') === 'durak') {
+            $pdo->rollBack();
+            sendError('Durak results are server-authoritative');
+        }
+
+        $playersData = $data['players_data'] ?? []; // Array of {user_id, rank, score, ...}
+
+        // If sent as JSON string from client
+        if (is_string($playersData)) {
+            $playersData = json_decode($playersData, true) ?? [];
         }
 
         $gameType = $room['game_type'];

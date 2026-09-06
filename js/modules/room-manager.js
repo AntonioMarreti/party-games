@@ -1341,6 +1341,7 @@ function renderPlayerList(players, containerId) {
     else if (sgId === 'partybattle') botLimit = 16;
     else if (sgId === 'brainbattle') botLimit = 16;
     else if (sgId === 'wordclash_party') botLimit = 8;
+    else if (sgId === 'durak') botLimit = 5;
 
     if (amIHost && botLimit > 0 && players.length < botLimit) {
         const div = document.createElement('div');
