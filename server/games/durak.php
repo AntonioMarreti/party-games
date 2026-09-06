@@ -5,7 +5,7 @@ const DURAK_DECK_PROFILE_ID = 'durak_36';
 const DURAK_DECK_PROFILE_52_ID = 'durak_52';
 const DURAK_HAND_SIZE = 6;
 const DURAK_MIN_PLAYERS = 2;
-const DURAK_MAX_PLAYERS = 4;
+const DURAK_MAX_PLAYERS = 5;
 
 if (isset($pdo) && $pdo instanceof PDO && isset($room) && is_array($room) && isset($room['id'])) {
     $GLOBALS['durak_start_context'] = [
@@ -107,7 +107,7 @@ function durakValidateLivePlayerRoster(array $roster): array
 
     $playerCount = count($playerOrder);
     if ($playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS || $humanCount < 1) {
-        throw new RuntimeException('Для Дурака нужно 2–4 участника и хотя бы один живой игрок');
+        throw new RuntimeException('Для Дурака нужно 2–5 участников и хотя бы один живой игрок');
     }
 
     return $playerOrder;
@@ -200,7 +200,7 @@ function durakBuildInitialState(
     $playerCount = count($playerOrder);
 
     if ($playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS) {
-        throw new RuntimeException('Durak requires 2-4 live players');
+        throw new RuntimeException('Durak requires 2-5 players');
     }
 
     $deck = durakBuildDeck($profileId);

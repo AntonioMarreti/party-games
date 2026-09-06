@@ -1199,7 +1199,7 @@ async function startGame(gameName) {
         const maxPlayers = getCatalogMaxPlayers(game);
         const players = Array.isArray(window.currentGamePlayers) ? window.currentGamePlayers : [];
         if (players.length < 2 || players.length > maxPlayers) {
-            const message = 'Дурак — для 2–4 участников. Добавьте игроков или уберите лишних участников из комнаты.';
+            const message = 'Дурак — для 2–5 игроков. Добавьте игроков или уберите лишних участников из комнаты.';
             if (window.showAlert) window.showAlert('Нельзя начать Дурака', message, 'warning');
             return { status: 'error', message };
         }

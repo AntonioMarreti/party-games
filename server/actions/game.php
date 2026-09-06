@@ -91,8 +91,8 @@ function action_start_game($pdo, $user, $data)
     if ($gameName === 'durak') {
         $humanPlayers = (int) ($counts['human_players'] ?? 0);
         $totalPlayers = (int) ($counts['total_players'] ?? 0);
-        if ($humanPlayers < 1 || $totalPlayers < 2 || $totalPlayers > 4) {
-            failGameLifecycle('Для Дурака нужно 2–4 участника и хотя бы один живой игрок', [
+        if ($humanPlayers < 1 || $totalPlayers < 2 || $totalPlayers > 5) {
+            failGameLifecycle('Для Дурака нужно 2–5 участников и хотя бы один живой игрок', [
                 'actor_user_id' => (int) $user['id'],
                 'room_id' => (int) $room['id'],
                 'room_code' => $room['room_code'] ?? null,

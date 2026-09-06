@@ -1269,7 +1269,7 @@
                 ? renderFinalScreen(state, res)
                 : `
                     <div class="durak-context-row">
-                        <div class="durak-seats">${renderPlayers(res, state)}</div>
+                        <div class="durak-seats${(state.player_order || []).length >= 5 ? ' is-five-player' : ''}">${renderPlayers(res, state)}</div>
                         <div class="durak-context-actions">
                             <div class="durak-context-status">${esc(compactStatusCopy(state, res))}</div>
                             ${Number(res?.is_host || 0) === 1 ? `

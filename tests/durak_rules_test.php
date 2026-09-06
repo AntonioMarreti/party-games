@@ -61,6 +61,18 @@ foreach ([2, 3, 4] as $playerCount) {
     }
 }
 
+foreach (['36' => DURAK_DECK_PROFILE_ID, '52' => DURAK_DECK_PROFILE_52_ID] as $label => $profileId) {
+    $players = array_map('strval', range(1, 5));
+    $state = durakBuildInitialState($players, $profileId);
+    $handCount = array_sum(array_map('count', $state['hands']));
+
+    durakTestAssert($handCount === 5 * DURAK_HAND_SIZE, "Five players receive six cards for {$label}-card deck");
+    durakTestAssert(count($state['draw_pile']) === (int) $label - 5 * DURAK_HAND_SIZE, "Five-player {$label}-card draw pile size");
+    durakTestAssert(in_array($state['trump']['card'], $state['draw_pile'], true), "Five-player {$label}-card trump remains in pile");
+    durakTestAssert(in_array($state['roles']['attacker_id'], $players, true), "Five-player {$label}-card attacker is in roster");
+    durakTestAssert(in_array($state['roles']['defender_id'], $players, true), "Five-player {$label}-card defender is in roster");
+}
+
 foreach ([
     ['allow_throw_in' => true, 'allow_transfer' => false],
     ['allow_throw_in' => true, 'allow_transfer' => true],
@@ -198,11 +210,170 @@ durakTestAssert(durakValidateLivePlayerRoster([
     ['user_id' => 201, 'is_bot' => 1],
     ['user_id' => 202, 'is_bot' => 1],
 ]) === ['10', '11', '201', '202'], 'Two humans and two bots are valid');
-durakTestExpectRosterError(array_merge($fourPlayerRoster, [['user_id' => 204, 'is_bot' => 1]]), 'More than four total participants must be rejected');
 durakTestExpectRosterError([
     ['user_id' => 201, 'is_bot' => 1],
     ['user_id' => 202, 'is_bot' => 1],
 ], 'A bot-only Durak roster must be rejected');
+durakTestAssert(durakValidateLivePlayerRoster([
+    ['user_id' => 10, 'is_bot' => 0],
+    ['user_id' => 11, 'is_bot' => 0],
+]) === ['10', '11'], 'Two participants are accepted');
+durakTestAssert(durakValidateLivePlayerRoster([
+    ['user_id' => 10, 'is_bot' => 0],
+    ['user_id' => 201, 'is_bot' => 1],
+    ['user_id' => 202, 'is_bot' => 1],
+    ['user_id' => 203, 'is_bot' => 1],
+    ['user_id' => 204, 'is_bot' => 1],
+]) === ['10', '201', '202', '203', '204'], 'Five participants are accepted');
+durakTestExpectRosterError([
+    ['user_id' => 10, 'is_bot' => 0],
+], 'One participant must be rejected');
+durakTestExpectRosterError([
+    ['user_id' => 10, 'is_bot' => 0],
+    ['user_id' => 201, 'is_bot' => 1],
+    ['user_id' => 202, 'is_bot' => 1],
+    ['user_id' => 203, 'is_bot' => 1],
+    ['user_id' => 204, 'is_bot' => 1],
+    ['user_id' => 205, 'is_bot' => 1],
+], 'Six participants must be rejected');
+
+$fiveBotSetup = durakBuildSetupState(
+    ['10', '201', '202', '203', '204'],
+    ['201' => 'easy', '202' => 'medium', '203' => 'hard', '204' => 'medium']
+);
+durakTestAssert($fiveBotSetup['player_order'] === ['10', '201', '202', '203', '204'], 'Five-player setup preserves mixed roster order');
+durakTestAssert(count($fiveBotSetup['bot_difficulties']) === 4, 'One human and four bots keep all difficulties');
+$fiveBotMatch = durakBuildInitialState(
+    ['10', '201', '202', '203', '204'],
+    DURAK_DECK_PROFILE_ID,
+    ['allow_throw_in' => true, 'allow_transfer' => true],
+    ['201' => 'easy', '202' => 'medium', '203' => 'hard', '204' => 'medium']
+);
+durakTestAssert(count($fiveBotMatch['hands']) === 5 && array_sum(array_map('count', $fiveBotMatch['hands'])) === 30, 'One human and four bots can start a five-player match');
+durakTestAssert(count(durakBuildInitialState(
+    ['10', '11', '12', '201', '202'],
+    DURAK_DECK_PROFILE_ID,
+    ['allow_throw_in' => true, 'allow_transfer' => false],
+    ['201' => 'easy', '202' => 'hard']
+)['hands']) === 5, 'Three humans and two bots can start a five-player match');
+
+$fiveRulesState = durakTestState([
+    'player_order' => ['1', '2', '3', '4', '5'],
+    'in_game_players' => ['1', '2', '3', '4', '5'],
+    'hands' => [
+        '1' => ['6S'],
+        '2' => ['7S', '7H'],
+        '3' => ['6H'],
+        '4' => ['9D'],
+        '5' => ['10C'],
+    ],
+    'draw_pile' => ['JH', 'QC'],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'attack_limit' => 3,
+]);
+$fiveRulesState = durakHandleAttackCard($fiveRulesState, '1', '6S')['state'];
+$fiveRulesState = durakHandleDefendCard($fiveRulesState, '2', '6S', '7S')['state'];
+$fiveRulesState = durakHandleAttackCard($fiveRulesState, '3', '6H')['state'];
+$fiveRulesState = durakHandleDefendCard($fiveRulesState, '2', '6H', '7H')['state'];
+durakTestAssert($fiveRulesState['actor_id'] === '4', 'Five-player throw-in advances to the fourth participant');
+$fiveRulesState = durakHandlePassThrowIn($fiveRulesState, '4')['state'];
+$fiveRulesState = durakHandlePassThrowIn($fiveRulesState, '5')['state'];
+durakTestAssert($fiveRulesState['roles']['attacker_id'] === '4', 'Five-player trick completion skips finished participants');
+
+$fiveTransferState = durakTestState([
+    'player_order' => ['1', '2', '3', '4', '5'],
+    'in_game_players' => ['1', '2', '3', '4', '5'],
+    'rules' => ['allow_throw_in' => true, 'allow_transfer' => true],
+    'hands' => [
+        '1' => ['8C'],
+        '2' => ['6H'],
+        '3' => ['9D', '10C'],
+        '4' => ['JH'],
+        '5' => ['QC'],
+    ],
+    'table' => [['attack' => '6S', 'defend' => null]],
+    'phase' => 'defense',
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '2',
+]);
+$fiveTransferResult = durakHandleTransferCard($fiveTransferState, '2', '6H');
+durakTestAssert($fiveTransferResult['status'] === 'ok' && $fiveTransferResult['state']['roles']['defender_id'] === '3', 'Five-player transfer selects the next active defender');
+
+$fiveTakeState = durakTestState([
+    'player_order' => ['1', '2', '3', '4', '5'],
+    'in_game_players' => ['1', '2', '3', '4', '5'],
+    'hands' => [
+        '1' => [],
+        '2' => ['2D'],
+        '3' => ['9D'],
+        '4' => ['JH'],
+        '5' => ['QC'],
+    ],
+    'table' => [['attack' => '6S', 'defend' => null]],
+    'phase' => 'defense',
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '2',
+]);
+$fiveTakeResult = durakHandleTakeCards($fiveTakeState, '2');
+durakTestAssert($fiveTakeResult['status'] === 'ok' && $fiveTakeResult['state']['actor_id'] === '3', 'Five-player take opens throw-in for the next participant');
+
+$fiveRefillState = durakTestState([
+    'player_order' => ['1', '2', '3', '4', '5'],
+    'in_game_players' => ['1', '2', '3', '4', '5'],
+    'hands' => ['1' => ['6C'], '2' => ['7H'], '3' => ['8C'], '4' => ['9D'], '5' => ['10S']],
+    'draw_pile' => ['JH', 'QC'],
+    'table' => [['attack' => '6S', 'defend' => '7S']],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '3',
+    'attack_limit' => 1,
+]);
+durakCompleteTrick($fiveRefillState, false);
+durakTestAssert($fiveRefillState['draw_pile'] === [] && $fiveRefillState['roles']['attacker_id'] === '2', 'Five-player refill follows attacker order and rotates roles');
+
+$fiveFinishState = durakTestState([
+    'player_order' => ['1', '2', '3', '4', '5'],
+    'finish_order' => ['3', '1', '4', '2'],
+    'result' => ['loser_id' => '5', 'reason' => 'last_player_with_cards'],
+    'phase' => 'finished',
+]);
+$fiveResultPlayers = durakBuildResultPlayersData($fiveFinishState);
+durakTestAssert(array_column($fiveResultPlayers, 'rank') === [1, 2, 3, 4, 5], 'Five-player result positions are 1 through 5');
+durakTestAssert(array_column($fiveResultPlayers, 'user_id') === [3, 1, 4, 2, 5], 'Five-player result preserves finish order and loser');
+
+$fiveBotChainState = durakTestState([
+    'player_order' => ['1', '2', '3', '4', '5'],
+    'in_game_players' => ['1', '2', '3', '4', '5'],
+    'hands' => [
+        '1' => ['6S'],
+        '2' => ['7S', '7H'],
+        '3' => ['6H'],
+        '4' => ['9D'],
+        '5' => [],
+    ],
+    'draw_pile' => ['10C'],
+    'roles' => ['attacker_id' => '1', 'defender_id' => '2'],
+    'actor_id' => '1',
+    'attack_limit' => 3,
+    'bot_difficulties' => ['2' => 'easy', '3' => 'medium', '5' => 'hard'],
+]);
+$humanAttack = durakHandleAttackCard($fiveBotChainState, '1', '6S');
+$fiveBotChain = durakAdvanceBots(null, [], $humanAttack['state']);
+durakTestAssert($fiveBotChain['status'] === 'ok' && $fiveBotChain['state']['actor_id'] === '4', 'Five-player human to bot to bot chain returns to a human');
+durakTestAssert(count($fiveBotChain['state']['hands']) === 5, 'Five-player bot chain retains all participant hands');
+
+$fiveProjection = durakBuildPlayerProjection(durakBuildInitialState(['1', '2', '3', '4', '5'], DURAK_DECK_PROFILE_52_ID), '1');
+durakTestAssert(count($fiveProjection['opponent_hands']) === 4, 'Five-player projection exposes four opponent counts');
+durakTestAssert(!isset($fiveProjection['hands'], $fiveProjection['draw_pile']), 'Five-player projection keeps private cards hidden');
+
+$fiveRematchState = durakBuildInitialState(
+    ['10', '201', '202', '203', '204'],
+    DURAK_DECK_PROFILE_ID,
+    ['allow_throw_in' => true, 'allow_transfer' => true],
+    ['201' => 'easy', '202' => 'medium', '203' => 'hard', '204' => 'medium']
+);
+durakTestAssert(count($fiveRematchState['player_order']) === 5, 'Five-player rematch keeps the roster');
+durakTestAssert($fiveRematchState['finish_order'] === [] && $fiveRematchState['stats_recorded'] === false, 'Five-player rematch resets lifecycle markers');
 
 $botAttackState = durakTestState([
     'player_order' => ['1', '2', '3'],
