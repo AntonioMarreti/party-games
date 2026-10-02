@@ -191,6 +191,16 @@
     overflow: hidden;
 }
 
+.durak-context-row.is-five-player {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 4px;
+}
+
+.durak-context-row.is-five-player .durak-context-actions {
+    justify-content: flex-end;
+}
+
 .durak-seats {
     min-width: 0;
     display: flex;
@@ -279,6 +289,11 @@
     border-color: rgba(37, 99, 235, 0.46);
     background: rgba(219, 234, 254, 0.66);
     box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.06) inset;
+}
+
+.durak-seat.is-defender:not(.is-active) {
+    border-color: rgba(234, 88, 12, 0.34);
+    background: rgba(255, 247, 237, 0.64);
 }
 
 .durak-avatar {
@@ -407,6 +422,53 @@
     font-weight: 900;
 }
 
+.durak-deck-empty {
+    width: 40px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    border: 1px dashed rgba(100, 116, 139, 0.42);
+    border-radius: 10px;
+    background: rgba(241, 245, 249, 0.72);
+}
+
+.durak-deck-empty span {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #94a3b8;
+    border-radius: 50%;
+}
+
+.durak-deck-empty span::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 2px;
+    width: 16px;
+    height: 2px;
+    border-radius: 999px;
+    background: #94a3b8;
+    transform: rotate(-45deg);
+}
+
+.durak-trump-suit {
+    width: 40px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.78);
+    color: #172033;
+    font-size: 25px;
+    font-weight: 900;
+}
+
+.durak-trump-suit.is-red {
+    color: #dc2626;
+}
+
 .durak-deck-label {
     color: #64748b;
     font-size: 10px;
@@ -448,6 +510,8 @@
 
 .durak-table-empty.is-trick-result {
     border-style: solid;
+    align-content: center;
+    gap: 6px;
 }
 
 .durak-table-empty.is-taking {
@@ -472,6 +536,13 @@
     color: #334155;
     font-size: 16px;
     font-weight: 900;
+}
+
+.durak-empty-subtitle {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.2;
 }
 
 .durak-empty-text,
@@ -513,6 +584,22 @@
 .durak-trick.is-selected {
     border-color: rgba(37, 99, 235, 0.78);
     background: rgba(219, 234, 254, 0.74);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) inset;
+}
+
+.durak-trick.is-defendable-target:not(.is-selected) {
+    border-color: rgba(22, 163, 74, 0.54);
+    background: rgba(240, 253, 244, 0.82);
+    box-shadow: 0 8px 20px rgba(22, 163, 74, 0.08);
+}
+
+.durak-trick.is-unavailable-target {
+    border-color: rgba(148, 163, 184, 0.16);
+    background: rgba(248, 250, 252, 0.5);
+}
+
+.durak-trick.is-unavailable-target .durak-trick-cards {
+    opacity: 0.5;
 }
 
 .durak-trick-cards {
@@ -619,6 +706,11 @@ button.durak-card.is-muted .durak-card-center-suit {
 button.durak-card.is-defendable {
     border-color: rgba(37, 99, 235, 0.48);
     box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+}
+
+button.durak-card.is-waiting-target {
+    border-color: rgba(22, 163, 74, 0.7);
+    box-shadow: 0 14px 26px rgba(22, 163, 74, 0.14);
 }
 
 .durak-card.is-red {
@@ -759,7 +851,7 @@ button.durak-card.is-defendable {
 }
 
 .durak-action-btn {
-    min-height: 42px;
+    min-height: 44px;
     border: 1px solid rgba(37, 99, 235, 0.18);
     border-radius: 14px;
     background: #ffffff;
@@ -1081,9 +1173,9 @@ button.durak-card.is-defendable {
 
 .durak-hand-settings-btn,
 .durak-hand-settings-close {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
     display: grid;
     place-items: center;
     appearance: none;
@@ -1565,6 +1657,11 @@ button.durak-card.is-defendable {
         linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.86)),
         repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.018) 0 1px, transparent 1px 18px);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.durak-setup-screen.is-guest .durak-setup-return {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(255, 255, 255, 0.66);
 }
 
 .durak-setup-intro {
