@@ -1,132 +1,61 @@
 # Party Battle Content Progress
 
-Этот файл фиксирует текущее состояние контентной работы по Party Battle, чтобы можно было вернуться без повторного аудита и раскопок.
+Текущее состояние сверено 2026-10-03 с commit `3d050059faf5e7995f7c78f52bc9ea958fe4c061`. Источник истины — canonical packs + `pb_getPartyBattlePackRegistry()`; staging не является durable state. Этот reset не проверял live-feel в production.
 
-## Что уже сделано
+## Реализованная инфраструктура
 
-### Общая инфраструктура
+- Аудит: `tools/audit_partybattle_content.php`.
+- Importer: `tools/parsers/partybattle_importer.php`, structured JSON через `field=__raw`, dry-run/preview.
+- Strategy: [partybattle_content_strategy.md](partybattle_content_strategy.md).
+- Manifests: `partybattle_import_manifest.current.json`, examples для bluff/advice; ссылки на локальные source files не гарантируют их наличие.
+- Helpers: `export_bluff_packs_to_import_sources.php`, `build_advice_staging_from_ru_qna.php`.
 
-- Добавлен аудит паков:
-  - `tools/audit_partybattle_content.php`
-- Зафиксирована контентная стратегия:
-  - `tools/parsers/partybattle_content_strategy.md`
-- Собран текущий manifest для старых staging-источников:
-  - `tools/parsers/partybattle_import_manifest.current.json`
+## Canonical и registered coverage
 
-### Bluff
+| Режим | Подключённые темы | Файлы на диске вне registry |
+| --- | --- | --- |
+| meme | base, 18plus, office, relationships, school, it, simple_base | — |
+| joke | base, 18plus | office, relationships, party |
+| advice | base, 18plus, office, party, relationships | — |
+| acronym | base, 18plus | — |
+| caption | base | — |
+| bluff | base, 18plus, body, history, weird_facts | — |
+| whoami | base, 18plus | cinema, friendship, office, party, provocative |
 
-- В registry подключены ранее неиспользуемые паки:
-  - `body`
-  - `history`
-  - `weird_facts`
-- Добавлен bluff manifest:
-  - `tools/parsers/partybattle_import_manifest.bluff.example.json`
-- Добавлен export helper:
-  - `tools/parsers/export_bluff_packs_to_import_sources.php`
-- Добавлена поддержка `field=__raw` в importer для structured JSON:
-  - `tools/parsers/partybattle_importer.php`
-- Собраны и дочищены staging-файлы:
-  - `data/import/bluff_body_facts.json`
-  - `data/import/bluff_history_facts.json`
-  - `data/import/bluff_weird_facts.json`
-- Эти staging-файлы уже импортированы в canonical packs:
-  - `server/games/packs/partybattle/bluff/body.json`
-  - `server/games/packs/partybattle/bluff/history.json`
-  - `server/games/packs/partybattle/bluff/weird_facts.json`
+Все указанные canonical files присутствуют. Неподключённые темы не становятся активными от наличия файла: resolver возвращает base. Детали: [packs README](../../server/games/packs/README.md).
 
-### Advice
+- `advice/base` содержит 179 entries; сумма entries всех зарегистрированных advice files — 249 до runtime dedupe/backfill. Это не измерение количества уникальных доступных карточек в конкретном матче.
+- `bluff/body`, `history`, `weird_facts` подключены и содержат 11/14/18 entries соответственно.
+- Старые notes описывали curated advice batches и bluff staging/import. Эти временные `data/import/*` не требуются runtime и не считаются доказательством текущего локального наличия. Текущий результат проверяется по canonical packs, не по старому staging shortlist.
 
-- В registry подключены существующие thematic packs:
-  - `office`
-  - `party`
-  - `relationships`
-- Собран builder под `ru_qna_333k`:
-  - `tools/parsers/build_advice_staging_from_ru_qna.php`
-- Собран auto-staging слой:
-  - `data/import/advice_ru_qna_candidates.json`
-- Собран ручной shortlist:
-  - `data/import/advice_ru_qna_shortlist.json`
-- Добавлен manifest для advice import dry-run:
-  - `tools/parsers/partybattle_import_manifest.advice.example.json`
-- Auto-layer признан слишком сыроватым для прямого импорта.
-- Вместо него собраны curated rewrite batches:
-  - `data/import/advice_curated_rewrites.json`
-  - `data/import/advice_curated_rewrites_batch2.json`
+## Оставшаяся работа (later, P5)
 
-### Advice import status
+### Advice / Bluff
 
-- Первый curated batch уже импортирован в:
-  - `server/games/packs/partybattle/advice/base.json`
-- Второй curated batch тоже уже импортирован туда же.
-- Текущее состояние после последних импортов:
-  - `advice/base`: `179` entries
-  - общий активный `advice` pool: `249`
+- При расширении advice сделать небольшие curated batches: Q&A использовать как source of situations, переписывать в Party Battle tone и review до импорта.
+- Расширять bluff body/history/weird_facts по качеству и live-feedback; проверить playable pool в реальной игре.
 
-## Что сознательно НЕ сделано
+### Whoami / Joke theme files
 
-- Не импортирован сырой `ru_qna` слой напрямую.
-- Не строился auto-import через GigaChat в production packs.
-- Не трогались `caption` visual manifests для массового расширения.
-- Не делался новый bulk-import для `joke` из joke datasets, потому что качество плохое для Party Battle.
+- Review Whoami cinema/friendship/office/party/provocative и Joke office/relationships/party.
+- Решить, какие подключать, какие дочистить; registry сейчас их не использует. В этом reset packs/registry не изменялись.
 
-## Что осталось сделать
+### Caption / Joke / Meme
 
-### Advice
+- Caption расширять отдельным curated visual pool; 18plus/themed packs — кандидаты, не обязательный scope.
+- Joke — curated setup writing; meme — template-driven prompts. Blind joke dataset import не является главным путём.
 
-- Сделать еще 1-3 curated batches по `15-25` карточек.
-- Если развивать pipeline дальше:
-  - использовать `ru_qna` только как source of situations;
-  - финальный текст всегда переписывать в Party Battle tone;
-  - импортировать только после review.
+## Безопасный pipeline роста
 
-### Bluff
+1. Generation/download в локальный staging, не напрямую в canonical packs.
+2. Трансформация в формат режима и ручной review.
+3. Importer dry-run/preview.
+4. Импорт, проверка canonical pack и решение о registry.
+5. Live-feedback после отдельно разрешённой QA.
 
-- При желании нарастить `body/history/weird_facts` еще на один проход.
-- Проверить live-feel нового bluff pool в реальной игре.
+## Быстрый вход в тему
 
-### Whoami
-
-- Посмотреть неиспользуемые паки на диске:
-  - `cinema`
-  - `friendship`
-  - `office`
-  - `party`
-  - `provocative`
-- Решить, какие из них просто подключать в registry, а какие сначала preview.
-
-### Caption
-
-- Собрать curated visual expansion отдельно.
-- Не тащить caption blind import’ом из текстовых источников.
-
-### Joke / Meme
-
-- Не использовать blind bulk-import как основной путь.
-- Если возвращаться:
-  - `joke` -> curated setup writing
-  - `meme` -> template-driven prompt writing
-
-## Идея на будущее
-
-Возможный безопасный pipeline роста базы:
-
-1. Периодический AI-assisted generation в staging.
-2. Генерация НЕ в canonical packs, а в отдельные `data/import/*.json`.
-3. Короткий ручной review.
-4. Dry-run importer.
-5. Только потом импорт в `server/games/packs/partybattle/*`.
-
-Важно:
-- не пускать нейросеть напрямую в production packs;
-- не смешивать generation и import без review.
-
-## Быстрый вход в тему в следующий раз
-
-Если возвращаемся к контенту, сначала смотреть:
-
-1. `tools/parsers/partybattle_content_progress.md`
-2. `tools/parsers/partybattle_content_strategy.md`
-3. `tools/audit_partybattle_content.php`
-4. `data/import/advice_curated_rewrites.json`
-5. `data/import/advice_curated_rewrites_batch2.json`
-6. `data/import/bluff_*_facts.json`
+1. Этот файл и [content strategy](partybattle_content_strategy.md).
+2. `server/games/partybattle.php::pb_getPartyBattlePackRegistry()` и canonical files.
+3. `tools/audit_partybattle_content.php`.
+4. [Sources catalog](partybattle_sources.md) и [staging rules](../../data/import/README.md); source files при необходимости восстановить отдельно.

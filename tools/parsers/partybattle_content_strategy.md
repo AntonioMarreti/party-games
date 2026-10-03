@@ -2,6 +2,8 @@
 
 Этот файл фиксирует практичную стратегию наполнения Party Battle контентом.
 
+Coverage сверено 2026-10-03 с `3d050059faf5e7995f7c78f52bc9ea958fe4c061`: [content progress](partybattle_content_progress.md). Стратегия описывает будущий pipeline, а не подтверждённую production QA.
+
 Главная мысль:
 
 - нам нужен не просто "смешной текст";
@@ -304,16 +306,16 @@ Importer полезен не для всего подряд, а как инфр�
 
 ### Stage 4
 
-- подключить и использовать уже существующие thematic packs, где они реально готовы
+- после review решить о подключении существующих Whoami `cinema/friendship/office/party/provocative` и Joke `office/relationships/party`: эти файлы есть, но сейчас вне registry
 - после этого делать manual cleanup по live-feedback
 
 ## Источники и текущие рабочие файлы
 
 - importer: `tools/parsers/partybattle_importer.php`
-- current manifest: `tools/parsers/partybattle_import_manifest.current.json`
+- staging manifest: `tools/parsers/partybattle_import_manifest.current.json` (source paths могут отсутствовать локально/в git)
 - sources catalog: `tools/parsers/partybattle_sources.md`
-- import staging: `data/import/`
-- pack registry: `server/games/partybattle.php`
+- временный import staging: `data/import/` (не runtime и не durable source of truth)
+- durable coverage: canonical `server/games/packs/partybattle/*` + `server/games/partybattle.php::pb_getPartyBattlePackRegistry()`
 - content audit: `tools/audit_partybattle_content.php`
 
 ## Практический вывод

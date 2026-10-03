@@ -1,5 +1,7 @@
 # Packs Registry
 
+Registry/code snapshot: 2026-10-03, `3d050059faf5e7995f7c78f52bc9ea958fe4c061`. Durable runtime truth: canonical files **and** `pb_getPartyBattlePackRegistry()`; files on disk alone do not establish coverage.
+
 Canonical pack consumers in this repo:
 
 - `server/games/partybattle.php`
@@ -23,7 +25,7 @@ Canonical pack consumers in this repo:
 
 - `server/games/wordclash.php`
   Does not use `server/games/packs`.
-  Dictionary files live in `words/`.
+  Broad guess dictionaries and curated target snapshots live in `words/`. Secret selection uses DB active targets when seeded, JSON targets otherwise (classic WordClash has a last-resort broad fallback). DB suggestions/audit and seed/blacklist migrations 015/016 exist; production DB state requires verification.
 
 Notes:
 
@@ -39,8 +41,8 @@ Offline import workflow:
 
 1. Download the source dataset locally.
 2. Put it into a repo-relative folder such as `data/import/`.
-3. Run `php tools/parsers/partybattle_importer.php --source=data/import/file --mode=joke --theme=base --format=lines --rebuild`.
-4. Review the resulting canonical pack in `server/games/packs/partybattle/*`.
+3. Review/transform candidates first, then inspect `--dry-run` (for example `php tools/parsers/partybattle_importer.php --source=data/import/file --mode=advice --theme=base --format=lines --dry-run`).
+4. After review, import and inspect the canonical pack in `server/games/packs/partybattle/*`. `--rebuild` replaces the existing pool and is a separate deliberate choice.
 5. Commit the imported pack so the project stays self-contained.
 6. For batch imports, start from `tools/parsers/partybattle_import_manifest.russian_text.example.json`.
 
@@ -74,15 +76,15 @@ Parquet note:
 - parquet imports require `pyarrow` installed in that environment.
 - question-like sources such as `ru-QnA-333K` should usually use `profile=advice_question` instead of `advice_prompt`.
 
-Coverage snapshot:
+Registered coverage snapshot (all referenced files are present):
 
 - `meme`
   Themes: `base`, `18plus`, `office`, `relationships`, `school`, `it`, `simple_base`
   Gaps: baseline thematic coverage is good
 
 - `joke`
-  Themes: `base`, `18plus`, `office`, `relationships`, `party`
-  Gaps: baseline thematic coverage is good
+  Themes: `base`, `18plus`
+  Existing `office`, `relationships`, `party` files are not registered; review before deciding to enable them.
 
 - `advice`
   Themes: `base`, `18plus`, `office`, `relationships`, `party`
@@ -101,10 +103,12 @@ Coverage snapshot:
   Gaps: themes are present; next step is expanding fact count and curating for consistency
 
 - `whoami`
-  Themes: `base`, `18plus`, `cinema`, `friendship`, `office`, `party`, `provocative`
-  Gaps: theming is strongest here; no issue
+  Themes: `base`, `18plus`
+  Existing `cinema`, `friendship`, `office`, `party`, `provocative` files are not registered; theme resolution falls back to `base` for these names.
 
-Recommended next additions:
+Later candidates after curation (not commitments):
 
 - `caption/18plus.json`
 - themed `caption/*` image packs such as `office`, `relationships`, `party`
+
+Staging `data/import/*` and source manifests may reference local, temporary files absent from git. Recreate/locate reviewed sources before importing; they are not durable current state. For joke/meme use generation/curation-first per [content strategy](../../../tools/parsers/partybattle_content_strategy.md); blind joke bulk-import is not the main growth path.

@@ -8,17 +8,20 @@
 - runtime проекта не должен зависеть от доступности источника;
 - после выгрузки данные импортируются в `server/games/packs/partybattle/*` и коммитятся в репозиторий.
 
-## Приоритетные русские текстовые базы
+## Роль источников
+
+Основной pipeline задаёт [content strategy](partybattle_content_strategy.md): `bluff` — facts import + curation, `advice` — situations + rewrite/review, `whoami` — curated social prompts, `joke/meme` — generation/curation-first, `caption` — visual curation.
+
+Каталог ниже — кандидаты сырья, не готовые runtime packs и не подтверждение актуального формата/лицензии внешней выгрузки. Проверять экспорт и условия использования перед новым импортом. Joke corpora могут служить reference для ручной трансформации; blind bulk-import в joke/meme не является рекомендуемым путём.
+
+## Русские текстовые базы для reference/curation
 
 ### 1. Kaggle: Jokes in Russian Dataset (500K+)
 
 - URL: `https://www.kaggle.com/datasets/dokster/jokes-in-russian-dataset-500k`
 - Формат: `txt`, одна шутка на строку
 - Импортер: `format=lines`
-- Подходит для:
-  - `joke/base`
-  - `meme/base`
-  - тематических `meme/*` после ручной фильтрации
+- Роль: reference/raw premises для ручного переписывания; не прямой canonical импорт готовых шуток в `joke/meme/advice`.
 - Риск:
   - много мусора, повторы, не все строки годятся как prompt
 
@@ -27,10 +30,7 @@
 - URL: `https://www.kaggle.com/datasets/darkl1ght/russian-jokes-dataset`
 - Формат: табличный датасет, обычно `csv`
 - Импортер: `format=csv`, поле чаще всего `text`
-- Подходит для:
-  - `joke/base`
-  - `advice/base` после фильтрации
-  - `meme/base` после отбора коротких prompt-like строк
+- Роль: reference/raw premises для ручного переписывания; не прямой canonical импорт готовых шуток в `joke/meme/advice`.
 - Плюс:
   - большой объем
 
@@ -41,10 +41,7 @@
 - Импортер:
   - `format=csv`, поле `text`
   - или `format=lines` для `dataset.txt`
-- Подходит для:
-  - `joke/base`
-  - `advice/base`
-  - `meme/base` после дополнительного отбора
+- Роль: reference/raw premises для ручного переписывания; не прямой canonical импорт готовых шуток в `joke/meme/advice`.
 - Плюс:
   - удобный локальный экспорт
 
@@ -54,9 +51,7 @@
 - Формат: conversations-like JSON/parquet
 - Импортер:
   - если экспортирован в JSON conversations, `format=hf_conversations_json`
-- Подходит для:
-  - `joke/base`
-  - `meme/base`
+- Роль: reference/raw premises для ручного переписывания; не прямой canonical импорт готовых шуток в `joke/meme/advice`.
 - Плюс:
   - уже ближе к короткому humorous-style контенту
 
@@ -66,28 +61,11 @@
 - Использование:
   - скорее как reference / cleaner source
   - для более безопасного и менее токсичного backfill
-- Подходит для:
-  - `joke/base`
-  - `advice/base`
-
-### 6. Hugging Face: samedad/mem-and-russian-jokes-dataset
-
-- URL: `https://huggingface.co/datasets/samedad/mem-and-russian-jokes-dataset`
-- Формат: parquet / conversations-style
-- Импортер:
-  - после локального экспорта в JSON можно использовать `format=hf_conversations_json`
-- Подходит для:
-  - `joke/base`
-  - `meme/base`
-- Плюс:
-  - 522k строк
-  - MIT license
-- Риск:
-  - нужен отдельный отбор по коротким prompt-like строкам
+- Роль: reference/raw premises для ручного переписывания; не прямой canonical импорт готовых шуток в `joke/meme/advice`.
 
 ## Дополнительные полезные базы
 
-### 7. Hugging Face: nyuuzyou/ru-QnA-333K
+### 6. Hugging Face: nyuuzyou/ru-QnA-333K
 
 - URL: `https://huggingface.co/datasets/nyuuzyou/ru-QnA-333K`
 - Формат: parquet
@@ -100,7 +78,7 @@
 - Риск:
   - много серьезных и неигровых категорий, нужен сильный отбор
 
-### 8. Hugging Face: gorovuha/CleanComedyGold
+### 7. Hugging Face: gorovuha/CleanComedyGold
 
 - URL: `https://huggingface.co/datasets/gorovuha/CleanComedyGold`
 - Использование:
@@ -112,21 +90,21 @@
 
 ## Базы для фильтрации, а не для прямого импорта
 
-### 9. Hugging Face: Mikimi/MultiLingvAllToxic
+### 8. Hugging Face: Mikimi/MultiLingvAllToxic
 
 - URL: `https://huggingface.co/datasets/Mikimi/MultiLingvAllToxic`
 - Использование:
   - источник токсичных паттернов и дополнительного blacklist
   - не источник игрового контента
 
-### 10. Hugging Face: Mnwa/russian-toxic
+### 9. Hugging Face: Mnwa/russian-toxic
 
 - URL: `https://huggingface.co/datasets/Mnwa/russian-toxic`
 - Использование:
   - дополнительная база для расширения анти-токсичных фильтров
   - не для прямого импорта в Party Battle
 
-### 11. Hugging Face: Onidle/ru-merged-toxic-comments
+### 10. Hugging Face: Onidle/ru-merged-toxic-comments
 
 - URL: `https://huggingface.co/datasets/Onidle/ru-merged-toxic-comments`
 - Использование:
@@ -153,19 +131,12 @@
 - полезны для image-question задач, но не дают Party Battle-ready шуток или prompts;
 - можно использовать только точечно, не как основной источник.
 
-## Рекомендуемый порядок импорта
+## Рекомендуемый порядок работы с контентом (later)
 
-1. `joke/base`
-2. `advice/base`
-3. `meme/base`
-4. тематические `meme/*` и `joke/advice/*`
-5. потом уже отдельный curated pipeline для `caption`
+1. `bluff`: fact sources → playable facts → curation → importer dry-run.
+2. `advice`: `ru-QnA-333K` или curated situations → rewrite → review → dry-run.
+3. `whoami`: review существующих thematic files перед решением о registry, затем curated social sources при необходимости.
+4. `caption`: отдельно curated visual pool.
+5. `joke/meme`: generation по правилам режима + ручной review; corpora выше только вспомогательный reference.
 
-## Практический shortlist на сейчас
-
-Если идти без лишней распыленности, я бы работал в таком порядке:
-
-1. `russian_jokes.txt` как bulk-source для `joke`
-2. `CleanComedy` как cleaner/reference source
-3. `ru-QnA-333K` как отдельный кандидат под `advice`
-4. `mem-and-russian-jokes-dataset` как дополнительный источник для `meme`
+Текущий coverage и оставшиеся тематические подключения: [content progress](partybattle_content_progress.md). Временные `data/import/*` не обязаны лежать в git; durable результат — canonical packs вместе с registry. Manifests не доказывают импорт и не заменяют проверку source files.
