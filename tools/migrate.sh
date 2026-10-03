@@ -31,6 +31,7 @@ MIGRATION_FILE=""
 case "$MIGRATION_ID" in
     "016") MIGRATION_FILE="server/migrations/016_wordclash_blacklist_to_db.php" ;;
     "017") MIGRATION_FILE="server/migrations/017_add_qr_auth_sessions.php" ;;
+    "018") MIGRATION_FILE="server/migrations/018_add_scheduled_game_manual_reminders.php" ;;
     *)
         echo "Error: Migration ID '$MIGRATION_ID' is not in the allowlist."
         exit 1

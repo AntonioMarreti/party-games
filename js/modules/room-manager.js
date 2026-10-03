@@ -913,6 +913,16 @@ async function createScheduledGame() {
     }
 }
 
+async function resolveScheduledDeepLinkGames(games) {
+    const targetId = Number(window.pendingScheduledGameDeepLinkId || 0);
+    if (!targetId || games.some(game => Number(game.id) === targetId)) return games;
+    const target = await window.apiRequest({
+        action: 'get_scheduled_games', scheduled_game_id: targetId
+    });
+    if (!target || target.status !== 'ok') throw new Error('Scheduled lookup failed');
+    return [...games, ...(Array.isArray(target.games) ? target.games : [])];
+}
+
 async function loadScheduledGames() {
     const container = document.getElementById('scheduled-games-list');
     if (!container || isScheduledGamesLoading) return;
@@ -920,8 +930,18 @@ async function loadScheduledGames() {
     isScheduledGamesLoading = true;
     container.innerHTML = '<p class="text-center text-muted small py-4">Загружаем расписание...</p>';
 
-    const res = await window.apiRequest({ action: 'get_scheduled_games' });
-    isScheduledGamesLoading = false;
+    let res;
+    try {
+        res = await window.apiRequest({ action: 'get_scheduled_games' });
+        if (res?.status === 'ok') {
+            res.games = await resolveScheduledDeepLinkGames(Array.isArray(res.games) ? res.games : []);
+        }
+    } catch (error) {
+        res = null;
+    } finally {
+        isScheduledGamesLoading = false;
+    }
+    currentScheduledGamesById = new Map();
 
     const getScheduledHeaderHtml = (withAction = true) => `
         <div class="public-rooms-header rooms-list-header d-flex align-items-center justify-content-between mb-2">
@@ -948,6 +968,7 @@ async function loadScheduledGames() {
     }
 
     if (!Array.isArray(res.games) || res.games.length === 0) {
+        consumePendingScheduledDeepLink([], container);
         container.innerHTML = `
             ${getScheduledHeaderHtml(false)}
             <div class="scheduled-game-card rooms-empty-card text-center">
@@ -1015,7 +1036,7 @@ async function loadScheduledGames() {
         } else if (isHost) {
             primaryAction = canOpen
                 ? `<button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openScheduledGame(${Number(game.id)})">Открыть</button>`
-                : `<span class="scheduled-game-disabled-action" aria-disabled="true">Откроется после набора игроков</span>`;
+                : `<span class="scheduled-game-disabled-action" aria-disabled="true">Можно открыть за 5 минут до старта</span>`;
             secondaryAction = `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="rescheduleScheduledGame(${Number(game.id)})">Перенести игру</button>${hasRealSubscribers ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendScheduledGameManualReminder(${Number(game.id)})">Напомнить</button>` : ''}<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelScheduledGame(${Number(game.id)})">Отменить игру</button>`;
         } else {
             primaryAction = spotsLeft <= 0 && !isSubscribed
@@ -1174,11 +1195,14 @@ async function sendScheduledGameManualReminder(id) {
     if (res?.status === 'ok') {
         const sentCount = Number(res.sent_count || 0);
         const skippedCount = Number(res.skipped_count || 0);
-        let message = res.message || `Напоминание отправлено: ${sentCount} игрокам`;
+        const recipientCount = Number(res.recipient_count || 0);
+        const partial = sentCount > 0 && sentCount < recipientCount;
+        let message = partial ? `Отправлено ${sentCount} из ${recipientCount}`
+            : (res.message || `Напоминание отправлено: ${sentCount} игрокам`);
         if (skippedCount > 0) {
             message += `, пропущено: ${skippedCount}`;
         }
-        showScheduledFeedback('Напоминание отправлено', message, 'success');
+        showScheduledFeedback(partial ? 'Отправлено частично' : 'Напоминание отправлено', message, partial ? 'warning' : 'success');
         return;
     }
 
