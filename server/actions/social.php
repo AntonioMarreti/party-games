@@ -440,45 +440,54 @@ function action_invite_friends($pdo, $user, $data) {
     foreach ($friends as $friend) {
         if (!empty($friend['telegram_id'])) {
             try {
-                // Determine user name
                 $senderName = !empty($user['custom_name']) ? $user['custom_name'] : $user['first_name'];
-                
-                $message = "<tg-emoji emoji-id=\"6023852878597200124\">🎮</tg-emoji> <b>Приглашение в игру!</b>\n\n";
-                $message .= "$senderName зовет тебя поиграть!\n";
-                $message .= "Заходи, пока место не заняли!";
+                $senderHtml = htmlspecialchars((string) $senderName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $roomUrl = "https://t.me/" . BOT_USERNAME . "/app?startapp={$room['room_code']}";
+                $urlHtml = htmlspecialchars($roomUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $richHtml = '<h3>🎮 Приглашение в игру</h3>'
+                    . "<p>{$senderHtml} зовёт тебя поиграть!</p>"
+                    . '<p>Заходи, пока место не заняли!</p>'
+                    . '<tg-button-row align="center">'
+                    . '<tg-button type="url" style="primary" url="' . $urlHtml . '">Зайти в комнату</tg-button>'
+                    . '</tg-button-row>';
 
-                $keyboard = [
-                    'inline_keyboard' => [[
-                        [
-                            'text' => 'Зайти в комнату',
-                            'url' => "https://t.me/" . BOT_USERNAME . "/app?startapp={$room['room_code']}"
-                        ]
-                    ]]
-                ];
-
-                TelegramLogger::sendAnalytics("Invite Sent", "User {$user['id']} invited friend {$friend['id']} to room $roomId");
-
-                // Use direct curl for custom message with keyboard
-                $url = "https://tgproxy.regucka1998.workers.dev/bot" . BOT_TOKEN . "/sendMessage";
-                $postData = [
+                $method = 'sendRichMessage';
+                $result = TelegramLogger::sendRequest($method, [
                     'chat_id' => $friend['telegram_id'],
-                    'text' => $message,
-                    'parse_mode' => 'HTML',
-                    'reply_markup' => json_encode($keyboard)
-                ];
+                    'rich_message' => ['html' => $richHtml],
+                ]);
+                $response = is_string($result) ? json_decode($result, true) : null;
 
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 2); 
-                curl_exec($ch);
-                curl_close($ch);
-                
+                // Only an explicit API rejection is safe to retry with the legacy format.
+                // A timeout or invalid response may hide a delivered message.
+                if (is_array($response) && ($response['ok'] ?? null) === false) {
+                    $message = "<tg-emoji emoji-id=\"6023852878597200124\">🎮</tg-emoji> <b>Приглашение в игру!</b>\n\n";
+                    $message .= "{$senderHtml} зовет тебя поиграть!\n";
+                    $message .= "Заходи, пока место не заняли!";
+                    $method = 'sendMessage';
+                    $result = TelegramLogger::sendRequest($method, [
+                        'chat_id' => $friend['telegram_id'],
+                        'text' => $message,
+                        'parse_mode' => 'HTML',
+                        'reply_markup' => ['inline_keyboard' => [[[
+                            'text' => 'Зайти в комнату',
+                            'url' => $roomUrl,
+                        ]]]],
+                    ]);
+                    $response = is_string($result) ? json_decode($result, true) : null;
+                }
+
+                if (!is_array($response) || ($response['ok'] ?? null) !== true) {
+                    // Do not log raw transport data: it can contain tokens or personal data.
+                    error_log('Room invite delivery: ' . $method . ' '
+                        . (is_array($response) && ($response['ok'] ?? null) === false ? 'rejected' : 'ambiguous'));
+                    continue;
+                }
                 $sentCount++;
-            } catch (Exception $e) {
-                TelegramLogger::logError('invite_send_error', ['user' => $friend['id'], 'msg' => $e->getMessage()]);
+                TelegramLogger::sendAnalytics("Invite Sent", "User {$user['id']} invited friend {$friend['id']} to room $roomId");
+            } catch (Throwable $e) {
+                // Keep recipient failures isolated; an exception is not proof of non-delivery.
+                error_log('Room invite transport/analytics exception');
             }
         }
     }
