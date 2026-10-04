@@ -1,12 +1,6 @@
 # Backlog
 
-Сверено с кодом на 2026-10-03, commit `3d050059faf5e7995f7c78f52bc9ea958fe4c061`. Приоритеты и реализованные foundations: [FUTURE_WORK.md](FUTURE_WORK.md). Здесь только незавершённая работа; verification не означает отсутствующую реализацию.
-
-## Product / retention (P1)
-
-- [ ] Проверить Scheduled retention loop в production: create → invite → subscribe → reminder → open → join; отдельно перенос, отмена, unsubscribe и недоступная старая ссылка. Нужны подтверждение scheduler и реальной доставки, не только debug accounts.
-- [ ] Добавить maintenance cleanup `expired/cancelled` scheduled records старше 90 дней и связанных reminder/subscription данных с явной политикой хранения. TODO есть в `scheduled_cleanup_expired()`, отдельный job не найден.
-- [ ] Исправить disabled-copy «Откроется после набора игроков»: UI/server открывают игру по времени (за 5 минут), а недобор min_players на сервере даёт предупреждение, не запрет.
+Статус обновлён 2026-10-04 на baseline `6f18f79a86a7f9deefb665717e7ec40afbe8c22e`. P1 — Scheduled Games COMPLETE: P1-A deployed, production cron и реальная automatic Telegram delivery подтверждены владельцем. Текущий активный приоритет — P2. Приоритеты и реализованные foundations: [FUTURE_WORK.md](FUTURE_WORK.md). P2–P5 сохраняют предыдущую сверку от 2026-10-03; нового аудита не проводилось.
 
 ## Telegram integration (P2)
 
@@ -38,3 +32,7 @@
 - [ ] Party Battle: curated advice batches, live-feedback для bluff и curated caption visual expansion; joke/meme развивать generation/curation-first. Детали в [content strategy](tools/parsers/partybattle_content_strategy.md).
 
 WordClash target dictionaries и DB-backed active targets/suggestions/audit уже реализованы; старая задача создания targets снята. Это не подтверждение состояния production DB.
+
+## Deferred maintenance / data policy
+
+- [ ] Добавить maintenance cleanup `expired/cancelled` scheduled records старше 90 дней и связанных reminder/subscription данных после отдельного product/data retention decision. Cleanup не реализован и сознательно отложен; не блокирует Scheduled Games completion (P1).

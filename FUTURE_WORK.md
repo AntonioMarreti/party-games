@@ -1,33 +1,23 @@
 # Future Work
 
-Status checked against repository at commit `3d050059faf5e7995f7c78f52bc9ea958fe4c061`.
-Дата сверки: 2026-10-03. HEAD = origin/main на момент preflight. Это рабочая приоритизация после documentation reset, которую можно пересматривать по результатам использования.
+Status updated at repository baseline `6f18f79a86a7f9deefb665717e7ec40afbe8c22e`.
+Дата обновления: 2026-10-04. HEAD = origin/main на момент preflight. P1 закрыт; текущий первый незавершённый приоритет — P2.
 
-Проверены код и открытые GitHub issues; production, migrations, scheduler и устройства не проверялись. Конкретные задачи: [BACKLOG.md](BACKLOG.md); ручные сценарии: [smoke checklist](docs/testing/smoke-checklist.md).
+Статус P1 основан на выполненном production rollout и подтверждении владельцем cron/реальной automatic Telegram delivery. P2–P5 сохраняют результаты предыдущей сверки кода и GitHub issues от 2026-10-03; нового аудита не проводилось. Конкретные задачи: [BACKLOG.md](BACKLOG.md); ручные сценарии: [smoke checklist](docs/testing/smoke-checklist.md).
 
-## P1 — Scheduled Games completion
+## P1 — Scheduled Games — COMPLETE
 
-### Уже есть
+- Реализованы create/list/subscribe/unsubscribe/reschedule/cancel/open, scheduled deep links и вход в live-room. Targeted `scheduled_<id>` lookup не зависит от общего LIMIT 30 или пустого списка.
+- Host открывает комнату начиная с T−5; disabled-copy соответствует времени. Недобор min_players даёт warning. Scheduled game остаётся доступной до T+1h, затем lazy cleanup переводит её в `expired`; orphaned live-room также истекает.
+- Active subscribe — idempotent no-op; cancelled → subscribed проверяет capacity и сбрасывает reminder mark. Есть manual reminders с корректными zero/partial/full результатами и cooldown после фактической delivery, уведомления при переносе/отмене/открытии и automatic host/subscriber reminders с marks успешной отправки и MySQL lock.
+- P1-A deployed в commit `6f18f79`: migration 018 applied, `scheduled_game_manual_reminders` ready, runtime deploy и SHA-256 verification PASS, asset version 3544. Runtime DDL manual reminders удалён; tests/checks PASS.
+- Владелец подтвердил production cron: `/usr/bin/php /home/c68695/lapin.live/www/mpg/server/jobs/send_scheduled_game_reminders.php`, расписание `* * * * *` (каждую минуту), соответствует фиксированному reminder window 5 минут. Реальная automatic Telegram delivery ранее проверена владельцем: host reminder в 19:37 для старта 19:42 и в 23:15 для старта 23:20.
 
-- `server/actions/scheduled_games.php` и API router: create, list, subscribe/unsubscribe, reschedule, cancel, open; host/access/status/capacity guards.
-- `room-manager.js`, `scheduled-game-invite.js`, `auth-manager.js` и `app.js`: расписание, `scheduled_<id>` deep link, подсветка карточки/сообщение о недоступной игре, invite/share через Telegram URL.
-- Host открывает публичную waiting-комнату за 5 минут до старта или позже; scheduled становится `live`, участники входят через room flow. Недобор минимума возвращает warning.
-- Ручное host reminder для subscribed участников с cooldown 10 минут; уведомления подписчиков при переносе, отмене и открытии комнаты.
-- `server/jobs/send_scheduled_game_reminders.php`: автоматическое напоминание host/subscribers в окне ближайших 5 минут, MySQL lock и отметки успешной отправки. Поле `remind_before_minutes` в схеме не означает configurable schedule: job использует фиксированное окно.
-- Expiry в scheduled actions: неоткрытые игры старше часа → `expired`, orphaned live-room → `expired`; room lifecycle также помечает связанную live-запись при удалении комнаты.
-- Схема и совместимые обновления в migration `007_add_scheduled_games.php`. Наличие migration не подтверждает её применение в production.
-
-### Осталось
-
-- Закончить retention loop проверкой production scheduler, delivery и полного create/invite/subscribe/reminder/open/join сценария, включая перенос/отмену. Repository job не доказывает установленный или работающий cron.
-- Maintenance cleanup старых `expired/cancelled` записей (>90 дней): TODO есть, отдельного job в репозитории нет. Это отличается от уже реализованного expiry по запросу.
-- Согласовать disabled-copy кнопки открытия с временным guard: сейчас текст обещает ожидание набора игроков.
-
-### Не сейчас
-
-Повторная разработка subscriptions/reminders MVP, новые retention механики, replay/history backfill без продуктового запроса.
+Deferred: maintenance cleanup `expired/cancelled` >90 дней не реализован, требует отдельного product/data retention decision и не блокирует завершение P1.
 
 ## P2 — Telegram-native room/scheduled integration
+
+Текущий активный приоритет.
 
 ### Уже есть
 
