@@ -1,9 +1,9 @@
 # Future Work
 
-Status updated at repository baseline `6f18f79a86a7f9deefb665717e7ec40afbe8c22e`.
-Дата обновления: 2026-10-04. HEAD = origin/main на момент preflight. P1 закрыт; текущий первый незавершённый приоритет — P2.
+Status updated at repository baseline `3f1b564f39b2a4031c2ca80451168a83bf229cdf`; P3.1 implementation — локальные изменения поверх этого HEAD.
+Дата обновления: 2026-10-05. HEAD = origin/main на момент preflight. P1/P2 COMPLETE; текущий первый незавершённый приоритет — P3.
 
-Статус P1 основан на выполненном production rollout и подтверждении владельцем cron/реальной automatic Telegram delivery. P2–P5 сохраняют результаты предыдущей сверки кода и GitHub issues от 2026-10-03; нового аудита не проводилось. Конкретные задачи: [BACKLOG.md](BACKLOG.md); ручные сценарии: [smoke checklist](docs/testing/smoke-checklist.md).
+Статус P1 основан на выполненном production rollout и подтверждении владельцем cron/реальной automatic Telegram delivery. P2 COMPLETE по подтверждённому product status; P3.1 — локальная реализация и проверки. Остальные результаты предыдущей сверки от 2026-10-03 сохранены; нового общего аудита не проводилось. Конкретные задачи: [BACKLOG.md](BACKLOG.md); ручные сценарии: [smoke checklist](docs/testing/smoke-checklist.md).
 
 ## P1 — Scheduled Games — COMPLETE
 
@@ -15,32 +15,21 @@ Status updated at repository baseline `6f18f79a86a7f9deefb665717e7ec40afbe8c22e`
 
 Deferred: maintenance cleanup `expired/cancelled` >90 дней не реализован, требует отдельного product/data retention decision и не блокирует завершение P1.
 
-## P2 — Telegram-native room/scheduled integration
+## P2 — Telegram-native integration — COMPLETE
 
-Текущий активный приоритет.
+- Room invite → Rich Messages.
+- Scheduled reminders/state notifications → Rich Messages; scheduled custom emoji deployed.
+- Friendship request/accepted notifications → Rich Messages.
 
-### Уже есть
-
-- Room deep links, QR invite/scan и copy invite; friend invite через bot (`social.php`).
-- Scheduled invite (`t.me/share/url`), автоматические/ручные reminders и state-change notifications.
-- `/start` в `bot.php` передаёт entry parameter в Mini App; friend request/accept notifications существуют.
-- Bot flows используют обычный `sendMessage`: `/start`, friend invite/request/accept, reminders и перенос/открытие с `inline_keyboard`; cancellation отправляет текст без кнопки. QR/copy и post-game share не являются bot sendMessage flows.
-
-### Осталось
-
-[Telegram Bot API](https://core.telegram.org/bots/api#richmessagebutton) описывает Rich Messages и rich-message buttons. В Party Games их реализации пока нет.
-
-1. Modernize room invite: полезный структурированный контекст и entry CTA с совместимым fallback.
-2. После проверки этого flow перейти к scheduled-game invite/reminder и правильным scheduled/live CTA.
-3. Другие bot notifications оценивать отдельно, если есть UX-польза.
-
-Поддержку клиентов и реальную доставку нужно проверять на устройствах; актуальное webhook configuration из кода не следует.
+Friendship native Telegram spot-check — deferred/non-blocking; завершение P2 подтверждено product status.
 
 ### Не сейчас
 
 Массовая миграция всех bot messages, изменения gameplay, обязательное внедрение ephemeral messages. Ephemeral — отдельный инструмент для конкретного UX.
 
 ## P3 — Post-game sharing completion
+
+Текущий активный приоритет.
 
 ### Уже есть
 
@@ -49,13 +38,12 @@ Deferred: maintenance cleanup `expired/cancelled` >90 дней не реализ
 - Обычный share открывает `t.me/share/url` с текстом и invite URL через Telegram или browser; он не прикладывает PNG к chat message.
 - Story вызывает `Telegram.WebApp.shareToStory` с public media URL: provider media либо API `generate_share_card`.
 - `server/actions/share.php` генерирует PNG 1080×1920 через GD, хранит в `uploads/share-cards`, возвращает публичный URL; есть reuse по hash и очистка карточек с TTL 7 дней. Router и общий script подключены.
-- Если Story API или media URL отсутствует, используется обычный share. `widget_link` поддержан только при явном `story.widgetLink` provider, автоматически из inviteLink не создаётся.
+- Если Story API или media URL отсутствует, используется обычный share. P3.1 также покрывает ошибку генерации/API и throw/rejection `shareToStory`: fallback максимум один раз за attempt, успешный Story без fallback (локальный regression smoke; без production QA/deploy). `widget_link` поддержан только при явном `story.widgetLink` provider, автоматически из inviteLink не создаётся.
 
 ### Осталось
 
 - Real-device Story/share QA (Telegram/iOS/Android), доступность публичной PNG, GD/шрифты/permissions в production, кириллица, длинные поля и отмена.
 - Polish существующей share-card; единый полезный CTA/deep link после финала и закрытия комнаты.
-- Проверить fallback consistency для rejected API calls/ошибок `shareToStory`, помимо уже существующего fallback при отсутствии API/URL.
 - Выбрать следующую provider coverage по продуктовой пользе: Bunker, Blokus, Minesweeper BR, Spyfall, Backgammon и WordClash Party пока не зарегистрированы. Это не самостоятельные gameplay bugs.
 - Для Bunker определить final/history payload перед общим summary: game-specific outro есть, но общего provider нет. Общая history infrastructure поддерживает расширенные поля по доступности схемы; старое утверждение о выполненной production migration 008 не подтверждено в этом reset.
 

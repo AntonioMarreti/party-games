@@ -1,19 +1,21 @@
 # Backlog
 
-Статус обновлён 2026-10-04 на baseline `6f18f79a86a7f9deefb665717e7ec40afbe8c22e`. P1 — Scheduled Games COMPLETE: P1-A deployed, production cron и реальная automatic Telegram delivery подтверждены владельцем. Текущий активный приоритет — P2. Приоритеты и реализованные foundations: [FUTURE_WORK.md](FUTURE_WORK.md). P2–P5 сохраняют предыдущую сверку от 2026-10-03; нового аудита не проводилось.
+Статус обновлён 2026-10-05 на baseline `3f1b564f39b2a4031c2ca80451168a83bf229cdf` (P3.1 — локальные изменения поверх HEAD). P1 — Scheduled Games COMPLETE: P1-A deployed, production cron и реальная automatic Telegram delivery подтверждены владельцем. P2 COMPLETE; текущий активный приоритет — P3. Приоритеты и реализованные foundations: [FUTURE_WORK.md](FUTURE_WORK.md). Общего аудита не проводилось; остальные статусы сохранены.
 
-## Telegram integration (P2)
+## Telegram integration (P2) — COMPLETE
 
-- [ ] Modernize **room invite** с Rich Messages/rich-message buttons: сохранить entry deep link и fallback; проверить поддерживаемые клиенты и фактический UX.
-- [ ] Следующим отдельным шагом адаптировать **scheduled invite/reminder**, сохранив различие scheduled-card и live-room CTA.
-- [ ] Оценивать другие bot notifications только после этих двух flows. Rich Messages пока отсутствуют в реализации; ephemeral messages выбирать только под конкретный UX.
+- [x] Room invite → Rich Messages.
+- [x] Scheduled reminders/state notifications → Rich Messages; scheduled custom emoji deployed.
+- [x] Friendship request/accepted notifications → Rich Messages.
 
-## Sharing (P3)
+Friendship native Telegram spot-check — deferred/non-blocking (подтверждённый product status).
+
+## Sharing (P3) — текущий активный приоритет
 
 - [ ] Провести real-device QA обычного share и Story на Telegram Android/iOS: public PNG, кириллица, отмена, API availability и fallback при недоступном media.
 - [ ] Довести visual/product polish существующей share-card: длинные имена/outcome, титулы, читаемость и CTA.
 - [ ] Согласовать invite/deep-link и CTA после финала, в том числе когда исходная комната уже закрыта; определить политику Story widget_link (сейчас только опциональное поле provider).
-- [ ] Проверить единообразие fallback при ошибке генерации/API: сейчас fallback покрывает отсутствие Story API/media URL, но вызовы могут отклониться/бросить исключение.
+- [x] P3.1: normal share fallback при ошибке генерации/API и throw/rejection `shareToStory`, максимум один раз за Story attempt; локальный regression smoke, без production QA/deploy.
 - [ ] Выбрать подходящие следующие игры для shared provider (Bunker, Blokus, Minesweeper BR, Spyfall, Backgammon, WordClash Party пока без регистрации). Отсутствие provider само по себе не баг; для Bunker сначала определить итог/history payload.
 
 ## Technical / security (P4)

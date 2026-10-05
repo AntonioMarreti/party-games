@@ -330,24 +330,29 @@
             return;
         }
 
-        const mediaUrl = await generateStoryMediaUrl(summary);
-        if (!mediaUrl) {
-            share(gameId, summary);
-            return;
+        try {
+            const mediaUrl = await generateStoryMediaUrl(summary);
+            if (mediaUrl) {
+                const params = {
+                    text: summary.story?.text || formatShareText(summary)
+                };
+
+                if (summary.story?.widgetLink?.url) {
+                    params.widget_link = {
+                        url: summary.story.widgetLink.url,
+                        name: summary.story.widgetLink.name || 'Играть'
+                    };
+                }
+
+                await window.Telegram.WebApp.shareToStory(mediaUrl, params);
+                return;
+            }
+        } catch (error) {
+            // Technical generation/Story errors use the same normal-share fallback.
         }
 
-        const params = {
-            text: summary.story?.text || formatShareText(summary)
-        };
-
-        if (summary.story?.widgetLink?.url) {
-            params.widget_link = {
-                url: summary.story.widgetLink.url,
-                name: summary.story.widgetLink.name || 'Играть'
-            };
-        }
-
-        window.Telegram.WebApp.shareToStory(mediaUrl, params);
+        // Keep fallback outside the try so a failed share cannot trigger it twice.
+        share(gameId, summary);
     }
 
     function playAgain(gameId) {
