@@ -28,6 +28,8 @@ ini_set('error_log', $logFile);
 try {
     foreach ([true,false] as $isHost) {
         $body = scheduledReminderMessage($game,$isHost);
+        reminderCheck(str_starts_with($body, $isHost?'Ваша игра «':'Игра «'), 'Body has no heading emoji prefix');
+        reminderCheck(!str_contains($body, '<tg-emoji'), 'Body has no custom emoji markup');
         $label = $isHost?'Открыть комнату':'Открыть игру';
         foreach ([
             [[$ok],true,['sendRichMessage']],
@@ -45,8 +47,9 @@ try {
             reminderCheck(scheduledReminderSend(1001,$body,$label,$url,false)===$delivered,'Only confirmed delivery returns true');
             reminderCheck(array_column(TelegramLogger::$calls,'method')===$methods,'Explicit-only fallback');
             $html=TelegramLogger::$calls[0]['params']['rich_message']['html'];
-            reminderCheck(str_contains($html,'<h3>🎮 Скоро игра</h3>'),'Automatic heading');
+            reminderCheck(str_contains($html,'<h3><tg-emoji emoji-id="6023852878597200124">🎮</tg-emoji> Скоро игра</h3>'),'Automatic heading');
             reminderCheck(str_contains($html,$escaped) && !str_contains($html,$game['title']) && !str_contains($html,'&amp;lt;'),'Title escaped once');
+            reminderCheck(substr_count($html, '<tg-emoji ') === 1, 'Exactly one custom emoji in Rich heading');
             reminderCheck(str_contains($html,'<b>19:42</b>'),'Existing time preserved');
             reminderCheck(str_contains($html,'<tg-button-row align="center"><tg-button type="url" style="primary" url="'.$url.'">'.$label.'</tg-button>'),'Host/subscriber primary centered CTA and scheduled link');
             reminderCheck(str_contains($html,$isHost?'Записались: 1/4. Откройте комнату':'Хост скоро откроет комнату'),'Existing role-specific body');

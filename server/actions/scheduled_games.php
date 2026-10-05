@@ -286,10 +286,25 @@ function scheduled_create_room($pdo, $user, $game, $hostId)
     return ['room_id' => $roomId, 'room_code' => $code];
 }
 
+function scheduled_rich_heading($heading)
+{
+    // Only this fixed mapping may contribute raw custom-emoji markup.
+    $emoji = [
+        'Напоминание об игре' => ['6021536113108196448', '🔔'],
+        'Время игры изменилось' => ['6035276353438227060', '⏰'],
+        'Комната открыта' => ['6019076101869934284', '🚪'],
+        'Игра отменена' => ['5807692706507399432', '❌'],
+    ];
+    $text = htmlspecialchars($heading, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    if (!isset($emoji[$heading])) return $text;
+    [$id, $fallback] = $emoji[$heading];
+    return '<tg-emoji emoji-id="' . $id . '">' . $fallback . '</tg-emoji> ' . $text;
+}
+
 // $text is the existing HTML-safe notification body; preserve it for fallback.
 function scheduled_send_rich_notification($chatId, $heading, $text, $buttonText = null, $buttonUrl = null)
 {
-    $html = '<h3>' . htmlspecialchars($heading, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h3>'
+    $html = '<h3>' . scheduled_rich_heading($heading) . '</h3>'
         . '<p>' . str_replace("\n", '<br>', $text) . '</p>';
     $fallback = [
         'chat_id' => $chatId, 'text' => $text,
@@ -321,7 +336,7 @@ function scheduled_send_rich_notification($chatId, $heading, $text, $buttonText 
     return false;
 }
 
-function scheduled_notify_subscribers($pdo, $gameId, $text, $buttonText = null, $buttonUrl = null, $heading = '🎮 Напоминание об игре')
+function scheduled_notify_subscribers($pdo, $gameId, $text, $buttonText = null, $buttonUrl = null, $heading = 'Напоминание об игре')
 {
     if (!class_exists('TelegramLogger')) {
         return;
@@ -899,7 +914,7 @@ function action_send_scheduled_game_manual_reminder($pdo, $user, $data)
 
         foreach ($recipients as $recipient) {
             if (scheduled_send_rich_notification(
-                $recipient['telegram_id'], '🎮 Напоминание об игре', $message, 'Открыть игру', $buttonUrl
+                $recipient['telegram_id'], 'Напоминание об игре', $message, 'Открыть игру', $buttonUrl
             )) {
                 $sentCount++;
                 continue;

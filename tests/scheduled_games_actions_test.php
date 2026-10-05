@@ -178,6 +178,7 @@ check(!str_contains($source,'CREATE TABLE'),'Action source contains no runtime D
 $migration=file_get_contents(__DIR__.'/../server/migrations/018_add_scheduled_game_manual_reminders.php');
 check(str_contains($migration,'CREATE TABLE IF NOT EXISTS scheduled_game_manual_reminders'),'Migration has repeat-safe create');
 // P2.2 transport and notification regression cases, retaining all P1 checks above.
+check(scheduled_rich_heading('<tg-emoji emoji-id="1">X</tg-emoji>') === '&lt;tg-emoji emoji-id=&quot;1&quot;&gt;X&lt;/tg-emoji&gt;', 'Unknown heading cannot inject raw markup');
 $reject = json_encode(['ok' => false, 'error_code' => 400]);
 $title = '<b>A&B "title"</b>\' <tg-button>';
 $escapedTitle = htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -202,7 +203,7 @@ foreach ([
     check(count($pdo->manual)===($expectedCount>0?1:0), 'Manual zero/partial cooldown semantics');
     check(TelegramLogger::$methods===$methods, 'Manual rich/fallback/ambiguous methods');
     $html=TelegramLogger::$sent[0]['rich_message']['html'];
-    check(str_contains($html, '<h3>🎮 Напоминание об игре</h3>') && str_contains($html,$escapedTitle), 'Manual heading and escaped body');
+    check(str_contains($html, '<h3><tg-emoji emoji-id="6021536113108196448">🔔</tg-emoji> Напоминание об игре</h3>') && str_contains($html,$escapedTitle), 'Manual heading and escaped body');
     check(!str_contains($html,$title) && !str_contains($html,'&amp;lt;'), 'No title injection or double escaping');
     check(str_contains($html, '<tg-button-row align="center"><tg-button type="url" style="primary" url="'.$scheduledUrl.'">Открыть игру</tg-button>'), 'Manual existing scheduled CTA');
     if (in_array('sendMessage',$methods,true)) {
@@ -232,7 +233,7 @@ foreach (['reschedule','open','cancel'] as $event) {
     check(str_contains($html,$escapedTitle) && !str_contains($html,$title) && !str_contains($html,'&amp;lt;'),'Event title escaped once');
     if ($event==='cancel') {
         check($pdo->games[1]['status']==='cancelled','Cancel lifecycle preserved');
-        check(str_contains($html,'<h3>Игра отменена</h3>') && !str_contains($html,'<tg-button'),'Cancel has no CTA');
+        check(str_contains($html,'<h3><tg-emoji emoji-id="5807692706507399432">❌</tg-emoji> Игра отменена</h3>') && !str_contains($html,'<tg-button'),'Cancel has no CTA');
         check(TelegramLogger::$methods===['sendRichMessage','sendMessage','sendRichMessage'],'Cancel fallback and recipient isolation');
         check(!isset(TelegramLogger::$sent[1]['reply_markup']) && TelegramLogger::$sent[1]['text']==="Игра «{$escapedTitle}» отменена.",'Cancel plain fallback');
     } else {
@@ -242,9 +243,9 @@ foreach (['reschedule','open','cancel'] as $event) {
         check(str_contains($html,'style="primary" url="'.$expectedUrl.'">'.$label.'</tg-button>'),'Event CTA destination');
         if ($event==='open') {
             check($pdo->games[1]['status']==='live' && !str_contains($html,'startapp=scheduled_'),'Open uses room flow');
-            check(str_contains($html,'<h3>Комната открыта</h3>'),'Open heading');
+            check(str_contains($html,'<h3><tg-emoji emoji-id="6019076101869934284">🚪</tg-emoji> Комната открыта</h3>'),'Open heading');
         } else {
-            check(str_contains($html,'<h3>Время игры изменилось</h3>') && str_contains($html,date('d.m.Y H:i',strtotime($data['starts_at']))),'Reschedule heading/time');
+            check(str_contains($html,'<h3><tg-emoji emoji-id="6035276353438227060">⏰</tg-emoji> Время игры изменилось</h3>') && str_contains($html,date('d.m.Y H:i',strtotime($data['starts_at']))),'Reschedule heading/time');
             check($pdo->hostReminder===null && $pdo->subscriptions[2]['reminder_sent_at']===null && $pdo->subscriptions[3]['reminder_sent_at']===null,'Reschedule resets host/subscriber marks');
         }
     }

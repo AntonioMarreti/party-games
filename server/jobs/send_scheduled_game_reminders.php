@@ -20,8 +20,7 @@ if (!isset($pdo) || !$pdo instanceof PDO) {
 $dryRun = in_array('--dry-run', $argv ?? [], true);
 $appUrl = defined('BOT_USERNAME') ? ('https://t.me/' . BOT_USERNAME . '/app') : 'https://t.me/';
 
-// TODO: Replace null with actual custom emoji id when available.
-const SCHEDULED_REMINDER_CUSTOM_EMOJI_ID = null;
+const SCHEDULED_REMINDER_CUSTOM_EMOJI_ID = '6023852878597200124';
 
 function scheduledReminderTableExists(PDO $pdo, string $table): bool
 {
@@ -59,10 +58,7 @@ function scheduledReminderFormatStartsAt($startsAt)
 
 function scheduledReminderEmoji(): string
 {
-    if (defined('SCHEDULED_REMINDER_CUSTOM_EMOJI_ID') && SCHEDULED_REMINDER_CUSTOM_EMOJI_ID) {
-        return '<tg-emoji emoji-id="' . htmlspecialchars((string) SCHEDULED_REMINDER_CUSTOM_EMOJI_ID, ENT_QUOTES, 'UTF-8') . '">🎮</tg-emoji> ';
-    }
-    return '';
+    return '<tg-emoji emoji-id="' . SCHEDULED_REMINDER_CUSTOM_EMOJI_ID . '">🎮</tg-emoji> ';
 }
 
 function scheduledReminderMessage(array $game, $isHost)
@@ -73,14 +69,13 @@ function scheduledReminderMessage(array $game, $isHost)
     $time = htmlspecialchars(scheduledReminderFormatStartsAt($game['starts_at'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $subscribersCount = (int) ($game['subscribers_count'] ?? 0);
     $maxPlayers = (int) ($game['max_players'] ?? 0);
-    $emoji = scheduledReminderEmoji();
 
     if ($isHost) {
-        return $emoji . "Ваша игра «{$displayName}» начнётся в <b>{$time}</b>.\n\n"
+        return "Ваша игра «{$displayName}» начнётся в <b>{$time}</b>.\n\n"
             . "Записались: {$subscribersCount}/{$maxPlayers}. Откройте комнату, когда будете готовы.";
     }
 
-    return $emoji . "Игра «{$displayName}», на которую вы записались, начнётся в <b>{$time}</b>.\n\n"
+    return "Игра «{$displayName}», на которую вы записались, начнётся в <b>{$time}</b>.\n\n"
         . "Хост скоро откроет комнату. Зайдите в приложение, чтобы не пропустить старт.";
 }
 
@@ -102,7 +97,7 @@ function scheduledReminderSend($chatId, $text, $buttonText, $buttonUrl, $dryRun)
     ];
 
     if ($dryRun) {
-        $usesCustomEmoji = strpos($text, '<tg-emoji') !== false ? 'yes' : 'no';
+        $usesCustomEmoji = strpos(scheduledReminderEmoji(), '<tg-emoji') !== false ? 'yes' : 'no';
         echo "[dry-run] send to {$chatId}: " . strip_tags($text) . "\n";
         echo "[dry-run]   method: sendRichMessage; button style: primary; row: center\n";
         echo "[dry-run]   button label: {$buttonText}\n";
@@ -111,7 +106,7 @@ function scheduledReminderSend($chatId, $text, $buttonText, $buttonUrl, $dryRun)
         return true;
     }
 
-    $html = '<h3>🎮 Скоро игра</h3><p>' . str_replace("\n", '<br>', $text) . '</p>'
+    $html = '<h3>' . scheduledReminderEmoji() . 'Скоро игра</h3><p>' . str_replace("\n", '<br>', $text) . '</p>'
         . '<tg-button-row align="center"><tg-button type="url" style="primary" url="'
         . htmlspecialchars($buttonUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">'
         . htmlspecialchars($buttonText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
