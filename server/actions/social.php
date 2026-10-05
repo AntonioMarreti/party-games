@@ -66,6 +66,49 @@ function action_search_users($pdo, $user, $data) {
     }
 }
 
+// Presentation/transport only for the two existing friendship notifications.
+function social_send_friendship_notification($chatId, $event, $senderName)
+{
+    $name = htmlspecialchars((string) $senderName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    if ($event === 'friend_request') {
+        $heading = '<tg-emoji emoji-id="6021678620123077295">➕</tg-emoji> Новая заявка в друзья';
+        $body = '<b>' . $name . '</b> хочет добавить тебя.';
+        $legacy = "👋 <b>Боец, у тебя новая заявка в друзья!</b>\n\n👤 " . $body;
+    } elseif ($event === 'friend_accepted') {
+        $heading = '<tg-emoji emoji-id="6023940002008799618">👍</tg-emoji> Заявка принята';
+        $body = '<b>' . $name . '</b> принял(а) твою заявку в друзья.';
+        $leaderboard = 'Теперь вы можете видеть друг друга в таблице лидеров друзей!';
+        $legacy = "✅ <b>Ура! Новая дружба!</b>\n\n👤 " . $body . "\n\n" . $leaderboard;
+        $body .= '</p><p>' . $leaderboard;
+    } else {
+        return false;
+    }
+    $html = '<h3>' . $heading . '</h3><p>' . $body . '</p>'
+        . '<tg-button-row align="center"><tg-button type="web_app" style="primary" url="https://lapin.live/mpg/">Открыть Party Games</tg-button></tg-button-row>';
+    try {
+        $result = TelegramLogger::sendRequest('sendRichMessage', [
+            'chat_id' => $chatId, 'rich_message' => ['html' => $html],
+        ]);
+        $response = is_string($result) ? json_decode($result, true) : null;
+        // Only an explicit API rejection is safe to follow with another message.
+        if (is_array($response) && ($response['ok'] ?? null) === false) {
+            $result = TelegramLogger::sendRequest('sendMessage', [
+                'chat_id' => $chatId, 'text' => $legacy, 'parse_mode' => 'HTML',
+                'reply_markup' => ['inline_keyboard' => [[[
+                    'text' => '🎮 Открыть Party Games', 'web_app' => ['url' => 'https://lapin.live/mpg/'],
+                ]]]],
+            ]);
+            $response = is_string($result) ? json_decode($result, true) : null;
+        }
+        if (is_array($response) && ($response['ok'] ?? null) === true) return true;
+        error_log('Friendship notification delivery rejected or ambiguous');
+    } catch (Throwable $e) {
+        // Never disclose raw transport errors or fail the completed friendship action.
+        error_log('Friendship notification transport exception');
+    }
+    return false;
+}
+
 function action_add_friend($pdo, $user, $data) {
     $friendId = (int)($data['friend_id'] ?? 0);
     
@@ -111,21 +154,9 @@ function action_add_friend($pdo, $user, $data) {
             $targetUser = $stmt->fetch();
 
             if ($targetUser && !empty($targetUser['telegram_id'])) {
-                $msg = "👋 <b>Боец, у тебя новая заявка в друзья!</b>\n\n" .
-                       "👤 <b>" . htmlspecialchars($user['custom_name'] ?? $user['first_name']) . "</b> хочет добавить тебя.";
-                
-                $keyboard = [
-                    'inline_keyboard' => [[
-                        ['text' => '🎮 Открыть Party Games', 'web_app' => ['url' => 'https://lapin.live/mpg/']]
-                    ]]
-                ];
-
-                TelegramLogger::sendRequest('sendMessage', [
-                    'chat_id' => $targetUser['telegram_id'],
-                    'text' => $msg,
-                    'parse_mode' => 'HTML',
-                    'reply_markup' => json_encode($keyboard)
-                ]);
+                social_send_friendship_notification(
+                    $targetUser['telegram_id'], 'friend_request', $user['custom_name'] ?? $user['first_name']
+                );
             }
         } catch (Exception $e) {
             // Ignore telegram sending errors (blocked bot etc)
@@ -242,22 +273,9 @@ function action_accept_friend($pdo, $user, $data) {
             $requester = $stmt->fetch();
 
             if ($requester && !empty($requester['telegram_id'])) {
-                $msg = "✅ <b>Ура! Новая дружба!</b>\n\n" .
-                       "👤 <b>" . htmlspecialchars($user['custom_name'] ?? $user['first_name']) . "</b> принял(а) твою заявку в друзья.\n\n" .
-                       "Теперь вы можете видеть друг друга в таблице лидеров друзей!";
-                
-                $keyboard = [
-                    'inline_keyboard' => [[
-                        ['text' => '🎮 Открыть Party Games', 'web_app' => ['url' => 'https://lapin.live/mpg/']]
-                    ]]
-                ];
-
-                TelegramLogger::sendRequest('sendMessage', [
-                    'chat_id' => $requester['telegram_id'],
-                    'text' => $msg,
-                    'parse_mode' => 'HTML',
-                    'reply_markup' => json_encode($keyboard)
-                ]);
+                social_send_friendship_notification(
+                    $requester['telegram_id'], 'friend_accepted', $user['custom_name'] ?? $user['first_name']
+                );
             }
         } catch (Exception $e) {}
         
