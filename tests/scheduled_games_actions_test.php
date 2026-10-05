@@ -13,12 +13,14 @@ class TelegramLogger {
     public static array $results = [];
     public static array $sent = [];
     public static array $errors = [];
+    public static array $methods = [];
     public static $lastError = null;
     public static function sendRequest($method, $params) {
         self::$sent[] = $params;
+        self::$methods[] = $method;
         $result = array_shift(self::$results);
         if ($result instanceof Throwable) throw $result;
-        return json_encode(['ok' => (bool) $result]);
+        return $result === true ? json_encode(['ok' => true]) : $result;
     }
     public static function logEvent(...$args) {}
     public static function logError(...$args) { self::$errors[] = $args; }
@@ -42,6 +44,8 @@ class ScheduledTestPdo {
     public array $games = []; public array $subscriptions = []; public array $manual = [];
     public array $rooms = []; public array $sql = []; public bool $transaction = false;
     public bool $manualSchema = true;
+    public bool $notifyContacts = false;
+    public $hostReminder = 'sent';
     public function prepare($sql) { return new ScheduledTestStmt($this, $sql); }
     public function query($sql) { $stmt = $this->prepare($sql); $stmt->execute(); return $stmt; }
     public function exec($sql) { $this->run(preg_replace('/\s+/', ' ', trim($sql)), []); }
@@ -83,7 +87,14 @@ class ScheduledTestPdo {
         if (str_starts_with($sql, "UPDATE scheduled_games SET status = 'live'")) { $this->games[end($params)]['status']='live'; return []; }
         if (str_starts_with($sql, 'SELECT created_at')) return $this->manual ? [['created_at' => date('Y-m-d H:i:s')]] : [];
         if (str_starts_with($sql, 'SELECT s.id as subscription_id')) return array_map(fn($id) => ['subscription_id' => $id, 'user_id' => $id, 'telegram_id' => $id], array_keys(array_filter($this->subscriptions, fn($s) => $s['status'] === 'subscribed')));
-        if (str_starts_with($sql, 'SELECT u.telegram_id')) return [];
+        if (str_starts_with($sql, 'SELECT u.telegram_id')) return $this->notifyContacts ? array_map(fn($id) => ['telegram_id' => $id], array_keys(array_filter($this->subscriptions, fn($s) => $s['status'] === 'subscribed'))) : [];
+        if (str_starts_with($sql, 'UPDATE scheduled_games SET starts_at')) { $this->games[$params[1]]['starts_at']=$params[0]; return []; }
+        if (str_starts_with($sql, "UPDATE scheduled_games SET status = 'cancelled'")) { $this->games[$params[0]]['status']='cancelled'; return []; }
+        if (str_starts_with($sql, 'UPDATE scheduled_game_host_reminders SET reminder_sent_at = NULL')) { $this->hostReminder=null; return []; }
+        if (str_starts_with($sql, 'UPDATE scheduled_game_subscriptions SET reminder_sent_at = NULL')) {
+            foreach ($this->subscriptions as &$sub) $sub['reminder_sent_at']=null;
+            return [];
+        }
         if (str_starts_with($sql, 'INSERT INTO scheduled_game_manual_reminders')) {
             check(count(TelegramLogger::$sent) > 0, 'Cooldown must be created after delivery');
             check(TelegramLogger::$results === [], 'Cooldown must wait for every delivery attempt');
@@ -166,4 +177,76 @@ check(invoke('action_send_scheduled_game_manual_reminder',$pdo)['status']==='err
 check(!str_contains($source,'CREATE TABLE'),'Action source contains no runtime DDL');
 $migration=file_get_contents(__DIR__.'/../server/migrations/018_add_scheduled_game_manual_reminders.php');
 check(str_contains($migration,'CREATE TABLE IF NOT EXISTS scheduled_game_manual_reminders'),'Migration has repeat-safe create');
-echo "PASS scheduled actions: listing, target lookup, subscribe, open, delivery, schema\n";
+// P2.2 transport and notification regression cases, retaining all P1 checks above.
+$reject = json_encode(['ok' => false, 'error_code' => 400]);
+$title = '<b>A&B "title"</b>\' <tg-button>';
+$escapedTitle = htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$scheduledUrl = scheduled_deep_link_url(1);
+foreach ([
+    [[true], 1, ['sendRichMessage']],
+    [[$reject, true], 1, ['sendRichMessage', 'sendMessage']],
+    [[$reject, $reject], 0, ['sendRichMessage', 'sendMessage']],
+    [[false], 0, ['sendRichMessage']],
+    [['{invalid'], 0, ['sendRichMessage']],
+    [[''], 0, ['sendRichMessage']],
+    [[new RuntimeException('transport')], 0, ['sendRichMessage']],
+    [[true, false], 1, ['sendRichMessage', 'sendRichMessage']],
+] as [$responses, $expectedCount, $methods]) {
+    $pdo = new ScheduledTestPdo(); $pdo->games[1]=game(); $pdo->games[1]['title']=$title;
+    $recipientCount = count($methods) === 2 && $methods[1] === 'sendRichMessage' ? 2 : 1;
+    $pdo->subscriptions=[2=>['status'=>'subscribed']];
+    if ($recipientCount === 2) $pdo->subscriptions[3]=['status'=>'subscribed'];
+    TelegramLogger::$results=$responses; TelegramLogger::$sent=[]; TelegramLogger::$methods=[];
+    $result=invoke('action_send_scheduled_game_manual_reminder',$pdo);
+    check(($result['status']==='ok')===($expectedCount>0), 'Manual confirmed delivery determines success');
+    check(count($pdo->manual)===($expectedCount>0?1:0), 'Manual zero/partial cooldown semantics');
+    check(TelegramLogger::$methods===$methods, 'Manual rich/fallback/ambiguous methods');
+    $html=TelegramLogger::$sent[0]['rich_message']['html'];
+    check(str_contains($html, '<h3>🎮 Напоминание об игре</h3>') && str_contains($html,$escapedTitle), 'Manual heading and escaped body');
+    check(!str_contains($html,$title) && !str_contains($html,'&amp;lt;'), 'No title injection or double escaping');
+    check(str_contains($html, '<tg-button-row align="center"><tg-button type="url" style="primary" url="'.$scheduledUrl.'">Открыть игру</tg-button>'), 'Manual existing scheduled CTA');
+    if (in_array('sendMessage',$methods,true)) {
+        check(TelegramLogger::$sent[1]['text']===scheduled_manual_reminder_message($pdo->games[1]),'Manual fallback body unchanged');
+        check(TelegramLogger::$sent[1]['reply_markup']['inline_keyboard'][0][0]['url']===$scheduledUrl,'Manual fallback URL unchanged');
+    }
+    if ($expectedCount) check($result['sent_count']===$expectedCount && $result['recipient_count']===$recipientCount && $result['skipped_count']===$recipientCount-$expectedCount,'Manual counts preserved');
+}
+$pdo=new ScheduledTestPdo(); $pdo->games[1]=game(1,600,'live');
+$pdo->subscriptions=[2=>['status'=>'subscribed']];
+TelegramLogger::$results=[true]; TelegramLogger::$sent=[];
+check(invoke('action_send_scheduled_game_manual_reminder',$pdo)['status']==='ok','Live manual reminder still available');
+check(str_contains(TelegramLogger::$sent[0]['rich_message']['html'],'уже открыта. Можно заходить.'),'Live manual body preserved');
+
+foreach (['reschedule','open','cancel'] as $event) {
+    $pdo=new ScheduledTestPdo(); $pdo->games[1]=game(1,240); $pdo->games[1]['title']=$title;
+    $pdo->notifyContacts=true;
+    $pdo->subscriptions=[2=>['status'=>'subscribed','reminder_sent_at'=>'sent'],3=>['status'=>'subscribed','reminder_sent_at'=>'sent']];
+    // First recipient throws or rejects; the second must still be notified.
+    TelegramLogger::$results=$event==='cancel'?[$reject,true,true]:[new RuntimeException('transport'),true];
+    TelegramLogger::$sent=[]; TelegramLogger::$methods=[];
+    $data=['scheduled_game_id'=>1];
+    if ($event==='reschedule') $data['starts_at']=date('Y-m-d H:i:s',time()+1200);
+    $result=invoke('action_'.$event.'_scheduled_game',$pdo,1,$data);
+    check($result['status']==='ok','Notification failure does not change action success');
+    $html=TelegramLogger::$sent[0]['rich_message']['html'];
+    check(str_contains($html,$escapedTitle) && !str_contains($html,$title) && !str_contains($html,'&amp;lt;'),'Event title escaped once');
+    if ($event==='cancel') {
+        check($pdo->games[1]['status']==='cancelled','Cancel lifecycle preserved');
+        check(str_contains($html,'<h3>Игра отменена</h3>') && !str_contains($html,'<tg-button'),'Cancel has no CTA');
+        check(TelegramLogger::$methods===['sendRichMessage','sendMessage','sendRichMessage'],'Cancel fallback and recipient isolation');
+        check(!isset(TelegramLogger::$sent[1]['reply_markup']) && TelegramLogger::$sent[1]['text']==="Игра «{$escapedTitle}» отменена.",'Cancel plain fallback');
+    } else {
+        check(TelegramLogger::$methods===['sendRichMessage','sendRichMessage'],'Exception does not fallback or interrupt batch');
+        $expectedUrl=$event==='open'?scheduled_room_deep_link_url('TEST'):$scheduledUrl;
+        $label=$event==='open'?'Зайти в комнату':'Открыть игру';
+        check(str_contains($html,'style="primary" url="'.$expectedUrl.'">'.$label.'</tg-button>'),'Event CTA destination');
+        if ($event==='open') {
+            check($pdo->games[1]['status']==='live' && !str_contains($html,'startapp=scheduled_'),'Open uses room flow');
+            check(str_contains($html,'<h3>Комната открыта</h3>'),'Open heading');
+        } else {
+            check(str_contains($html,'<h3>Время игры изменилось</h3>') && str_contains($html,date('d.m.Y H:i',strtotime($data['starts_at']))),'Reschedule heading/time');
+            check($pdo->hostReminder===null && $pdo->subscriptions[2]['reminder_sent_at']===null && $pdo->subscriptions[3]['reminder_sent_at']===null,'Reschedule resets host/subscriber marks');
+        }
+    }
+}
+echo "PASS scheduled actions: P1 guarantees, rich manual/event notifications, fallback, isolation, escaping\n";

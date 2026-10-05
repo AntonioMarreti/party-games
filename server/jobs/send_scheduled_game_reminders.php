@@ -104,21 +104,38 @@ function scheduledReminderSend($chatId, $text, $buttonText, $buttonUrl, $dryRun)
     if ($dryRun) {
         $usesCustomEmoji = strpos($text, '<tg-emoji') !== false ? 'yes' : 'no';
         echo "[dry-run] send to {$chatId}: " . strip_tags($text) . "\n";
+        echo "[dry-run]   method: sendRichMessage; button style: primary; row: center\n";
         echo "[dry-run]   button label: {$buttonText}\n";
         echo "[dry-run]   button url: {$buttonUrl}\n";
         echo "[dry-run]   custom emoji entity used: {$usesCustomEmoji}\n";
         return true;
     }
 
-    $result = TelegramLogger::sendRequest('sendMessage', [
-        'chat_id' => $chatId,
-        'text' => $text,
-        'parse_mode' => 'HTML',
-        'disable_web_page_preview' => true,
-        'reply_markup' => $replyMarkup,
-    ]);
-    $decoded = json_decode((string) $result, true);
-    return is_array($decoded) && !empty($decoded['ok']);
+    $html = '<h3>🎮 Скоро игра</h3><p>' . str_replace("\n", '<br>', $text) . '</p>'
+        . '<tg-button-row align="center"><tg-button type="url" style="primary" url="'
+        . htmlspecialchars($buttonUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">'
+        . htmlspecialchars($buttonText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+        . '</tg-button></tg-button-row>';
+    try {
+        $result = TelegramLogger::sendRequest('sendRichMessage', [
+            'chat_id' => $chatId, 'rich_message' => ['html' => $html],
+        ]);
+        $response = is_string($result) ? json_decode($result, true) : null;
+        // Only explicit rejection proves fallback will not duplicate a delivered rich message.
+        if (is_array($response) && ($response['ok'] ?? null) === false) {
+            $result = TelegramLogger::sendRequest('sendMessage', [
+                'chat_id' => $chatId, 'text' => $text,
+                'parse_mode' => 'HTML', 'disable_web_page_preview' => true,
+                'reply_markup' => $replyMarkup,
+            ]);
+            $response = is_string($result) ? json_decode($result, true) : null;
+        }
+        if (is_array($response) && ($response['ok'] ?? null) === true) return true;
+        error_log('Scheduled automatic reminder delivery rejected or ambiguous');
+    } catch (Throwable $e) {
+        error_log('Scheduled automatic reminder transport exception');
+    }
+    return false;
 }
 
 function scheduledReminderLogEvent($action, array $data, string $message): void

@@ -286,7 +286,42 @@ function scheduled_create_room($pdo, $user, $game, $hostId)
     return ['room_id' => $roomId, 'room_code' => $code];
 }
 
-function scheduled_notify_subscribers($pdo, $gameId, $text, $buttonText = null, $buttonUrl = null)
+// $text is the existing HTML-safe notification body; preserve it for fallback.
+function scheduled_send_rich_notification($chatId, $heading, $text, $buttonText = null, $buttonUrl = null)
+{
+    $html = '<h3>' . htmlspecialchars($heading, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h3>'
+        . '<p>' . str_replace("\n", '<br>', $text) . '</p>';
+    $fallback = [
+        'chat_id' => $chatId, 'text' => $text,
+        'parse_mode' => 'HTML', 'disable_web_page_preview' => true,
+    ];
+    if ($buttonText && $buttonUrl) {
+        $html .= '<tg-button-row align="center"><tg-button type="url" style="primary" url="'
+            . htmlspecialchars($buttonUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">'
+            . htmlspecialchars($buttonText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '</tg-button></tg-button-row>';
+        $fallback['reply_markup'] = ['inline_keyboard' => [[['text' => $buttonText, 'url' => $buttonUrl]]]];
+    }
+    try {
+        $result = TelegramLogger::sendRequest('sendRichMessage', [
+            'chat_id' => $chatId, 'rich_message' => ['html' => $html],
+        ]);
+        $response = is_string($result) ? json_decode($result, true) : null;
+        // An ambiguous response may hide delivery: fallback only after explicit rejection.
+        if (is_array($response) && ($response['ok'] ?? null) === false) {
+            $result = TelegramLogger::sendRequest('sendMessage', $fallback);
+            $response = is_string($result) ? json_decode($result, true) : null;
+        }
+        if (is_array($response) && ($response['ok'] ?? null) === true) return true;
+        error_log('Scheduled notification delivery rejected or ambiguous');
+    } catch (Throwable $e) {
+        // Do not disclose raw transport errors or stop delivery to other recipients.
+        error_log('Scheduled notification transport exception');
+    }
+    return false;
+}
+
+function scheduled_notify_subscribers($pdo, $gameId, $text, $buttonText = null, $buttonUrl = null, $heading = '🎮 Напоминание об игре')
 {
     if (!class_exists('TelegramLogger')) {
         return;
@@ -311,24 +346,8 @@ function scheduled_notify_subscribers($pdo, $gameId, $text, $buttonText = null, 
         return;
     }
 
-    $replyMarkup = null;
-    if ($buttonText && $buttonUrl) {
-        $replyMarkup = [
-            'inline_keyboard' => [ [ ['text' => $buttonText, 'url' => $buttonUrl] ] ]
-        ];
-    }
-
     foreach ($subscribers as $sub) {
-        $params = [
-            'chat_id' => $sub['telegram_id'],
-            'text' => $text,
-            'parse_mode' => 'HTML',
-            'disable_web_page_preview' => true,
-        ];
-        if ($replyMarkup) {
-            $params['reply_markup'] = $replyMarkup;
-        }
-        TelegramLogger::sendRequest('sendMessage', $params);
+        scheduled_send_rich_notification($sub['telegram_id'], $heading, $text, $buttonText, $buttonUrl);
     }
 }
 
@@ -530,7 +549,7 @@ function action_reschedule_scheduled_game($pdo, $user, $data)
 
             $title = htmlspecialchars(trim((string)($game['title'] ?? '')) ?: 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $timeFormatted = date('d.m.Y H:i', strtotime($startsAt));
-            scheduled_notify_subscribers($pdo, (int)$game['id'], "Время игры «{$title}» изменилось. Новый старт: {$timeFormatted}.", "Открыть игру", scheduled_deep_link_url((int)$game['id']));
+            scheduled_notify_subscribers($pdo, (int)$game['id'], "Время игры «{$title}» изменилось. Новый старт: {$timeFormatted}.", "Открыть игру", scheduled_deep_link_url((int)$game['id']), "Время игры изменилось");
         }
 
         $pdo->commit();
@@ -731,7 +750,7 @@ function action_open_scheduled_game($pdo, $user, $data)
         $pdo->commit();
 
         $title = htmlspecialchars(trim((string)($game['title'] ?? '')) ?: 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        scheduled_notify_subscribers($pdo, (int)$game['id'], "Комната для игры «{$title}» открыта. Можно заходить.", "Зайти в комнату", scheduled_room_deep_link_url($room['room_code']));
+        scheduled_notify_subscribers($pdo, (int)$game['id'], "Комната для игры «{$title}» открыта. Можно заходить.", "Зайти в комнату", scheduled_room_deep_link_url($room['room_code']), "Комната открыта");
 
         scheduled_log_event('open_scheduled_game', [
             'scheduled_game_id' => (int) $game['id'],
@@ -779,7 +798,7 @@ function action_cancel_scheduled_game($pdo, $user, $data)
         $pdo->commit();
 
         $title = htmlspecialchars(trim((string)($game['title'] ?? '')) ?: 'Открытая игра', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        scheduled_notify_subscribers($pdo, (int)$game['id'], "Игра «{$title}» отменена.");
+        scheduled_notify_subscribers($pdo, (int)$game['id'], "Игра «{$title}» отменена.", null, null, "Игра отменена");
 
         scheduled_log_event('cancel_scheduled_game', [
             'scheduled_game_id' => (int) $game['id'],
@@ -879,26 +898,9 @@ function action_send_scheduled_game_manual_reminder($pdo, $user, $data)
         $skippedCount = max(0, $subscribersTotal - count($recipients));
 
         foreach ($recipients as $recipient) {
-            try {
-                $result = TelegramLogger::sendRequest('sendMessage', [
-                    'chat_id' => $recipient['telegram_id'],
-                    'text' => $message,
-                    'parse_mode' => 'HTML',
-                    'disable_web_page_preview' => true,
-                    'reply_markup' => [
-                        'inline_keyboard' => [[
-                            [
-                                'text' => 'Открыть игру',
-                                'url' => $buttonUrl,
-                            ]
-                        ]]
-                    ],
-                ]);
-            } catch (Throwable $e) {
-                $result = false;
-            }
-            $decoded = json_decode((string) $result, true);
-            if (is_array($decoded) && !empty($decoded['ok'])) {
+            if (scheduled_send_rich_notification(
+                $recipient['telegram_id'], '🎮 Напоминание об игре', $message, 'Открыть игру', $buttonUrl
+            )) {
                 $sentCount++;
                 continue;
             }
@@ -910,7 +912,7 @@ function action_send_scheduled_game_manual_reminder($pdo, $user, $data)
                 'recipient_user_id' => (int) ($recipient['user_id'] ?? 0),
                 'subscription_id' => (int) ($recipient['subscription_id'] ?? 0),
                 'chat_id' => (int) ($recipient['telegram_id'] ?? 0),
-                'telegram_error' => TelegramLogger::$lastError,
+                'telegram_error' => 'Delivery not confirmed',
             ], 'Scheduled manual reminder failed');
         }
 
