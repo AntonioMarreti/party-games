@@ -491,7 +491,20 @@ function renderResults(state) {
     // Update Buttons area based on role
     const footer = document.querySelector('#blokus-results-screen .results-footer');
     if (footer) {
-        if (window.isHost) {
+        const summary = window.GameSummaryProvider?.remember('blokus', state, {
+            players: blokusState.players || [],
+            isHost: Boolean(window.isHost)
+        });
+        if (summary) {
+            const waitingMessage = window.isHost ? ''
+                : '<div class="pill-badge text-center mb-3 small" style="background:var(--bg-secondary); color:var(--text-muted); padding:4px 12px; border-radius:12px; display:inline-block; width:100%;">Ожидайте хоста...</div>';
+            footer.innerHTML = waitingMessage + window.GameSummaryProvider.render(summary, {
+                playAgainLabel: window.isHost ? 'Вернуться в комнату' : 'Выйти',
+                playAgainAction: window.isHost ? 'return-room-lobby' : 'leave-room',
+                roomActionLabel: window.isHost ? 'Покинуть комнату' : '',
+                roomAction: 'leave-room'
+            });
+        } else if (window.isHost) {
             footer.innerHTML = `
                 <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold mb-2 shadow-sm" onclick="returnToRoomLobby()">
                     Вернуться в комнату
@@ -540,3 +553,40 @@ window.blokusApplyMove = async function () {
 const originalPieceSelect = window.selectPiece;
 // We need to catch where selectPiece is defined. It's likely in ui.js or handlers.js. 
 // Since we are editing blokus.js which is the entry point, we can wrap standard UI interactions here if exposed.
+
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('blokus', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const name = player => player.display_name || player.custom_name || player.first_name || player.username || 'Игрок';
+            const entries = Array.isArray(gameState?.gameResults) ? gameState.gameResults : [];
+            const results = entries.filter(entry => {
+                const playerExists = entry && players.some(player => String(player.id ?? player.user_id) === String(entry.user_id));
+                const validNumber = value => (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
+                    && Number.isFinite(Number(value));
+                return playerExists && validNumber(entry.rank) && Number(entry.rank) > 0
+                    && validNumber(entry.score);
+            }).map(entry => ({
+                player: players.find(player => String(player.id ?? player.user_id) === String(entry.user_id)),
+                rank: Number(entry.rank), score: Number(entry.score)
+            })).sort((a, b) => a.rank - b.rank);
+            const first = results.filter(entry => entry.rank === 1);
+            const best = first.length === 1 ? first[0] : null;
+            const winner = best ? { id: best.player.id ?? best.player.user_id, name: name(best.player), score: best.score } : null;
+            return {
+                gameId: 'blokus',
+                participants: players.map(player => ({ id: player.id ?? player.user_id, name: name(player) })),
+                winner,
+                outcome: winner ? `${winner.name} занял(а) первое место с результатом ${winner.score} очков.`
+                    : first.length > 1 ? 'Игроки разделили первое место.' : 'Партия завершена. Итоговый результат недоступен.',
+                awards: results.slice(0, 3).map(entry => ({
+                    title: entry.rank === 1 && winner ? 'Лучший результат' : `${entry.rank} место`,
+                    player: `${name(entry.player)} · ${entry.score} очков`
+                }))
+            };
+        },
+        'return-room-lobby': function () { return window.returnToRoomLobby(); },
+        'leave-room': function () { return window.leaveRoom(); }
+    });
+}

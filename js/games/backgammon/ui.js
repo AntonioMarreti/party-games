@@ -301,16 +301,24 @@ function renderBgBoard(container, engine, res, myColor, isMyTurn, isStarting, me
 
     // Update Controls & Result Info
     controls.innerHTML = `
-        ${engine.status === 'finished' ? `
-            <div class="bg-finish-panel">
+        ${engine.status === 'finished' ? (() => {
+            const summary = window.GameSummaryProvider?.remember('backgammon_game', engine, {
+                players: res.room.players || [], isHost: Boolean(res.is_host)
+            });
+            return `<div class="bg-finish-panel">
                 <div class="bg-finish-title">${engine.winner === myColor ? 'Вы выиграли' : 'Победили ' + (engine.winner === 'white' ? 'белые' : 'черные')}</div>
                 <div class="bg-finish-score">Снято: белые ${engine.whiteOff}/15 · черные ${engine.blackOff}/15</div>
-                <div class="bg-finish-actions">
+                ${summary ? window.GameSummaryProvider.render(summary, {
+                    playAgainLabel: res.is_host ? 'Начать заново' : 'Выйти',
+                    playAgainAction: res.is_host ? 'restart-game' : 'return-to-room',
+                    roomActionLabel: res.is_host ? 'Вернуться в лобби' : '',
+                    roomAction: 'return-to-room'
+                }) : `<div class="bg-finish-actions">
                     ${res.is_host ? `<button class="bg-btn bg-btn-primary" onclick="bgConfirmRestartGame()">Начать заново</button>` : ''}
                     <button class="bg-btn bg-btn-secondary" onclick="bgToggleMenu()">Меню</button>
-                </div>
-            </div>
-        ` : isStarting ? `
+                </div>`}
+            </div>`;
+        })() : isStarting ? `
             ${bothRolled && engine.startingRolls.white === engine.startingRolls.black ? `
                 <div class="bg-turn-info text-primary fw-bold mb-2">
                     <i class="bi bi-arrow-repeat me-1"></i>
@@ -692,4 +700,37 @@ function renderPoints(engine, indices, isTop) {
         </div>`);
     }
     return arr;
+}
+
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('backgammon_game', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const winnerIndex = gameState?.winner === 'white' ? 0 : gameState?.winner === 'black' ? 1 : -1;
+            const player = winnerIndex >= 0 ? players[winnerIndex] : null;
+            const name = value => value?.display_name || value?.custom_name || value?.first_name || value?.username || 'Игрок';
+            const offValue = value => (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
+                && Number.isFinite(Number(value)) ? Number(value) : null;
+            const whiteOff = offValue(gameState?.whiteOff);
+            const blackOff = offValue(gameState?.blackOff);
+            const score = gameState?.winner === 'white' ? whiteOff : gameState?.winner === 'black' ? blackOff : null;
+            const winner = player
+                ? { id: player.id ?? player.user_id, name: name(player), score } : null;
+            const awards = [];
+            if (winner) awards.push({ title: 'Победитель партии', player: `${winner.name} · ${winner.score} шашек снято` });
+            if (whiteOff !== null && blackOff !== null) {
+                awards.push({ title: 'Итог по шашкам', player: `Белые ${whiteOff}/15 · Чёрные ${blackOff}/15` });
+            }
+            return {
+                gameId: 'backgammon_game',
+                participants: players.map(item => ({ id: item.id ?? item.user_id, name: name(item) })),
+                winner,
+                outcome: winner ? `${winner.name} первым снял все 15 шашек.` : 'Партия завершена.',
+                awards
+            };
+        },
+        'restart-game': function () { return window.bgConfirmRestartGame(); },
+        'return-to-room': function () { return window.backToLobby?.(); }
+    });
 }
