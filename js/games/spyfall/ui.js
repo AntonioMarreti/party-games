@@ -25,13 +25,13 @@ function render_spyfall(res) {
     if (wrapper.dataset.phase !== state.phase) {
         wrapper.innerHTML = '';
         wrapper.dataset.phase = state.phase;
-        buildSpyfallSkeleton(state, wrapper, res.is_host);
+        buildSpyfallSkeleton(state, wrapper, res.is_host, res);
     }
 
     updateSpyfallData(state, res, wrapper, myId);
 }
 
-function buildSpyfallSkeleton(state, wrapper, isHost) {
+function buildSpyfallSkeleton(state, wrapper, isHost, res = {}) {
     const phase = state.phase;
 
     if (phase === 'setup') {
@@ -130,6 +130,10 @@ function buildSpyfallSkeleton(state, wrapper, isHost) {
         document.getElementById('spyGuessModal').style.display = 'none';
     }
     else if (phase === 'results') {
+        const summary = window.GameSummaryProvider?.remember('spyfall', state, {
+            players: res.players || [],
+            isHost: Boolean(isHost)
+        });
         wrapper.innerHTML = `
             <div class="px-4 py-5 text-center">
                 <div id="spyfall-result-icon" class="spyfall-result-icon"></div>
@@ -143,10 +147,15 @@ function buildSpyfallSkeleton(state, wrapper, isHost) {
                     <div class="small text-muted text-uppercase mb-1">Локация:</div>
                     <div class="h5 fw-bold text-primary mb-0" id="spyfall-result-loc"></div>
                 </div>
+                ${summary ? window.GameSummaryProvider.render(summary, {
+                    playAgainLabel: isHost ? 'Вернуться в лобби' : 'Ждём хоста...',
+                    playAgainAction: 'return-to-room',
+                    playAgainDisabled: !isHost
+                }) : ''}
             </div>
-            <div class="fixed-bottom-actions p-3">
+            ${summary ? '' : `<div class="fixed-bottom-actions p-3">
                 ${isHost ? `<button class="glass-btn glass-btn-primary w-100 mb-2" onclick="window.spyfallFinish()">Вернуться в лобби</button>` : `<div class="text-center p-3 text-muted fw-bold">Ждем хоста...</div>`}
-            </div>
+            </div>`}
          `;
     }
 }
@@ -318,3 +327,36 @@ window.confirmSpyVote = function (targetId, targetName) {
 };
 
 window.render_spyfall = render_spyfall;
+
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('spyfall', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const spy = players.find(player => String(player.id ?? player.user_id) === String(gameState?.spy_id)) || null;
+            const name = player => player.display_name || player.custom_name || player.first_name || player.username || 'Игрок';
+            const spyName = spy ? name(spy) : '';
+            let winner = null;
+            let outcome = 'Раунд завершён.';
+            if (gameState?.winner === 'spy') {
+                winner = spy ? { id: spy.id ?? spy.user_id, name: spyName } : null;
+                outcome = spy ? `Шпион ${spyName} победил.` : 'Шпион победил.';
+            } else if (gameState?.winner === 'locals') {
+                outcome = spyName ? `Местные жители победили. Шпион — ${spyName}.` : 'Местные жители победили.';
+            }
+            const awards = [];
+            if (spy) awards.push({ title: 'Шпион', player: spyName });
+            if (typeof gameState?.location === 'string' && gameState.location.trim()) {
+                awards.push({ title: 'Локация', player: gameState.location });
+            }
+            return {
+                gameId: 'spyfall',
+                participants: players.map(player => ({ id: player.id ?? player.user_id, name: name(player) })),
+                winner,
+                outcome,
+                awards
+            };
+        },
+        'return-to-room': function () { return window.spyfallFinish(); }
+    });
+}
