@@ -39,6 +39,13 @@
         return roomCode ? `https://t.me/mpartygamebot/app?startapp=${encodeURIComponent(roomCode)}` : window.location.href;
     }
 
+    function getGameInfoLink(gameId) {
+        if (typeof gameId !== 'string' || !gameId || /[^a-z0-9_]/.test(gameId)
+            || !Array.isArray(window.AVAILABLE_GAMES)
+            || !window.AVAILABLE_GAMES.some(game => game.id === gameId)) return '';
+        return `https://t.me/mpartygamebot/app?startapp=gameinfo_${encodeURIComponent(gameId)}`;
+    }
+
     function getRoomPlayers() {
         return window.APP_STATE?.room?.players || [];
     }
@@ -337,11 +344,16 @@
                     text: summary.story?.text || formatShareText(summary)
                 };
 
-                if (summary.story?.widgetLink?.url) {
-                    params.widget_link = {
-                        url: summary.story.widgetLink.url,
-                        name: summary.story.widgetLink.name || 'Играть'
-                    };
+                if (window.Telegram?.WebApp?.initDataUnsafe?.user?.is_premium === true) {
+                    if (summary.story?.widgetLink?.url) {
+                        params.widget_link = {
+                            url: summary.story.widgetLink.url,
+                            name: summary.story.widgetLink.name || 'Играть'
+                        };
+                    } else {
+                        const gameInfoLink = getGameInfoLink(summary.gameId);
+                        if (gameInfoLink) params.widget_link = { url: gameInfoLink, name: 'Об игре' };
+                    }
                 }
 
                 await window.Telegram.WebApp.shareToStory(mediaUrl, params);

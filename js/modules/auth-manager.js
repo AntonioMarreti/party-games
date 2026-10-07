@@ -114,6 +114,7 @@ function updateSessionInfoBestEffort(device) {
 
 async function initApp(tg) {
     let screenShown = false;
+    let gameInfoHandled = false;
     try {
         const currentStartParam = tg?.initDataUnsafe?.start_param;
         console.log("Start Param:", currentStartParam);
@@ -166,6 +167,20 @@ async function initApp(tg) {
             const isScheduledDeepLink = /^scheduled_\d+$/.test(String(startParam));
             if (isScheduledDeepLink) {
                 startParam = null;
+            } else if (typeof startParam === 'string' && startParam.startsWith('gameinfo_')) {
+                gameInfoHandled = true;
+                const gameId = startParam.slice('gameinfo_'.length);
+                const validGameId = gameId.length > 0 && !/[^a-z0-9_]/.test(gameId);
+                const knownGame = validGameId && Array.isArray(window.AVAILABLE_GAMES)
+                    && window.AVAILABLE_GAMES.some(game => game.id === gameId);
+                if (knownGame && typeof window.openGameShowcase === 'function') {
+                    window.openGameShowcase(gameId);
+                } else if (res.status === 'no_room') {
+                    if (window.showScreen) window.showScreen('lobby');
+                    screenShown = true;
+                }
+                // The entire namespace is consumed, including unknown/malformed IDs.
+                return;
             }
         }
 
@@ -209,7 +224,7 @@ async function initApp(tg) {
     } finally {
         // ULTIMATE FAILSAFE
         const splash = document.getElementById('screen-splash');
-        if (splash && splash.classList.contains('active-screen')) {
+        if (!gameInfoHandled && splash && splash.classList.contains('active-screen')) {
             const hash = window.location.hash.substring(1);
             const target = (hash && hash !== 'splash' && hash !== 'login') ? hash : (localStorage.getItem('pg_token') ? 'lobby' : 'login');
             if (window.showScreen) window.showScreen(target);

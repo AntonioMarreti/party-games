@@ -15,7 +15,7 @@ const summary = {
     shareText: 'Итог игры: Анна победила!'
 };
 
-function setup({ apiRequest, storyCall, storyAvailable = true, telegramLink = true } = {}) {
+function setup({ apiRequest, storyCall, storyAvailable = true, telegramLink = true, premium, games = [{ id: 'test' }] } = {}) {
     const shares = [];
     const stories = [];
     const requests = [];
@@ -23,7 +23,8 @@ function setup({ apiRequest, storyCall, storyAvailable = true, telegramLink = tr
     const windowObject = {
         location: { href: 'https://example.test/' },
         currentRoomCode: 'TEST',
-        Telegram: { WebApp: {} },
+        Telegram: { WebApp: { initDataUnsafe: { user: { is_premium: premium } } } },
+        AVAILABLE_GAMES: games,
         open: (...args) => shares.push(args),
         apiRequest: request => {
             requests.push(request);
@@ -67,7 +68,7 @@ const failureCases = [
 
 async function run() {
     for (const [name, options, storyCount] of failureCases) {
-        const runtime = setup(options);
+        const runtime = setup({ ...options, premium: true });
         await runtime.provider.shareStory('test', summary);
         assertFallback(runtime);
         assert.equal(runtime.stories.length, storyCount, name);
@@ -82,7 +83,7 @@ async function run() {
         () => ({ then(resolve) { resolve(); } }),
         () => false // A non-error return must not be interpreted as cancellation/failure.
     ]) {
-        const runtime = setup({ storyCall });
+        const runtime = setup({ storyCall, premium: true });
         const withStory = {
             ...summary,
             story: { mediaUrl, text: 'Итог для истории', widget_link: { url: summary.inviteLink, name: 'Реванш' } }
@@ -98,7 +99,7 @@ async function run() {
         });
     }
 
-    const generated = setup();
+    const generated = setup({ premium: true });
     await generated.provider.shareStory('test', summary);
     await generated.provider.shareStory('test', summary);
     assert.equal(generated.requests.length, 1, 'Successful generated media must remain cached');
@@ -107,8 +108,48 @@ async function run() {
     assert.equal(generated.stories.length, 2);
     assert.equal(generated.stories[0][0], mediaUrl);
     assert.equal(generated.stories[0][1].text, summary.shareText);
-    assert.equal(generated.stories[0][1].widget_link, undefined, 'Do not derive Story widget_link from inviteLink');
-    assert.equal(generated.shares.length, 0);
+    assert.deepEqual(JSON.parse(JSON.stringify(generated.stories[0][1].widget_link)), {
+        url: 'https://t.me/mpartygamebot/app?startapp=gameinfo_test', name: 'Об игре'
+    });
+    assert.notEqual(generated.stories[0][1].widget_link.url, summary.inviteLink);
+    generated.provider.share('test', summary);
+    assertFallback(generated);
+    assert.equal(generated.shares.length, 1);
+
+    for (const premium of [false, undefined, null, 'true', 1]) {
+        for (const explicit of [false, true]) {
+            const runtime = setup({ premium });
+            const input = explicit ? { ...summary, story: {
+                mediaUrl, text: 'Story text', widgetLink: { url: summary.inviteLink, name: 'Custom' }
+            } } : summary;
+            await runtime.provider.shareStory('test', input);
+            assert.equal(runtime.stories.length, 1);
+            assert.equal(runtime.stories[0][0], mediaUrl);
+            assert.equal(runtime.stories[0][1].text, explicit ? 'Story text' : summary.shareText);
+            assert.equal(Object.hasOwn(runtime.stories[0][1], 'widget_link'), false);
+            assert.equal(runtime.shares.length, 0, 'No Premium link must not trigger fallback');
+        }
+    }
+
+    const explicitDefault = setup({ premium: true });
+    await explicitDefault.provider.shareStory('test', { ...summary,
+        story: { mediaUrl, widgetLink: { url: 'https://example.test/custom' } } });
+    assert.deepEqual(JSON.parse(JSON.stringify(explicitDefault.stories[0][1].widget_link)), {
+        url: 'https://example.test/custom', name: 'Играть'
+    });
+
+    for (const gameId of ['unknown', 'TEST', 'test-invalid', 'test space', 'test\n']) {
+        const games = gameId === 'unknown' ? [{ id: 'test' }] : [{ id: gameId }];
+        const runtime = setup({ premium: true, games });
+        await runtime.provider.shareStory('test', { ...summary, gameId });
+        assert.equal(runtime.stories.length, 1);
+        assert.equal(Object.hasOwn(runtime.stories[0][1], 'widget_link'), false);
+        assert.equal(runtime.shares.length, 0);
+    }
+    const underscore = setup({ premium: true, games: [{ id: 'tictactoe_ultimate' }] });
+    await underscore.provider.shareStory('test', { ...summary, gameId: 'tictactoe_ultimate' });
+    assert.equal(underscore.stories[0][1].widget_link.url,
+        'https://t.me/mpartygamebot/app?startapp=gameinfo_tictactoe_ultimate');
 
     for (const failedGeneration of [
         () => { throw new Error('generation'); },
@@ -138,7 +179,7 @@ async function run() {
     process.on('unhandledRejection', onUnhandled);
     try {
         for (const [name, options, storyCount] of failureCases) {
-            const runtime = setup(options);
+            const runtime = setup({ ...options, premium: true });
             runtime.provider.register('test', { buildSummary: () => summary });
             const button = {
                 dataset: { gameSummaryAction: 'share-story', gameId: 'test' },
