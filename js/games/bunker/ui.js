@@ -623,6 +623,10 @@ window.renderVoteResults = function (wrapper, state, res) {
 
 window.renderOutro = function (wrapper, state, res) {
     var survivors = res.players.filter(p => !state.kicked_players.includes(String(p.id)));
+    var summary = window.GameSummaryProvider ? window.GameSummaryProvider.remember('bunker', state, {
+        players: res.players || [],
+        isHost: Boolean(res.is_host)
+    }) : null;
 
     var html = `
         <div class="bunker-outro-screen p-4" style="padding-top: calc(82px + env(safe-area-inset-top)) !important; padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important;">
@@ -655,16 +659,22 @@ window.renderOutro = function (wrapper, state, res) {
             <div class="survivors-stories mt-4 pb-5">
                 ${window.renderStories(res.players, state)}
             </div>
+            ${summary ? window.GameSummaryProvider.render(summary, {
+                playAgainLabel: res.is_host ? 'В лобби' : 'Выйти',
+                playAgainAction: 'finish-bunker'
+            }) : ''}
         </div>
     `;
 
-    html += `
-        <div class="fixed-bottom-actions px-4 pb-4 bg-transparent">
-            ${res.is_host ?
-            `<button class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold shadow-lg" onclick="window.bunkerFinish(event)">↩️ В Лобби</button>` :
-            `<button class="btn btn-outline-secondary btn-lg w-100 rounded-pill py-3 fw-bold shadow-sm" onclick="window.bunkerFinish(event)">Выйти</button>`
-        }
-        </div>`;
+    if (!summary) {
+        html += `
+            <div class="fixed-bottom-actions px-4 pb-4 bg-transparent">
+                ${res.is_host ?
+                `<button class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold shadow-lg" onclick="window.bunkerFinish(event)">↩️ В Лобби</button>` :
+                `<button class="btn btn-outline-secondary btn-lg w-100 rounded-pill py-3 fw-bold shadow-sm" onclick="window.bunkerFinish(event)">Выйти</button>`
+            }
+            </div>`;
+    }
 
     wrapper.innerHTML = html;
 
@@ -920,3 +930,40 @@ window.renderTieReveal = function (wrapper, state, res) {
 
     wrapper.innerHTML = html;
 };
+
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('bunker', {
+        buildSummary: function (gameState, context = {}) {
+            const players = Array.isArray(context.players) ? context.players : [];
+            const kickedPlayers = Array.isArray(gameState?.kicked_players) ? gameState.kicked_players : [];
+            const kickedIds = new Set(kickedPlayers.map(id => String(id)));
+            const survivors = players.filter(player => !kickedIds.has(String(player.id ?? player.user_id)));
+            const name = player => player.display_name || player.custom_name || player.first_name || player.username || 'Игрок';
+            const catastropheTitle = typeof gameState?.catastrophe?.title === 'string'
+                ? gameState.catastrophe.title.trim() : '';
+            const threatResults = Array.isArray(gameState?.threat_results) ? gameState.threat_results : [];
+            const validThreats = threatResults.filter(threat => typeof threat?.success === 'boolean');
+            const awards = [];
+            if (catastropheTitle) awards.push({ title: 'Катастрофа', player: catastropheTitle });
+            if (players.length > 0) awards.push({ title: 'В бункере', player: `${survivors.length} из ${players.length} игроков` });
+            if (validThreats.length > 0) {
+                const succeeded = validThreats.filter(threat => threat.success === true).length;
+                awards.push({ title: 'Испытания', player: `${succeeded} из ${validThreats.length} преодолено` });
+            }
+            const places = gameState?.bunker_places;
+            const validPlaces = (typeof places === 'number' || (typeof places === 'string' && places.trim() !== ''))
+                && Number.isFinite(Number(places)) && Number(places) >= 0;
+            const outcome = players.length === 0 ? 'История бункера завершена.'
+                : `В бункере остались ${survivors.length} из ${players.length} игроков.${validPlaces ? ` Мест: ${Number(places)}.` : ''}`;
+            return {
+                gameId: 'bunker',
+                participants: players.map(player => ({ id: player.id ?? player.user_id, name: name(player) })),
+                winner: null,
+                outcome,
+                awards
+            };
+        },
+        'finish-bunker': function () { return window.bunkerFinish(); }
+    });
+}
