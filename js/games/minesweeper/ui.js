@@ -74,7 +74,8 @@ function render_minesweeper_br(res) {
         }
     } else if (state.status === 'finished') {
         renderMsBoard(wrapper, state, players, myId);
-        renderMsResults(wrapper, state, players);
+        const summary = window.GameSummaryProvider?.remember('minesweeper_br', state, { players });
+        renderMsResults(wrapper, state, players, summary);
     }
 }
 
@@ -333,7 +334,7 @@ function renderMsCell(idx, state, myId, cellSize, fontSize) {
 
 // ───────────────────── RESULTS ─────────────────────
 
-function renderMsResults(container, state, players) {
+function renderMsResults(container, state, players, summary = null) {
     const results = state.gameResults || [];
     const myId = String(window.currentUser?.id);
     const isSolo = (players || []).length === 1;
@@ -419,10 +420,12 @@ function renderMsResults(container, state, players) {
                 </div>
             ` : ''}
 
-            <div class="d-flex flex-column gap-2 w-100">
+            ${summary && window.GameSummaryProvider ? window.GameSummaryProvider.render(summary, {
+                playAgainLabel: 'Играть снова', roomActionLabel: 'В лобби'
+            }) : `<div class="d-flex flex-column gap-2 w-100">
                 <button class="glass-btn primary w-100 py-3 rounded-4 fw-bold" onclick="minesweeperStartGame()">ИГРАТЬ СНОВА</button>
                 <button class="glass-btn secondary w-100 py-3 rounded-4 fw-bold" onclick="minesweeperFinish()">В ЛОББИ</button>
-            </div>
+            </div>`}
         </div>
     `;
 }
@@ -562,3 +565,43 @@ window.renderMsTutorialStep = function(container) {
 };
 
 window.render_minesweeper_br = render_minesweeper_br;
+
+if (window.GameSummaryProvider) {
+    window.GameSummaryProvider.register('minesweeper_br', {
+        buildSummary: function (gameState, context = {}) {
+            const players = context.players || [];
+            const name = player => player.display_name || player.custom_name || player.first_name || player.username || 'Игрок';
+            const results = Array.isArray(gameState?.gameResults) ? gameState.gameResults : [];
+            const leaderboard = results.filter(result => {
+                const numeric = value => (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
+                    && Number.isFinite(Number(value));
+                return result && numeric(result.score) && numeric(result.rank)
+                    && Number.isInteger(Number(result.rank)) && Number(result.rank) >= 1;
+            }).map(result => ({
+                player: players.find(player => String(player.id) === String(result.user_id)),
+                score: Number(result.score), rank: Number(result.rank)
+            })).sort((a, b) => a.rank - b.rank);
+            const first = leaderboard.filter(entry => entry.rank === 1);
+            const hitMineSolo = players.length === 1 && Array.isArray(gameState?.history)
+                && gameState.history.some(entry => entry?.type === 'mine_hit_solo');
+            const best = first.length === 1 && first[0].player && !hitMineSolo ? first[0] : null;
+            const winner = best ? { id: best.player.id, name: name(best.player), score: best.score } : null;
+            const outcome = hitMineSolo ? 'Поражение: вы подорвались на мине.'
+                : winner ? `${winner.name} завершил(а) игру на 1 месте: ${winner.score} очков.`
+                : first.length > 1 ? 'Равный лучший результат: несколько игроков разделили 1 место.'
+                : 'Игра завершена. Итоговый результат недоступен.';
+            return {
+                gameId: 'minesweeper_br',
+                participants: players.map(player => ({ id: player.id, name: name(player) })),
+                winner,
+                outcome,
+                awards: hitMineSolo ? [] : leaderboard.filter(entry => entry.player).slice(0, 3).map(entry => ({
+                    title: entry.rank === 1 && winner ? 'Лучший результат' : `${entry.rank} место`,
+                    player: `${name(entry.player)} · ${entry.score} очков`
+                }))
+            };
+        },
+        playAgain: function () { return window.minesweeperStartGame(); },
+        'return-to-room': function () { return window.minesweeperFinish(); }
+    });
+}

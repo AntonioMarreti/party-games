@@ -623,6 +623,9 @@
 
     function renderGameOver(res, state, content) {
         const host = isHost(res);
+        const summary = window.GameSummaryProvider?.remember('wordclash_party', state, {
+            players: res.players || [], isHost: host
+        });
         content.innerHTML = `
             <section class="wcp-panel">
                 <div class="wcp-result-hero">
@@ -630,10 +633,13 @@
                     <div class="wcp-secret">${esc(String(state.secret_word || '').toUpperCase())}</div>
                 </div>
                 ${renderScoreboard(res, state)}
-                <div class="wcp-actions">
+                ${summary ? window.GameSummaryProvider.render(summary, {
+                    playAgainLabel: host ? 'Сыграть снова' : 'В лобби',
+                    roomActionLabel: host ? 'В лобби' : ''
+                }) : `<div class="wcp-actions">
                     ${host ? `<button type="button" class="wcp-primary-btn" onclick="window.wcpRestartGame()">Сыграть снова</button>` : ''}
                     <button type="button" class="wcp-secondary-btn" onclick="window.wcpBackToLobby()">В лобби</button>
-                </div>
+                </div>`}
             </section>
         `;
     }
@@ -841,5 +847,45 @@
             }
         });
         window._wcpPhysicalKeyboardListenerAdded = true;
+    }
+    if (window.GameSummaryProvider) {
+        window.GameSummaryProvider.register('wordclash_party', {
+            buildSummary: function (gameState, context = {}) {
+                const players = context.players || [];
+                const scores = gameState?.scores && typeof gameState.scores === 'object' && !Array.isArray(gameState.scores)
+                    ? gameState.scores : {};
+                const leaderboard = players.filter(player => {
+                    const score = scores?.[player.id];
+                    return (typeof score === 'number' || (typeof score === 'string' && score.trim() !== ''))
+                        && Number.isFinite(Number(score));
+                }).map(player => ({ player, score: Number(scores[player.id]) }))
+                    .sort((a, b) => b.score - a.score);
+                const best = leaderboard[0];
+                const tied = best && leaderboard.filter(entry => entry.score === best.score).length > 1;
+                const winner = best && !tied
+                    ? { id: best.player.id, name: playerName(best.player), score: best.score } : null;
+                const outcome = winner
+                    ? `${winner.name} набрал(а) лучший результат: ${winner.score} очков.`
+                    : tied ? `Равный лучший результат: ${best.score} очков.` : 'Партия завершена. Итоговые очки недоступны.';
+                return {
+                    gameId: 'wordclash_party',
+                    participants: players.map(player => ({ id: player.id, name: playerName(player) })),
+                    winner,
+                    outcome,
+                    awards: leaderboard.slice(0, 3).map(entry => {
+                        const rank = 1 + leaderboard.filter(other => other.score > entry.score).length;
+                        return {
+                            title: rank === 1 && winner ? 'Лучший результат' : `${rank} место`,
+                            player: `${playerName(entry.player)} · ${entry.score} очков`
+                        };
+                    })
+                };
+            },
+            playAgain: function (gameState, context) {
+                if (context.isHost) return window.wcpRestartGame();
+                return window.wcpBackToLobby();
+            },
+            'return-to-room': function () { return window.wcpBackToLobby(); }
+        });
     }
 })();
