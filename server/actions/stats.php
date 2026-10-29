@@ -4,6 +4,66 @@ require_once __DIR__ . '/../lib/gamification.php';
 
 // === GAME HISTORY & STATS ===
 
+function isGameFinishedState(string $gameType, array $state): bool
+{
+    if (!empty($state['stats_recorded'])) {
+        return true;
+    }
+
+    $phase = (string) ($state['phase'] ?? '');
+    $status = (string) ($state['status'] ?? '');
+    $finished = !empty($state['finished']) || !empty($state['game_over']);
+
+    switch ($gameType) {
+        case 'bunker':
+            return $phase === 'outro';
+        case 'spyfall':
+        case 'spy':
+            return $phase === 'results';
+        case 'wordclash':
+        case 'wordclash_party':
+            return $phase === 'game_over' || $finished;
+        case 'brainbattle':
+            return $phase === 'finished' || $status === 'finished';
+        case 'partybattle':
+            return $phase === 'finished';
+        case 'minesweeper_br':
+        case 'blokus':
+        case 'backgammon_game':
+            return $status === 'finished';
+        case 'tictactoe':
+        case 'tictactoe_ultimate':
+            return $finished || $status === 'finished';
+        default:
+            return in_array($phase, ['finished', 'results', 'game_over', 'outro'], true)
+                || $status === 'finished'
+                || $finished;
+    }
+}
+
+function statsResolveAuthoritativePlayersData(string $gameType, array $state, array $validRoomUserIds): ?array
+{
+    if ($gameType !== 'bunker') {
+        return null;
+    }
+
+    if (!isset($state['kicked_players']) || !is_array($state['kicked_players'])) {
+        return null;
+    }
+
+    $kicked = array_map('strval', $state['kicked_players']);
+    $data = [];
+    foreach ($validRoomUserIds as $uid) {
+        $isKicked = in_array((string) $uid, $kicked, true);
+        $data[$uid] = [
+            'user_id' => $uid,
+            'rank' => $isKicked ? 2 : 1,
+            'score' => 0,
+        ];
+    }
+    return $data;
+}
+
 function action_game_finished($pdo, $user, $data)
 {
     $room = null;
@@ -40,19 +100,41 @@ function action_game_finished($pdo, $user, $data)
             sendError('Durak results are server-authoritative');
         }
 
+        if (($room['status'] ?? '') !== 'playing' || ($room['game_type'] ?? '') === 'lobby') {
+            $pdo->rollBack();
+            sendError('Game is not active');
+        }
+
+        $gameType = $room['game_type'] ?? '';
+        $state = json_decode($room['game_state'] ?? '', true);
+        if (!is_array($state)) {
+            $pdo->rollBack();
+            sendError('Game state is missing or invalid');
+        }
+
+        if (!isGameFinishedState($gameType, $state)) {
+            $pdo->rollBack();
+            sendError('Game is not finished');
+        }
+
+        if (!empty($state['stats_recorded'])) {
+            $pdo->commit();
+            echo json_encode(['status' => 'ok', 'already_recorded' => true]);
+            return;
+        }
+
+        // Only Bunker relies on client-initiated results recording.
+        // All other games record statistics authoritatively on the server during gameplay.
+        if ($gameType !== 'bunker') {
+            $pdo->rollBack();
+            sendError('Game results are server-authoritative');
+        }
+
         $playersData = $data['players_data'] ?? []; // Array of {user_id, rank, score, ...}
 
         // If sent as JSON string from client
         if (is_string($playersData)) {
             $playersData = json_decode($playersData, true) ?? [];
-        }
-
-        $gameType = $room['game_type'];
-        $state = json_decode($room['game_state'] ?? '', true);
-        if (is_array($state) && !empty($state['stats_recorded'])) {
-            $pdo->commit();
-            echo json_encode(['status' => 'ok', 'already_recorded' => true]);
-            return;
         }
 
         // Validate playersData is array
@@ -61,14 +143,71 @@ function action_game_finished($pdo, $user, $data)
             sendError('Invalid players data');
         }
 
-        // Use Helper
-        recordGameStats($pdo, $room, $playersData, (int) ($data['duration'] ?? 0));
+        // Ensure all submitted players are legitimate participants of this room
+        $roomPlayersStmt = $pdo->prepare("SELECT user_id FROM room_players WHERE room_id = ?");
+        $roomPlayersStmt->execute([$room['id']]);
+        $validRoomUserIds = array_map('intval', $roomPlayersStmt->fetchAll(PDO::FETCH_COLUMN));
 
-        if (is_array($state)) {
-            $state['stats_recorded'] = true;
-            $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
-                ->execute([json_encode($state), $room['id']]);
+        if (empty($validRoomUserIds)) {
+            $pdo->rollBack();
+            sendError('No players in room');
         }
+
+        $authoritativeMap = statsResolveAuthoritativePlayersData($gameType, $state, $validRoomUserIds);
+        if ($authoritativeMap === null) {
+            $pdo->rollBack();
+            sendError('Game state is missing outcome data');
+        }
+
+        $seenUserIds = [];
+        foreach ($playersData as $entry) {
+            if (!is_array($entry) || !isset($entry['user_id'])) {
+                $pdo->rollBack();
+                sendError('Invalid players data format');
+            }
+
+            $pid = (int) $entry['user_id'];
+            if ($pid <= 0 || !in_array($pid, $validRoomUserIds, true)) {
+                $pdo->rollBack();
+                sendError('Player does not belong to this room');
+            }
+
+            if (isset($seenUserIds[$pid])) {
+                $pdo->rollBack();
+                sendError('Duplicate players in game results');
+            }
+            $seenUserIds[$pid] = true;
+
+            $auth = $authoritativeMap[$pid];
+            $clientRank = isset($entry['rank']) ? (int) $entry['rank'] : null;
+            if ($clientRank !== null && $clientRank !== (int) $auth['rank']) {
+                $pdo->rollBack();
+                sendError('Game results do not match server state (tampered rank)');
+            }
+
+            $clientScore = isset($entry['score']) ? (int) $entry['score'] : null;
+            if ($clientScore !== null && $clientScore !== 0) {
+                $pdo->rollBack();
+                sendError('Game results do not match server state (tampered score)');
+            }
+        }
+
+        if (count($seenUserIds) !== count($validRoomUserIds)) {
+            $pdo->rollBack();
+            sendError('Game results do not include all room players');
+        }
+
+        // Authoritative server state is the single source of truth for recording
+        $effectivePlayersData = array_values($authoritativeMap);
+
+        $duration = max(0, min(86400, (int) ($data['duration'] ?? 0)));
+
+        // Use Helper
+        recordGameStats($pdo, $room, $effectivePlayersData, $duration);
+
+        $state['stats_recorded'] = true;
+        $pdo->prepare("UPDATE rooms SET game_state = ? WHERE id = ?")
+            ->execute([json_encode($state), $room['id']]);
 
         // recordGameStats already handles the duration and history.
         // We REMOVE the automatic lobby jump here to allow users to see the results screen.
@@ -81,7 +220,7 @@ function action_game_finished($pdo, $user, $data)
     } catch (Exception $e) {
         if ($pdo->inTransaction())
             $pdo->rollBack();
-        TelegramLogger::log("Game Finish Error", ['error' => $e->getMessage(), 'room' => $room['room_code']]);
+        TelegramLogger::log("Game Finish Error", ['error' => $e->getMessage(), 'room' => $room['room_code'] ?? null]);
         sendError('Stats Error');
     }
 }
