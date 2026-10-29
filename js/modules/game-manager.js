@@ -170,6 +170,9 @@ const GameManager = {
             // Skip our own reactions (already shown locally and instantly)
             if (window.globalUser && ev.user_id == window.globalUser.id) return;
 
+            // Suppress incoming reactions if user disabled them
+            if (typeof isReactionsEnabled === 'function' && !isReactionsEnabled()) return;
+
             const payload = JSON.parse(ev.payload || '{}');
 
             // Special: Audio Pings
@@ -365,6 +368,8 @@ const GameManager = {
      * Buffers requests to avoid hitting server too hard.
      */
     triggerReaction(emoji) {
+        if (!shouldShowReactionToolbar()) return;
+
         // 1. Show locally immediately
         this.showFloatingEmoji(emoji);
 
@@ -390,9 +395,74 @@ const GameManager = {
 
 const EMOJI_OPTIONS = ['😎', '👻', '🤖', '🐱', '💀', '👽', '🦊', '🐯', '🤴', '🥷', '🦁', '🦄', '🐼', '🐵', '🐸'];
 
-function getReactionHideStorageKey() {
-    const roomCode = String(window.currentRoomCode || '').trim();
-    return roomCode ? `hide_reactions_room_${roomCode}` : null;
+function isReactionsEnabled() {
+    if (window.ThemeManager && window.ThemeManager.settings && typeof window.ThemeManager.settings.showReactions !== 'undefined') {
+        return Boolean(window.ThemeManager.settings.showReactions);
+    }
+    try {
+        const stored = JSON.parse(localStorage.getItem('pgb_settings') || '{}');
+        if (typeof stored.showReactions !== 'undefined') {
+            return Boolean(stored.showReactions);
+        }
+    } catch (e) {}
+    return true;
+}
+
+function setReactionsEnabled(enabled) {
+    if (typeof window.toggleSetting === 'function') {
+        window.toggleSetting('showReactions', Boolean(enabled));
+    } else {
+        try {
+            const stored = JSON.parse(localStorage.getItem('pgb_settings') || '{}');
+            stored.showReactions = Boolean(enabled);
+            localStorage.setItem('pgb_settings', JSON.stringify(stored));
+        } catch (e) {}
+        if (window.ThemeManager && window.ThemeManager.settings) {
+            window.ThemeManager.settings.showReactions = Boolean(enabled);
+        }
+    }
+}
+
+function getAuthoritativeGamePlayers() {
+    if (Array.isArray(window.currentGamePlayers) && window.currentGamePlayers.length > 0) {
+        return window.currentGamePlayers;
+    }
+    if (Array.isArray(window.currentRoomPlayers) && window.currentRoomPlayers.length > 0) {
+        return window.currentRoomPlayers;
+    }
+    return [];
+}
+
+function isSoloGame() {
+    const players = getAuthoritativeGamePlayers();
+    return players.length <= 1;
+}
+
+function shouldShowReactionToolbar() {
+    if (!isReactionsEnabled()) {
+        return false;
+    }
+    if (isSoloGame()) {
+        return false;
+    }
+    return true;
+}
+
+function updateReactionToolbarVisibility() {
+    const container = document.getElementById('reaction-container');
+    const screen = document.getElementById('screen-game');
+    const isGameActive = screen && (screen.classList.contains('active') || screen.style.display !== 'none');
+
+    if (shouldShowReactionToolbar() && isGameActive) {
+        if (!container) {
+            renderReactionToolbar();
+        } else {
+            container.style.display = 'block';
+        }
+    } else if (container) {
+        container.style.display = 'none';
+        container.classList.remove('expanded');
+    }
 }
 
 function renderReactionToolbar() {
@@ -433,22 +503,9 @@ function renderReactionToolbar() {
         const palette = document.createElement('div');
         palette.className = 'reaction-palette';
 
-        const hideBtn = document.createElement('button');
-        hideBtn.type = 'button';
-        hideBtn.className = 'reaction-hide-btn';
-        hideBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
-        hideBtn.title = 'Скрыть до новой комнаты';
-        hideBtn.setAttribute('aria-label', 'Скрыть реакции');
-        hideBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const hideKey = getReactionHideStorageKey();
-            if (hideKey) {
-                localStorage.setItem(hideKey, 'true');
-            }
-            hideReactionToolbar();
-        });
-        palette.appendChild(hideBtn);
+        // 2a. Emojis row
+        const emojisRow = document.createElement('div');
+        emojisRow.className = 'reaction-palette-emojis';
 
         // Palette: Approval, Fun, Wow, Shock, Thinking, Waiting/Hurry
         const emojis = ['👍', '😂', '🔥', '😱', '🤔', '⏳'];
@@ -509,8 +566,27 @@ function renderReactionToolbar() {
             btn.addEventListener('mouseleave', endPress);
 
             btn.innerText = e;
-            palette.appendChild(btn);
+            emojisRow.appendChild(btn);
         });
+        palette.appendChild(emojisRow);
+
+        // 2b. Compact "Hide reactions" button
+        const hideActionBtn = document.createElement('button');
+        hideActionBtn.type = 'button';
+        hideActionBtn.className = 'reaction-hide-action-btn';
+        hideActionBtn.innerHTML = '<i class="bi bi-eye-slash"></i> <span>Скрыть реакции</span>';
+        hideActionBtn.setAttribute('aria-label', 'Скрыть реакции');
+        hideActionBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            container.classList.remove('expanded');
+            setReactionsEnabled(false);
+            updateReactionToolbarVisibility();
+            if (typeof window.showToast === 'function') {
+                window.showToast('Реакции скрыты. Вернуть их можно в настройках', 'info');
+            }
+        });
+        palette.appendChild(hideActionBtn);
 
         // 3. Drag Logic (Vertical Only for edge reachability)
         let isDragging = false;
@@ -568,9 +644,9 @@ function renderReactionToolbar() {
         });
     }
 
-    const hideKey = getReactionHideStorageKey();
-    if (hideKey && localStorage.getItem(hideKey) === 'true') {
+    if (!shouldShowReactionToolbar()) {
         container.style.display = 'none';
+        container.classList.remove('expanded');
         return;
     }
 
@@ -1282,6 +1358,10 @@ window.sendReaction = GameManager.triggerReaction.bind(GameManager); // Legacy a
 // UI Exports
 window.renderReactionToolbar = renderReactionToolbar;
 window.hideReactionToolbar = hideReactionToolbar;
+window.updateReactionToolbarVisibility = updateReactionToolbarVisibility;
+window.isSoloGame = isSoloGame;
+window.isReactionsEnabled = isReactionsEnabled;
+window.setReactionsEnabled = setReactionsEnabled;
 window.EMOJI_OPTIONS = EMOJI_OPTIONS;
 
 // Game Discovery Exports

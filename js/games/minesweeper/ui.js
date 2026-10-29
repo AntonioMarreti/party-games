@@ -2,6 +2,7 @@
 
 // Flag mode state (persists across re-renders)
 window._msFlagMode = window._msFlagMode || false;
+window._msCanFlag = Boolean(window._msCanFlag);
 
 function markMsCellPending(cellEl) {
     if (!cellEl || cellEl.classList.contains('revealed')) return;
@@ -42,7 +43,7 @@ function render_minesweeper_br(res) {
         container.innerHTML = '';
         wrapper = document.createElement('div');
         wrapper.id = 'ms-wrapper';
-        wrapper.className = 'game-custom-wrapper';
+        wrapper.className = 'game-custom-wrapper px-3';
         container.appendChild(wrapper);
     }
 
@@ -57,6 +58,8 @@ function render_minesweeper_br(res) {
     }
 
     if (state.status === 'setup') {
+        window._msFlagMode = false;
+        window._msCanFlag = false;
         renderMsSetup(wrapper, res.is_host, state);
     } else if (state.status === 'playing') {
         window._msResultsSubmitted = false;
@@ -89,7 +92,7 @@ function renderMsSetup(container, isHost, state) {
     ];
 
     container.innerHTML = `
-        <div class="text-center p-4">
+        <div class="text-center py-4 px-1">
             <div class="display-1 mb-3"><i class="bi bi-bomb"></i></div>
             <h2 class="fw-bold mb-1">Настройка игры</h2>
             <p class="text-muted small mb-4">Выберите сложность и начните разминирование</p>
@@ -136,9 +139,10 @@ function renderMsBoard(container, state, players, myId) {
     const currentPlayer = (players || []).find(p => String(p.id) === currentTurnUid);
     const currentPlayerName = currentPlayer ? (currentPlayer.custom_name || currentPlayer.first_name) : 'Игрок';
 
-    // Responsive cell size: fit grid within viewport
-    const viewportW = window.innerWidth - 40; // 20px padding each side
-    const maxCellW = Math.floor(viewportW / cols) - 2; // subtract gap
+    // Responsive cell size: fit grid within #ms-wrapper without horizontal overflow
+    const containerW = Math.min(window.innerWidth - 32, 408);
+    const gridInnerW = containerW - 18 - (cols - 1) * 2; // subtract grid padding (16px), border (2px), and gaps
+    const maxCellW = Math.floor(gridInnerW / cols);
     const cellSize = Math.min(Math.max(maxCellW, 20), 38); // clamp between 20-38
     const fontSize = Math.max(Math.round(cellSize * 0.45), 10);
 
@@ -155,6 +159,11 @@ function renderMsBoard(container, state, players, myId) {
                              (flagCount >= mineCount || flagCount === unrevealedCount);
 
     const isSolo = players.length === 1;
+    const canFlag = state.status === 'playing' && Boolean(state.grid && Object.keys(state.revealed || {}).length > 0);
+    window._msCanFlag = canFlag;
+    if (!canFlag) {
+        window._msFlagMode = false;
+    }
 
     // Board
     container.innerHTML = `
@@ -225,7 +234,9 @@ function renderMsBoard(container, state, players, myId) {
                 <button class="ms-mode-btn ${!window._msFlagMode ? 'active' : ''}" onclick="minesweeperSetMode(false)">
                     <i class="bi bi-hand-index"></i> Открыть
                 </button>
-                <button class="ms-mode-btn ${window._msFlagMode ? 'active flag-mode' : ''}" onclick="minesweeperSetMode(true)">
+                <button class="ms-mode-btn ${window._msFlagMode ? 'active flag-mode' : ''} ${!canFlag ? 'disabled' : ''}"
+                        ${!canFlag ? 'title="Сначала откройте клетку" aria-disabled="true"' : ''}
+                        onclick="minesweeperSetMode(true)">
                     <i class="bi bi-flag-fill"></i> Флажок
                 </button>
             </div>
@@ -265,7 +276,7 @@ function renderMsBoard(container, state, players, myId) {
                 // Chord on revealed number
                 markMsCellPending(el);
                 minesweeperChord(idx);
-            } else if (window._msFlagMode) {
+            } else if (window._msFlagMode && canFlag) {
                 // Flag mode: toggle flag
                 markMsCellPending(el);
                 minesweeperToggleFlag(idx);
@@ -279,7 +290,7 @@ function renderMsBoard(container, state, players, myId) {
         // Long press still works as flag shortcut
         let pressTimer;
         el.ontouchstart = (e) => {
-            if (!isMyTurn || state.revealed[idx] !== undefined) return;
+            if (!isMyTurn || state.revealed[idx] !== undefined || !canFlag) return;
             pressTimer = setTimeout(() => {
                 markMsCellPending(el);
                 minesweeperToggleFlag(idx);
@@ -293,6 +304,13 @@ function renderMsBoard(container, state, players, myId) {
         el.oncontextmenu = (e) => {
             e.preventDefault();
             if (isMyTurn && state.revealed[idx] === undefined) {
+                if (!canFlag) {
+                    if (window.ThemeManager) window.ThemeManager.triggerHaptic('notification', 'warning');
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Сначала откройте клетку', 'warning');
+                    }
+                    return;
+                }
                 markMsCellPending(el);
                 minesweeperToggleFlag(idx);
             }
@@ -385,7 +403,7 @@ function renderMsResults(container, state, players, summary = null) {
     }
 
     overlay.innerHTML = `
-        <div class="text-center p-4">
+        <div class="text-center p-4 w-100">
             <div class="display-1 mb-3 animate__animated animate__bounceIn">
                 ${hitMineSolo ? '<i class="bi bi-patch-exclamation-fill text-danger"></i>' : '<i class="bi bi-trophy-fill" style="color: #FFD700; filter: drop-shadow(0 0 15px rgba(255,215,0,0.5))"></i>'}
             </div>
@@ -420,12 +438,14 @@ function renderMsResults(container, state, players, summary = null) {
                 </div>
             ` : ''}
 
-            ${summary && window.GameSummaryProvider ? window.GameSummaryProvider.render(summary, {
-                playAgainLabel: 'Играть снова', roomActionLabel: 'В лобби'
-            }) : `<div class="d-flex flex-column gap-2 w-100">
-                <button class="glass-btn primary w-100 py-3 rounded-4 fw-bold" onclick="minesweeperStartGame()">ИГРАТЬ СНОВА</button>
-                <button class="glass-btn secondary w-100 py-3 rounded-4 fw-bold" onclick="minesweeperFinish()">В ЛОББИ</button>
-            </div>`}
+            <div class="ms-results-summary-wrap w-100 text-start">
+                ${summary && window.GameSummaryProvider ? window.GameSummaryProvider.render(summary, {
+                    playAgainLabel: 'Играть снова', roomActionLabel: 'В лобби'
+                }) : `<div class="d-flex flex-column gap-2 w-100">
+                    <button class="glass-btn primary w-100 py-3 rounded-4 fw-bold" onclick="minesweeperStartGame()">ИГРАТЬ СНОВА</button>
+                    <button class="glass-btn secondary w-100 py-3 rounded-4 fw-bold" onclick="minesweeperFinish()">В ЛОББИ</button>
+                </div>`}
+            </div>
         </div>
     `;
 }

@@ -128,6 +128,17 @@
                 </div>
             </div>
 
+            <div class="settings-item">
+                <div class="settings-label-wrap">
+                    <div class="settings-row-title">Показывать реакции</div>
+                    <div class="settings-row-subtitle">Кнопка и анимации реакций во время игры</div>
+                </div>
+                <div class="form-check form-switch p-0 m-0 d-flex align-items-center">
+                    <input class="form-check-input settings-switch ms-auto" type="checkbox" id="setting-showReactions"
+                        onchange="toggleSetting('showReactions', this.checked)">
+                </div>
+            </div>
+
             <div class="settings-item border-0 pb-0">
                 <div class="settings-label-wrap">
                     <div class="settings-row-title">Лидерборд</div>

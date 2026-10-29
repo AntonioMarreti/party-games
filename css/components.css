@@ -459,9 +459,10 @@ body.dark-mode.thermal-safe .pb-input-shell .form-control::placeholder {
     right: 0;
     background: var(--bg-glass-strong);
     backdrop-filter: blur(20px);
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 16px;
+    padding: 10px;
     display: flex;
+    flex-direction: column;
     gap: 8px;
     opacity: 0;
     transform: translateY(10px);
@@ -476,29 +477,53 @@ body.dark-mode.thermal-safe .pb-input-shell .form-control::placeholder {
     pointer-events: auto;
 }
 
-.reaction-hide-btn {
-    width: 40px;
-    height: 40px;
+.reaction-palette-emojis {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.reaction-hide-action-btn {
+    width: 100%;
+    padding: 6px 10px;
     border-radius: 8px;
-    background: color-mix(in srgb, var(--status-error), transparent 85%);
-    color: var(--status-error);
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(var(--glass-bg-rgb, 255, 255, 255), 0.12);
+    color: var(--text-muted, #7d7d7d);
+    font-size: 12px;
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 16px;
-    order: -1;
-    /* Place first */
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.reaction-hide-btn:hover {
-    background: color-mix(in srgb, var(--status-error), transparent 75%);
-    transform: scale(1.1);
+.reaction-hide-action-btn:hover {
+    background: rgba(0, 0, 0, 0.09);
+    color: var(--text-main, #333);
 }
 
-.reaction-hide-btn:active {
-    transform: scale(0.95);
+.reaction-hide-action-btn:active {
+    transform: scale(0.97);
+}
+
+[data-theme="dark"] .reaction-hide-action-btn,
+body.dark-mode .reaction-hide-action-btn,
+body.tg-dark-theme .reaction-hide-action-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.74);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .reaction-hide-action-btn:hover,
+body.dark-mode .reaction-hide-action-btn:hover,
+body.tg-dark-theme .reaction-hide-action-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
 }
 
 .reaction-palette-btn {

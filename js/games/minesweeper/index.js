@@ -102,6 +102,13 @@ window.minesweeperToggleFlag = function (idx) {
         window.advanceMsTutorial('flag', {index: idx});
         return;
     }
+    if (!window._msCanFlag) {
+        if (window.ThemeManager) window.ThemeManager.triggerHaptic('notification', 'warning');
+        if (typeof window.showToast === 'function') {
+            window.showToast('Сначала откройте клетку', 'warning');
+        }
+        return;
+    }
     if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
     sendGameAction('toggle_flag', { index: idx });
 };
@@ -128,6 +135,13 @@ window.minesweeperFinish = function () {
 };
 
 window.minesweeperSetMode = function (flagMode) {
+    if (flagMode && !window._msCanFlag) {
+        if (window.ThemeManager) window.ThemeManager.triggerHaptic('notification', 'warning');
+        if (typeof window.showToast === 'function') {
+            window.showToast('Сначала откройте клетку', 'warning');
+        }
+        return;
+    }
     window._msFlagMode = flagMode;
     if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
     // Update segmented control buttons

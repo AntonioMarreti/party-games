@@ -1,5 +1,17 @@
 /* css/games/minesweeper.css – Minesweeper Battle Royale */
 
+/* ─── Main Game Wrapper & Alignment (QA #50) ─── */
+#ms-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 16px;
+    padding-right: 16px;
+    box-sizing: border-box;
+}
+
 /* ─── Board Container ─── */
 .ms-board-container {
     width: 100%;
@@ -218,7 +230,7 @@
 /* ─── Turn Indicator ─── */
 .ms-turn-indicator {
     padding: 10px 16px;
-    margin: 0 8px;
+    margin: 0 0 10px 0;
     text-align: center;
     font-weight: 800;
     font-size: 14px;
@@ -291,6 +303,17 @@
 
 .ms-mode-btn:active {
     transform: scale(0.96);
+}
+
+.ms-mode-btn.disabled,
+.ms-mode-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ms-mode-btn.disabled:active,
+.ms-mode-btn:disabled:active {
+    transform: none;
 }
 
 .ms-mode-btn.active {
@@ -540,8 +563,13 @@ body.tg-dark-theme .ms-tutorial-tooltip {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: calc(100% - 30px);
+    width: calc(100% - 24px);
     max-width: 400px;
+    max-height: calc(100% - 40px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
@@ -549,11 +577,16 @@ body.tg-dark-theme .ms-tutorial-tooltip {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     transition: opacity 0.3s ease, transform 0.3s ease;
     border-radius: 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     border: 1px solid rgba(255,255,255,0.4);
+}
+
+@media (max-width: 380px) {
+    .ms-results-overlay > div {
+        padding: 1.25rem 0.85rem !important;
+    }
 }
 
 [data-theme="dark"] .ms-results-overlay,
@@ -566,6 +599,145 @@ body.tg-dark-theme .ms-results-overlay {
 body.dark-mode .ms-results-overlay .text-muted,
 body.tg-dark-theme .ms-results-overlay .text-muted {
     color: var(--text-on-dark-muted) !important;
+}
+
+/* ─── Results Summary Card Layout & Alignment (QA #51) ─── */
+.ms-results-summary-wrap {
+    width: 100%;
+    text-align: left;
+}
+
+.ms-results-overlay .game-summary-card {
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ms-results-overlay .game-summary-card .game-summary-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    text-align: left;
+    width: 100%;
+}
+
+.ms-results-overlay .game-summary-card .game-summary-title-wrap,
+.ms-results-overlay .game-summary-card .game-summary-kicker,
+.ms-results-overlay .game-summary-card .game-summary-title,
+.ms-results-overlay .game-summary-card .game-summary-outcome,
+.ms-results-overlay .game-summary-card .game-summary-participants,
+.ms-results-overlay .game-summary-card .game-summary-awards,
+.ms-results-overlay .game-summary-card .game-summary-award,
+.ms-results-overlay .game-summary-card .game-summary-award > div,
+.ms-results-overlay .game-summary-card .game-summary-award-title,
+.ms-results-overlay .game-summary-card .game-summary-award-name,
+.ms-results-overlay .game-summary-card .game-summary-empty,
+.ms-results-overlay .game-summary-card .game-summary-share-preview,
+.ms-results-overlay .game-summary-card .game-summary-share-preview-copy,
+.ms-results-overlay .game-summary-card .game-summary-share-preview-label,
+.ms-results-overlay .game-summary-card .game-summary-share-preview-title,
+.ms-results-overlay .game-summary-card .game-summary-share-preview-meta {
+    text-align: left;
+}
+
+/* ─── Results Buttons Contrast in Dark Mode (QA #52) ─── */
+[data-theme="dark"] .ms-results-overlay .btn-outline-secondary,
+body.dark-mode .ms-results-overlay .btn-outline-secondary,
+body.tg-dark-theme .ms-results-overlay .btn-outline-secondary,
+html.dark-mode .ms-results-overlay .btn-outline-secondary {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.24) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .ms-results-overlay .btn-outline-secondary:hover,
+[data-theme="dark"] .ms-results-overlay .btn-outline-secondary:focus,
+[data-theme="dark"] .ms-results-overlay .btn-outline-secondary:active,
+body.dark-mode .ms-results-overlay .btn-outline-secondary:hover,
+body.dark-mode .ms-results-overlay .btn-outline-secondary:focus,
+body.dark-mode .ms-results-overlay .btn-outline-secondary:active,
+body.tg-dark-theme .ms-results-overlay .btn-outline-secondary:hover,
+body.tg-dark-theme .ms-results-overlay .btn-outline-secondary:focus,
+body.tg-dark-theme .ms-results-overlay .btn-outline-secondary:active,
+html.dark-mode .ms-results-overlay .btn-outline-secondary:hover,
+html.dark-mode .ms-results-overlay .btn-outline-secondary:focus,
+html.dark-mode .ms-results-overlay .btn-outline-secondary:active {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.45) !important;
+    background-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Light mode button contrast */
+.ms-results-overlay .btn-outline-secondary {
+    color: #2d3436;
+    border-color: rgba(108, 92, 231, 0.22);
+    background-color: rgba(108, 92, 231, 0.04);
+}
+
+.ms-results-overlay .btn-outline-secondary:hover,
+.ms-results-overlay .btn-outline-secondary:focus,
+.ms-results-overlay .btn-outline-secondary:active {
+    color: #1e272e;
+    border-color: rgba(108, 92, 231, 0.4);
+    background-color: rgba(108, 92, 231, 0.1);
+}
+
+/* Dark mode card surface & text contrast */
+[data-theme="dark"] .ms-results-overlay .game-summary-card,
+body.dark-mode .ms-results-overlay .game-summary-card,
+body.tg-dark-theme .ms-results-overlay .game-summary-card,
+html.dark-mode .ms-results-overlay .game-summary-card {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.94);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-title,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-award-title,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-share-preview-title,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-title,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-award-title,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-share-preview-title,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-title,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-award-title,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-share-preview-title,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-title,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-award-title,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-share-preview-title {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-kicker,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-outcome,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-participants,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-award-name,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-empty,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-share-preview-label,
+[data-theme="dark"] .ms-results-overlay .game-summary-card .game-summary-share-preview-meta,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-kicker,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-outcome,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-participants,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-award-name,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-empty,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-share-preview-label,
+body.dark-mode .ms-results-overlay .game-summary-card .game-summary-share-preview-meta,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-kicker,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-outcome,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-participants,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-award-name,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-empty,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-share-preview-label,
+body.tg-dark-theme .ms-results-overlay .game-summary-card .game-summary-share-preview-meta,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-kicker,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-outcome,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-participants,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-award-name,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-empty,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-share-preview-label,
+html.dark-mode .ms-results-overlay .game-summary-card .game-summary-share-preview-meta {
+    color: var(--text-on-dark-muted, rgba(255, 255, 255, 0.74)) !important;
 }
 
 .ms-results-overlay.minimized {

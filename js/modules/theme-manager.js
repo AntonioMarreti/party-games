@@ -7,7 +7,8 @@ const DEFAULT_SETTINGS = {
     noAnimations: false,
     haptics: true,
     notificationsEnabled: true,
-    thermalSafe: false
+    thermalSafe: false,
+    showReactions: true
 };
 
 const DEFAULT_THEME_PREFERENCES = {
@@ -466,10 +467,14 @@ function applySettings() {
     syncTelegramThemeClass();
 
     applyThemeDOM();
+
+    if (typeof window.updateReactionToolbarVisibility === 'function') {
+        window.updateReactionToolbarVisibility();
+    }
 }
 
 function syncUI() {
-    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe'];
+    const switches = ['noAnimations', 'haptics', 'simpleBg', 'largeFont', 'privacyLeaderboard', 'notificationsEnabled', 'soundEnabled', 'thermalSafe', 'showReactions'];
     switches.forEach(key => {
         const el = document.getElementById('setting-' + key);
         if (el) {

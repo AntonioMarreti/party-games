@@ -800,7 +800,11 @@ window.stopGameBackgroundWorkExcept = stopGameBackgroundWorkExcept;
 window.addEventListener('screenChanged', (e) => {
     const id = e.detail.screenId;
     if (id === 'screen-game') {
-        if (typeof renderReactionToolbar === 'function') renderReactionToolbar();
+        if (typeof updateReactionToolbarVisibility === 'function') {
+            updateReactionToolbarVisibility();
+        } else if (typeof renderReactionToolbar === 'function') {
+            renderReactionToolbar();
+        }
         if (!document.hidden && window.currentRoomCode && typeof window.checkState === 'function') {
             window.checkState();
         }
@@ -880,6 +884,9 @@ window.checkState = async function (options = {}) {
         }
 
         if (res.players) window.currentGamePlayers = res.players;
+        if (typeof updateReactionToolbarVisibility === 'function') {
+            updateReactionToolbarVisibility();
+        }
         if (res.events && res.events.length > 0) handleReactions(res.events);
 
         // Handle Favorites
@@ -986,6 +993,8 @@ window.checkState = async function (options = {}) {
             stopGameBackgroundWorkExcept(null, 'left_room');
             window.currentRoomCode = null;
             window.isHost = false;
+            window.currentGamePlayers = [];
+            if (typeof hideReactionToolbar === 'function') hideReactionToolbar();
 
             // Fix: Respect hash if present, otherwise fallback to lobby
             const hash = window.location.hash.substring(1);
