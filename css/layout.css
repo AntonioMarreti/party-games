@@ -14,9 +14,25 @@ body {
 
 :root {
     --app-viewport-height: 100vh;
-    --app-safe-top-base: env(safe-area-inset-top, 0px);
-    --app-safe-bottom: env(safe-area-inset-bottom, 0px);
-    --app-safe-top: var(--app-safe-top-base);
+    --app-tg-content-safe-top: var(--tg-content-safe-area-inset-top, 0px);
+    --app-tg-safe-top: var(--tg-safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --app-tg-safe-bottom: var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    --app-tg-content-safe-bottom: var(--tg-content-safe-area-inset-bottom, 0px);
+    --app-tg-header-clearance: 0px;
+    --app-safe-top-base: max(
+        var(--app-tg-content-safe-top, 0px),
+        var(--app-tg-safe-top, 0px),
+        env(safe-area-inset-top, 0px)
+    );
+    --app-safe-top: max(
+        var(--app-safe-top-base),
+        calc(var(--app-tg-safe-top) + var(--app-tg-header-clearance))
+    );
+    --app-safe-bottom: max(
+        var(--app-tg-content-safe-bottom, 0px),
+        var(--app-tg-safe-bottom, 0px),
+        env(safe-area-inset-bottom, 0px)
+    );
     --app-bottom-nav-clearance: calc(120px + var(--app-safe-bottom));
     --desktop-app-shell-width: 480px;
     --desktop-bottom-nav-width: 380px;
@@ -28,8 +44,22 @@ body {
     }
 }
 
-body.tg-platform-android.safe-top {
-    --app-safe-top: calc(var(--app-safe-top-base) + 36px);
+html.tg-platform-ios,
+body.tg-platform-ios {
+    --app-tg-header-clearance: 44px;
+    --app-safe-top: max(
+        var(--app-safe-top-base),
+        calc(var(--app-tg-safe-top) + 44px)
+    );
+}
+
+html.tg-platform-android,
+body.tg-platform-android {
+    --app-tg-header-clearance: 36px;
+    --app-safe-top: max(
+        var(--app-safe-top-base),
+        calc(var(--app-tg-safe-top) + 36px)
+    );
 }
 
 body.tg-platform-android .game-detail-action-bar {
@@ -107,16 +137,16 @@ body.tg-platform-android .game-detail-action-bar {
 .header-bg {
     background: var(--header-gradient);
     color: var(--text-on-accent);
-    padding-top: calc(40px + var(--app-safe-top));
-    padding-bottom: 60px;
-    padding-left: 24px;
-    padding-right: 24px;
-    border-bottom-left-radius: var(--radius-lg);
-    border-bottom-right-radius: var(--radius-lg);
-    margin-bottom: -35px;
+    padding-top: calc(18px + var(--app-safe-top));
+    padding-bottom: 34px;
+    padding-left: 20px;
+    padding-right: 20px;
+    border-bottom-left-radius: 26px;
+    border-bottom-right-radius: 26px;
+    margin-bottom: -18px;
     position: relative;
     z-index: 0;
-    box-shadow: var(--shadow-strong);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 body.dark-mode .header-bg,
@@ -126,19 +156,20 @@ body.tg-dark-theme.dark-mode .header-bg {
 }
 
 .header-title {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 800;
-    margin-bottom: 4px;
-    line-height: 1.1;
-    letter-spacing: -0.5px;
+    margin-bottom: 3px;
+    line-height: 1.15;
+    letter-spacing: -0.3px;
 }
 
 .header-subtitle {
-    opacity: 0.8;
-    font-size: 15px;
+    opacity: 0.88;
+    font-size: 13px;
     font-weight: 500;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    letter-spacing: normal;
+    text-transform: none !important;
+    line-height: 1.35;
 }
 
 /* === NAVIGATION === */

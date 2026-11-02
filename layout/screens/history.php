@@ -1,4 +1,4 @@
-<div id="screen-history" class="screen" style="display: none; height: 100vh; overflow-y: auto;">
+<div id="screen-history" class="screen">
     <div class="header-bg history-hero">
         <button type="button" class="history-back-btn" onclick="goBackFromHistory()" aria-label="Назад в профиль" hidden>
             <i class="bi bi-chevron-left" aria-hidden="true"></i>
@@ -9,7 +9,7 @@
     </div>
 
     <div class="content-wrapper history-content pt-4" id="history-list-container"
-        style="padding-bottom: calc(160px + env(safe-area-inset-bottom));">
+        style="padding-bottom: var(--app-bottom-nav-clearance);">
         <div id="history-loader" class="history-state-card text-center">
             <div class="spinner-border text-primary text-opacity-50" role="status">
                 <span class="visually-hidden">Загрузка...</span>
@@ -17,7 +17,7 @@
             <div class="text-muted small fw-bold mt-3">Загружаем историю...</div>
         </div>
 
-        <div id="history-content-list" class="d-flex flex-column gap-3"></div>
+        <div id="history-content-list" class="d-flex flex-column gap-2"></div>
 
         <div id="history-empty" class="history-state-card text-center" style="display: none;">
             <div class="empty-state-icon text-muted mb-3 opacity-50" aria-hidden="true">
@@ -30,7 +30,7 @@
         </div>
     </div>
 
-    <div id="history-details-sheet" class="history-details-overlay" aria-hidden="true"
+    <div id="history-details-sheet" class="history-details-overlay" aria-hidden="true" style="display: none;"
         onclick="closeHistoryDetails()">
         <div class="history-details-sheet" role="dialog" aria-modal="true" aria-labelledby="history-details-title"
             onclick="event.stopPropagation()">

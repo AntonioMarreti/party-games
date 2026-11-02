@@ -130,14 +130,445 @@ body.modal-open {
     color: var(--app-text-muted, var(--text-muted)) !important;
 }
 
-body.dark-mode #gameSelectorModal .game-list-content .text-dark,
-body.tg-dark-theme #gameSelectorModal .game-list-content .text-dark {
+/* === Game Selector Modal (Dialog Style with Safe Area) === */
+#gameSelectorModal {
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+#gameSelectorModal .modal-dialog.game-selector-dialog {
+    margin: auto !important;
+    max-width: 440px !important;
+    width: calc(100% - 24px) !important;
+    height: auto !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 16px) - 20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#gameSelectorModal .modal-content.game-selector-modal-content {
+    background: var(--bg-card, var(--bg-secondary)) !important;
+    border-radius: 26px !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 16px) - 20px) !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28) !important;
+    border: 1px solid var(--border-main) !important;
+    width: 100%;
+}
+
+.game-selector-modal-header {
+    padding: 16px 18px 10px 18px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: none !important;
+    flex-shrink: 0;
+}
+
+.game-selector-modal-header .modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.game-selector-modal-header .btn-close {
+    padding: 8px;
+    margin: 0;
+    opacity: 0.75;
+    transition: opacity 0.15s, transform 0.15s;
+    background-size: 10px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.game-selector-modal-header .btn-close:focus {
+    box-shadow: none;
+}
+.game-selector-modal-header .btn-close:active {
+    transform: scale(0.92);
+}
+
+.game-selector-modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+#game-selector-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+}
+
+.game-selector-sticky-header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-main);
+    padding: 0 14px 8px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    z-index: 5;
+}
+
+/* Search Box */
+.game-selector-search-box {
+    position: relative;
+    width: 100%;
+}
+
+.game-selector-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.game-selector-search-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 32px 0 32px;
+    font-size: 13.5px;
+    border-radius: 12px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-app);
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-selector-search-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent);
+}
+
+.game-selector-search-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.game-selector-search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* Category Tabs */
+.game-selector-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.game-selector-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-tab {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 14px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-app);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.filter-tab:active {
+    transform: scale(0.96);
+}
+
+.filter-tab.active {
+    background: var(--primary-color) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-color) !important;
+    font-weight: 700;
+}
+
+/* Favorites Strip (Quick-Picks) */
+.game-fav-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 2px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.game-fav-strip::-webkit-scrollbar {
+    display: none;
+}
+
+.game-fav-strip-label {
+    font-size: 11px;
+    color: #f59e0b;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding-right: 2px;
+}
+
+.game-fav-chip {
+    height: 26px;
+    padding: 0 9px 0 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 13px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-app);
+    color: var(--text-main);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.game-fav-chip:active {
+    transform: scale(0.96);
+}
+
+.game-fav-chip.selected {
+    border-color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-app));
+    color: var(--primary-color);
+}
+
+.game-fav-chip-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+/* 2-Column Grid Container */
+.game-grid-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px 20px 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-content: start;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Card */
+.game-grid-card {
+    background: var(--bg-app);
+    border: 1px solid var(--border-main);
+    border-radius: 14px;
+    padding: 8px 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    min-height: 52px;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.game-grid-card:active {
+    transform: scale(0.97);
+}
+
+.game-grid-card.selected {
+    border-color: var(--primary-color) !important;
+    background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-app)) !important;
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.game-grid-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.game-grid-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.game-grid-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-grid-meta {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.1;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-grid-players {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    opacity: 0.85;
+}
+
+.game-grid-card .game-fav-btn {
+    padding: 4px;
+    margin: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    opacity: 0.45;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: transform 0.15s, opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.game-grid-card .game-fav-btn:active {
+    transform: scale(0.8);
+}
+
+.game-grid-card .game-fav-btn.active {
+    opacity: 1;
+    color: #f59e0b;
+}
+
+.game-grid-card .game-grid-check {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    color: var(--primary-color);
+    font-size: 11px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Empty Search Result */
+.game-grid-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+}
+.game-grid-empty i {
+    font-size: 24px;
+    opacity: 0.6;
+}
+
+/* Modal Footer & Bottom Button */
+.game-selector-modal-footer {
+    padding: 10px 16px 14px 16px !important;
+    border-top: 1px solid var(--border-main) !important;
+    background: var(--bg-card, var(--bg-secondary));
+    flex-shrink: 0;
+    border-radius: 0 0 26px 26px;
+}
+
+.game-selector-bottom-btn {
+    height: 44px;
+    border-radius: 14px;
+    background: var(--bg-app);
+    border: 1px solid var(--border-main);
+    color: var(--text-main);
+    font-size: 14.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.game-selector-bottom-btn:hover {
+    background: color-mix(in srgb, var(--text-main) 6%, var(--bg-app));
+    color: var(--text-main);
+}
+
+.game-selector-bottom-btn:active {
+    transform: scale(0.98);
+    background: color-mix(in srgb, var(--text-main) 12%, var(--bg-app));
+}
+
+body.dark-mode #gameSelectorModal .game-grid-name,
+body.tg-dark-theme #gameSelectorModal .game-grid-name {
     color: var(--text-main) !important;
 }
 
-body.dark-mode #gameSelectorModal .game-list-content .text-muted,
-body.tg-dark-theme #gameSelectorModal .game-list-content .text-muted {
+body.dark-mode #gameSelectorModal .game-grid-meta,
+body.tg-dark-theme #gameSelectorModal .game-grid-meta {
     color: var(--text-muted) !important;
+}
+
+body.dark-mode #gameSelectorModal .game-selector-bottom-btn,
+body.tg-dark-theme #gameSelectorModal .game-selector-bottom-btn {
+    background: var(--bg-app, #1f242d);
+    border-color: var(--border-main);
+    color: var(--text-main);
 }
 
 .lobby-modal-form {
@@ -295,107 +726,267 @@ body.thermal-safe .lobby-modal .create-room-public-row {
     background-repeat: no-repeat;
 }
 
-.invite-icon-wrapper {
-    width: 80px;
-    height: 80px;
-    min-width: 80px;
-    min-height: 80px;
-    border-radius: 50%;
-    background-color: var(--bg-app);
-    display: inline-flex;
+/* === 2. Invite Friends Modal (Dialog Style with Safe Area) === */
+#inviteFriendsModal {
+    padding: 0 !important;
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    margin-bottom: 8px;
 }
 
-.invite-icon {
-    font-size: 40px;
-    line-height: 1;
-    color: var(--primary-color);
+#inviteFriendsModal .modal-dialog.invite-friends-dialog {
+    margin: auto !important;
+    max-width: 440px !important;
+    width: calc(100% - 24px) !important;
+    height: auto !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 16px) - 20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.invite-search-group {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-main);
-    border-radius: 16px;
-    padding: 6px 10px 6px 12px;
-    box-shadow: var(--shadow-main);
+#inviteFriendsModal .modal-content.invite-friends-modal-content {
+    background: var(--bg-card, var(--bg-secondary)) !important;
+    border-radius: 26px !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 16px) - 20px) !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28) !important;
+    border: 1px solid var(--border-main) !important;
+    width: 100%;
+}
+
+.invite-friends-modal-header {
+    padding: 16px 18px 12px 18px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: none !important;
+    flex-shrink: 0;
+}
+
+.invite-friends-modal-header .modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.invite-friends-modal-header .btn-close {
+    padding: 8px;
+    margin: 0;
+    opacity: 0.75;
+    transition: opacity 0.15s, transform 0.15s;
+    background-size: 10px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.invite-friends-modal-header .btn-close:focus {
+    box-shadow: none;
+}
+.invite-friends-modal-header .btn-close:active {
+    transform: scale(0.92);
+}
+
+.invite-friends-modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 16px 8px 16px !important;
+    min-height: 220px;
+}
+
+.invite-search-wrap {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-app);
+    flex-shrink: 0;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.invite-search-wrap:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent);
 }
 
 .invite-search-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    flex: 0 0 20px;
-    color: color-mix(in srgb, var(--text-muted), var(--text-main) 24%);
+    position: static;
+    transform: none;
+    font-size: 14px;
+    color: var(--text-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+    line-height: 1;
 }
 
 .invite-search-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 !important;
+    font-size: 14px;
     border: none !important;
     background: transparent !important;
-    box-shadow: none !important;
-    height: 100%;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    padding-left: 0;
-    font-size: 16px;
-    width: 100%;
-    outline: none !important;
     color: var(--text-main);
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none;
+}
+
+.invite-search-input:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .invite-search-input::placeholder {
-    color: color-mix(in srgb, var(--text-muted), var(--text-main) 18%);
-    opacity: 1;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.invite-friends-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 2px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .invite-friend-item {
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
-    padding: 8px;
-    padding-right: 16px;
-    border-radius: 12px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    border: 1px solid transparent;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.15s ease;
+    user-select: none;
+    background: transparent;
 }
 
-.invite-send-btn {
-    width: 100%;
-    border-radius: 50rem;
-    font-weight: 700;
-    color: var(--app-accent-text) !important;
-    background: var(--primary-gradient);
-    border: none !important;
-    padding: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    font-size: 18px;
-    transition: all 0.2s;
+.invite-friend-item:active {
+    transform: scale(0.985);
 }
 
-.invite-send-btn:disabled {
-    background: var(--divider);
-    color: var(--text-muted) !important;
-    box-shadow: none;
-    cursor: not-allowed;
-}
-
-.invite-modal-footer {
-    background: transparent !important;
-    border: none !important;
-    padding: 0 12px 24px;
+.invite-friend-item.selected {
+    background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-app)) !important;
+    border-color: color-mix(in srgb, var(--primary-color) 35%, transparent);
 }
 
 .invite-avatar-box {
     position: relative;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     margin-right: 12px;
     flex-shrink: 0;
+}
+
+.invite-friend-name {
+    color: var(--text-main);
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.invite-custom-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-main);
+    background: var(--bg-app);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: transparent;
+    transition: all 0.15s ease;
+}
+
+.invite-custom-check.checked {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: #ffffff;
+}
+
+.invite-modal-footer {
+    padding: 10px 16px 14px 16px !important;
+    border-top: 1px solid var(--border-main) !important;
+    background: var(--bg-card, var(--bg-secondary));
+    flex-shrink: 0;
+    border-radius: 0 0 26px 26px;
+}
+
+#inviteFriendsModal .invite-cancel-btn,
+#inviteFriendsModal .invite-send-btn {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    border-radius: 14px !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    line-height: 1 !important;
+}
+
+#inviteFriendsModal .invite-cancel-btn {
+    min-width: 90px !important;
+    background: var(--bg-app) !important;
+    border: 1px solid var(--border-main) !important;
+    color: var(--text-main) !important;
+    box-shadow: none !important;
+}
+
+#inviteFriendsModal .invite-cancel-btn:active {
+    transform: scale(0.97);
+    background: color-mix(in srgb, var(--text-main) 10%, var(--bg-app)) !important;
+}
+
+#inviteFriendsModal .invite-send-btn {
+    flex: 1 !important;
+    background: var(--primary-color) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    border: 1px solid transparent !important;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--primary-color), transparent 60%) !important;
+}
+
+#inviteFriendsModal .invite-send-btn:disabled {
+    background: color-mix(in srgb, var(--text-main) 12%, var(--bg-app)) !important;
+    border: 1px solid transparent !important;
+    color: var(--text-muted) !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+}
+
+#inviteFriendsModal .invite-send-btn:not(:disabled):active {
+    transform: scale(0.98);
+}
+
+body.dark-mode #inviteFriendsModal .invite-cancel-btn,
+body.tg-dark-theme #inviteFriendsModal .invite-cancel-btn {
+    background: var(--bg-app, #1f242d) !important;
+    border-color: var(--border-main) !important;
+    color: var(--text-main) !important;
 }
 
 /* === GAME SELECTOR MODAL === */

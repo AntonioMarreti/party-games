@@ -718,10 +718,11 @@ async function toggleGameLike(gameId, el) {
             icon.classList.add('bi-heart-fill', 'text-danger');
             icon.style.transform = 'scale(1.2)';
             setTimeout(() => icon.style.transform = 'scale(1)', 200);
-            if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
+            if (window.ThemeManager) window.ThemeManager.triggerHaptic('impact', 'medium');
         } else {
             icon.classList.add('bi-heart');
             icon.classList.remove('bi-heart-fill', 'text-danger');
+            if (window.ThemeManager) window.ThemeManager.triggerHaptic('selection');
         }
     }
     // 2. Handle SVG Toggle (Game Detail) is handled by caller (optimistic), 
@@ -741,6 +742,9 @@ async function toggleGameLike(gameId, el) {
             }
 
             // === SYNC UI ACROSS APP (Lobby Cards, etc) ===
+            if (window.gameCatalogState && window.gameCatalogState.category === 'favorites' && typeof window.renderAllGames === 'function') {
+                window.renderAllGames();
+            }
             const allLikeBtns = document.querySelectorAll(`[data-like-game-id="${gameId}"]`);
             allLikeBtns.forEach(btn => {
                 const i = btn.querySelector('i');

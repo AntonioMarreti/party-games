@@ -230,6 +230,29 @@ function applyTelegramViewportHeight() {
     if (roundedHeight > 0) {
         document.documentElement.style.setProperty('--app-viewport-height', `${roundedHeight}px`);
     }
+
+    if (isRealTelegramWebApp(tg)) {
+        if (tg.contentSafeAreaInset) {
+            const cTop = Number(tg.contentSafeAreaInset.top || 0);
+            const cBottom = Number(tg.contentSafeAreaInset.bottom || 0);
+            const cLeft = Number(tg.contentSafeAreaInset.left || 0);
+            const cRight = Number(tg.contentSafeAreaInset.right || 0);
+            document.documentElement.style.setProperty('--tg-content-safe-area-inset-top', `${cTop}px`);
+            document.documentElement.style.setProperty('--tg-content-safe-area-inset-bottom', `${cBottom}px`);
+            document.documentElement.style.setProperty('--tg-content-safe-area-inset-left', `${cLeft}px`);
+            document.documentElement.style.setProperty('--tg-content-safe-area-inset-right', `${cRight}px`);
+        }
+        if (tg.safeAreaInset) {
+            const sTop = Number(tg.safeAreaInset.top || 0);
+            const sBottom = Number(tg.safeAreaInset.bottom || 0);
+            const sLeft = Number(tg.safeAreaInset.left || 0);
+            const sRight = Number(tg.safeAreaInset.right || 0);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-top', `${sTop}px`);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-bottom', `${sBottom}px`);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-left', `${sLeft}px`);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-right', `${sRight}px`);
+        }
+    }
 }
 
 function scheduleTelegramViewportUpdate() {
@@ -241,13 +264,21 @@ function scheduleTelegramViewportUpdate() {
     });
 }
 
+const TELEGRAM_VIEWPORT_EVENTS = ['viewportChanged', 'safeAreaChanged', 'contentSafeAreaChanged'];
+
 function updateTelegramViewportVars(tg) {
     const nextTelegramWebApp = isRealTelegramWebApp(tg) ? tg : null;
     if (nextTelegramWebApp !== telegramViewportLifecycle.telegramWebApp) {
         if (telegramViewportLifecycle.telegramListenerBound
             && telegramViewportLifecycle.telegramWebApp
             && typeof telegramViewportLifecycle.telegramWebApp.offEvent === 'function') {
-            telegramViewportLifecycle.telegramWebApp.offEvent('viewportChanged', scheduleTelegramViewportUpdate);
+            TELEGRAM_VIEWPORT_EVENTS.forEach(eventName => {
+                try {
+                    telegramViewportLifecycle.telegramWebApp.offEvent(eventName, scheduleTelegramViewportUpdate);
+                } catch (e) {
+                    // ignore
+                }
+            });
         }
         telegramViewportLifecycle.telegramWebApp = nextTelegramWebApp;
         telegramViewportLifecycle.telegramListenerBound = false;
@@ -273,7 +304,13 @@ function updateTelegramViewportVars(tg) {
     if (nextTelegramWebApp
         && !telegramViewportLifecycle.telegramListenerBound
         && typeof nextTelegramWebApp.onEvent === 'function') {
-        nextTelegramWebApp.onEvent('viewportChanged', scheduleTelegramViewportUpdate);
+        TELEGRAM_VIEWPORT_EVENTS.forEach(eventName => {
+            try {
+                nextTelegramWebApp.onEvent(eventName, scheduleTelegramViewportUpdate);
+            } catch (e) {
+                // ignore
+            }
+        });
         telegramViewportLifecycle.telegramListenerBound = true;
     }
 

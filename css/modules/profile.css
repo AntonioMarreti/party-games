@@ -923,13 +923,14 @@ body.large-font .settings-row-subtitle {
 .profile-header-modern {
     background: var(--header-gradient);
     color: white;
-    padding: 30px 20px 40px;
-    border-bottom-left-radius: 30px;
-    border-bottom-right-radius: 30px;
+    padding: calc(18px + var(--app-safe-top)) 20px 34px !important;
+    border-bottom-left-radius: 26px !important;
+    border-bottom-right-radius: 26px !important;
     box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--primary-color), transparent 50%);
     text-align: center;
     position: relative;
     z-index: 10;
+    overflow: hidden;
 }
 
 body.dark-mode .profile-header-modern,
@@ -941,31 +942,71 @@ body.tg-dark-theme.dark-mode .profile-header-premium {
 }
 
 .profile-avatar-xl {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    margin: 0 auto 15px;
-    background-size: cover;
-    background-position: center;
+    width: 76px;
+    height: 76px;
+    min-width: 76px;
+    min-height: 76px;
+    max-width: 76px;
+    max-height: 76px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 10px;
     position: relative;
-    /* Ensure content box sizing is handled or consistent, but we rely on child sizing */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
-/* FIX: Ensure renderAvatar output fits inside the container */
-.profile-avatar-xl>div,
+.profile-avatar-xl .avatar-with-badge {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    flex: 0 0 100% !important;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
 .profile-avatar-xl .avatar-wrapper,
-.profile-avatar-xl .avatar-circle,
+.profile-avatar-xl .avatar-circle {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    flex: 0 0 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
 .profile-avatar-xl img {
     width: 100% !important;
     height: 100% !important;
-    border-radius: 50%;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    display: block !important;
+}
+
+.profile-header-modern h2 {
+    font-size: 1.25rem !important;
 }
 
 .profile-level-summary {
     width: min(250px, calc(100% - 48px));
-    margin: 10px auto 0;
+    margin: 6px auto 0;
 }
 
 .profile-level-summary-top {
@@ -973,9 +1014,9 @@ body.tg-dark-theme.dark-mode .profile-header-premium {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 7px;
+    margin-bottom: 5px;
     color: rgba(255, 255, 255, 0.88);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 800;
 }
 
@@ -985,7 +1026,7 @@ body.tg-dark-theme.dark-mode .profile-header-premium {
 }
 
 .profile-level-progress {
-    height: 7px;
+    height: 6px;
     border-radius: 999px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.34);
@@ -1008,10 +1049,10 @@ body.tg-dark-theme.dark-mode .profile-header-premium {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--border-glass);
-    margin: -30px 20px 20px;
-    width: calc(100% - 40px);
-    border-radius: 24px;
-    padding: 15px;
+    margin: -16px 16px 14px;
+    width: calc(100% - 32px);
+    border-radius: 18px;
+    padding: 10px 14px;
     box-shadow: var(--shadow-main);
     position: relative;
     z-index: 20;
@@ -1028,6 +1069,17 @@ body.tg-dark-theme.dark-mode .profile-header-premium {
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+
+.stat-box .value {
+    font-size: 1.15rem !important;
+    font-weight: 800;
+}
+
+.stat-box .label {
+    font-size: 10px !important;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
 .stat-divider-v {

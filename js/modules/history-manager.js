@@ -13,7 +13,10 @@ const HISTORY_GAME_NAMES = {
     tictactoe_ultimate: 'Крестики-нолики Ultimate',
     wordclash: 'Битва Слов',
     spyfall: 'Шпион',
-    minesweeper_br: 'Сапёр Battle Royale'
+    minesweeper_br: 'Сапёр Battle Royale',
+    durak: 'Дурак',
+    backgammon_game: 'Длинные Нарды',
+    backgammon: 'Длинные Нарды'
 };
 
 const HISTORY_GAME_ICONS = {
@@ -26,8 +29,22 @@ const HISTORY_GAME_ICONS = {
     tictactoe_ultimate: 'bi-grid-3x3-gap-fill text-primary',
     wordclash: 'bi-fonts text-success',
     spyfall: 'bi-incognito text-danger',
-    minesweeper_br: 'bi-patch-exclamation-fill text-secondary'
+    minesweeper_br: 'bi-patch-exclamation-fill text-secondary',
+    durak: 'bi-suit-spade-fill text-primary',
+    backgammon_game: 'bi-dice-5-fill text-warning',
+    backgammon: 'bi-dice-5-fill text-warning'
 };
+
+function formatPlayersCount(count) {
+    const num = Number(count);
+    if (!num) return '';
+    const n = num % 10;
+    const n100 = num % 100;
+    const word = (n === 1 && n100 !== 11)
+        ? 'игрок'
+        : (n >= 2 && n <= 4 && (n100 < 12 || n100 > 14) ? 'игрока' : 'игроков');
+    return `${num} ${word}`;
+}
 
 let historyBackTarget = null;
 
@@ -113,6 +130,7 @@ function goBackFromHistory() {
 }
 
 async function loadGameHistory() {
+    closeHistoryDetails();
     const container = document.getElementById('history-content-list');
     const loader = document.getElementById('history-loader');
     const emptyState = document.getElementById('history-empty');
@@ -203,7 +221,7 @@ function renderHistoryList(history, container) {
         const pos = Number.isFinite(posValue) && item.final_position !== null ? posValue : '-';
         const duration = Number(item.duration_seconds || 0);
         const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
-        const playersText = item.players_count ? `${item.players_count} игроков` : '';
+        const playersText = formatPlayersCount(item.players_count);
         const canReplay = Boolean(item.game_type)
             && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
 
@@ -317,7 +335,7 @@ function showGameDetailsModal(item) {
     const iconBg = gameConfig?.color || 'var(--primary-color)';
     const dateObj = new Date(item.created_at);
     const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const playersText = item.players_count ? `${item.players_count} игроков` : '';
+    const playersText = formatPlayersCount(item.players_count);
     const duration = Number(item.duration_seconds || 0);
     const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
     const metaText = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
@@ -365,6 +383,8 @@ function showGameDetailsModal(item) {
     const sheet = document.getElementById('history-details-sheet');
     if (sheet) {
         document.body.classList.add('history-details-open');
+        sheet.style.display = 'flex';
+        void sheet.offsetWidth;
         sheet.classList.add('active');
         sheet.setAttribute('aria-hidden', 'false');
     }
@@ -375,6 +395,7 @@ function closeHistoryDetails() {
     if (sheet) {
         sheet.classList.remove('active');
         sheet.setAttribute('aria-hidden', 'true');
+        sheet.style.display = 'none';
     }
     document.body.classList.remove('history-details-open');
 }

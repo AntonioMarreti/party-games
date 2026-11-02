@@ -2,10 +2,10 @@
 <div id="tab-games" class="tab-content" style="display: none;">
     <div class="header-bg rooms-header">
         <div class="header-title">Открытые игры</div>
-        <div class="header-subtitle">Найдите компанию сейчас или запишитесь на игру</div>
-        <div class="position-relative">
-            <i class="bi bi-search position-absolute rooms-search-icon" style="top: 27px; right: 15px;"></i>
-            <input type="text" class="search-bar ps-3" placeholder="Найти игру...">
+        <div class="header-subtitle">Найдите компанию или запишитесь на игру</div>
+        <div class="rooms-search-wrap">
+            <i class="bi bi-search rooms-search-icon" aria-hidden="true"></i>
+            <input type="text" class="search-bar" placeholder="Найти игру..." aria-label="Поиск игр">
         </div>
     </div>
     <div class="content-wrapper rooms-content-wrapper" style="padding-bottom: calc(110px + env(safe-area-inset-bottom));">

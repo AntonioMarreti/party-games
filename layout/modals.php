@@ -25,38 +25,35 @@
 <!-- 1. Removed: Leaderboard is now a separate screen -->
 
 <!-- 2. Invite Friends Modal -->
-<div class="modal fade" id="inviteFriendsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold ps-2">Позвать друзей</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade invite-friends-modal" id="inviteFriendsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable invite-friends-dialog">
+        <div class="modal-content border-0 shadow invite-friends-modal-content">
+            <div class="modal-header border-0 invite-friends-modal-header">
+                <h5 class="modal-title fw-bold">Позвать друзей</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
-            <div class="modal-body pt-2">
-                <div class="text-center mb-3">
-                    <div class="invite-icon-wrapper">
-                        <i class="bi bi-envelope-paper-heart-fill invite-icon"></i>
-                    </div>
-                    <p class="text-muted small">Отправьте приглашение друзьям,<br>чтобы они присоединились к игре.</p>
-                </div>
-
-                <div class="invite-search-group mb-3">
-                    <div class="invite-search-icon"><i class="bi bi-search"></i></div>
+            <div class="modal-body p-0 invite-friends-modal-body">
+                <div class="invite-search-wrap">
+                    <i class="bi bi-search invite-search-icon"></i>
                     <input type="text" id="invite-search-input" class="invite-search-input" placeholder="Поиск друга..."
-                        oninput="filterInviteList()">
+                        oninput="filterInviteList()" autocomplete="off">
                 </div>
 
-                <div id="invite-friends-list" class="mb-3 custom-scrollbar"
-                    style="max-height: 300px; overflow-y: auto; overflow-x: hidden;">
+                <div id="invite-friends-list" class="invite-friends-list custom-scrollbar">
                     <div class="text-center py-4">
                         <div class="spinner-border spinner-border-sm text-primary"></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer invite-modal-footer">
-                <button class="invite-send-btn link-light" onclick="sendInvites()" id="btn-send-invites" disabled>
-                    Отправить (<span id="invite-count">0</span>)
-                </button>
+            <div class="modal-footer border-0 invite-modal-footer">
+                <div class="d-flex gap-2 w-100">
+                    <button type="button" class="btn invite-cancel-btn" data-bs-dismiss="modal">
+                        Закрыть
+                    </button>
+                    <button type="button" class="btn invite-send-btn" onclick="sendInvites()" id="btn-send-invites" disabled>
+                        Отправить (<span id="invite-count">0</span>)
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -355,15 +352,20 @@
 </div>
 
 <!-- 10. Game Selector Modal -->
-<div class="modal fade" id="gameSelectorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold ps-2">Выбрать игру</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade game-selector-modal" id="gameSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable game-selector-dialog">
+        <div class="modal-content border-0 shadow game-selector-modal-content">
+            <div class="modal-header border-0 game-selector-modal-header">
+                <h5 class="modal-title fw-bold">Выбрать игру</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
-            <div class="modal-body p-0">
-                <div class="list-group list-group-flush" id="game-selector-list"></div>
+            <div class="modal-body p-0 game-selector-modal-body">
+                <div id="game-selector-list"></div>
+            </div>
+            <div class="modal-footer border-0 game-selector-modal-footer">
+                <button type="button" class="btn w-100 game-selector-bottom-btn" data-bs-dismiss="modal">
+                    Закрыть
+                </button>
             </div>
         </div>
     </div>

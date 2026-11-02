@@ -878,6 +878,8 @@ const gameCatalogState = {
 
 function filterCatalogGames(games, category) {
     switch (category) {
+        case 'favorites':
+            return games.filter(game => window.userFavorites && window.userFavorites.includes(game.id));
         case 'company':
             return games.filter(game => game.category === 'party' || getCatalogMaxPlayers(game) >= 3);
         case 'duo':
@@ -927,11 +929,12 @@ function renderAllGames(category = gameCatalogState.category, query = gameCatalo
     if (count) count.innerText = String(filteredGames.length);
 
     if (filteredGames.length === 0) {
+        const isFav = gameCatalogState.category === 'favorites';
         list.innerHTML = `
-            <div class="catalog-empty-state">
-                <i class="bi bi-controller" aria-hidden="true"></i>
-                <div class="catalog-empty-title">Игр не найдено</div>
-                <div class="catalog-empty-text">Попробуйте другой формат или измените поиск.</div>
+            <div class="catalog-empty-state text-center py-5">
+                <i class="bi ${isFav ? 'bi-heart' : 'bi-controller'} mb-2 d-block text-muted opacity-50" style="font-size: 40px;" aria-hidden="true"></i>
+                <div class="catalog-empty-title fw-bold fs-6 mb-1">${isFav ? 'В избранном пока пусто' : 'Игр не найдено'}</div>
+                <div class="catalog-empty-text text-muted small">${isFav ? 'Нажмите на сердечко у любой игры, чтобы добавить её сюда.' : 'Попробуйте другой формат или измените поиск.'}</div>
             </div>
         `;
         return;
@@ -957,9 +960,13 @@ function renderAllGames(category = gameCatalogState.category, query = gameCatalo
         const safeDifficulty = window.safeHTML ? window.safeHTML(meta.difficulty) : meta.difficulty;
         const safeLabel = window.safeHTML ? window.safeHTML(getCatalogCategoryLabel(game)) : getCatalogCategoryLabel(game);
 
+        const thumbHtml = game.promoImage
+            ? `<img src="${game.promoImage}?v=3559" alt="${safeName}" class="catalog-game-thumb-img" loading="lazy">`
+            : `<i class="bi ${game.icon || 'bi-controller'}" style="color: white; font-size: 24px;"></i>`;
+
         card.innerHTML = `
-            <div class="catalog-game-icon" style="background-color: ${iconColor};">
-                <i class="bi ${game.icon || 'bi-controller'}"></i>
+            <div class="catalog-game-thumb" style="${game.promoImage ? '' : `background-color: ${iconColor};`}">
+                ${thumbHtml}
             </div>
             <div class="catalog-game-info">
                 <div class="catalog-game-topline">
@@ -1082,7 +1089,11 @@ function openGameShowcase(gameId) {
 
     // Populate Data
     if (headerTitle) headerTitle.innerText = game.name;
-    if (subtitle) subtitle.innerText = game.category || 'Игры для компании';
+    if (subtitle) {
+        const catLabel = getCatalogCategoryLabel(game);
+        const playersLabel = game.stats?.players ? `${game.stats.players} игроков` : '';
+        subtitle.innerText = [catLabel, playersLabel].filter(Boolean).join(' • ');
+    }
     if (loreArea) loreArea.innerHTML = game.longDescription || game.description || 'Описание скоро появится!';
     if (icon) icon.className = `bi ${game.icon || 'bi-controller'}`;
     if (iconWrap) {
@@ -1183,20 +1194,19 @@ function openGameShowcase(gameId) {
     if (heroImg) {
         if (game.promoImage) {
             heroImg.innerHTML = `
-                <img src="${game.promoImage}?v=2326" class="h-100 w-100" style="object-fit: cover; object-position: center; display: block; border: none;">
+                <img src="${game.promoImage}?v=3559" class="h-100 w-100" style="object-fit: cover; object-position: center; display: block; border: none;">
                 <!-- Gradient Overlay for Header Readability -->
-                <div style="position:absolute; top:0; left:0; width:100%; height:120px; background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%); z-index: 1;"></div>
-                <!-- Bottom Gradient -->
-                <div style="position:absolute; bottom:0; left:0; width:100%; height:80px; background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%); z-index: 2;"></div>
+                <div style="position:absolute; top:0; left:0; width:100%; height:120px; background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%); z-index: 1;"></div>
+                <!-- Bottom Gradient into card -->
+                <div style="position:absolute; bottom:0; left:0; width:100%; height:90px; background: linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 100%); z-index: 2;"></div>
             `;
         } else {
             heroImg.innerHTML = `
-                <div style="width:100%; height:100%; background: linear-gradient(135deg, ${game.color} 0%, var(--accent-color) 100%); display: flex; align-items: center; justify-content: center; font-size: 140px; color: rgba(255,255,255,0.2);">
+                <div style="width:100%; height:100%; background: linear-gradient(135deg, ${game.color || '#2563eb'} 0%, var(--primary-color) 100%); display: flex; align-items: center; justify-content: center; font-size: 100px; color: rgba(255,255,255,0.25);">
                     <i class="bi ${game.icon || 'bi-controller'}"></i>
                 </div>
             `;
         }
-
     }
 
     // Button Logic - Direct assignment for maximum reliability
@@ -1365,6 +1375,7 @@ window.setReactionsEnabled = setReactionsEnabled;
 window.EMOJI_OPTIONS = EMOJI_OPTIONS;
 
 // Game Discovery Exports
+window.gameCatalogState = gameCatalogState;
 window.renderLibrary = renderLibrary;
 window.renderPopularGames = renderPopularGames;
 window.renderAllGames = renderAllGames;

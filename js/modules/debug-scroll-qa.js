@@ -1090,15 +1090,16 @@
         const dummy = document.createElement('div');
         dummy.style.position = 'fixed';
         dummy.style.bottom = '0';
-        dummy.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
+        dummy.style.paddingBottom = 'max(var(--tg-content-safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px))';
         dummy.style.visibility = 'hidden';
         document.body.appendChild(dummy);
         const safeBottom = parseFloat(getComputedStyle(dummy).paddingBottom) || 0;
         dummy.remove();
 
         const nav = document.querySelector('.bottom-nav, .app-bottom-nav, .tabbar, .bottom-menu');
-        const navHeight = nav ? Math.min(96, Math.round(nav.getBoundingClientRect().height || 0)) : 0;
-        return Math.max(18, safeBottom + navHeight + 10);
+        const navHeight = (nav && nav.offsetHeight > 0) ? Math.min(96, nav.offsetHeight) : 66;
+        const navBottomOffset = 20;
+        return Math.max(18, safeBottom + navBottomOffset + navHeight + 14);
     }
 
     function getSavedButtonPosition() {

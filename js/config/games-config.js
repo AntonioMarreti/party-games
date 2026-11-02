@@ -212,7 +212,7 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-grid-3x3-gap-fill',
         color: '#4D96FF',
         bgColor: 'rgba(77, 150, 255, 0.1)',
-        promoImage: '',
+        promoImage: 'assets/promo/ultimate_ttt.jpg',
         description: 'Стратегические крестики-нолики на поле 9x9.',
         longDescription: `
             <p><strong>Ultimate Tic-Tac-Toe</strong> (или Стратегические крестики-нолики) — это игра, которая превращает знакомую с детства забаву в глубокое тактическое противостояние.</p>
@@ -483,7 +483,7 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-suit-spade-fill',
         color: '#2563eb',
         bgColor: 'rgba(37, 99, 235, 0.12)',
-        promoImage: '',
+        promoImage: 'assets/promo/durak.jpg',
         description: 'Классическая подкидная карточная партия для 2–5 игроков.',
         longDescription: `
             <p><strong>Дурак</strong> — серверная версия Дурака для приватной комнаты на 2–5 игроков. Игроки атакуют, защищаются, подкидывают карты, переводят атаку и добирают из общей колоды.</p>
@@ -501,6 +501,31 @@ window.AVAILABLE_GAMES = [
             { icon: 'bi-eye-slash', text: 'Чужие руки скрыты и показываются только числом карт' },
             { icon: 'bi-person-check', text: 'Ход строго один за другим через сервер' }
         ],
+        gallery: [
+            {
+                type: 'html',
+                label: 'Игровой стол и козырь',
+                content: `
+                    <div class="p-3 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #1b4332 0%, #081c15 100%); border: 1px solid rgba(255,255,255,0.12); color: white;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-warning text-dark fw-bold rounded-pill px-3 py-1">Козырь: Пики ♠</span>
+                            <span class="small opacity-75">Колода: 24</span>
+                        </div>
+                        <div class="d-flex justify-content-center gap-2 py-2">
+                            <div class="bg-white text-dark rounded-2 p-2 px-3 fw-bold shadow text-center" style="min-width: 44px;">
+                                <div style="font-size: 16px;">10</div>
+                                <div class="text-danger">♥</div>
+                            </div>
+                            <div class="bg-white text-dark rounded-2 p-2 px-3 fw-bold shadow text-center" style="min-width: 44px; border: 2px solid #2563eb;">
+                                <div style="font-size: 16px;">В</div>
+                                <div class="text-danger">♥</div>
+                            </div>
+                        </div>
+                        <div class="text-center x-small opacity-75 mt-2">Бито старшей картой масти</div>
+                    </div>
+                `
+            }
+        ],
         files: [
             'js/games/durak/durak.css',
             'js/games/durak/ui.js',
@@ -515,7 +540,7 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-x-lg',
         color: '#FFD93D',
         bgColor: '#FFFBEB',
-        promoImage: '',
+        promoImage: 'assets/promo/tictactoe.jpg',
         description: 'Классическая битва умов.',
         longDescription: `
             <p><strong>Крестики-Нолики</strong> — это нестареющая классика в современном исполнении. Самая быстрая и понятная игра для двоих, которая проверит вашу внимательность и умение просчитывать ходы оппонента наперед.</p>
@@ -568,7 +593,7 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-incognito',
         color: '#E74C3C',
         bgColor: '#FDEDEC',
-        promoImage: '',
+        promoImage: 'assets/promo/spyfall.jpg',
         description: 'Найди шпиона среди своих!',
         longDescription: `
             <p><strong>Шпион</strong> — это разговорная игра для компании. Кто-то из вас шпион, а остальные — обычные люди в секретной локации.</p>
@@ -613,6 +638,7 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-patch-exclamation-fill',
         color: '#2C3E50',
         bgColor: '#EBEDEF',
+        promoImage: 'assets/promo/minesweeper_br.jpg',
         description: 'Пошаговая дуэль на минном поле — думай или взлетай!',
         longDescription: `
             <p><strong>Сапёр Battle Royale</strong> — это легендарная головоломка, превращённая в пошаговое соревнование. Теперь вы не просто чистите поле, а боретесь за каждую клетку с друзьями.</p>
@@ -665,9 +691,10 @@ window.AVAILABLE_GAMES = [
         icon: 'bi-dice-5',
         color: '#8b5a2b',
         bgColor: '#fdf2e9',
+        promoImage: 'assets/promo/backgammon.jpg',
         description: 'Классические Длинные Нарды.',
         longDescription: `
-            <p><strong>Длинные нарды</strong> — классическая настольная игра для двух игроков на логику и стратегию.</p>
+            <p><strong>Длинные нарды</strong> — классическая настольная игра для двух игроков на логику и стратегию. Управляйте фишками, выбрасывайте кубики и проведите свою партию до победного сброса с доски.</p>
         `,
         stats: { players: '2', time: '10-20 мин', difficulty: 'Средняя' },
         rules: [
@@ -675,7 +702,21 @@ window.AVAILABLE_GAMES = [
             { icon: 'bi-arrow-clockwise', text: 'Движение строго против часовой стрелки' },
             { icon: 'bi-slash-circle', text: 'Запрещено выбивать чужие фишки' }
         ],
-        gallery: [],
+        gallery: [
+            {
+                type: 'html',
+                label: 'Игровая доска и кости',
+                content: `
+                    <div class="p-3 rounded-4 shadow-sm text-center" style="background: linear-gradient(135deg, #3d2314 0%, #1a0f08 100%); border: 1px solid rgba(255,255,255,0.12); color: white;">
+                        <div class="d-flex justify-content-center gap-3 py-2 align-items-center">
+                            <div class="rounded-3 bg-white text-dark fw-bold d-flex align-items-center justify-content-center shadow" style="width: 38px; height: 38px; font-size: 20px;">⚄</div>
+                            <div class="rounded-3 bg-white text-dark fw-bold d-flex align-items-center justify-content-center shadow" style="width: 38px; height: 38px; font-size: 20px;">⚂</div>
+                        </div>
+                        <div class="small opacity-75 mt-2">Ход: 5 и 3 пункта против часовой стрелки</div>
+                    </div>
+                `
+            }
+        ],
         css: ['css/games/backgammon.css'],
         files: [
             'js/games/backgammon/logic.js',

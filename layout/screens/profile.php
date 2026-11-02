@@ -1,7 +1,7 @@
 <!-- ТАБ 3: ПРОФИЛЬ -->
 <div id="tab-profile" class="tab-content profile-screen" data-screen="profile" style="display: none;">
     <!-- Modern Header -->
-    <div class="profile-header-modern" style="padding-top: calc(60px + env(safe-area-inset-top));">
+    <div class="profile-header-modern">
         <!-- Added padding for notch -->
         <div class="profile-avatar-xl" id="profile-avatar-big"></div>
         <h2 class="fw-bold mb-0" id="profile-name-big">...</h2>
@@ -34,7 +34,7 @@
         </div>
     </button>
 
-    <div class="content-wrapper" style="padding-bottom: calc(110px + env(safe-area-inset-bottom));">
+    <div class="content-wrapper" style="padding-bottom: var(--app-bottom-nav-clearance);">
         <section class="profile-daily-card daily-tasks-card" id="profile-daily-card" style="display:none;">
             <button type="button" class="btn-unstyled profile-daily-head daily-collapsed-card" onclick="toggleProfileDailyTasks()"
                 aria-expanded="false" id="profile-daily-head">

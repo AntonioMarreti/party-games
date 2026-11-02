@@ -24,6 +24,9 @@
             <button class="catalog-filter-pill active" data-cat="all">
                 <i class="bi bi-grid-fill" aria-hidden="true"></i><span>Все</span>
             </button>
+            <button class="catalog-filter-pill" data-cat="favorites">
+                <i class="bi bi-heart-fill" aria-hidden="true"></i><span>Избранное</span>
+            </button>
             <button class="catalog-filter-pill" data-cat="company">
                 <i class="bi bi-people-fill" aria-hidden="true"></i><span>Компания</span>
             </button>

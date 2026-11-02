@@ -5,22 +5,23 @@
     <!-- FIXED UI LAYER -->
     <div class="fixed-ui-layer position-absolute w-100 h-100"
         style="top:0; left:0; z-index: 100; pointer-events: none;">
-        <!-- Close Button -->
+        <!-- Back Button (Top Left) -->
         <div class="game-detail-close-wrap position-absolute">
             <button id="game-detail-close-btn" class="btn d-flex align-items-center justify-content-center shadow-lg"
                 onclick="closeGameShowcase()"
                 aria-label="Назад"
-                style="width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.4); color:white; padding: 0; flex-shrink: 0; min-width: 40px;">
-                <i class="bi bi-x-lg" style="font-size: 18px; line-height: 1;"></i>
+                style="width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.3); color:white; padding: 0; flex-shrink: 0; min-width: 40px;">
+                <i class="bi bi-chevron-left" style="font-size: 18px; line-height: 1; margin-left: -2px;"></i>
             </button>
         </div>
 
         <!-- Bottom Action Button (Navbar style) -->
-        <div class="game-detail-action-bar position-absolute bottom-0 start-0 end-0 p-4 border-top"
-            style="background: var(--bg-glass-strong); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; border-bottom-left-radius: 44px; border-bottom-right-radius: 44px; overflow: hidden; border-color: var(--border-glass) !important;">
-            <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg" id="btn-try-game-now"
-                style="border: none; font-size: 16px; background: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%); letter-spacing: 0.5px;">
-                ПОПРОБОВАТЬ СЕЙЧАС
+        <div class="game-detail-action-bar position-absolute bottom-0 start-0 end-0 p-3 border-top"
+            style="background: var(--bg-glass-strong); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); pointer-events: auto; padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; overflow: hidden; border-color: var(--border-glass) !important; z-index: 200;">
+            <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg d-flex align-items-center justify-content-center gap-2" id="btn-try-game-now"
+                style="border: none; font-size: 16px; background: var(--header-gradient, var(--primary-color)); letter-spacing: -0.2px; min-height: 52px;">
+                <i class="bi bi-play-fill" style="font-size: 22px; line-height: 1;"></i>
+                <span>Играть сейчас</span>
             </button>
         </div>
     </div>
@@ -84,25 +85,22 @@
                 </div>
             </div>
 
-            <!-- STATS ROW (Fixed grid, no scroll) -->
-            <div class="d-flex justify-content-between align-items-center py-3 mb-4 border-top border-bottom"
-                style="border-color: var(--divider) !important;">
-                <div class="text-center flex-grow-1">
-                    <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
-                        Игроков</div>
-                    <div class="fw-bold" id="stat-players" style="font-size: 16px; color: var(--text-main);">-</div>
+            <!-- STATS ROW (Clean Modern Cards) -->
+            <div class="game-detail-stats-grid mb-4">
+                <div class="game-detail-stat-card">
+                    <i class="bi bi-people-fill game-detail-stat-icon" aria-hidden="true"></i>
+                    <div class="game-detail-stat-val" id="stat-players">-</div>
+                    <div class="game-detail-stat-label">Игроков</div>
                 </div>
-                <div class="vr bg-secondary opacity-25"></div>
-                <div class="text-center flex-grow-1">
-                    <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
-                        Время</div>
-                    <div class="fw-bold" id="stat-time" style="font-size: 16px; color: var(--text-main);">-</div>
+                <div class="game-detail-stat-card">
+                    <i class="bi bi-clock-fill game-detail-stat-icon" aria-hidden="true"></i>
+                    <div class="game-detail-stat-val" id="stat-time">-</div>
+                    <div class="game-detail-stat-label">Время</div>
                 </div>
-                <div class="vr bg-secondary opacity-25"></div>
-                <div class="text-center flex-grow-1">
-                    <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 10px; letter-spacing: 0.5px;">
-                        Сложность</div>
-                    <div class="fw-bold" id="stat-difficulty" style="font-size: 16px; color: var(--text-main);">-</div>
+                <div class="game-detail-stat-card">
+                    <i class="bi bi-bar-chart-fill game-detail-stat-icon" aria-hidden="true"></i>
+                    <div class="game-detail-stat-val" id="stat-difficulty">-</div>
+                    <div class="game-detail-stat-label">Сложность</div>
                 </div>
             </div>
 
