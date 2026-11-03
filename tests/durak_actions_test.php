@@ -292,4 +292,23 @@ $genericResponse = json_decode(ob_get_clean(), true);
 durakActionAssert(($genericResponse['status'] ?? null) === 'ok', 'Non-Durak game_finished must keep its existing path');
 durakActionAssert($genericPdo->rollbackCount === 0, 'Non-Durak game_finished should not hit Durak rejection');
 
+require_once __DIR__ . '/../server/lib/shared_helpers.php';
+require_once __DIR__ . '/../server/games/durak.php';
+$multiWinnerDurakData = statsNormalizePlayersData(durakBuildResultPlayersData([
+    'player_order' => ['10', '20', '30', '40'],
+    'finish_order' => ['30', '10', '20'],
+    'result' => ['loser_id' => '40', 'reason' => 'last_player_with_cards'],
+]));
+$playerNamesStub = [10 => 'P10', 20 => 'P20', 30 => 'P30', 40 => 'P40'];
+$winnerStub = statsFindWinnerData($multiWinnerDurakData, $playerNamesStub);
+durakActionAssert($winnerStub['user_id'] === 30, 'First finisher leads Durak winner summary');
+foreach ($multiWinnerDurakData as $entry) {
+    $payload = statsBuildPlayerResultPayload($entry, $playerNamesStub, $winnerStub, 4, calculateXP($entry['rank'], 0));
+    if ((int) $entry['user_id'] === 40) {
+        durakActionAssert($payload['is_win'] === false && $payload['place'] === 4, 'Durak loser receives rank 4 loss');
+    } else {
+        durakActionAssert($payload['is_win'] === true && $payload['place'] === 1, 'All escaped Durak players receive rank 1 win');
+    }
+}
+
 echo "Durak action regression tests passed\n";

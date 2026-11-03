@@ -328,7 +328,9 @@ function action_game_action($pdo, $user, $data)
             if ($gameName === 'durak' && ($result['state']['phase'] ?? '') === 'finished' && empty($result['state']['stats_recorded'])) {
                 require_once __DIR__ . '/stats.php';
                 $playersData = durakBuildResultPlayersData($result['state']);
-                recordGameStats($pdo, $room, $playersData, 0);
+                $startedAt = (int) ($result['state']['started_at'] ?? 0);
+                $duration = $startedAt > 0 ? max(0, time() - $startedAt) : 0;
+                recordGameStats($pdo, $room, $playersData, $duration);
                 $result['state']['stats_recorded'] = true;
             }
 

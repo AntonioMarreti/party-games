@@ -123,20 +123,23 @@
 }
 
 .durak-exit-btn {
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
+    width: 100%;
+    min-height: 46px;
     appearance: none;
-    border: 1px solid rgba(185, 28, 28, 0.2);
+    border: 1px solid rgba(185, 28, 28, 0.28);
     border-radius: 14px;
     display: grid;
     place-items: center;
-    padding: 0;
-    background: rgba(254, 242, 242, 0.82);
+    padding: 10px 14px;
+    background: rgba(254, 242, 242, 0.94);
     color: #b91c1c;
-    font-size: 18px;
-    line-height: 1;
-    box-shadow: 0 8px 20px rgba(127, 29, 29, 0.08);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.15;
+    text-align: center;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -145,7 +148,7 @@
 }
 
 .durak-exit-btn:active:not(:disabled) {
-    transform: translateY(1px) scale(0.98);
+    transform: translateY(1px) scale(0.99);
 }
 
 .durak-exit-btn:focus-visible {
@@ -225,13 +228,26 @@
     justify-content: center;
     border: 1px solid rgba(37, 99, 235, 0.18);
     border-radius: 999px;
-    padding: 6px 9px;
-    background: rgba(255, 255, 255, 0.72);
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.78);
     color: #1d4ed8;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 850;
     line-height: 1.1;
     white-space: nowrap;
+}
+
+.durak-context-status.is-my-turn {
+    border-color: rgba(29, 78, 216, 0.42);
+    background: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.durak-context-status.is-waiting {
+    border-color: rgba(148, 163, 184, 0.3);
+    background: rgba(248, 250, 252, 0.88);
+    color: #475569;
 }
 
 .durak-context-actions {
@@ -291,9 +307,19 @@
     box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.06) inset;
 }
 
+.durak-seat.is-attacker:not(.is-active) {
+    border-color: rgba(59, 130, 246, 0.28);
+    background: rgba(239, 246, 255, 0.58);
+}
+
 .durak-seat.is-defender:not(.is-active) {
     border-color: rgba(234, 88, 12, 0.34);
     background: rgba(255, 247, 237, 0.64);
+}
+
+.durak-seat.is-finished-player {
+    opacity: 0.68;
+    background: rgba(241, 245, 249, 0.5);
 }
 
 .durak-avatar {
@@ -503,6 +529,8 @@
     border-radius: 18px;
     display: grid;
     place-items: center;
+    align-content: center;
+    gap: 8px;
     text-align: center;
     padding: 22px;
     color: #64748b;
@@ -553,7 +581,34 @@
     font-weight: 650;
 }
 
+.durak-table-stage {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+}
+
+.durak-bot-feed {
+    flex: 0 0 auto;
+    align-self: center;
+    max-width: 100%;
+    border: 1px solid rgba(100, 116, 139, 0.22);
+    border-radius: 999px;
+    padding: 4px 11px;
+    background: rgba(248, 250, 252, 0.92);
+    color: #334155;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.25;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .durak-table-grid {
+    flex: 1 1 auto;
     min-height: 0;
     align-content: center;
     display: grid;
@@ -575,6 +630,10 @@
     justify-content: center;
     gap: 4px;
     padding: 8px;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .durak-trick.is-open {
@@ -591,6 +650,12 @@
     border-color: rgba(22, 163, 74, 0.54);
     background: rgba(240, 253, 244, 0.82);
     box-shadow: 0 8px 20px rgba(22, 163, 74, 0.08);
+}
+
+.durak-trick.is-prompt-target:not(.is-selected) {
+    border-color: #16a34a;
+    background: rgba(220, 252, 231, 0.94);
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2), 0 10px 24px rgba(22, 163, 74, 0.14);
 }
 
 .durak-trick.is-unavailable-target {
@@ -633,14 +698,24 @@
 }
 
 .durak-defense-status {
-    margin: -1px 0 1px;
+    flex: 0 0 auto;
+    align-self: center;
+    max-width: 100%;
+    margin: 0;
     border-radius: 999px;
-    padding: 7px 10px;
-    background: rgba(219, 234, 254, 0.8);
+    padding: 6px 12px;
+    background: rgba(219, 234, 254, 0.88);
     color: #1d4ed8;
     font-size: 12px;
     font-weight: 900;
+    line-height: 1.2;
     text-align: center;
+}
+
+.durak-defense-status.is-prompting {
+    background: rgba(220, 252, 231, 0.96);
+    border: 1px solid rgba(22, 163, 74, 0.38);
+    color: #166534;
 }
 
 .durak-card,
@@ -672,6 +747,10 @@
 button.durak-card {
     appearance: none;
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
     transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
@@ -839,30 +918,80 @@ button.durak-card.is-waiting-target {
     grid-template-columns: 1fr;
 }
 
+.durak-actions.is-defense.is-take-only {
+    grid-template-columns: minmax(126px, 46%);
+    justify-content: end;
+}
+
+.durak-actions.is-defense.is-confirming-take {
+    grid-template-columns: minmax(96px, 0.78fr) minmax(0, 1.22fr);
+}
+
 .durak-actions.is-triple {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .durak-actions.is-triple .durak-action-btn {
     min-width: 0;
-    padding-right: 6px;
-    padding-left: 6px;
-    font-size: 12px;
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: 13px;
 }
 
 .durak-action-btn {
     min-height: 44px;
     border: 1px solid rgba(37, 99, 235, 0.18);
     border-radius: 14px;
+    padding: 8px 12px;
     background: #ffffff;
     color: #1d4ed8;
     font-size: 14px;
     font-weight: 900;
+    line-height: 1.15;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.durak-action-btn.is-defend {
+    border-color: rgba(29, 78, 216, 0.34);
+    background: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
+}
+
+.durak-action-btn.is-defend.is-needs-target {
+    border-color: rgba(37, 99, 235, 0.52);
+    border-style: dashed;
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: none;
+}
+
+.durak-action-btn.is-transfer {
+    border-color: rgba(217, 119, 6, 0.42);
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.durak-action-btn.is-secondary {
+    border-color: rgba(100, 116, 139, 0.3);
+    background: rgba(255, 255, 255, 0.92);
+    color: #334155;
 }
 
 .durak-action-btn.is-danger {
     color: #b91c1c;
-    border-color: rgba(185, 28, 28, 0.18);
+    border-color: rgba(185, 28, 28, 0.22);
+    background: rgba(254, 242, 242, 0.86);
+}
+
+.durak-action-btn.is-danger.is-confirming {
+    border-color: #b91c1c;
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(185, 28, 28, 0.2);
 }
 
 .durak-action-btn:disabled {
@@ -1142,6 +1271,10 @@ button.durak-card.is-waiting-target {
     font-weight: 900;
 }
 
+#durak-shell.is-my-turn .durak-hand-title {
+    color: #1d4ed8;
+}
+
 .durak-hand-hint {
     margin-top: 4px;
     color: #64748b;
@@ -1339,6 +1472,30 @@ button.durak-card.is-waiting-target {
     line-height: 1.35;
 }
 
+.durak-hand-settings-danger {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(148, 163, 184, 0.24);
+    display: grid;
+    gap: 8px;
+}
+
+.durak-hand-settings-danger[hidden] {
+    display: none;
+}
+
+.durak-hand-settings-danger .durak-hand-settings-label {
+    margin-bottom: 0;
+}
+
+.durak-hand-settings-warning {
+    margin: 0 2px;
+    color: #7f1d1d;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
 .durak-hand {
     min-width: 0;
     max-width: 100%;
@@ -1347,6 +1504,7 @@ button.durak-card.is-waiting-target {
     padding: 16px 2px 4px;
     scrollbar-width: none;
     overscroll-behavior-x: contain;
+    touch-action: pan-x;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -1510,6 +1668,18 @@ button.durak-card.is-waiting-target {
     font-size: 12px;
 }
 
+@media (max-width: 440px) {
+    .durak-actions.is-triple {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .durak-actions.is-triple .durak-action-btn.is-danger:last-child {
+        grid-column: 1 / -1;
+        justify-self: end;
+        min-width: 140px;
+    }
+}
+
 @media (max-width: 360px) {
     #durak-shell {
         padding-left: 9px;
@@ -1558,14 +1728,6 @@ button.durak-card.is-waiting-target {
 
     .durak-hand-copy {
         min-width: 120px;
-    }
-
-    .durak-actions.is-triple {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .durak-actions.is-triple .durak-action-btn.is-danger:last-child {
-        grid-column: 1 / -1;
     }
 }
 
@@ -1925,6 +2087,28 @@ button.durak-card.is-waiting-target {
     min-height: 56px;
     padding-top: 8px;
     padding-bottom: 8px;
+}
+
+body.durak-game-active #reaction-container:not([style*="bottom"]) {
+    right: 12px;
+    bottom: calc(286px + env(safe-area-inset-bottom, 0px));
+}
+
+body.durak-game-active #reaction-container .reaction-trigger {
+    width: 38px;
+    height: 38px;
+    font-size: 19px;
+}
+
+body.durak-settings-open #reaction-container {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@media (max-height: 680px) {
+    body.durak-game-active #reaction-container:not([style*="bottom"]) {
+        bottom: calc(244px + env(safe-area-inset-bottom, 0px));
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

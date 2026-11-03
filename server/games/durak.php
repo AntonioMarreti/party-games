@@ -24,7 +24,7 @@ function durakNormalizeDeckProfileId($profileId, bool $fallbackToDefault = false
         return DURAK_DECK_PROFILE_ID;
     }
 
-    throw new InvalidArgumentException('Unsupported Durak deck profile');
+    throw new InvalidArgumentException('Неподдерживаемый размер колоды');
 }
 
 function durakDeckProfileFromInput(array $data): string
@@ -164,6 +164,8 @@ function durakBuildSetupState(array $playerOrder, array $botDifficulties = []): 
         'finish_order' => [],
         'rematch_requests' => [],
         'stats_recorded' => false,
+        'started_at' => null,
+        'last_bot_actions' => [],
         'hands' => [],
         'draw_pile' => [],
         'trump' => [
@@ -176,6 +178,7 @@ function durakBuildSetupState(array $playerOrder, array $botDifficulties = []): 
             'attacker_id' => null,
             'defender_id' => null,
         ],
+        'trick_attacker_id' => null,
         'actor_id' => null,
         'passed_throwers' => [],
         'defender_mode' => 'defending',
@@ -200,7 +203,7 @@ function durakBuildInitialState(
     $playerCount = count($playerOrder);
 
     if ($playerCount < DURAK_MIN_PLAYERS || $playerCount > DURAK_MAX_PLAYERS) {
-        throw new RuntimeException('Durak requires 2-5 players');
+        throw new RuntimeException('Для Дурака нужно от 2 до 5 игроков');
     }
 
     $deck = durakBuildDeck($profileId);
@@ -229,6 +232,8 @@ function durakBuildInitialState(
         'finish_order' => [],
         'rematch_requests' => [],
         'stats_recorded' => false,
+        'started_at' => time(),
+        'last_bot_actions' => [],
         'hands' => $hands,
         'draw_pile' => $deck,
         'trump' => [
@@ -241,6 +246,7 @@ function durakBuildInitialState(
             'attacker_id' => $attackerId,
             'defender_id' => $defenderId,
         ],
+        'trick_attacker_id' => $attackerId,
         'actor_id' => $attackerId,
         'passed_throwers' => [],
         'defender_mode' => 'defending',
@@ -256,7 +262,7 @@ function getInitialState()
 {
     $context = $GLOBALS['durak_start_context'] ?? null;
     if (!is_array($context) || !isset($context['pdo'], $context['room_id']) || !($context['pdo'] instanceof PDO)) {
-        throw new RuntimeException('Durak start context missing');
+        throw new RuntimeException('Не удалось определить контекст запуска партии');
     }
 
     $roster = durakGetRoomPlayerRoster($context['pdo'], (int) $context['room_id']);
@@ -269,7 +275,7 @@ function durakCreateInitialState(PDO $pdo, array $room, array $data = []): array
 {
     $roomId = (int) ($room['id'] ?? 0);
     if ($roomId <= 0) {
-        throw new RuntimeException('Durak room is missing');
+        throw new RuntimeException('Комната не найдена');
     }
 
     $roster = durakGetRoomPlayerRoster($pdo, $roomId);
@@ -299,7 +305,7 @@ function durakNormalizeBooleanValue($value, string $fieldName): bool
         }
     }
 
-    throw new InvalidArgumentException("Invalid boolean value for {$fieldName}");
+    throw new InvalidArgumentException("Некорректное значение параметра {$fieldName}");
 }
 
 function durakRulesFromInput(array $data): array
@@ -318,7 +324,7 @@ function durakRulesFromRequiredInput(array $data): array
 {
     foreach (['allow_throw_in', 'allow_transfer'] as $fieldName) {
         if (!array_key_exists($fieldName, $data)) {
-            throw new InvalidArgumentException("Missing boolean value for {$fieldName}");
+            throw new InvalidArgumentException("Не указан параметр правил {$fieldName}");
         }
     }
 
@@ -375,15 +381,19 @@ function handleGameAction($pdo, $room, $user, $postData)
         if ($action === 'decline_rematch') {
             return durakHandleDeclineRematch($room, $state);
         }
-        return durakError('Game is already finished');
+        return durakError('Партия уже завершена');
     }
 
     if (in_array($action, $rematchActions, true)) {
-        return durakError('Rematch is only available after the game');
+        return durakError('Реванш доступен только после завершения партии');
     }
 
     if ($action === 'start_match') {
         return durakHandleStartMatch($pdo, $room, $state, $postData);
+    }
+
+    if (in_array($action, ['attack_card', 'defend_card', 'pass_throw_in', 'take_cards', 'transfer_card'], true)) {
+        $state['last_bot_actions'] = [];
     }
 
     if ($action === 'attack_card') {
@@ -411,7 +421,7 @@ function handleGameAction($pdo, $room, $user, $postData)
         return durakHandleTransferCard($state, $userId, (string) ($postData['card_id'] ?? ''));
     }
 
-    return durakError('Unknown Durak action');
+    return durakError('Неизвестное действие');
 }
 
 function durakGetBotDifficulties(PDO $pdo, int $roomId): array
@@ -601,8 +611,31 @@ function durakApplyBotAction(array $state, string $botId, array $action): array
         case 'transfer_card':
             return durakHandleTransferCard($state, $botId, (string) ($action['card_id'] ?? ''));
         default:
-            return durakError('Unknown Durak bot action');
+            return durakError('Неизвестное действие бота');
     }
+}
+
+function durakBotStateSignature(array $state): string
+{
+    $normalizedHands = [];
+    foreach ($state['hands'] ?? [] as $pid => $cards) {
+        $copy = is_array($cards) ? array_values($cards) : [];
+        sort($copy);
+        $normalizedHands[(string) $pid] = $copy;
+    }
+
+    return serialize([
+        $state['phase'] ?? null,
+        $normalizedHands,
+        $state['draw_pile'] ?? [],
+        count($state['discard'] ?? []),
+        $state['table'] ?? [],
+        $state['roles'] ?? [],
+        $state['trick_attacker_id'] ?? null,
+        $state['actor_id'] ?? null,
+        $state['passed_throwers'] ?? [],
+        $state['defender_mode'] ?? null,
+    ]);
 }
 
 function durakAdvanceBots(?PDO $pdo, array $room, array $state): array
@@ -614,49 +647,113 @@ function durakAdvanceBots(?PDO $pdo, array $room, array $state): array
         $botDifficulties = durakGetBotDifficulties($pdo, $roomId);
     }
 
-    $maxSteps = max(64, count($state['player_order'] ?? []) * 64);
+    $visitedStates = [];
+    $stepsWithoutProgress = 0;
+    $botEvents = [];
+    $maxSteps = max(1024, count($state['player_order'] ?? []) * 256);
     for ($step = 0; $step < $maxSteps; $step++) {
         if (($state['phase'] ?? '') === 'finished') {
+            if (!empty($botEvents)) {
+                $state['last_bot_actions'] = array_slice($botEvents, -6);
+            }
             return ['status' => 'ok', 'state' => $state];
         }
 
         $actorId = (string) ($state['actor_id'] ?? '');
         if ($actorId === '' || !array_key_exists($actorId, $botDifficulties)) {
+            if (!empty($botEvents)) {
+                $state['last_bot_actions'] = array_slice($botEvents, -6);
+            }
             return ['status' => 'ok', 'state' => $state];
         }
 
-        $before = serialize($state);
-        $action = durakChooseBotAction($state, $actorId, $botDifficulties[$actorId]);
+        $beforeSig = durakBotStateSignature($state);
+        $beforeDrawCount = count($state['draw_pile'] ?? []);
+        $beforeDiscardCount = count($state['discard'] ?? []);
+        $beforeActiveCount = count($state['in_game_players'] ?? []);
+        $wasOpeningAttack = empty($state['table']);
+        $visitedStates[$beforeSig] = true;
+
+        $difficulty = $botDifficulties[$actorId];
+        $action = durakChooseBotAction($state, $actorId, $difficulty);
         if ($action === null) {
-            return durakError('Durak bot has no legal action');
+            return durakError('У бота нет допустимого хода');
         }
 
+        if ($stepsWithoutProgress >= 48 && ($action['type'] ?? '') === 'take_cards') {
+            $defendCandidates = array_values(array_filter(
+                durakListLegalBotActions($state, $actorId),
+                static fn(array $candidate): bool => ($candidate['type'] ?? '') === 'defend_card'
+            ));
+            if (!empty($defendCandidates)) {
+                $action = $defendCandidates[0];
+            }
+        }
+
+        $executedAction = $action;
         $result = durakApplyBotAction($state, $actorId, $action);
+        if (($result['status'] ?? '') === 'ok' && isset($result['state'])) {
+            $candidateState = $result['state'];
+            durakNormalizeState($candidateState);
+            if (isset($visitedStates[durakBotStateSignature($candidateState)])) {
+                foreach (durakListLegalBotActions($state, $actorId) as $altAction) {
+                    $altResult = durakApplyBotAction($state, $actorId, $altAction);
+                    if (($altResult['status'] ?? '') !== 'ok' || !isset($altResult['state'])) {
+                        continue;
+                    }
+                    $altState = $altResult['state'];
+                    durakNormalizeState($altState);
+                    if (!isset($visitedStates[durakBotStateSignature($altState)])) {
+                        $result = ['status' => 'ok', 'state' => $altState];
+                        $executedAction = $altAction;
+                        break;
+                    }
+                }
+            }
+        }
         if (($result['status'] ?? '') !== 'ok' || !isset($result['state'])) {
-            return durakError('Durak bot action was rejected by the game engine');
+            return durakError('Ход бота отклонён правилами игры');
         }
         $state = $result['state'];
         durakNormalizeState($state);
-        if (serialize($state) === $before) {
-            return durakError('Durak bot action did not advance the game state');
+        if (durakBotStateSignature($state) === $beforeSig) {
+            return durakError('Ход бота не изменил состояние партии');
+        }
+
+        $executedType = (string) ($executedAction['type'] ?? '');
+        $botEvents[] = [
+            'player_id' => $actorId,
+            'type' => ($executedType === 'attack_card' && $wasOpeningAttack) ? 'open_attack' : $executedType,
+            'card_id' => isset($executedAction['card_id']) ? (string) $executedAction['card_id'] : null,
+            'attack_card_id' => isset($executedAction['attack_card_id']) ? (string) $executedAction['attack_card_id'] : null,
+        ];
+
+        if (
+            count($state['draw_pile'] ?? []) < $beforeDrawCount
+            || count($state['discard'] ?? []) > $beforeDiscardCount
+            || count($state['in_game_players'] ?? []) < $beforeActiveCount
+        ) {
+            $stepsWithoutProgress = 0;
+        } else {
+            $stepsWithoutProgress++;
         }
     }
 
-    return durakError('Durak bot turn limit exceeded');
+    return durakError('Превышен лимит ходов бота');
 }
 
 function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postData): array
 {
     if (($state['phase'] ?? '') !== 'setup') {
-        return durakError('Durak match is not in setup');
+        return durakError('Партия уже запущена');
     }
     if (empty($room['is_host'])) {
-        return durakError('Only the host can start the match');
+        return durakError('Начать партию может только хост');
     }
 
     $roomId = (int) ($room['id'] ?? 0);
     if ($roomId <= 0) {
-        return durakError('Durak room is missing');
+        return durakError('Комната не найдена');
     }
 
     try {
@@ -680,13 +777,13 @@ function durakHandleStartMatch(PDO $pdo, array $room, array $state, array $postD
 function durakHandleRequestRematch(array $room, array $state, string $userId): array
 {
     if (($state['phase'] ?? '') !== 'finished') {
-        return durakError('Rematch is only available after the game');
+        return durakError('Реванш доступен только после завершения партии');
     }
     if (empty($userId) || !in_array($userId, $state['player_order'] ?? [], true)) {
-        return durakError('Only match participants can request a rematch');
+        return durakError('Предложить реванш могут только участники партии');
     }
     if (!empty($room['is_host'])) {
-        return durakError('The host can start a rematch directly');
+        return durakError('Хост может сразу запустить реванш');
     }
 
     if (!in_array($userId, $state['rematch_requests'] ?? [], true)) {
@@ -699,15 +796,15 @@ function durakHandleRequestRematch(array $room, array $state, string $userId): a
 function durakHandleStartRematch(PDO $pdo, array $room, array $state): array
 {
     if (($state['phase'] ?? '') !== 'finished') {
-        return durakError('Rematch is only available after the game');
+        return durakError('Реванш доступен только после завершения партии');
     }
     if (empty($room['is_host'])) {
-        return durakError('Only the host can start a rematch');
+        return durakError('Запустить реванш может только хост');
     }
 
     $roomId = (int) ($room['id'] ?? 0);
     if ($roomId <= 0) {
-        return durakError('Durak room is missing');
+        return durakError('Комната не найдена');
     }
 
     try {
@@ -731,10 +828,10 @@ function durakHandleStartRematch(PDO $pdo, array $room, array $state): array
 function durakHandleDeclineRematch(array $room, array $state): array
 {
     if (($state['phase'] ?? '') !== 'finished') {
-        return durakError('Rematch is only available after the game');
+        return durakError('Реванш доступен только после завершения партии');
     }
     if (empty($room['is_host'])) {
-        return durakError('Only the host can decline a rematch');
+        return durakError('Отклонить реванш может только хост');
     }
 
     $state['rematch_requests'] = [];
@@ -776,10 +873,12 @@ function durakBuildPlayerProjection(array $state, $viewerId): array
         'table' => $state['table'] ?? [],
         'discard_count' => count($state['discard'] ?? []),
         'roles' => $state['roles'] ?? ['attacker_id' => null, 'defender_id' => null],
+        'trick_attacker_id' => $state['trick_attacker_id'] ?? ($state['roles']['attacker_id'] ?? null),
         'actor_id' => $state['actor_id'] ?? null,
         'passed_throwers' => $state['passed_throwers'] ?? [],
         'defender_mode' => $state['defender_mode'] ?? 'defending',
         'attack_limit' => (int) ($state['attack_limit'] ?? DURAK_HAND_SIZE),
+        'last_bot_actions' => array_values(is_array($state['last_bot_actions'] ?? null) ? $state['last_bot_actions'] : []),
         'result' => $state['result'] ?? ['loser_id' => null, 'reason' => null],
     ];
 }
@@ -794,30 +893,39 @@ function durakBuildResultPlayersData(array $state): array
         }
     }
 
+    $loserId = trim((string) ($state['result']['loser_id'] ?? ''));
+
     $rankedPlayerIds = [];
     foreach (is_array($state['finish_order'] ?? null) ? $state['finish_order'] : [] as $playerId) {
         $playerId = trim((string) $playerId);
-        if ($playerId !== '' && in_array($playerId, $playerOrder, true) && !in_array($playerId, $rankedPlayerIds, true)) {
+        if ($playerId === '' || $playerId === $loserId) {
+            continue;
+        }
+        if (in_array($playerId, $playerOrder, true) && !in_array($playerId, $rankedPlayerIds, true)) {
             $rankedPlayerIds[] = $playerId;
         }
     }
 
-    $loserId = trim((string) ($state['result']['loser_id'] ?? ''));
-    if ($loserId !== '' && in_array($loserId, $playerOrder, true) && !in_array($loserId, $rankedPlayerIds, true)) {
-        $rankedPlayerIds[] = $loserId;
-    }
-
     foreach ($playerOrder as $playerId) {
+        if ($playerId === $loserId) {
+            continue;
+        }
         if (!in_array($playerId, $rankedPlayerIds, true)) {
             $rankedPlayerIds[] = $playerId;
         }
     }
 
+    if ($loserId !== '' && in_array($loserId, $playerOrder, true) && !in_array($loserId, $rankedPlayerIds, true)) {
+        $rankedPlayerIds[] = $loserId;
+    }
+
+    $loserRank = max(2, count($rankedPlayerIds));
     $playersData = [];
-    foreach ($rankedPlayerIds as $index => $playerId) {
+    foreach ($rankedPlayerIds as $playerId) {
+        $isLoser = ($loserId !== '' && $playerId === $loserId);
         $playersData[] = [
             'user_id' => (int) $playerId,
-            'rank' => $index + 1,
+            'rank' => $isLoser ? $loserRank : 1,
             'score' => 0,
         ];
     }
@@ -827,14 +935,16 @@ function durakBuildResultPlayersData(array $state): array
 
 function durakHandleAttackCard(array $state, string $userId, string $cardId): array
 {
+    durakNormalizeState($state);
+
     if (($state['phase'] ?? '') !== 'attack') {
-        return durakError('You cannot attack now');
+        return durakError('Сейчас нельзя ходить в атаку');
     }
     if ((string) ($state['actor_id'] ?? '') !== $userId) {
-        return durakError('It is not your turn');
+        return durakError('Сейчас ход другого игрока');
     }
     if (!durakHandHasCard($state, $userId, $cardId)) {
-        return durakError('Card is not in your hand');
+        return durakError('Этой карты нет у тебя в руке');
     }
 
     $defenderId = (string) ($state['roles']['defender_id'] ?? '');
@@ -842,32 +952,42 @@ function durakHandleAttackCard(array $state, string $userId, string $cardId): ar
     $isOpeningAttack = count($state['table'] ?? []) === 0;
 
     if ($userId === $defenderId) {
-        return durakError('Defender cannot throw in cards');
+        return durakError('Защищающийся не может подкидывать карты');
     }
     if ($isOpeningAttack && $userId !== $attackerId) {
-        return durakError('Only attacker can open the trick');
+        return durakError('Открывать взятку может только атакующий');
     }
     if (!$isOpeningAttack && in_array($userId, $state['passed_throwers'] ?? [], true)) {
-        return durakError('You have already passed this trick');
+        return durakError('Ты уже спасовал в этом круге подкидывания');
     }
     if (!$isOpeningAttack && ($state['rules']['allow_throw_in'] ?? true) !== true) {
-        return durakError('Throw-in is not allowed in this game');
+        return durakError('Подкидывание отключено правилами партии');
     }
     if (!$isOpeningAttack && !durakCardRankIsOnTable($state, $cardId)) {
-        return durakError('Throw-in card rank must match the table');
+        return durakError('Подкидывать можно только карты достоинства, которое уже есть на столе');
     }
     if (durakAttackCount($state) >= (int) ($state['attack_limit'] ?? DURAK_HAND_SIZE)) {
-        return durakError('Attack limit reached');
+        return durakError('Достигнут лимит карт для атаки');
+    }
+
+    if ($isOpeningAttack) {
+        $state['trick_attacker_id'] = $userId;
     }
 
     durakRemoveCardFromHand($state, $userId, $cardId);
+    durakRecordPlayerFinishedIfDeckEmpty($state, $userId);
     $state['table'][] = [
         'attack' => $cardId,
         'defend' => null,
     ];
 
     if (($state['defender_mode'] ?? 'defending') === 'taking') {
-        durakSetNextThrowerOrComplete($state, $userId, true);
+        if (durakIsEligibleThrower($state, $userId)) {
+            $state['phase'] = 'attack';
+            $state['actor_id'] = $userId;
+        } else {
+            durakSetNextThrowerOrComplete($state, $userId, true);
+        }
     } else {
         $state['phase'] = 'defense';
         $state['actor_id'] = $defenderId;
@@ -878,34 +998,41 @@ function durakHandleAttackCard(array $state, string $userId, string $cardId): ar
 
 function durakHandleDefendCard(array $state, string $userId, string $attackCardId, string $defenseCardId): array
 {
+    durakNormalizeState($state);
+
     if (($state['phase'] ?? '') !== 'defense') {
-        return durakError('You cannot defend now');
+        return durakError('Сейчас не фаза защиты');
     }
     if ((string) ($state['actor_id'] ?? '') !== $userId) {
-        return durakError('It is not your turn');
+        return durakError('Сейчас ход другого игрока');
     }
     if ((string) ($state['roles']['defender_id'] ?? '') !== $userId) {
-        return durakError('Only defender can defend');
+        return durakError('Отбиваться может только защищающийся');
     }
     if (($state['defender_mode'] ?? 'defending') !== 'defending') {
-        return durakError('Defender is already taking cards');
+        return durakError('Защищающийся уже берёт карты');
     }
     if (!durakHandHasCard($state, $userId, $defenseCardId)) {
-        return durakError('Card is not in your hand');
+        return durakError('Этой карты нет у тебя в руке');
     }
 
     $tableIndex = durakFindUncoveredAttackIndex($state, $attackCardId);
     if ($tableIndex === null) {
-        return durakError('Attack card is not open for defense');
+        return durakError('Эта карта атаки уже побита или её нет на столе');
     }
 
     $trumpSuit = (string) ($state['trump']['suit'] ?? '');
     if (!durakCanBeat($defenseCardId, $attackCardId, $trumpSuit)) {
-        return durakError('Defense card cannot beat the attack card');
+        return durakError('Выбранная карта не может побить эту карту атаки');
     }
 
+    $defenseRankWasOnTable = durakCardRankIsOnTable($state, $defenseCardId);
     durakRemoveCardFromHand($state, $userId, $defenseCardId);
+    durakRecordPlayerFinishedIfDeckEmpty($state, $userId);
     $state['table'][$tableIndex]['defend'] = $defenseCardId;
+    if (!$defenseRankWasOnTable) {
+        $state['passed_throwers'] = [];
+    }
 
     if (durakAllAttacksCovered($state)) {
         if (($state['rules']['allow_throw_in'] ?? true) === true) {
@@ -923,23 +1050,25 @@ function durakHandleDefendCard(array $state, string $userId, string $attackCardI
 
 function durakHandlePassThrowIn(array $state, string $userId): array
 {
+    durakNormalizeState($state);
+
     if (($state['rules']['allow_throw_in'] ?? true) !== true) {
-        return durakError('Throw-in is not allowed in this game');
+        return durakError('Подкидывание отключено правилами партии');
     }
     if (($state['phase'] ?? '') !== 'attack') {
-        return durakError('You cannot pass now');
+        return durakError('Сейчас нельзя спасовать');
     }
     if ((string) ($state['actor_id'] ?? '') !== $userId) {
-        return durakError('It is not your turn');
+        return durakError('Сейчас ход другого игрока');
     }
     if (count($state['table'] ?? []) === 0) {
-        return durakError('Opening attacker cannot pass');
+        return durakError('Открывающий атаку не может пропустить ход');
     }
     if ((string) ($state['roles']['defender_id'] ?? '') === $userId) {
-        return durakError('Defender cannot pass as thrower');
+        return durakError('Защищающийся не может пасовать вместо подкидывающих');
     }
     if (!durakAllAttacksCovered($state) && ($state['defender_mode'] ?? 'defending') !== 'taking') {
-        return durakError('Defender must answer open attacks first');
+        return durakError('Сначала защищающийся должен ответить на открытые карты');
     }
 
     if (!in_array($userId, $state['passed_throwers'] ?? [], true)) {
@@ -953,17 +1082,23 @@ function durakHandlePassThrowIn(array $state, string $userId): array
 
 function durakHandleTakeCards(array $state, string $userId): array
 {
+    durakNormalizeState($state);
+
     if (($state['phase'] ?? '') !== 'defense') {
-        return durakError('You cannot take cards now');
+        return durakError('Сейчас нельзя взять карты');
     }
     if ((string) ($state['actor_id'] ?? '') !== $userId) {
-        return durakError('It is not your turn');
+        return durakError('Сейчас ход другого игрока');
     }
     if ((string) ($state['roles']['defender_id'] ?? '') !== $userId) {
-        return durakError('Only defender can take cards');
+        return durakError('Взять карты может только защищающийся');
+    }
+    if (($state['defender_mode'] ?? 'defending') !== 'defending') {
+        return durakError('Защищающийся уже берёт карты');
     }
 
     $state['defender_mode'] = 'taking';
+    $state['passed_throwers'] = [];
     if (($state['rules']['allow_throw_in'] ?? true) === true) {
         durakSetNextThrowerOrComplete($state, null, true);
     } else {
@@ -975,67 +1110,74 @@ function durakHandleTakeCards(array $state, string $userId): array
 
 function durakHandleTransferCard(array $state, string $userId, string $cardId): array
 {
+    durakNormalizeState($state);
+
     if (($state['rules']['allow_transfer'] ?? false) !== true) {
-        return durakError('Transfer is not allowed in this game');
+        return durakError('Перевод отключён правилами партии');
     }
     if (($state['phase'] ?? '') !== 'defense') {
-        return durakError('You cannot transfer now');
+        return durakError('Сейчас нельзя перевести атаку');
     }
     if ((string) ($state['actor_id'] ?? '') !== $userId) {
-        return durakError('It is not your turn');
+        return durakError('Сейчас ход другого игрока');
     }
     if ((string) ($state['roles']['defender_id'] ?? '') !== $userId) {
-        return durakError('Only defender can transfer');
+        return durakError('Перевести атаку может только защищающийся');
     }
     if (($state['defender_mode'] ?? 'defending') !== 'defending') {
-        return durakError('Defender is already taking cards');
+        return durakError('Защищающийся уже берёт карты');
     }
 
     $table = $state['table'] ?? [];
     if (empty($table)) {
-        return durakError('No attacks to transfer');
+        return durakError('На столе нет карт для перевода');
     }
     foreach ($table as $pair) {
         if (!empty($pair['defend'])) {
-            return durakError('Cannot transfer after defending a card');
+            return durakError('Нельзя переводить после того, как начата защита');
         }
     }
 
     if (!durakHandHasCard($state, $userId, $cardId)) {
-        return durakError('Card is not in your hand');
+        return durakError('Этой карты нет у тебя в руке');
     }
 
     $transferRank = durakCardRank($cardId);
     foreach ($table as $pair) {
         $attackCardId = (string) ($pair['attack'] ?? '');
         if ($attackCardId === '' || durakCardRank($attackCardId) !== $transferRank) {
-            return durakError('Transfer card rank must match every attack card');
+            return durakError('Для перевода ранг карты должен совпадать со всеми картами атаки');
         }
     }
 
-    $inGamePlayers = array_values(array_map('strval', $state['in_game_players'] ?? []));
-    if (count($inGamePlayers) < 2) {
-        return durakError('No active player to transfer to');
+    $transferCandidates = durakActiveTrickPlayers($state, $userId);
+    if (count($transferCandidates) < 2) {
+        return durakError('Нет активного игрока, которому можно перевести атаку');
     }
     $nextDefenderId = durakNextInGamePlayer(
         $state['player_order'] ?? [],
-        $inGamePlayers,
+        $transferCandidates,
         $userId
     );
-    if ($nextDefenderId === $userId || !in_array($nextDefenderId, $inGamePlayers, true)) {
-        return durakError('No active player to transfer to');
+    if ($nextDefenderId === $userId || !in_array($nextDefenderId, $transferCandidates, true)) {
+        return durakError('Нет активного игрока, которому можно перевести атаку');
     }
 
     $attackCount = durakAttackCount($state) + 1;
     $newDefenderHandCount = count($state['hands'][$nextDefenderId] ?? []);
     if ($attackCount > DURAK_HAND_SIZE) {
-        return durakError('Attack limit reached');
+        return durakError('Достигнут лимит карт для атаки');
     }
     if ($attackCount > $newDefenderHandCount) {
-        return durakError('Next defender does not have enough cards');
+        return durakError('У следующего игрока недостаточно карт для перевода');
+    }
+
+    if (empty($state['trick_attacker_id'])) {
+        $state['trick_attacker_id'] = (string) ($state['roles']['attacker_id'] ?? $userId);
     }
 
     durakRemoveCardFromHand($state, $userId, $cardId);
+    durakRecordPlayerFinishedIfDeckEmpty($state, $userId);
     $state['table'][] = [
         'attack' => $cardId,
         'defend' => null,
@@ -1072,13 +1214,25 @@ function durakSetNextThrowerOrComplete(array &$state, ?string $afterPlayerId, bo
 
 function durakCompleteTrick(array &$state, bool $defenderTakes): void
 {
+    durakNormalizeState($state);
+
     $oldAttackerId = (string) ($state['roles']['attacker_id'] ?? '');
+    $trickAttackerId = (string) ($state['trick_attacker_id'] ?? '');
+    if ($trickAttackerId === '') {
+        $trickAttackerId = $oldAttackerId;
+    }
     $oldDefenderId = (string) ($state['roles']['defender_id'] ?? '');
     $tableCards = durakTableCards($state);
 
     if ($defenderTakes) {
         foreach ($tableCards as $cardId) {
             $state['hands'][$oldDefenderId][] = $cardId;
+        }
+        if (!empty($state['hands'][$oldDefenderId])) {
+            $state['finish_order'] = array_values(array_filter(
+                $state['finish_order'],
+                static fn($pid) => (string) $pid !== $oldDefenderId
+            ));
         }
         $nextAttackerSeed = durakNextInGamePlayer($state['player_order'], $state['in_game_players'], $oldDefenderId);
     } else {
@@ -1090,10 +1244,11 @@ function durakCompleteTrick(array &$state, bool $defenderTakes): void
     $state['passed_throwers'] = [];
     $state['defender_mode'] = 'defending';
 
-    durakRefillHands($state, $oldAttackerId);
-    durakUpdateFinishedPlayers($state);
+    $drawOrder = durakRefillHands($state, $trickAttackerId, $oldDefenderId);
+    durakUpdateFinishedPlayers($state, $drawOrder);
 
     if (durakMaybeFinishGame($state)) {
+        $state['trick_attacker_id'] = null;
         return;
     }
 
@@ -1105,29 +1260,92 @@ function durakCompleteTrick(array &$state, bool $defenderTakes): void
         'attacker_id' => $attackerId,
         'defender_id' => $defenderId,
     ];
+    $state['trick_attacker_id'] = $attackerId;
     $state['actor_id'] = $attackerId;
     $state['attack_limit'] = min(DURAK_HAND_SIZE, count($state['hands'][$defenderId] ?? []));
 }
 
-function durakRefillHands(array &$state, string $startPlayerId): void
+function durakRefillHands(array &$state, string $startPlayerId, string $defenderId = ''): array
 {
-    $drawOrder = durakPlayerOrderFrom($state['player_order'], $state['in_game_players'], $startPlayerId);
+    $clockwiseOrder = durakPlayerOrderFrom($state['player_order'], $state['in_game_players'], $startPlayerId);
+    $defenderId = (string) $defenderId;
+
+    $drawOrder = [];
+    $includeDefenderLast = false;
+    foreach ($clockwiseOrder as $playerId) {
+        if ($defenderId !== '' && (string) $playerId === $defenderId) {
+            $includeDefenderLast = true;
+            continue;
+        }
+        $drawOrder[] = (string) $playerId;
+    }
+    if ($includeDefenderLast) {
+        $drawOrder[] = $defenderId;
+    }
 
     foreach ($drawOrder as $playerId) {
         while (count($state['hands'][$playerId] ?? []) < DURAK_HAND_SIZE && !empty($state['draw_pile'])) {
             $state['hands'][$playerId][] = array_shift($state['draw_pile']);
         }
     }
+
+    return $drawOrder;
 }
 
-function durakUpdateFinishedPlayers(array &$state): void
+function durakRecordPlayerFinishedIfDeckEmpty(array &$state, string $playerId): void
 {
     if (!empty($state['draw_pile'])) {
         return;
     }
+    $playerId = (string) $playerId;
+    if ($playerId === '' || !empty($state['hands'][$playerId])) {
+        return;
+    }
+    if (!in_array($playerId, $state['finish_order'] ?? [], true)) {
+        $state['finish_order'][] = $playerId;
+    }
+}
 
-    foreach ($state['in_game_players'] as $playerId) {
+function durakActiveTrickPlayers(array $state, string $includePlayerId = ''): array
+{
+    $inGamePlayers = array_values(array_map('strval', $state['in_game_players'] ?? []));
+    if (!empty($state['draw_pile'])) {
+        return $inGamePlayers;
+    }
+
+    $includePlayerId = (string) $includePlayerId;
+    return array_values(array_filter($inGamePlayers, static function (string $playerId) use ($state, $includePlayerId): bool {
+        if ($includePlayerId !== '' && $playerId === $includePlayerId) {
+            return true;
+        }
+        return !empty($state['hands'][$playerId]);
+    }));
+}
+
+function durakUpdateFinishedPlayers(array &$state, array $preferredOrder = []): void
+{
+    $state['finish_order'] = array_values(array_filter(
+        $state['finish_order'] ?? [],
+        static fn($playerId) => empty($state['hands'][(string) $playerId])
+    ));
+
+    if (!empty($state['draw_pile'])) {
+        return;
+    }
+
+    $candidates = [];
+    foreach (array_merge($preferredOrder, $state['in_game_players'] ?? []) as $playerId) {
         $playerId = (string) $playerId;
+        if ($playerId !== '' && !in_array($playerId, $candidates, true)) {
+            $candidates[] = $playerId;
+        }
+    }
+
+    $inGameLookup = array_fill_keys(array_map('strval', $state['in_game_players'] ?? []), true);
+    foreach ($candidates as $playerId) {
+        if (!isset($inGameLookup[$playerId])) {
+            continue;
+        }
         if (!empty($state['hands'][$playerId])) {
             continue;
         }
@@ -1284,17 +1502,29 @@ function durakNormalizeState(array &$state): void
     } catch (InvalidArgumentException $error) {
         $state['stats_recorded'] = false;
     }
+    $state['started_at'] = isset($state['started_at']) && is_numeric($state['started_at'])
+        ? max(0, (int) $state['started_at'])
+        : null;
     $state['hands'] = is_array($state['hands'] ?? null) ? $state['hands'] : [];
     $state['draw_pile'] = is_array($state['draw_pile'] ?? null) ? $state['draw_pile'] : [];
     $state['table'] = is_array($state['table'] ?? null) ? $state['table'] : [];
     $state['discard'] = is_array($state['discard'] ?? null) ? $state['discard'] : [];
     $state['roles'] = is_array($state['roles'] ?? null) ? $state['roles'] : ['attacker_id' => null, 'defender_id' => null];
+    $defaultTrickAttacker = isset($state['roles']['attacker_id']) && (string) $state['roles']['attacker_id'] !== ''
+        ? (string) $state['roles']['attacker_id']
+        : null;
+    $state['trick_attacker_id'] = isset($state['trick_attacker_id']) && (string) $state['trick_attacker_id'] !== ''
+        ? (string) $state['trick_attacker_id']
+        : $defaultTrickAttacker;
     $state['actor_id'] = isset($state['actor_id']) ? (string) $state['actor_id'] : null;
     $state['passed_throwers'] = array_values(array_map('strval', $state['passed_throwers'] ?? []));
     $state['defender_mode'] = in_array(($state['defender_mode'] ?? 'defending'), ['defending', 'taking'], true)
         ? $state['defender_mode']
         : 'defending';
     $state['attack_limit'] = (int) ($state['attack_limit'] ?? DURAK_HAND_SIZE);
+    $state['last_bot_actions'] = is_array($state['last_bot_actions'] ?? null)
+        ? array_values($state['last_bot_actions'])
+        : [];
     $state['result'] = is_array($state['result'] ?? null)
         ? $state['result']
         : ['loser_id' => null, 'reason' => null];
