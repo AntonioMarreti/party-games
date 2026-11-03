@@ -587,6 +587,8 @@
     flex-direction: column;
     gap: 6px;
     overflow: hidden;
+    border: 2px solid transparent;
+    border-radius: 18px;
 }
 
 .durak-bot-feed {
@@ -2140,6 +2142,7 @@ body.durak-settings-open #reaction-container {
 .durak-table-stage.is-drag-valid-zone,
 .durak-table-empty.is-drag-valid-zone {
     border: 2px dashed rgba(37, 99, 235, 0.45);
+    border-radius: 18px;
     background: rgba(239, 246, 255, 0.55);
     transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
@@ -2149,7 +2152,7 @@ body.durak-settings-open #reaction-container {
     border-style: solid;
     border-color: #2563eb;
     background: rgba(219, 234, 254, 0.85);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) inset, 0 0 16px rgba(37, 99, 235, 0.16) inset;
 }
 
 .durak-trick.is-defend-valid-target {
