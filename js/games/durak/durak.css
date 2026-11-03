@@ -2175,9 +2175,10 @@ body.durak-settings-open #reaction-container {
     justify-content: center;
     gap: 8px;
     flex: 0 0 auto;
+    box-sizing: border-box;
     min-height: 52px;
     padding: 10px 16px;
-    margin: 4px 4px 2px 4px;
+    margin: 4px 8px 2px 8px;
     border: 2px dashed rgba(217, 119, 6, 0.55);
     border-radius: 14px;
     background: rgba(254, 243, 199, 0.94);
@@ -2187,8 +2188,8 @@ body.durak-settings-open #reaction-container {
     line-height: 1;
     user-select: none;
     -webkit-user-select: none;
-    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.1);
-    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.1);
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
 }
 
 .durak-transfer-zone.is-active.is-drag-hover {
@@ -2196,8 +2197,8 @@ body.durak-settings-open #reaction-container {
     border-color: #d97706;
     background: #fde68a;
     color: #92400e;
-    transform: scale(1.015);
-    box-shadow: 0 0 0 2.5px rgba(217, 119, 6, 0.28), 0 8px 18px rgba(217, 119, 6, 0.18);
+    transform: none;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35), 0 4px 14px rgba(217, 119, 6, 0.2);
 }
 
 .durak-transfer-zone-icon {
@@ -2213,7 +2214,7 @@ body.durak-settings-open #reaction-container {
     min-height: 46px;
     padding: 8px 12px;
     font-size: 13px;
-    margin: 2px 3px 1px 3px;
+    margin: 2px 8px 1px 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
