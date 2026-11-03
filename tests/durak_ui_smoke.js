@@ -8,14 +8,22 @@ const source = fs.readFileSync(uiPath, 'utf8');
 const marker = '\n})();\n';
 const hookExport = `
     window.__durakUiTestHooks = {
+        activateDrag,
         bindEvents,
         canPlayAttackCard,
         canSelectAttackTarget,
         canTransfer,
+        cancelDrag,
         cleanupResizeHandling,
         compactStatusCopy,
         defenseTargetCard,
+        dragState,
+        executeDropAction,
         formatBotActionSummary,
+        handleCardPointerDown,
+        handleWindowPointerCancel,
+        handleWindowPointerMove,
+        handleWindowPointerUp,
         hasDefenseOrTransferOption,
         nextActivePlayerId,
         otherEligibleThrowerExists,
@@ -29,10 +37,13 @@ const hookExport = `
         renderSetupScreen,
         renderShell,
         renderTable,
+        resolveDropTarget,
         selectAttackTarget,
         selectHandCard,
+        syncDragVisuals,
         syncHandSettingsLayer,
         uiState,
+        updateDropTargetVisuals,
         updateLastTrickResult
     };
 `;
@@ -41,11 +52,21 @@ assert.ok(source.includes(marker), 'Durak UI test hook insertion point must exis
 
 const timers = [];
 const bodyClassSet = new Set();
+const windowListeners = new Map();
 const windowObject = {
     innerWidth: 390,
     innerHeight: 844,
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (type, handler) => {
+        if (!windowListeners.has(type)) windowListeners.set(type, new Set());
+        windowListeners.get(type).add(handler);
+    },
+    removeEventListener: (type, handler) => {
+        windowListeners.get(type)?.delete(handler);
+    },
+    dispatchEvent: (event) => {
+        const handlers = windowListeners.get(event.type);
+        if (handlers) handlers.forEach(h => h(event));
+    },
     requestAnimationFrame: callback => {
         timers.push(callback);
         return timers.length;
@@ -81,14 +102,35 @@ const documentObject = {
         contains: () => true
     },
     getElementById: id => elementsById.get(id) || null,
+    elementFromPoint: (x, y) => null,
     addEventListener: () => {},
     removeEventListener: () => {},
-    createElement: () => ({
-        set textContent(value) {
-            this.innerHTML = String(value ?? '');
-        },
-        innerHTML: ''
-    })
+    createElement: () => {
+        const classSet = new Set();
+        return {
+            id: '',
+            className: '',
+            innerHTML: '',
+            classList: {
+                add: (...names) => names.forEach(n => classSet.add(n)),
+                remove: (...names) => names.forEach(n => classSet.delete(n)),
+                toggle: (n, force) => {
+                    const next = force === undefined ? !classSet.has(n) : Boolean(force);
+                    if (next) classSet.add(n); else classSet.delete(n);
+                    return next;
+                },
+                contains: n => classSet.has(n)
+            },
+            style: {
+                setProperty: () => {},
+                removeProperty: () => {}
+            },
+            remove: () => {},
+            set textContent(value) {
+                this.innerHTML = String(value ?? '');
+            }
+        };
+    }
 };
 const sandbox = {
     window: windowObject,
@@ -106,22 +148,45 @@ function flushTimers() {
 }
 
 function fakeButton(dataset = {}) {
+    const classSet = new Set();
     return {
         dataset,
         disabled: false,
         attributes: {},
         onclick: null,
+        onpointerdown: null,
+        classList: {
+            add: (...names) => names.forEach(n => classSet.add(n)),
+            remove: (...names) => names.forEach(n => classSet.delete(n)),
+            toggle: (n, force) => {
+                const next = force === undefined ? !classSet.has(n) : Boolean(force);
+                if (next) classSet.add(n); else classSet.delete(n);
+                return next;
+            },
+            contains: n => classSet.has(n)
+        },
+        closest(sel) {
+            if (sel.includes('.durak-trick') && this.dataset.attackCard) return this;
+            if (sel.includes('.durak-card') && this.dataset.cardId) return this;
+            if (sel.includes('[data-drop-zone="transfer"]') && this.dataset.dropZone === 'transfer') return this;
+            if ((sel.includes('.durak-table-stage') || sel.includes('.durak-table-empty')) && this.dataset.dropZone === 'attack') return this;
+            return null;
+        },
         setAttribute(name, value) {
             this.attributes[name] = String(value);
         },
         removeAttribute(name) {
             delete this.attributes[name];
+        },
+        getAttribute(name) {
+            return this.attributes[name] ?? null;
         }
     };
 }
 
 function fakeShell(single = {}, lists = {}) {
     return {
+        appendChild() {},
         querySelector(selector) {
             return single[selector] || null;
         },
@@ -136,6 +201,7 @@ function fakeShell(single = {}, lists = {}) {
 }
 
 function resetUiState() {
+    if (hooks.cancelDrag) hooks.cancelDrag();
     hooks.uiState.selectedCardId = null;
     hooks.uiState.selectedAttackCardId = null;
     hooks.uiState.confirmingTake = false;
@@ -628,6 +694,7 @@ async function run() {
     // Stage 3.4 & 3.5: Active exit button moved out of .durak-context-actions into #durak-hand-settings-layer + concise bot feed
     resetUiState();
     let createdShell = null;
+    const defaultCreateElement = documentObject.createElement;
     documentObject.createElement = () => {
         const el = {
             id: '',
@@ -642,6 +709,7 @@ async function run() {
     hooks.renderShell(shellContainer);
     assert.ok(createdShell && /id="durak-hand-settings-layer"[\s\S]*id="durak-exit-section"[\s\S]*id="durak-exit-btn"/.test(createdShell.innerHTML), '3.4: #durak-exit-btn must live inside #durak-hand-settings-layer away from Telegram top-right controls');
     assert.doesNotMatch(boardElem.innerHTML, /id="durak-exit-btn"/, '3.4: Active #durak-board top row must NOT contain #durak-exit-btn');
+    documentObject.createElement = defaultCreateElement;
 
     const botStateWithFeed = {
         ...defenseState,
@@ -653,6 +721,202 @@ async function run() {
     assert.equal(hooks.formatBotActionSummary(botStateWithFeed, viewerRes), 'Маша: ход 6♠ · подкид 9♥', '3.5: Bot action summary formats open_attack and throw-in concisely');
     const botFeedTableHtml = hooks.renderTable(botStateWithFeed, viewerRes).trim();
     assert.match(botFeedTableHtml, /^<div class="durak-table-stage">[\s\S]*durak-bot-feed[\s\S]*<\/div>$/, '3.5: Bot feed renders inside .durak-table-stage without breaking 3-row .durak-center grid');
+
+    // Stage 4: Mobile Card Drag-and-Drop in Durak
+    let apiRequests = [];
+    windowObject.apiRequest = async req => {
+        apiRequests.push(req);
+        return { status: 'success' };
+    };
+
+    // 4.1: Regular tap on hand card selects/unselects without activating drag
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    const tapCardBtn = fakeButton({ cardId: '6H' });
+    hooks.bindEvents(fakeShell({}, { '.durak-hand .durak-card': [tapCardBtn] }), firstThrowerBeatState, viewerRes);
+    tapCardBtn.onclick();
+    assert.equal(hooks.uiState.selectedCardId, '6H', '4.1: Regular tap must select card');
+    tapCardBtn.onclick();
+    assert.equal(hooks.uiState.selectedCardId, null, '4.1: Second tap must unselect card');
+    assert.equal(hooks.dragState.active, false, '4.1: Regular tap must not activate drag');
+
+    // 4.2: Horizontal swipe on hand card scrolls hand, cancels drag tracking, and sends no action
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    tapCardBtn.onpointerdown({ pointerId: 1, clientX: 100, clientY: 500, button: 0 });
+    assert.equal(hooks.dragState.tracking, true, '4.2: pointerdown starts tracking');
+    hooks.handleWindowPointerMove({ pointerId: 1, clientX: 130, clientY: 502, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.tracking, false, '4.2: Horizontal swipe cancels tracking for native scroll');
+    assert.equal(hooks.dragState.active, false, '4.2: Horizontal swipe does not activate drag');
+    hooks.handleWindowPointerUp({ pointerId: 1, clientX: 130, clientY: 502 });
+    assert.equal(apiRequests.length, 0, '4.2: Horizontal swipe must not send any action');
+
+    // 4.3: Upward drag on attack card activates drag, highlights table drop zone, and drops to send attack_card
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    const atkTableStage = fakeButton({ dropZone: 'attack' });
+    const atkShell = fakeShell({ '.durak-table-stage, .durak-table-empty': atkTableStage }, { '.durak-hand .durak-card': [tapCardBtn] });
+    elementsById.set('durak-shell', atkShell);
+    documentObject.elementFromPoint = (x, y) => atkTableStage;
+    hooks.bindEvents(atkShell, firstThrowerBeatState, viewerRes);
+    tapCardBtn.onpointerdown({ pointerId: 2, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 2, clientX: 100, clientY: 380, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.active, true, '4.3: Upward motion activates drag');
+    assert.equal(hooks.dragState.canAttack, true, '4.3: Valid throw-in card sets canAttack');
+    assert.equal(hooks.dragState.hoverTarget?.type, 'attack', '4.3: Table resolves as attack target');
+    hooks.handleWindowPointerUp({ pointerId: 2, clientX: 100, clientY: 380 });
+    assert.equal(apiRequests.length, 1, '4.3: Dropping over table sends 1 action');
+    assert.equal(apiRequests[0].type, 'attack_card', '4.3: Action type must be attack_card');
+    assert.equal(apiRequests[0].card_id, '6H', '4.3: Card ID must be 6H');
+    assert.equal(hooks.dragState.active, false, '4.3: Drop ends active drag');
+
+    // 4.4: Upward drag on defense card highlights beatable open tricks, and drops on specific trick to send defend_card
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = defenseState;
+    hooks.uiState.lastRes = viewerRes;
+    const defCardBtn = fakeButton({ cardId: '7S' });
+    const trick6S = fakeButton({ attackCard: '6S' });
+    const trick9H = fakeButton({ attackCard: '9H' });
+    const defShell = fakeShell({}, {
+        '.durak-hand .durak-card': [defCardBtn],
+        '.durak-trick[data-attack-card]': [trick6S, trick9H]
+    });
+    elementsById.set('durak-shell', defShell);
+    hooks.bindEvents(defShell, defenseState, viewerRes);
+    documentObject.elementFromPoint = (x, y) => trick9H;
+    defCardBtn.onpointerdown({ pointerId: 3, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 3, clientX: 100, clientY: 350, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.active, true, '4.4: Upward motion activates defense drag');
+    assert.deepEqual(hooks.dragState.validDefenseTargets, ['6S'], '4.4: Only 6S is a valid defense target for 7S');
+    assert.equal(hooks.dragState.hoverTarget, null, '4.4: Incompatible trick 9H must not resolve as hover target');
+    documentObject.elementFromPoint = (x, y) => trick6S;
+    hooks.handleWindowPointerMove({ pointerId: 3, clientX: 100, clientY: 300, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.hoverTarget?.type, 'defend', '4.4: Compatible trick 6S resolves as defend target');
+    assert.equal(hooks.dragState.hoverTarget?.attackCardId, '6S', '4.4: Attack card ID is 6S');
+    hooks.handleWindowPointerUp({ pointerId: 3, clientX: 100, clientY: 300 });
+    assert.equal(apiRequests.length, 1, '4.4: Dropping over compatible trick sends defend_card');
+    assert.equal(apiRequests[0].type, 'defend_card');
+    assert.equal(apiRequests[0].card_id, '7S');
+    assert.equal(apiRequests[0].attack_card_id, '6S');
+
+    // 4.5: Upward drag on transferable card shows separate transfer zone, and dropping on it sends transfer_card
+    apiRequests = [];
+    resetUiState();
+    const transferAllowedState = { ...transferState, trump: { suit: 'D', card: '6D' } };
+    hooks.uiState.currentState = transferAllowedState;
+    hooks.uiState.lastRes = viewerRes;
+    const trfCardBtn = fakeButton({ cardId: '6C' });
+    const trfZone = fakeButton({ dropZone: 'transfer' });
+    const trfShell = fakeShell({ '#durak-transfer-zone': trfZone }, {
+        '.durak-hand .durak-card': [trfCardBtn],
+        '.durak-trick[data-attack-card]': [trick6S]
+    });
+    elementsById.set('durak-shell', trfShell);
+    hooks.bindEvents(trfShell, transferAllowedState, viewerRes);
+    documentObject.elementFromPoint = (x, y) => trfZone;
+    trfCardBtn.onpointerdown({ pointerId: 4, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 4, clientX: 100, clientY: 350, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.canTransfer, true, '4.5: Transferable card sets canTransfer');
+    assert.equal(hooks.dragState.hoverTarget?.type, 'transfer', '4.5: Transfer zone resolves as transfer target');
+    hooks.handleWindowPointerUp({ pointerId: 4, clientX: 100, clientY: 350 });
+    assert.equal(apiRequests.length, 1, '4.5: Dropping in transfer zone sends transfer_card');
+    assert.equal(apiRequests[0].type, 'transfer_card');
+    assert.equal(apiRequests[0].card_id, '6C');
+
+    // 4.6: Dropping transferable card on an attacking trick never sends transfer_card
+    apiRequests = [];
+    resetUiState();
+    const multiOptionCardBtn = fakeButton({ cardId: '6D' });
+    const multiOptionState = { ...transferAllowedState, my_hand: ['6D'] };
+    const multiOptionShell = fakeShell({ '#durak-transfer-zone': trfZone }, {
+        '.durak-hand .durak-card': [multiOptionCardBtn],
+        '.durak-trick[data-attack-card]': [trick6S]
+    });
+    elementsById.set('durak-shell', multiOptionShell);
+    hooks.uiState.currentState = multiOptionState;
+    hooks.uiState.lastRes = viewerRes;
+    hooks.bindEvents(multiOptionShell, multiOptionState, viewerRes);
+    documentObject.elementFromPoint = (x, y) => trick6S;
+    multiOptionCardBtn.onpointerdown({ pointerId: 5, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 5, clientX: 100, clientY: 300, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.canTransfer, true, '4.6: Card can transfer');
+    assert.ok(hooks.dragState.validDefenseTargets.includes('6S'), '4.6: Card can also defend 6S');
+    assert.equal(hooks.dragState.hoverTarget?.type, 'defend', '4.6: Dropping on trick must resolve to defend, NEVER transfer');
+    hooks.handleWindowPointerUp({ pointerId: 5, clientX: 100, clientY: 300 });
+    assert.equal(apiRequests.length, 1);
+    assert.equal(apiRequests[0].type, 'defend_card', '4.6: Drop on trick sends defend_card');
+    assert.equal(apiRequests[0].attack_card_id, '6S');
+
+    // 4.7: Unplayable card does not activate drag and never triggers an action
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    const unplayableBtn = fakeButton({ cardId: '10C' });
+    hooks.bindEvents(fakeShell({}, { '.durak-hand .durak-card': [unplayableBtn] }), firstThrowerBeatState, viewerRes);
+    unplayableBtn.onpointerdown({ pointerId: 6, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 6, clientX: 100, clientY: 400, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.active, false, '4.7: Unplayable card must not activate drag');
+    hooks.handleWindowPointerUp({ pointerId: 6, clientX: 100, clientY: 400 });
+    assert.equal(apiRequests.length, 0, '4.7: Unplayable card gesture must not send any request');
+
+    // 4.8: Releasing outside any valid target cancels drag, restores source card, and sends no action
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    documentObject.elementFromPoint = (x, y) => null;
+    tapCardBtn.onpointerdown({ pointerId: 7, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 7, clientX: 100, clientY: 400, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.active, true);
+    assert.equal(hooks.dragState.hoverTarget, null, '4.8: Moving outside results in null hoverTarget');
+    hooks.handleWindowPointerUp({ pointerId: 7, clientX: 100, clientY: 400 });
+    assert.equal(apiRequests.length, 0, '4.8: Release outside target must send no request');
+    assert.equal(hooks.dragState.active, false, '4.8: Drag is cancelled');
+
+    // 4.9: pointercancel cleanly cancels drag and clears temporary state
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    tapCardBtn.onpointerdown({ pointerId: 8, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 8, clientX: 100, clientY: 400, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.active, true);
+    hooks.handleWindowPointerCancel({ pointerId: 8 });
+    assert.equal(hooks.dragState.active, false, '4.9: pointercancel must cancel active drag');
+    assert.equal(hooks.dragState.tracking, false, '4.9: pointercancel clears tracking');
+    assert.equal(apiRequests.length, 0, '4.9: pointercancel must send no requests');
+
+    // 4.10: Releasing a dropped card sets busy / clears state, preventing duplicate requests and suppressing clicks
+    apiRequests = [];
+    resetUiState();
+    hooks.uiState.currentState = firstThrowerBeatState;
+    hooks.uiState.lastRes = viewerRes;
+    documentObject.elementFromPoint = (x, y) => atkTableStage;
+    tapCardBtn.onpointerdown({ pointerId: 9, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 9, clientX: 100, clientY: 400, cancelable: true, preventDefault: () => {} });
+    hooks.handleWindowPointerUp({ pointerId: 9, clientX: 100, clientY: 400 });
+    assert.equal(apiRequests.length, 1, '4.10: 1st release sends action');
+    hooks.handleWindowPointerUp({ pointerId: 9, clientX: 100, clientY: 400 });
+    assert.equal(apiRequests.length, 1, '4.10: Repeated release does not send duplicate request');
+    tapCardBtn.onclick();
+    assert.equal(hooks.uiState.selectedCardId, null, '4.10: Click immediately after drag drop is suppressed');
+
+    // 4.11: Server state update during active drag: cancels if move invalidated, or preserves if still valid
+    resetUiState();
+    hooks.uiState.currentState = defenseState;
+    hooks.uiState.lastRes = viewerRes;
+    defCardBtn.onpointerdown({ pointerId: 10, clientX: 100, clientY: 500, button: 0 });
+    hooks.handleWindowPointerMove({ pointerId: 10, clientX: 100, clientY: 400, cancelable: true, preventDefault: () => {} });
+    assert.equal(hooks.dragState.active, true, '4.11: Drag started');
+    hooks.renderGame({ ...viewerRes, room: { game_state: JSON.stringify({ ...defenseState, phase: 'finished' }) } });
+    assert.equal(hooks.dragState.active, false, '4.11: Invalidation during active drag safely cancels drag');
 
     console.log('Durak UI smoke: PASS');
 }

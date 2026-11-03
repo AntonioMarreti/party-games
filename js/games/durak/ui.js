@@ -82,6 +82,24 @@
         lastHeight: 0
     };
 
+    const dragState = {
+        tracking: false,
+        active: false,
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        cardId: null,
+        cardElement: null,
+        avatarElement: null,
+        hoverTarget: null,
+        validDefenseTargets: [],
+        canAttack: false,
+        canTransfer: false,
+        suppressClickUntil: 0
+    };
+
     function parseState(res) {
         const raw = res?.room?.game_state || res?.game_state;
         if (!raw) return uiState.currentState || {};
@@ -873,6 +891,10 @@
                         `;
                     }).join('')}
                 </div>
+                <div class="durak-transfer-zone" id="durak-transfer-zone" data-drop-zone="transfer">
+                    <span class="durak-transfer-zone-icon" aria-hidden="true">⇄</span>
+                    <span class="durak-transfer-zone-text">Перевести</span>
+                </div>
             </div>
         `;
     }
@@ -1558,6 +1580,7 @@
         uiState.handSettingsOpen = false;
         cancelTakeConfirmation();
         uiState.targetPromptActive = false;
+        cancelDrag();
 
         if (uiState.handSettingsKeydownBound) {
             document.removeEventListener('keydown', handleHandSettingsKeydown);
@@ -1637,6 +1660,25 @@
             uiState.targetPromptActive = false;
         } else if (canAttack(state, res) && uiState.selectedCardId && !canPlayAttackCard(state, res, uiState.selectedCardId)) {
             uiState.selectedCardId = null;
+        }
+
+        if (dragState.active) {
+            const isPhaseValid = state.phase === 'attack' || state.phase === 'defense';
+            const isTurnValid = isMyTurn(state, res);
+            const hasCard = Array.isArray(state.my_hand) && state.my_hand.includes(dragState.cardId);
+            let cardActionStillValid = false;
+            if (isPhaseValid && isTurnValid && hasCard) {
+                if (dragState.canAttack && canPlayAttackCard(state, res, dragState.cardId)) {
+                    cardActionStillValid = true;
+                } else if (isMyDefenseTurn(state, res)) {
+                    const hasBeatable = compatibleOpenAttacks(state, dragState.cardId).length > 0;
+                    const canTrf = canTransferCard(state, res, dragState.cardId);
+                    if (hasBeatable || canTrf) cardActionStillValid = true;
+                }
+            }
+            if (!cardActionStillValid) {
+                cancelDrag();
+            }
         }
 
         const gameArea = document.getElementById('game-area');
@@ -1736,6 +1778,9 @@
         if (domUpdated || !shell._eventsBound) {
             bindEvents(shell, state, res);
             shell._eventsBound = true;
+        }
+        if (dragState.active) {
+            syncDragVisuals(shell);
         }
     }
 
@@ -1840,6 +1885,341 @@
         }
     }
 
+    function syncDragVisuals(shell) {
+        if (!shell || !dragState.active) return;
+        if (dragState.cardId) {
+            const newCardBtn = shell.querySelector(`.durak-hand .durak-card[data-card-id="${dragState.cardId}"]`);
+            if (newCardBtn) {
+                dragState.cardElement = newCardBtn;
+                newCardBtn.classList.add('is-dragging-source');
+            }
+        }
+        if (dragState.canAttack) {
+            const attackZone = shell.querySelector('.durak-table-stage, .durak-table-empty');
+            if (attackZone) attackZone.classList.add('is-drag-valid-zone');
+        }
+        if (dragState.validDefenseTargets.length > 0) {
+            shell.querySelectorAll('.durak-trick[data-attack-card]').forEach(trick => {
+                const attackCardId = trick.dataset ? trick.dataset.attackCard : trick.getAttribute?.('data-attack-card');
+                if (attackCardId && dragState.validDefenseTargets.includes(attackCardId)) {
+                    trick.classList.add('is-defend-valid-target');
+                }
+            });
+        }
+        if (dragState.canTransfer) {
+            const transferZone = shell.querySelector('#durak-transfer-zone');
+            if (transferZone) transferZone.classList.add('is-active');
+        }
+    }
+
+    function clearDropTargetHighlights() {
+        const shell = document.getElementById('durak-shell');
+        if (!shell) return;
+        shell.querySelectorAll('.is-drag-valid-zone, .is-drag-hover').forEach(el => {
+            el.classList.remove('is-drag-valid-zone', 'is-drag-hover');
+        });
+        shell.querySelectorAll('.is-defend-valid-target, .is-defend-hover-target').forEach(el => {
+            el.classList.remove('is-defend-valid-target', 'is-defend-hover-target');
+        });
+        const transferZone = shell.querySelector('#durak-transfer-zone');
+        if (transferZone) {
+            transferZone.classList.remove('is-active', 'is-drag-hover');
+        }
+    }
+
+    function removeWindowDragListeners() {
+        window.removeEventListener('pointermove', handleWindowPointerMove);
+        window.removeEventListener('pointerup', handleWindowPointerUp);
+        window.removeEventListener('pointercancel', handleWindowPointerCancel);
+    }
+
+    function cancelDragListenersOnly() {
+        dragState.tracking = false;
+        dragState.active = false;
+        dragState.cardId = null;
+        dragState.cardElement = null;
+        dragState.hoverTarget = null;
+        dragState.validDefenseTargets = [];
+        dragState.canAttack = false;
+        dragState.canTransfer = false;
+        removeWindowDragListeners();
+    }
+
+    function cancelDrag() {
+        if (dragState.avatarElement) {
+            dragState.avatarElement.remove();
+            dragState.avatarElement = null;
+        }
+        if (dragState.cardElement?.classList) {
+            dragState.cardElement.classList.remove('is-dragging-source');
+            dragState.cardElement = null;
+        }
+        clearDropTargetHighlights();
+        dragState.tracking = false;
+        dragState.active = false;
+        dragState.pointerId = null;
+        dragState.cardId = null;
+        dragState.hoverTarget = null;
+        dragState.validDefenseTargets = [];
+        dragState.canAttack = false;
+        dragState.canTransfer = false;
+        removeWindowDragListeners();
+    }
+
+    function createDragAvatar(cardId, sourceElement) {
+        if (!cardId) return null;
+        const meta = suitMeta(cardId);
+        const rank = cardRank(cardId);
+        const avatar = document.createElement('div');
+        avatar.id = 'durak-drag-avatar';
+        avatar.className = `durak-card is-drag-avatar is-${meta.tone}`;
+        if (sourceElement?.classList?.contains?.('is-trump')) {
+            avatar.classList.add('is-trump');
+        }
+        avatar.innerHTML = `
+            <span class="durak-card-corner">
+                <span class="durak-card-corner-rank">${esc(rank)}</span>
+                <span class="durak-card-corner-suit">${esc(meta.symbol)}</span>
+            </span>
+            <span class="durak-card-center-suit" aria-hidden="true">${esc(meta.symbol)}</span>
+            <span class="durak-card-corner is-bottom" aria-hidden="true">
+                <span class="durak-card-corner-rank">${esc(rank)}</span>
+                <span class="durak-card-corner-suit">${esc(meta.symbol)}</span>
+            </span>
+        `;
+        const shell = document.getElementById('durak-shell') || document.body;
+        if (typeof shell?.appendChild === 'function') {
+            shell.appendChild(avatar);
+        } else if (typeof document.body?.appendChild === 'function') {
+            document.body.appendChild(avatar);
+        }
+        return avatar;
+    }
+
+    function updateDragAvatarPosition(x, y) {
+        if (!dragState.avatarElement?.style) return;
+        const cardWidth = 68;
+        const cardHeight = 96;
+        const left = Math.round(x - cardWidth / 2);
+        const top = Math.round(y - cardHeight * 0.72);
+        dragState.avatarElement.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+    }
+
+    function resolveDropTarget(x, y) {
+        if (!dragState.active) return null;
+        const shell = document.getElementById('durak-shell');
+        if (!shell) return null;
+
+        let element = null;
+        if (typeof document.elementFromPoint === 'function') {
+            element = document.elementFromPoint(x, y);
+        }
+
+        if (!element) return null;
+
+        const transferZone = element.closest ? element.closest('[data-drop-zone="transfer"]') : null;
+        if (transferZone && dragState.canTransfer) {
+            return { type: 'transfer', element: transferZone };
+        }
+
+        const trickEl = element.closest ? element.closest('.durak-trick[data-attack-card]') : null;
+        if (trickEl) {
+            const attackCardId = trickEl.dataset ? trickEl.dataset.attackCard : trickEl.getAttribute?.('data-attack-card');
+            if (attackCardId && dragState.validDefenseTargets.includes(attackCardId)) {
+                return { type: 'defend', attackCardId, element: trickEl };
+            }
+        }
+
+        const attackZone = element.closest ? element.closest('#durak-board .durak-table-stage, #durak-board .durak-table-empty, .durak-table-stage, .durak-table-empty') : null;
+        if (attackZone && dragState.canAttack) {
+            return { type: 'attack', element: attackZone };
+        }
+
+        return null;
+    }
+
+    function updateDropTargetVisuals(hoverTarget) {
+        const shell = document.getElementById('durak-shell');
+        if (!shell) return;
+
+        const transferZone = shell.querySelector('#durak-transfer-zone');
+        if (transferZone) {
+            transferZone.classList.toggle('is-drag-hover', hoverTarget?.type === 'transfer');
+        }
+
+        const attackZone = shell.querySelector('.durak-table-stage, .durak-table-empty');
+        if (attackZone) {
+            attackZone.classList.toggle('is-drag-hover', hoverTarget?.type === 'attack');
+        }
+
+        shell.querySelectorAll('.durak-trick[data-attack-card]').forEach(trick => {
+            const isHover = hoverTarget?.type === 'defend' && hoverTarget.element === trick;
+            trick.classList.toggle('is-defend-hover-target', isHover);
+        });
+    }
+
+    function activateDrag(event) {
+        dragState.active = true;
+        const shell = document.getElementById('durak-shell');
+
+        if (dragState.cardElement?.classList) {
+            dragState.cardElement.classList.add('is-dragging-source');
+        }
+
+        dragState.avatarElement = createDragAvatar(dragState.cardId, dragState.cardElement);
+        updateDragAvatarPosition(dragState.currentX, dragState.currentY);
+
+        if (shell) {
+            if (dragState.canAttack) {
+                const attackZone = shell.querySelector('.durak-table-stage, .durak-table-empty');
+                if (attackZone) attackZone.classList.add('is-drag-valid-zone');
+            }
+
+            if (dragState.validDefenseTargets.length > 0) {
+                shell.querySelectorAll('.durak-trick[data-attack-card]').forEach(trick => {
+                    const attackCardId = trick.dataset ? trick.dataset.attackCard : trick.getAttribute?.('data-attack-card');
+                    if (attackCardId && dragState.validDefenseTargets.includes(attackCardId)) {
+                        trick.classList.add('is-defend-valid-target');
+                    }
+                });
+            }
+
+            if (dragState.canTransfer) {
+                const transferZone = shell.querySelector('#durak-transfer-zone');
+                if (transferZone) transferZone.classList.add('is-active');
+            }
+        }
+
+        if (window.triggerHaptic) window.triggerHaptic('selection');
+    }
+
+    function handleCardPointerDown(event, button, state, res) {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (uiState.busy || button.disabled) return;
+        const cardId = button.dataset?.cardId || button.getAttribute?.('data-card-id') || button.attributes?.['data-card-id'] || '';
+        if (!cardId) return;
+
+        cancelDrag();
+
+        dragState.tracking = true;
+        dragState.active = false;
+        dragState.pointerId = event.pointerId ?? null;
+        dragState.startX = event.clientX || 0;
+        dragState.startY = event.clientY || 0;
+        dragState.currentX = event.clientX || 0;
+        dragState.currentY = event.clientY || 0;
+        dragState.cardId = cardId;
+        dragState.cardElement = button;
+
+        window.addEventListener('pointermove', handleWindowPointerMove, { passive: false });
+        window.addEventListener('pointerup', handleWindowPointerUp);
+        window.addEventListener('pointercancel', handleWindowPointerCancel);
+    }
+
+    function handleWindowPointerMove(event) {
+        if (!dragState.tracking) return;
+        if (dragState.pointerId !== null && event.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
+
+        dragState.currentX = event.clientX || 0;
+        dragState.currentY = event.clientY || 0;
+
+        const dx = dragState.currentX - dragState.startX;
+        const dy = dragState.startY - dragState.currentY;
+
+        if (!dragState.active) {
+            if (Math.abs(dx) > 10 && Math.abs(dx) >= dy) {
+                cancelDragListenersOnly();
+                return;
+            }
+
+            if (dy >= 10 && dy > Math.abs(dx)) {
+                const currentState = uiState.currentState || {};
+                const currentRes = uiState.lastRes || {};
+                const canAtk = canPlayAttackCard(currentState, currentRes, dragState.cardId);
+                const beatable = isMyDefenseTurn(currentState, currentRes)
+                    ? compatibleOpenAttacks(currentState, dragState.cardId).map(p => p.attack)
+                    : [];
+                const canTrf = canTransferCard(currentState, currentRes, dragState.cardId);
+
+                dragState.canAttack = canAtk;
+                dragState.validDefenseTargets = beatable;
+                dragState.canTransfer = canTrf;
+
+                if (!canAtk && beatable.length === 0 && !canTrf) {
+                    cancelDragListenersOnly();
+                    return;
+                }
+
+                activateDrag(event);
+            } else {
+                return;
+            }
+        }
+
+        if (dragState.active) {
+            if (event.cancelable && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+            updateDragAvatarPosition(dragState.currentX, dragState.currentY);
+            const target = resolveDropTarget(dragState.currentX, dragState.currentY);
+            dragState.hoverTarget = target;
+            updateDropTargetVisuals(target);
+        }
+    }
+
+    function executeDropAction(target, cardId) {
+        if (!target || !cardId || uiState.busy) return null;
+        const currentState = uiState.currentState || {};
+        const currentRes = uiState.lastRes || {};
+
+        if (target.type === 'attack') {
+            if (canPlayAttackCard(currentState, currentRes, cardId)) {
+                if (uiState.selectedCardId === cardId) uiState.selectedCardId = null;
+                return sendDurakAction('attack_card', { card_id: cardId });
+            }
+        } else if (target.type === 'defend') {
+            const attackCardId = target.attackCardId;
+            const trumpSuit = currentState.trump?.suit || '';
+            if (attackCardId && canBeatCard(cardId, attackCardId, trumpSuit)) {
+                if (uiState.selectedCardId === cardId) uiState.selectedCardId = null;
+                if (uiState.selectedAttackCardId === attackCardId) uiState.selectedAttackCardId = null;
+                return sendDurakAction('defend_card', { attack_card_id: attackCardId, card_id: cardId });
+            }
+        } else if (target.type === 'transfer') {
+            if (canTransferCard(currentState, currentRes, cardId)) {
+                if (uiState.selectedCardId === cardId) uiState.selectedCardId = null;
+                if (uiState.selectedAttackCardId) uiState.selectedAttackCardId = null;
+                return sendDurakAction('transfer_card', { card_id: cardId });
+            }
+        }
+        return null;
+    }
+
+    function handleWindowPointerUp(event) {
+        if (!dragState.tracking) return;
+        if (dragState.pointerId !== null && event.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
+
+        if (!dragState.active) {
+            cancelDragListenersOnly();
+            return;
+        }
+
+        dragState.suppressClickUntil = Date.now() + 450;
+        const target = dragState.hoverTarget;
+        const cardId = dragState.cardId;
+
+        cancelDrag();
+
+        if (target && cardId && !uiState.busy) {
+            executeDropAction(target, cardId);
+        }
+    }
+
+    function handleWindowPointerCancel(event) {
+        if (dragState.pointerId !== null && event.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
+        cancelDrag();
+    }
+
     function bindEvents(shell, state, res) {
         uiState.currentState = state;
         uiState.lastRes = res;
@@ -1919,11 +2299,13 @@
         });
 
         shell.querySelectorAll('.durak-hand .durak-card').forEach(button => {
+            button.onpointerdown = (event) => handleCardPointerDown(event, button, state, res);
             button.onclick = () => {
                 if (button.disabled) return;
+                if (Date.now() < dragState.suppressClickUntil) return;
                 const currentState = uiState.currentState || state;
                 const currentRes = uiState.lastRes || res;
-                const cardId = button.dataset.cardId || '';
+                const cardId = button.dataset?.cardId || button.getAttribute?.('data-card-id') || button.attributes?.['data-card-id'] || '';
                 selectHandCard(currentState, currentRes, cardId);
                 setError('');
                 renderGame(currentRes);
