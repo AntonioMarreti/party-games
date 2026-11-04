@@ -292,6 +292,7 @@ $routes = [
     'add_friend' => 'actions/social.php',
     'accept_friend' => 'actions/social.php',
     'reject_friend' => 'actions/social.php',
+    'cancel_friend_request' => 'actions/social.php',
     'remove_friend' => 'actions/social.php',
     'get_friends' => 'actions/social.php',
     'get_public_profile' => 'actions/social.php', // NEW

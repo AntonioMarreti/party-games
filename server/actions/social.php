@@ -111,9 +111,10 @@ function social_send_friendship_notification($chatId, $event, $senderName)
 
 function action_add_friend($pdo, $user, $data) {
     $friendId = (int)($data['friend_id'] ?? 0);
+    $myId = (int)($user['id'] ?? 0);
     
-    // Validation
-    if (!$friendId || $friendId == $user['id']) sendError('Invalid user ID');
+    // Validation: cannot add oneself or invalid user ID
+    if (!$friendId || $friendId === $myId) sendError('Invalid user ID');
     
     // Check if target user exists
     $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
@@ -123,26 +124,22 @@ function action_add_friend($pdo, $user, $data) {
     try {
         // Check existing friendship
         $stmt = $pdo->prepare("SELECT * FROM friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)");
-        $stmt->execute([$user['id'], $friendId, $friendId, $user['id']]);
+        $stmt->execute([$myId, $friendId, $friendId, $myId]);
         $existing = $stmt->fetch();
         
         if ($existing) {
             if ($existing['status'] === 'blocked') sendError('Action not allowed');
             if ($existing['status'] === 'accepted') sendError('Already friends');
             if ($existing['status'] === 'pending') {
-                if ($existing['user_id'] == $user['id']) sendError('Request already sent');
-                else {
-                    // This is actually an accept action if the other person sent it, 
-                    // but let's force them to use accept_friend for clarity, or auto-accept?
-                    // Strategy says: "Request already sent".
-                    sendError('Request pending');
-                }
+                if ((int)$existing['user_id'] === $myId) sendError('Request already sent');
+                else sendError('Request pending');
             }
+            sendError('Action not allowed');
         }
         
         // Create Request
         $stmt = $pdo->prepare("INSERT INTO friendships (user_id, friend_id, status) VALUES (?, ?, 'pending')");
-        $stmt->execute([$user['id'], $friendId]);
+        $stmt->execute([$myId, $friendId]);
         
         // Notify Target inside App
         createNotification($pdo, $friendId, 'friend_request', $user['id']);
@@ -350,6 +347,47 @@ function action_remove_friend($pdo, $user, $data) {
     }
 }
 
+function action_cancel_friend_request($pdo, $user, $data) {
+    $targetId = (int)($data['friend_id'] ?? 0);
+    $myId = (int)($user['id'] ?? 0);
+    if (!$targetId || $targetId === $myId) sendError('Invalid ID');
+
+    try {
+        // Find the pending request where current user is the requester (user_id = myId, friend_id = targetId)
+        $stmt = $pdo->prepare("SELECT id FROM friendships WHERE user_id = ? AND friend_id = ? AND status = 'pending'");
+        $stmt->execute([$myId, $targetId]);
+        $request = $stmt->fetch();
+
+        if (!$request) {
+            sendError('Заявка не найдена или уже обработана');
+        }
+
+        // Delete the pending request
+        $pdo->prepare("DELETE FROM friendships WHERE id = ?")->execute([$request['id']]);
+
+        // Clean up corresponding in-app notification for the recipient if present
+        try {
+            $pdo->prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND actor_user_id = ?")
+                ->execute([$targetId, $myId]);
+        } catch (Exception $e) {
+            // Ignore notification table errors
+        }
+
+        echo json_encode(['status' => 'ok']);
+    } catch (Exception $e) {
+        TelegramLogger::logError('database', [
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+            'stack' => $e->getTraceAsString()
+        ], [
+            'user_id' => $myId,
+            'action' => 'cancel_friend_request',
+            'target_id' => $targetId
+        ]);
+        sendError('Database Error');
+    }
+}
+
 function action_get_friends($pdo, $user, $data) {
     try {
         // Get all ACCEPTED friendships
@@ -377,11 +415,23 @@ function action_get_friends($pdo, $user, $data) {
         $stmt = $pdo->prepare($sqlPending);
         $stmt->execute([$user['id']]);
         $requests = $stmt->fetchAll();
+
+        // Also get pending requests (outgoing)
+        $sqlOutgoing = "
+            SELECT u.id, u.first_name, u.custom_name, u.photo_url, u.custom_avatar, u.is_tester, u.hide_profile_badge
+            FROM friendships f
+            JOIN users u ON u.id = f.friend_id
+            WHERE f.user_id = ? AND f.status = 'pending'
+        ";
+        $stmt = $pdo->prepare($sqlOutgoing);
+        $stmt->execute([$user['id']]);
+        $outgoingRequests = $stmt->fetchAll();
         
         echo json_encode([
             'status' => 'ok',
             'friends' => normalize_user_public_list($friends),
-            'requests' => normalize_user_public_list($requests)
+            'requests' => normalize_user_public_list($requests),
+            'outgoing_requests' => normalize_user_public_list($outgoingRequests)
         ]);
         
     } catch (Exception $e) {
@@ -484,7 +534,29 @@ function action_invite_friends($pdo, $user, $data) {
         sendError('Комната не найдена (или закрыта)');
     }
 
-    $friendIds = $data['friends'];
+    // Verify room access: user must be host or in room_players
+    try {
+        $accessStmt = $pdo->prepare("SELECT 1 FROM room_players WHERE room_id = ? AND user_id = ?");
+        $accessStmt->execute([$roomId, $user['id']]);
+        $hasAccess = (bool)$accessStmt->fetch();
+        if (!$hasAccess) {
+            $hostStmt = $pdo->prepare("SELECT 1 FROM rooms WHERE id = ? AND host_user_id = ?");
+            $hostStmt->execute([$roomId, $user['id']]);
+            $hasAccess = (bool)$hostStmt->fetch();
+        }
+        if (!$hasAccess) {
+            sendError('У вас нет доступа к этой комнате');
+        }
+    } catch (Throwable $e) {
+        if ($e instanceof RuntimeException && $e->getMessage() === 'У вас нет доступа к этой комнате') {
+            throw $e;
+        }
+    }
+
+    $friendIds = array_values(array_unique(array_filter(array_map('intval', $data['friends']))));
+    if (empty($friendIds)) {
+        sendError('Не выбраны друзья для приглашения');
+    }
 
     $sentCount = 0;
     

@@ -557,7 +557,9 @@ body.dark-mode .stat-label {
     margin-bottom: 8px;
 }
 
-#screen-friends #friends-list-container {
+#screen-friends #friends-list-container,
+#screen-friends #friends-req-container,
+#screen-friends #friends-req-out-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -666,6 +668,77 @@ body.dark-mode .stat-label {
 #screen-friends .friend-action-accept:hover {
     background: color-mix(in srgb, var(--text-main), var(--divider) 92%);
     transform: scale(1.05);
+}
+
+#screen-friends .friend-action-invite-cta {
+    min-height: 32px;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px !important;
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 999px !important;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 35%, transparent);
+    transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+    cursor: pointer;
+}
+
+#screen-friends .friend-action-invite-cta:active {
+    transform: scale(0.95);
+    opacity: 0.9;
+}
+
+#screen-friends .friend-cancel-req-btn {
+    min-height: 30px;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 12px !important;
+    border-radius: 999px !important;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    cursor: pointer;
+}
+
+#screen-friends .friend-cancel-req-btn:active {
+    transform: scale(0.95);
+}
+
+#screen-friends .friend-req-subtoggle {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-glass);
+}
+
+#screen-friends .friend-req-subtoggle .btn {
+    border: none !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    padding: 7px 16px !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#screen-friends .friend-req-subtoggle .btn.active {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.dark-mode #screen-friends .friend-req-subtoggle .btn.active,
+body.tg-dark-theme #screen-friends .friend-req-subtoggle .btn.active {
+    background: var(--bg-card) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    color: var(--text-main) !important;
 }
 
 body.dark-mode #screen-friends .friend-user-row,

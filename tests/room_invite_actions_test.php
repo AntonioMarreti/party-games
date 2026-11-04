@@ -30,8 +30,10 @@ class InviteTestStmt {
 class InviteTestPdo {
     private array $friends;
     private string $roomCode;
-    public function __construct(int $count, string $roomCode) {
+    public bool $hasAccess = true;
+    public function __construct(int $count, string $roomCode, bool $hasAccess = true) {
         $this->roomCode = $roomCode;
+        $this->hasAccess = $hasAccess;
         $this->friends = [];
         for ($id = 2; $id < 2 + $count; $id++) {
             $this->friends[] = ['id' => $id, 'telegram_id' => 1000 + $id, 'first_name' => 'Test'];
@@ -41,10 +43,16 @@ class InviteTestPdo {
         if ($sql === 'SELECT id, room_code FROM rooms WHERE id = ?') {
             return new InviteTestStmt([['id' => 1, 'room_code' => $this->roomCode]]);
         }
+        if ($sql === 'SELECT 1 FROM room_players WHERE room_id = ? AND user_id = ?') {
+            return new InviteTestStmt($this->hasAccess ? [['1' => 1]] : []);
+        }
+        if ($sql === 'SELECT 1 FROM rooms WHERE id = ? AND host_user_id = ?') {
+            return new InviteTestStmt($this->hasAccess ? [['1' => 1]] : []);
+        }
         if (str_starts_with($sql, 'SELECT id, telegram_id, first_name FROM users WHERE id IN (')) {
             return new InviteTestStmt($this->friends);
         }
-        throw new LogicException('Unexpected test SQL');
+        throw new LogicException('Unexpected test SQL: ' . $sql);
     }
 }
 function inviteRun(array $responses, int $friends = 1, array $user = [], string $roomCode = 'TEST42') {
@@ -110,7 +118,17 @@ try {
     $logs = file_get_contents($logFile);
     inviteCheck(str_contains($logs, 'rejected') && str_contains($logs, 'ambiguous') && str_contains($logs, 'exception'), 'Failures are logged');
     inviteCheck(!str_contains($logs, 'secret-marker'), 'Raw exception data is not logged');
-    echo "PASS room invite: rich payload, fallback, confirmed counts, batch isolation, ambiguity, escaping\n";
+
+    // Verify room access permission enforcement
+    $unauthPdo = new InviteTestPdo(1, 'TEST42', false);
+    try {
+        action_invite_friends($unauthPdo, ['id' => 99, 'first_name' => 'Stranger'], ['room_id' => 1, 'friends' => [2]]);
+        throw new LogicException('Non-member should not be allowed to invite to room');
+    } catch (RuntimeException $e) {
+        inviteCheck(str_contains($e->getMessage(), 'У вас нет доступа к этой комнате'), 'Unauthorized room access rejected');
+    }
+
+    echo "PASS room invite: rich payload, fallback, confirmed counts, batch isolation, ambiguity, escaping, access control\n";
 } finally {
     ini_set('error_log', $previousLog);
     unlink($logFile);

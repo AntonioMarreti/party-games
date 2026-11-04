@@ -35,7 +35,7 @@ class FriendshipTestPdo {
             $this->friendship=['id'=>7,'user_id'=>$params[0],'friend_id'=>$params[1],'status'=>'pending']; return [];
         }
         if ($sql==="SELECT id FROM friendships WHERE user_id = ? AND friend_id = ? AND status = 'pending'") {
-            return $this->friendship['user_id']===$params[0] && $this->friendship['friend_id']===$params[1] && $this->friendship['status']==='pending'?[['id'=>7]]:[];
+            return !empty($this->friendship) && ($this->friendship['user_id'] ?? null)===$params[0] && ($this->friendship['friend_id'] ?? null)===$params[1] && ($this->friendship['status'] ?? null)==='pending'?[['id'=>7]]:[];
         }
         if ($sql==="UPDATE friendships SET status = 'accepted' WHERE id = ?") { $this->friendship['status']='accepted'; return []; }
         if ($sql==="DELETE FROM friendships WHERE id = ?") { $this->friendship=[]; return []; }
@@ -137,5 +137,67 @@ try {
         friendshipCheck(str_contains($e->getMessage(), 'Заявка не найдена'), 'Only recipient can reject');
     }
 
-    echo "PASS friendship notifications and rejection: custom emoji, Web App CTA, fallback, ambiguity, escaping, action/notification/achievement semantics, reject validation\n";
+    // Verify action_cancel_friend_request
+    $cancelPdo = new FriendshipTestPdo();
+    $cancelPdo->friendship = ['id'=>7,'user_id'=>1,'friend_id'=>2,'status'=>'pending'];
+    $cancelPdo->notifications = [[2,'friend_request',1]];
+    ob_start();
+    try {
+        action_cancel_friend_request($cancelPdo, ['id'=>1,'first_name'=>'Requester'], ['friend_id'=>2]);
+        $cancelRes = json_decode(ob_get_contents(), true, 512, JSON_THROW_ON_ERROR);
+    } finally { ob_end_clean(); }
+    friendshipCheck($cancelRes === ['status'=>'ok'], 'Cancel action returns ok');
+    friendshipCheck($cancelPdo->friendship === [], 'Friendship record deleted on cancel');
+    friendshipCheck($cancelPdo->notifications === [], 'Notification deleted on cancel');
+
+    // Cancel fails if caller is not the requester
+    $wrongCancelPdo = new FriendshipTestPdo();
+    $wrongCancelPdo->friendship = ['id'=>7,'user_id'=>1,'friend_id'=>2,'status'=>'pending'];
+    try {
+        action_cancel_friend_request($wrongCancelPdo, ['id'=>2,'first_name'=>'Recipient'], ['friend_id'=>1]);
+        throw new LogicException('Recipient should not be able to cancel outgoing request');
+    } catch (Error $e) {
+        friendshipCheck(str_contains($e->getMessage(), 'Заявка не найдена'), 'Only requester can cancel');
+    }
+
+    // Anti-spam: cannot add oneself
+    $selfPdo = new FriendshipTestPdo();
+    try {
+        action_add_friend($selfPdo, ['id'=>1,'first_name'=>'Me'], ['friend_id'=>1]);
+        throw new LogicException('Self-friend request should fail');
+    } catch (Error $e) {
+        friendshipCheck(str_contains($e->getMessage(), 'Invalid user ID'), 'Self friend request rejected');
+    }
+
+    // Anti-spam: cannot duplicate pending request
+    $dupPdo = new FriendshipTestPdo();
+    $dupPdo->friendship = ['id'=>7,'user_id'=>1,'friend_id'=>2,'status'=>'pending'];
+    try {
+        action_add_friend($dupPdo, ['id'=>1,'first_name'=>'Me'], ['friend_id'=>2]);
+        throw new LogicException('Duplicate request should fail');
+    } catch (Error $e) {
+        friendshipCheck(str_contains($e->getMessage(), 'Request already sent'), 'Duplicate request rejected');
+    }
+
+    // Anti-spam: blocked user cannot send request
+    $blockPdo = new FriendshipTestPdo();
+    $blockPdo->friendship = ['id'=>7,'user_id'=>2,'friend_id'=>1,'status'=>'blocked'];
+    try {
+        action_add_friend($blockPdo, ['id'=>1,'first_name'=>'Me'], ['friend_id'=>2]);
+        throw new LogicException('Blocked user request should fail');
+    } catch (Error $e) {
+        friendshipCheck(str_contains($e->getMessage(), 'Action not allowed'), 'Blocked request rejected');
+    }
+
+    // Anti-spam: already friends
+    $alreadyPdo = new FriendshipTestPdo();
+    $alreadyPdo->friendship = ['id'=>7,'user_id'=>1,'friend_id'=>2,'status'=>'accepted'];
+    try {
+        action_add_friend($alreadyPdo, ['id'=>1,'first_name'=>'Me'], ['friend_id'=>2]);
+        throw new LogicException('Already friends request should fail');
+    } catch (Error $e) {
+        friendshipCheck(str_contains($e->getMessage(), 'Already friends'), 'Already friends rejected');
+    }
+
+    echo "PASS friendship notifications, cancel, rejection, and anti-spam validation\n";
 } finally { ini_set('error_log',$previousLog); unlink($logFile); }

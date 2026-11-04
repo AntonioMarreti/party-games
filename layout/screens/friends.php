@@ -69,8 +69,30 @@
 
             <!-- Requests Tab -->
             <div id="tab-friends-requests" class="friends-tab-pane w-100" style="display: none;">
-                <div id="friends-req-container">
-                    <p class="text-center text-muted m-0 p-0">Нет новых заявок</p>
+                <!-- Sub-toggle for Incoming vs Outgoing -->
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="btn-group rounded-pill p-1 friend-req-subtoggle" role="group" aria-label="Тип заявок" style="background: var(--bg-secondary);">
+                        <button type="button" class="btn btn-sm rounded-pill fw-bold active" id="btn-req-sub-in" onclick="switchRequestsSubTab('incoming')">
+                            Входящие <span id="friends-sub-in-badge" class="badge bg-danger rounded-circle ms-1" style="display:none;">0</span>
+                        </button>
+                        <button type="button" class="btn btn-sm rounded-pill fw-bold text-muted" id="btn-req-sub-out" onclick="switchRequestsSubTab('outgoing')">
+                            Отправленные <span id="friends-sub-out-badge" class="badge bg-secondary rounded-circle ms-1" style="display:none;">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Incoming list container -->
+                <div id="friends-req-incoming-container">
+                    <div id="friends-req-container">
+                        <p class="text-center text-muted m-0 p-0">Нет новых заявок</p>
+                    </div>
+                </div>
+
+                <!-- Outgoing list container -->
+                <div id="friends-req-outgoing-container" style="display: none;">
+                    <div id="friends-req-out-list">
+                        <p class="text-center text-muted m-0 p-0">Нет отправленных заявок</p>
+                    </div>
                 </div>
             </div>
         </div>
