@@ -1058,6 +1058,15 @@ body.tg-dark-theme #inviteFriendsModal .invite-cancel-btn {
     z-index: 10050 !important;
 }
 
+/* Ensure public profile modal appears above history details overlay (10080) */
+#userProfileModal {
+    z-index: 10100 !important;
+}
+
+body:has(#userProfileModal.show) .modal-backdrop {
+    z-index: 10095 !important;
+}
+
 
 
 /* Custom Overlay Modal (Stats, Alerts, Confirmations) */

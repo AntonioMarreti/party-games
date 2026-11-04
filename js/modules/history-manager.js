@@ -47,6 +47,36 @@ function formatPlayersCount(count) {
 }
 
 let historyBackTarget = null;
+let historySheetBackButtonHandler = null;
+
+function setupHistorySheetBackButton() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg?.BackButton) return;
+    if (historySheetBackButtonHandler && typeof tg.BackButton.offClick === 'function') {
+        tg.BackButton.offClick(historySheetBackButtonHandler);
+    }
+    historySheetBackButtonHandler = () => {
+        closeHistoryDetails();
+    };
+    if (typeof tg.BackButton.show === 'function') {
+        tg.BackButton.show();
+    }
+    if (typeof tg.BackButton.onClick === 'function') {
+        tg.BackButton.onClick(historySheetBackButtonHandler);
+    }
+}
+
+function removeHistorySheetBackButton() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg?.BackButton) return;
+    if (historySheetBackButtonHandler && typeof tg.BackButton.offClick === 'function') {
+        tg.BackButton.offClick(historySheetBackButtonHandler);
+    }
+    historySheetBackButtonHandler = null;
+    if (historyBackTarget !== 'profile' && typeof tg.BackButton.hide === 'function') {
+        tg.BackButton.hide();
+    }
+}
 
 function setHistoryBackTarget(target = null) {
     historyBackTarget = target === 'profile' ? 'profile' : null;
@@ -313,80 +343,250 @@ function openHistoryDetails(historyId) {
     }
 }
 
+function getHistoryParticipantName(p) {
+    if (!p) return 'Игрок';
+    if (typeof window.getSafeUserDisplayName === 'function') {
+        return window.getSafeUserDisplayName(p);
+    }
+    return p.custom_name || p.first_name || (p.username ? `@${p.username}` : (p.is_bot ? 'Бот' : 'Игрок'));
+}
+
+function buildParticipantMeta(p) {
+    const parts = [];
+    if (p.result_label) {
+        parts.push(String(p.result_label));
+    } else if (p.final_position !== null && p.final_position !== undefined) {
+        const posNum = Number(p.final_position);
+        if (posNum === 1) {
+            parts.push('1 место (Победа)');
+        } else if (posNum > 1) {
+            parts.push(`${posNum} место`);
+        }
+    }
+    if (p.final_score !== null && p.final_score !== undefined && Number(p.final_score) > 0) {
+        parts.push(`${p.final_score} очков`);
+    }
+    if (p.xp_gained !== null && p.xp_gained !== undefined && Number(p.xp_gained) > 0) {
+        parts.push(`+${p.xp_gained} XP`);
+    }
+    return parts.join(' · ');
+}
+
+function renderHistoryParticipants(participants, listEl, countEl) {
+    if (!listEl) return;
+    if (!Array.isArray(participants) || participants.length === 0) {
+        listEl.innerHTML = '<div class="text-muted small text-center py-3">Нет сохранённых участников</div>';
+        if (countEl) countEl.style.display = 'none';
+        return;
+    }
+
+    if (countEl) {
+        countEl.textContent = String(participants.length);
+        countEl.style.display = 'inline-block';
+    }
+
+    listEl.innerHTML = '';
+    participants.forEach((p) => {
+        const row = document.createElement('div');
+        row.className = 'history-participant-row';
+        if (p.has_profile) {
+            row.classList.add('has-profile');
+        }
+
+        const name = getHistoryParticipantName(p);
+        const meta = buildParticipantMeta(p);
+
+        // Avatar
+        const avatarWrapper = document.createElement('div');
+        avatarWrapper.className = 'history-participant-avatar';
+        if (typeof window.renderAvatar === 'function') {
+            avatarWrapper.innerHTML = window.renderAvatar(p, 'sm', false, true);
+        } else {
+            const fallbackEmoji = p.is_bot ? '🤖' : '👤';
+            avatarWrapper.innerHTML = `<div class="avatar-sm d-flex align-items-center justify-content-center bg-light rounded-circle" style="width:36px;height:36px;">${fallbackEmoji}</div>`;
+        }
+
+        // Info (Name + Meta)
+        const infoEl = document.createElement('div');
+        infoEl.className = 'history-participant-info';
+
+        const nameRow = document.createElement('div');
+        nameRow.className = 'history-participant-name-row';
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'history-participant-name';
+        nameEl.textContent = name;
+        nameRow.appendChild(nameEl);
+
+        if (p.is_self) {
+            const selfBadge = document.createElement('span');
+            selfBadge.className = 'history-participant-badge badge-self';
+            selfBadge.textContent = 'Вы';
+            nameRow.appendChild(selfBadge);
+        } else if (p.is_bot) {
+            const botBadge = document.createElement('span');
+            botBadge.className = 'history-participant-badge badge-bot';
+            botBadge.textContent = 'Бот';
+            nameRow.appendChild(botBadge);
+        }
+
+        infoEl.appendChild(nameRow);
+
+        if (meta) {
+            const metaEl = document.createElement('div');
+            metaEl.className = 'history-participant-meta';
+            metaEl.textContent = meta;
+            infoEl.appendChild(metaEl);
+        }
+
+        // Left User block (Avatar + Info)
+        const userEl = document.createElement('div');
+        userEl.className = 'history-participant-user';
+        userEl.appendChild(avatarWrapper);
+        userEl.appendChild(infoEl);
+
+        row.appendChild(userEl);
+
+        if (p.has_profile && p.user_id) {
+            const arrowEl = document.createElement('i');
+            arrowEl.className = 'bi bi-chevron-right history-participant-arrow';
+            arrowEl.setAttribute('aria-hidden', 'true');
+            row.appendChild(arrowEl);
+
+            row.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (typeof window.openUserProfile === 'function') {
+                    window.openUserProfile(p.user_id);
+                }
+            });
+        }
+
+        listEl.appendChild(row);
+    });
+}
+
 function showGameDetailsModal(item) {
     if (!item) return;
 
-    const score = Number(item.final_score || 0);
-    const posValue = Number(item.final_position);
-    const pos = Number.isFinite(posValue) && item.final_position !== null ? posValue : '-';
+    try {
+        const score = Number(item.final_score || 0);
+        const posValue = Number(item.final_position);
+        const pos = Number.isFinite(posValue) && item.final_position !== null ? posValue : '-';
 
-    let rankBonus = 0;
-    if (pos === 1) rankBonus = 100;
-    else if (pos === 2) rankBonus = 50;
-    else if (pos === 3) rankBonus = 20;
-    const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
-    const xp = calculateHistoryXp(item, pos, score);
+        let rankBonus = 0;
+        if (pos === 1) rankBonus = 100;
+        else if (pos === 2) rankBonus = 50;
+        else if (pos === 3) rankBonus = 20;
+        const scoreBonus = Math.min(150, Math.floor(Math.max(0, score) / 10));
+        const xp = calculateHistoryXp(item, pos, score);
 
-    const gname = HISTORY_GAME_NAMES[item.game_type] || item.game_type;
-    const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
-        ? window.AVAILABLE_GAMES.find(game => game.id === item.game_type)
-        : null;
-    const gicon = gameConfig?.icon || (HISTORY_GAME_ICONS[item.game_type] || 'bi-controller').split(' ')[0];
-    const iconBg = gameConfig?.color || 'var(--primary-color)';
-    const dateObj = new Date(item.created_at);
-    const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const playersText = formatPlayersCount(item.players_count);
-    const duration = Number(item.duration_seconds || 0);
-    const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
-    const metaText = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
-    const resultText = buildHistoryResultText(item, pos, score);
-    const winnerName = item.winner_name ? String(item.winner_name) : '';
-    const outcomeText = winnerName
-        ? `Победитель: ${winnerName}`
-        : (pos === '-' ? 'Итоги партии' : `Ваш результат: ${pos} место`);
-    const resultBadge = pos === 1 ? 'Победа' : (pos === '-' ? 'Итог' : `${pos} место`);
-    const canReplay = Boolean(item.game_type)
-        && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
+        const gname = HISTORY_GAME_NAMES[item.game_type] || item.game_type;
+        const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
+            ? window.AVAILABLE_GAMES.find(game => game.id === item.game_type)
+            : null;
+        const gicon = gameConfig?.icon || (HISTORY_GAME_ICONS[item.game_type] || 'bi-controller').split(' ')[0];
+        const iconBg = gameConfig?.color || 'var(--primary-color)';
+        const dateObj = new Date(item.created_at);
+        const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const playersText = formatPlayersCount(item.players_count);
+        const duration = Number(item.duration_seconds || 0);
+        const durationText = duration > 0 ? `${Math.max(1, Math.round(duration / 60))} мин` : '';
+        const metaText = [dateStr, playersText, durationText].filter(Boolean).join(' · ');
+        const resultText = buildHistoryResultText(item, pos, score);
+        const winnerName = item.winner_name ? String(item.winner_name) : '';
+        const outcomeText = winnerName
+            ? `Победитель: ${winnerName}`
+            : (pos === '-' ? 'Итоги партии' : `Ваш результат: ${pos} место`);
+        const resultBadge = pos === 1 ? 'Победа' : (pos === '-' ? 'Итог' : `${pos} место`);
+        const canReplay = Boolean(item.game_type)
+            && (!Array.isArray(window.AVAILABLE_GAMES) || window.AVAILABLE_GAMES.some(game => game.id === item.game_type));
 
-    if (window.safeText) {
-        window.safeText('history-details-title', gname);
-        window.safeText('history-details-meta', metaText);
-        window.safeText('history-details-result', resultText);
-        window.safeText('history-details-outcome', outcomeText);
-        window.safeText('history-details-badge', resultBadge);
-        window.safeText('history-details-xp', '+' + xp + ' XP');
-        window.safeText('history-details-rank-label', pos === '-' ? 'За результат' : (pos === 1 ? 'За победу' : `За ${pos} место`));
-        window.safeText('history-details-rank-bonus', '+' + rankBonus + ' XP');
-        window.safeText('history-details-score-bonus', '+' + scoreBonus + ' XP');
-    }
+        if (window.safeText) {
+            window.safeText('history-details-title', gname);
+            window.safeText('history-details-meta', metaText);
+            window.safeText('history-details-result', resultText);
+            window.safeText('history-details-outcome', outcomeText);
+            window.safeText('history-details-badge', resultBadge);
+            window.safeText('history-details-xp', '+' + xp + ' XP');
+            window.safeText('history-details-rank-label', pos === '-' ? 'За результат' : (pos === 1 ? 'За победу' : `За ${pos} место`));
+            window.safeText('history-details-rank-bonus', '+' + rankBonus + ' XP');
+            window.safeText('history-details-score-bonus', '+' + scoreBonus + ' XP');
+        }
 
-    const iconWrap = document.getElementById('history-details-icon');
-    const iconEl = iconWrap?.querySelector('i');
-    if (iconWrap) iconWrap.style.background = iconBg;
-    if (iconEl) {
-        iconEl.className = 'bi ' + gicon;
-    }
+        const iconWrap = document.getElementById('history-details-icon');
+        const iconEl = iconWrap?.querySelector('i');
+        if (iconWrap) iconWrap.style.background = iconBg;
+        if (iconEl) {
+            iconEl.className = 'bi ' + gicon;
+        }
 
-    const resultIconEl = document.getElementById('history-details-result-icon');
-    if (resultIconEl) {
-        resultIconEl.className = `bi ${pos === 1 ? 'bi-trophy-fill' : 'bi-flag-fill'} history-details-result-icon`;
-    }
+        const resultIconEl = document.getElementById('history-details-result-icon');
+        if (resultIconEl) {
+            resultIconEl.className = `bi ${pos === 1 ? 'bi-trophy-fill' : 'bi-flag-fill'} history-details-result-icon`;
+        }
 
-    const replayBtn = document.getElementById('history-details-replay');
-    const actionsEl = replayBtn?.closest('.history-details-actions');
-    if (replayBtn) {
-        replayBtn.style.display = canReplay ? '' : 'none';
-        replayBtn.dataset.gameType = item.game_type || '';
-    }
-    if (actionsEl) actionsEl.classList.toggle('single', !canReplay);
+        const replayBtn = document.getElementById('history-details-replay');
+        const actionsEl = replayBtn?.closest('.history-details-actions');
+        if (replayBtn) {
+            replayBtn.style.display = canReplay ? '' : 'none';
+            replayBtn.dataset.gameType = item.game_type || '';
+        }
+        if (actionsEl) actionsEl.classList.toggle('single', !canReplay);
 
-    const sheet = document.getElementById('history-details-sheet');
-    if (sheet) {
-        document.body.classList.add('history-details-open');
-        sheet.style.display = 'flex';
-        void sheet.offsetWidth;
-        sheet.classList.add('active');
-        sheet.setAttribute('aria-hidden', 'false');
+        const sheet = document.getElementById('history-details-sheet');
+        if (sheet) {
+            sheet.dataset.currentHistoryId = String(item.id || '');
+            document.body.classList.add('history-details-open');
+            sheet.style.display = 'flex';
+            void sheet.offsetWidth;
+            sheet.classList.add('active');
+            sheet.setAttribute('aria-hidden', 'false');
+            setupHistorySheetBackButton();
+        }
+
+        // Participants rendering & async fetch
+        const listEl = document.getElementById('history-participants-list');
+        const countEl = document.getElementById('history-participants-count');
+
+        if (listEl) {
+            if (item.cachedParticipants) {
+                renderHistoryParticipants(item.cachedParticipants, listEl, countEl);
+            } else if (!item.id) {
+                renderHistoryParticipants([], listEl, countEl);
+            } else {
+                if (countEl) countEl.style.display = 'none';
+                listEl.innerHTML = `
+                    <div class="text-center py-3 text-muted small">
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        Загрузка участников...
+                    </div>
+                `;
+
+                if (typeof window.apiRequest === 'function') {
+                    window.apiRequest({
+                        action: 'get_history_details',
+                        game_history_id: item.id
+                    }).then((res) => {
+                        if (sheet?.dataset.currentHistoryId !== String(item.id)) return;
+                        if (res?.status === 'ok') {
+                            item.cachedParticipants = res.participants || [];
+                            renderHistoryParticipants(item.cachedParticipants, listEl, countEl);
+                        } else {
+                            listEl.innerHTML = `<div class="text-muted small text-center py-3">${escapeHistoryHtml(res?.message || 'Не удалось загрузить участников')}</div>`;
+                        }
+                    }).catch((err) => {
+                        console.error('Error fetching game history details:', err);
+                        if (sheet?.dataset.currentHistoryId !== String(item.id)) return;
+                        listEl.innerHTML = '<div class="text-muted small text-center py-3">Не удалось загрузить участников</div>';
+                    });
+                } else {
+                    renderHistoryParticipants([], listEl, countEl);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error opening history details:', e);
+        closeHistoryDetails();
     }
 }
 
@@ -396,8 +596,10 @@ function closeHistoryDetails() {
         sheet.classList.remove('active');
         sheet.setAttribute('aria-hidden', 'true');
         sheet.style.display = 'none';
+        delete sheet.dataset.currentHistoryId;
     }
     document.body.classList.remove('history-details-open');
+    removeHistorySheetBackButton();
 }
 
 function cleanupHistoryDetailsForScreen(screenId = '') {

@@ -2093,6 +2093,7 @@ window.switchFriendsTab = switchFriendsTab;
 window.updateFriendBadges = updateFriendBadges;
 window.refreshFriendBadges = refreshFriendBadges;
 window.toggleProfileBadgeSetting = toggleProfileBadgeSetting;
+window.getSafeUserDisplayName = getSafeUserDisplayName;
 
 window.addEventListener('tabChanged', (event) => {
     if (event.detail && (event.detail.tabId === 'profile' || event.detail.tabId === 'home')) {

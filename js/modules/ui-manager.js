@@ -115,6 +115,11 @@ function showScreen(screenId) {
         }
     }
 
+    // Ensure history details modal class is cleaned up if navigating away from history or if details sheet is closed
+    if (finalId !== 'screen-history' || !document.getElementById('history-details-sheet')?.classList.contains('active')) {
+        document.body?.classList.remove('history-details-open');
+    }
+
     // SPECIAL: If showing Lobby, ensure at least one tab-content is visible
     if (finalId === 'screen-lobby') {
         const anyActive = screen.querySelector('.tab-content.active-tab');
@@ -143,6 +148,9 @@ function showScreen(screenId) {
  * Handle initial load and back/forward navigation
  */
 function handleRouting() {
+    if (document.body.classList.contains('history-details-open') && typeof window.closeHistoryDetails === 'function') {
+        window.closeHistoryDetails();
+    }
     let hash = window.location.hash.substring(1);
     if (!hash) return;
 

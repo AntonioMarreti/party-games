@@ -164,16 +164,40 @@ body.tg-dark-theme .history-details-sheet {
 body.dark-mode .history-result-card,
 body.tg-dark-theme .history-result-card,
 body.dark-mode .history-details-breakdown,
-body.tg-dark-theme .history-details-breakdown {
+body.tg-dark-theme .history-details-breakdown,
+body.dark-mode .history-details-participants-card,
+body.tg-dark-theme .history-details-participants-card {
     background: var(--bg-glass);
     border-color: var(--border-glass);
     color: var(--text-main);
 }
 
 body.dark-mode .history-details-breakdown-title,
-body.tg-dark-theme .history-details-breakdown-title {
+body.tg-dark-theme .history-details-breakdown-title,
+body.dark-mode .history-details-participants-header,
+body.tg-dark-theme .history-details-participants-header {
     background: var(--bg-glass-strong);
+    border-color: var(--border-glass);
     color: var(--text-main);
+}
+
+body.dark-mode .history-participant-row,
+body.tg-dark-theme .history-participant-row {
+    border-top-color: var(--border-glass);
+}
+
+body.dark-mode .history-participant-row.clickable:hover,
+body.tg-dark-theme .history-participant-row.clickable:hover,
+body.dark-mode .history-participant-row.has-profile:hover,
+body.tg-dark-theme .history-participant-row.has-profile:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+body.dark-mode .history-participant-row.clickable:active,
+body.tg-dark-theme .history-participant-row.clickable:active,
+body.dark-mode .history-participant-row.has-profile:active,
+body.tg-dark-theme .history-participant-row.has-profile:active {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 body.dark-mode .btn-light,

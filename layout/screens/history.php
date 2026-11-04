@@ -81,6 +81,19 @@
 
             <p class="history-details-note mb-0">Бонус за счёт: 10% от игровых очков, максимум +150 XP.</p>
 
+            <div class="history-details-participants-card" id="history-details-participants-section">
+                <div class="history-details-participants-header">
+                    <span>Участники партии</span>
+                    <span id="history-participants-count" class="badge rounded-pill bg-secondary text-muted" style="font-size: 10px; display: none;">0</span>
+                </div>
+                <div id="history-participants-list">
+                    <div class="text-center py-3 text-muted small">
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        Загрузка участников...
+                    </div>
+                </div>
+            </div>
+
             <div class="history-details-actions">
                 <button id="history-details-replay" type="button" class="btn btn-primary rounded-pill fw-bold"
                     onclick="replayHistoryGameFromSheet(event)">Сыграть ещё</button>

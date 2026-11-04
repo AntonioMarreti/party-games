@@ -250,6 +250,55 @@ class StatsActionTestPdo
             return [];
         }
 
+        if (str_contains($sql, 'FROM game_history WHERE id = ?')) {
+            $hid = (int) $params[0];
+            foreach ($this->gameHistory as $h) {
+                if ((int) ($h['id'] ?? 0) === $hid) {
+                    return [$h];
+                }
+            }
+            return [];
+        }
+
+        if (str_contains($sql, 'SELECT 1 FROM game_history_players WHERE game_history_id = ? AND user_id = ?')) {
+            $hid = (int) $params[0];
+            $uid = (int) $params[1];
+            foreach ($this->gameHistoryPlayers as $ghp) {
+                if ((int) ($ghp['game_history_id'] ?? 0) === $hid && (int) ($ghp['user_id'] ?? 0) === $uid) {
+                    return [['1' => 1]];
+                }
+            }
+            return [];
+        }
+
+        if (str_contains($sql, 'FROM game_history_players ghp')) {
+            $hid = (int) $params[0];
+            $matched = [];
+            foreach ($this->gameHistoryPlayers as $ghp) {
+                if ((int) ($ghp['game_history_id'] ?? 0) === $hid) {
+                    $row = $ghp;
+                    $row['u_id'] = $ghp['user_id'];
+                    $u = null;
+                    foreach ($this->users as $userItem) {
+                        if ((int) ($userItem['id'] ?? 0) === (int) ($ghp['user_id'] ?? 0)) {
+                            $u = $userItem;
+                            break;
+                        }
+                    }
+                    $row['first_name'] = $u['first_name'] ?? null;
+                    $row['custom_name'] = $u['custom_name'] ?? null;
+                    $row['username'] = $u['username'] ?? null;
+                    $row['photo_url'] = $u['photo_url'] ?? null;
+                    $row['custom_avatar'] = $u['custom_avatar'] ?? null;
+                    $row['is_tester'] = $u['is_tester'] ?? 0;
+                    $row['hide_profile_badge'] = $u['hide_profile_badge'] ?? 0;
+                    $row['is_bot'] = $u['is_bot'] ?? 0;
+                    $matched[] = $row;
+                }
+            }
+            return $matched;
+        }
+
         return [];
     }
 }
@@ -273,6 +322,16 @@ function runStatsAction(StatsActionTestPdo $pdo, array $user, array $data): arra
     $output = ob_get_clean();
     $res = json_decode($output, true);
     statsAssert(is_array($res), "Invalid JSON output from action_game_finished: {$output}");
+    return $res;
+}
+
+function runHistoryDetailsAction(StatsActionTestPdo $pdo, array $user, array $data): array
+{
+    ob_start();
+    action_get_history_details($pdo, $user, $data);
+    $output = ob_get_clean();
+    $res = json_decode($output, true);
+    statsAssert(is_array($res), "Invalid JSON output from action_get_history_details: {$output}");
     return $res;
 }
 
@@ -671,4 +730,87 @@ statsAssert(($res14['status'] ?? null) === 'ok', 'Test 14: Bunker with leaver fi
 statsAssert(($pdo14->userStats[1]['total_wins'] ?? 0) === 1, 'Test 14: Remaining survivor gets win');
 statsAssert(($pdo14->userStats[2]['total_losses'] ?? 0) === 1, 'Test 14: Remaining kicked player gets loss');
 
-echo "All stats game_finished security and regression tests passed successfully!\n";
+// ==========================================
+// Test 15: action_get_history_details валидация ID
+// ==========================================
+$historyDetailsPdo = new StatsActionTestPdo($multiWinRoom, $multiWinPlayers, $users13);
+expectStatsError(function () use ($historyDetailsPdo) {
+    action_get_history_details($historyDetailsPdo, ['id' => 1], ['game_history_id' => 0]);
+}, 'Invalid history ID');
+
+// ==========================================
+// Test 16: action_get_history_details несуществующая запись / чужая партия (Access denied)
+// ==========================================
+expectStatsError(function () use ($historyDetailsPdo) {
+    action_get_history_details($historyDetailsPdo, ['id' => 1], ['game_history_id' => 9999]);
+}, 'Access denied');
+
+// ==========================================
+// Test 17: action_get_history_details запрет доступа чужому пользователю
+// ==========================================
+$historyDetailsPdo->gameHistory[] = [
+    'id' => 100,
+    'user_id' => 1,
+    'room_id' => 13,
+    'game_type' => 'bunker',
+    'final_score' => 150,
+    'final_position' => 1,
+    'duration_seconds' => 300,
+    'players_count' => 3,
+    'created_at' => '2026-11-04 12:00:00'
+];
+$historyDetailsPdo->gameHistoryPlayers[] = [
+    'game_history_id' => 100,
+    'user_id' => 1,
+    'final_position' => 1,
+    'final_score' => 150,
+    'xp_gained' => 120,
+    'result_label' => 'Победа'
+];
+$historyDetailsPdo->gameHistoryPlayers[] = [
+    'game_history_id' => 100,
+    'user_id' => 2,
+    'final_position' => 2,
+    'final_score' => 80,
+    'xp_gained' => 60,
+    'result_label' => '2 место'
+];
+$historyDetailsPdo->gameHistoryPlayers[] = [
+    'game_history_id' => 100,
+    'user_id' => null,
+    'final_position' => 3,
+    'final_score' => 10,
+    'xp_gained' => 20,
+    'result_label' => '3 место'
+];
+
+// Пользователь 99 не был участником партии 100
+expectStatsError(function () use ($historyDetailsPdo) {
+    action_get_history_details($historyDetailsPdo, ['id' => 99], ['game_history_id' => 100]);
+}, 'Access denied');
+
+// ==========================================
+// Test 18: action_get_history_details успешное получение участников участником
+// ==========================================
+$res18 = runHistoryDetailsAction($historyDetailsPdo, ['id' => 1], ['game_history_id' => 100]);
+statsAssert(($res18['status'] ?? null) === 'ok', 'Test 18: Status is ok');
+statsAssert(($res18['game']['id'] ?? null) === 100, 'Test 18: Game ID matches');
+statsAssert(count($res18['participants'] ?? []) === 3, 'Test 18: 3 participants returned');
+
+$pSelf = $res18['participants'][0];
+statsAssert($pSelf['user_id'] === 1, 'Test 18: First participant is user 1');
+statsAssert($pSelf['is_self'] === true, 'Test 18: User 1 is marked as is_self');
+statsAssert($pSelf['has_profile'] === true, 'Test 18: User 1 has_profile is true');
+statsAssert($pSelf['final_position'] === 1, 'Test 18: Final position matches');
+
+$pOther = $res18['participants'][1];
+statsAssert($pOther['user_id'] === 2, 'Test 18: Second participant is user 2');
+statsAssert($pOther['is_self'] === false, 'Test 18: User 2 is not is_self');
+statsAssert($pOther['has_profile'] === true, 'Test 18: User 2 has_profile is true');
+
+$pBot = $res18['participants'][2];
+statsAssert($pBot['user_id'] === null, 'Test 18: Third participant has no user_id (bot/legacy)');
+statsAssert($pBot['is_self'] === false, 'Test 18: Bot is not is_self');
+statsAssert($pBot['has_profile'] === false, 'Test 18: Bot has_profile is false');
+
+echo "All stats game_finished and history details security and regression tests passed successfully!\n";

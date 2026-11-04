@@ -721,3 +721,121 @@ function action_get_history($pdo, $user, $data)
         sendError('Database Error');
     }
 }
+
+function action_get_history_details($pdo, $user, $data)
+{
+    $historyId = (int) ($data['game_history_id'] ?? $data['id'] ?? 0);
+    if ($historyId <= 0) {
+        sendError('Invalid history ID');
+    }
+
+    $currentUserId = (int) $user['id'];
+
+    try {
+        // 1. Verify access: caller must be a participant in this game
+        $checkStmt = $pdo->prepare("SELECT 1 FROM game_history_players WHERE game_history_id = ? AND user_id = ?");
+        $checkStmt->execute([$historyId, $currentUserId]);
+        if (!$checkStmt->fetch()) {
+            sendError('Access denied', 403);
+        }
+
+        // 2. Fetch game history record
+        $ghStmt = $pdo->prepare("
+            SELECT id, room_code, game_type, host_user_id, players_count, duration_seconds, created_at
+            FROM game_history
+            WHERE id = ?
+        ");
+        $ghStmt->execute([$historyId]);
+        $game = $ghStmt->fetch();
+        if (!$game) {
+            sendError('Game not found', 404);
+        }
+
+        // Optional columns check on game_history
+        $optCols = [];
+        foreach (['winner_user_id', 'winner_name', 'summary_text', 'result_payload'] as $col) {
+            if (statsColumnExists($pdo, 'game_history', $col)) {
+                $optCols[] = $col;
+            }
+        }
+        if (!empty($optCols)) {
+            $optStmt = $pdo->prepare("SELECT " . implode(', ', $optCols) . " FROM game_history WHERE id = ?");
+            $optStmt->execute([$historyId]);
+            $optData = $optStmt->fetch();
+            if ($optData) {
+                $game = array_merge($game, $optData);
+                if (!empty($game['result_payload']) && is_string($game['result_payload'])) {
+                    $decoded = json_decode($game['result_payload'], true);
+                    $game['result_payload'] = is_array($decoded) ? $decoded : null;
+                }
+            }
+        }
+
+        // 3. Fetch all participants from game_history_players
+        $playerOptCols = [];
+        foreach (['xp_gained', 'result_label', 'result_payload'] as $col) {
+            if (statsColumnExists($pdo, 'game_history_players', $col)) {
+                $playerOptCols[] = 'ghp.' . $col;
+            }
+        }
+        $extraCols = !empty($playerOptCols) ? ', ' . implode(', ', $playerOptCols) : '';
+
+        $stmt = $pdo->prepare("
+            SELECT ghp.user_id, ghp.final_position, ghp.final_score $extraCols,
+                   u.id AS u_id, u.first_name, u.custom_name, u.username, u.photo_url, u.custom_avatar,
+                   u.is_tester, u.hide_profile_badge, u.is_bot
+            FROM game_history_players ghp
+            LEFT JOIN users u ON u.id = ghp.user_id
+            WHERE ghp.game_history_id = ?
+            ORDER BY
+                CASE WHEN ghp.final_position IS NULL OR ghp.final_position <= 0 THEN 9999 ELSE ghp.final_position END ASC,
+                ghp.final_score DESC,
+                ghp.user_id ASC
+        ");
+        $stmt->execute([$historyId]);
+        $rows = $stmt->fetchAll();
+
+        $participants = [];
+        foreach ($rows as $row) {
+            $pUserId = !empty($row['user_id']) ? (int) $row['user_id'] : null;
+            $hasUser = !empty($row['u_id']);
+            $isBot = !empty($row['is_bot']) || $pUserId === null || $pUserId < 0;
+
+            $pData = [
+                'user_id' => $pUserId,
+                'has_profile' => $hasUser && !$isBot && $pUserId !== null && $pUserId > 0,
+                'is_self' => ($pUserId !== null && $pUserId === $currentUserId),
+                'is_bot' => $isBot ? 1 : 0,
+                'final_position' => $row['final_position'] !== null ? (int) $row['final_position'] : null,
+                'final_score' => (int) ($row['final_score'] ?? 0),
+                'xp_gained' => isset($row['xp_gained']) && $row['xp_gained'] !== null ? (int) $row['xp_gained'] : null,
+                'result_label' => $row['result_label'] ?? null,
+                // User public fields for avatar and name
+                'id' => $hasUser ? (int) $row['u_id'] : $pUserId,
+                'first_name' => $row['first_name'] ?? null,
+                'custom_name' => $row['custom_name'] ?? null,
+                'username' => $row['username'] ?? null,
+                'photo_url' => $row['photo_url'] ?? null,
+                'custom_avatar' => $row['custom_avatar'] ?? null,
+                'is_tester' => (int) ($row['is_tester'] ?? 0),
+                'hide_profile_badge' => (int) ($row['hide_profile_badge'] ?? 0),
+            ];
+
+            if (!empty($row['result_payload']) && is_string($row['result_payload'])) {
+                $decoded = json_decode($row['result_payload'], true);
+                $pData['result_payload'] = is_array($decoded) ? $decoded : null;
+            }
+
+            $participants[] = $pData;
+        }
+
+        echo json_encode([
+            'status' => 'ok',
+            'game' => $game,
+            'participants' => $participants
+        ]);
+    } catch (Exception $e) {
+        TelegramLogger::log("History Details Error", ['error' => $e->getMessage()]);
+        sendError('Database Error');
+    }
+}
