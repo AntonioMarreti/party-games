@@ -232,10 +232,18 @@ body.tg-dark-theme .app-toast {
 }
 
 /* Public User Profile Modal */
+body.dark-mode #userProfileModal,
+body.tg-dark-theme #userProfileModal {
+    background: rgba(0, 0, 0, 0.70) !important;
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+}
+
 body.dark-mode #userProfileModal .modal-content.user-profile-modal-content,
 body.tg-dark-theme #userProfileModal .modal-content.user-profile-modal-content {
     background: var(--bg-card) !important;
     border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
 }
 
 body.dark-mode .user-profile-modal-header,

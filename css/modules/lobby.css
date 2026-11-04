@@ -1169,11 +1169,17 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     grid-template-columns: 1fr;
 }
 
-body.history-details-open:has(#history-details-sheet.active) .bottom-nav {
+body.history-details-open:has(#history-details-sheet.active) .bottom-nav,
+body.history-details-open:has(#history-details-sheet.suspended-for-profile) .bottom-nav,
+body:has(#userProfileModal.show) .bottom-nav,
+body:has(#userProfileModal.active) .bottom-nav {
     display: none !important;
 }
 
-body.history-details-open:has(#history-details-sheet.active) #screen-history {
+body.history-details-open:has(#history-details-sheet.active) #screen-history,
+body.history-details-open:has(#history-details-sheet.suspended-for-profile) #screen-history,
+body:has(#userProfileModal.show) #screen-history,
+body:has(#userProfileModal.active) #screen-history {
     overflow: hidden !important;
 }
 

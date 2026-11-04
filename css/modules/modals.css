@@ -1058,32 +1058,53 @@ body.tg-dark-theme #inviteFriendsModal .invite-cancel-btn {
     z-index: 10050 !important;
 }
 
-/* === 11. Public User Profile Modal (Safe-Area & Scroll Polished) === */
+/* === 11. Public User Profile Modal (Safe-Area & Backdrop Polished) === */
 #userProfileModal {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
     z-index: 10100 !important;
-    padding: 0 !important;
+    box-sizing: border-box !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 64px) !important;
+    padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 20px) + 16px) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    margin: 0 !important;
     overscroll-behavior: contain;
     display: none;
     align-items: center;
     justify-content: center;
+    background: rgba(0, 0, 0, 0.58) !important;
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    transition: opacity 0.2s ease;
 }
 
 #userProfileModal.show,
 #userProfileModal.active {
     display: flex !important;
+    opacity: 1 !important;
 }
 
 body:has(#userProfileModal.show) .modal-backdrop,
 body:has(#userProfileModal.active) .modal-backdrop {
-    z-index: 10095 !important;
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 #userProfileModal .modal-dialog.user-profile-dialog {
-    margin: auto !important;
+    margin: 0 auto !important;
     max-width: 440px !important;
-    width: calc(100% - 24px) !important;
+    width: 100% !important;
     height: auto !important;
-    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 20px) - 24px) !important;
+    max-height: 100% !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1093,12 +1114,12 @@ body:has(#userProfileModal.active) .modal-backdrop {
 #userProfileModal .modal-content.user-profile-modal-content {
     background: var(--bg-card, var(--bg-secondary)) !important;
     border-radius: 26px !important;
-    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 20px) - 24px) !important;
+    max-height: calc(100dvh - (env(safe-area-inset-top, 0px) + 64px) - (max(env(safe-area-inset-bottom, 0px), 20px) + 16px)) !important;
     padding: 0 !important;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32) !important;
     border: 1px solid var(--border-main) !important;
     width: 100%;
     pointer-events: auto;
