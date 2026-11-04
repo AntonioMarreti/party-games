@@ -1293,8 +1293,8 @@ function renderFriendList(friends, query = '') {
                 <div class="friend-user-meta">Друг</div>
             </div>
             <div class="friend-user-action d-flex align-items-center gap-2">
-                <button class="friend-action-invite-cta" onclick="inviteFriendToPlay(${f.id}, event)" title="Позвать в игру">
-                    <i class="bi bi-controller me-1"></i>Позвать
+                <button class="btn-unstyled friend-action-invite" onclick="inviteFriendToPlay(${f.id}, event)" aria-label="Позвать играть" title="Позвать играть">
+                    <i class="bi bi-controller"></i>
                 </button>
                 <button class="btn-unstyled friend-action-danger" onclick="removeFriend(${f.id}, event)" aria-label="Удалить друга" title="Удалить друга">
                     <i class="bi bi-person-dash"></i>

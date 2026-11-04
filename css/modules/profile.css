@@ -670,25 +670,61 @@ body.dark-mode .stat-label {
     transform: scale(1.05);
 }
 
+#screen-friends .friend-action-invite,
 #screen-friends .friend-action-invite-cta {
-    min-height: 32px;
-    font-size: 12px !important;
-    font-weight: 700 !important;
+    position: relative;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    border-radius: 50% !important;
+    border: none !important;
+    background: var(--primary-color) !important;
+    color: #fff !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 4px 12px !important;
-    background: var(--primary-color) !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 999px !important;
+    padding: 0 !important;
     box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 35%, transparent);
-    transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+    transition: transform 0.15s ease-out, opacity 0.15s ease-out, background-color 0.15s ease-out;
     cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
 }
 
+#screen-friends .friend-action-invite i,
+#screen-friends .friend-action-invite-cta i {
+    font-size: 16px;
+    line-height: 1;
+    display: inline-block;
+    color: inherit;
+}
+
+/* 44×44 CSS px touch target */
+#screen-friends .friend-action-invite::after,
+#screen-friends .friend-action-invite-cta::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+@media (hover: hover) {
+    #screen-friends .friend-action-invite:hover,
+    #screen-friends .friend-action-invite-cta:hover {
+        background: color-mix(in srgb, var(--primary-color) 88%, #fff) !important;
+        transform: scale(1.05);
+    }
+}
+
+#screen-friends .friend-action-invite:active,
 #screen-friends .friend-action-invite-cta:active {
-    transform: scale(0.95);
+    transform: scale(0.96);
     opacity: 0.9;
 }
 
@@ -753,6 +789,15 @@ body.tg-dark-theme.dark-mode #screen-friends .friend-action-danger {
     color: #fb7185;
     background: rgba(251, 113, 133, 0.1);
     border-color: rgba(251, 113, 133, 0.22);
+}
+
+body.dark-mode #screen-friends .friend-action-invite,
+body.tg-dark-theme.dark-mode #screen-friends .friend-action-invite,
+body.dark-mode #screen-friends .friend-action-invite-cta,
+body.tg-dark-theme.dark-mode #screen-friends .friend-action-invite-cta {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
 .thermal-safe #screen-friends .friend-user-row {
