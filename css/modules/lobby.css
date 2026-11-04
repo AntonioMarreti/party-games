@@ -63,6 +63,11 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
     margin-bottom: 4px !important;
 }
 
+.home-hero > .d-flex > div:first-child {
+    min-width: 0;
+    flex: 1;
+}
+
 .home-hero .header-title {
     font-size: 24px;
     line-height: 1.15;
@@ -77,25 +82,12 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
     letter-spacing: normal;
 }
 
-.home-daily-tasks-button {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    position: relative;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    margin-top: 4px;
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.28) !important;
-    background: rgba(255, 255, 255, 0.14) !important;
-    color: #fff !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 10px 24px rgba(39, 31, 111, 0.14);
-    backdrop-filter: blur(14px) saturate(135%);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+.home-hero > .d-flex > .d-flex.align-items-center {
+    flex-shrink: 0;
+    gap: 4px !important;
 }
 
+.home-daily-tasks-button,
 .home-header-icon-button {
     width: 44px;
     height: 44px;
@@ -105,61 +97,65 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    margin-top: 4px;
+    margin-top: 2px;
     padding: 0;
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: #fff !important;
     cursor: pointer;
+    flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
 }
 
+.home-daily-tasks-button::before,
 .home-header-icon-button::before {
     content: '';
     position: absolute;
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
     pointer-events: none;
 }
 
+.home-daily-tasks-button:active::before,
 .home-header-icon-button:active::before {
-    transform: scale(0.92);
+    transform: scale(0.93);
     background: rgba(255, 255, 255, 0.18);
     border-color: rgba(255, 255, 255, 0.28);
 }
 
-.home-daily-tasks-button .bi-calendar2-check {
-    font-size: 21px;
-    line-height: 1;
-}
-
+.home-daily-tasks-button .bi-calendar2-check,
 .home-header-icon-button i {
     position: relative;
     z-index: 1;
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
     color: inherit;
 }
 
 .home-daily-tasks-button .bi-stars {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    font-size: 10px;
-    filter: drop-shadow(0 1px 4px rgba(255, 255, 255, 0.32));
+    right: 5px;
+    bottom: 5px;
+    z-index: 2;
+    font-size: 9px;
+    filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.4));
+    color: #fff;
+    pointer-events: none;
 }
 
 .home-header-icon-button .home-icon-badge {
     position: absolute;
-    top: 1px;
-    right: 1px;
-    z-index: 2;
+    top: -1px;
+    right: -1px;
+    z-index: 3;
     min-width: 17px;
     height: 17px;
     padding: 0 4px;
@@ -174,21 +170,11 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
     border: 1.5px solid var(--bg-card, #ffffff);
 }
 
-.home-daily-tasks-button:active {
-    transform: scale(0.96);
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: rgba(255, 255, 255, 0.38) !important;
-}
-
-.thermal-safe .home-daily-tasks-button {
-    background: rgba(255, 255, 255, 0.18) !important;
-    color: var(--app-accent-text) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
+.thermal-safe .home-daily-tasks-button::before,
 .thermal-safe .home-header-icon-button::before {
     background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .thermal-safe .home-hero-text {
