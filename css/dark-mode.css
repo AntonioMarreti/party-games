@@ -262,7 +262,9 @@ body.tg-dark-theme .user-profile-close-btn {
 body.dark-mode .user-profile-level-card,
 body.tg-dark-theme .user-profile-level-card,
 body.dark-mode .user-profile-stat-box,
-body.tg-dark-theme .user-profile-stat-box {
+body.tg-dark-theme .user-profile-stat-box,
+body.dark-mode .user-profile-joint-card,
+body.tg-dark-theme .user-profile-joint-card {
     background: rgba(255, 255, 255, 0.04) !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
 }

@@ -1140,6 +1140,8 @@ async function openUserProfile(userId) {
 
                 ${actionBtn ? `<div class="user-profile-actions mb-4">${actionBtn}</div>` : ''}
 
+                ${renderUserProfileJointGames(res.joint_games, fs)}
+
                 <div class="achievements-section text-start">
                     <div class="user-profile-achievements-header mb-2">
                         <h6 class="user-profile-achievements-title">Достижения</h6>
@@ -1152,6 +1154,80 @@ async function openUserProfile(userId) {
         }
     } else {
         if (container) container.innerHTML = '<p class="text-danger py-4">Ошибка загрузки</p>';
+    }
+}
+
+function renderUserProfileJointGames(jointGames, friendStatus) {
+    if (friendStatus === 'self') return '';
+
+    if (!jointGames || !jointGames.total_games || jointGames.total_games <= 0) {
+        return `
+            <div class="user-profile-joint-card is-empty mb-3">
+                <div class="user-profile-joint-empty-text">
+                    <i class="bi bi-controller opacity-50"></i>
+                    <span>Вы ещё не играли вместе</span>
+                </div>
+            </div>
+        `;
+    }
+
+    const total = Number(jointGames.total_games) || 0;
+    const word = getRussianPlural(total, 'партия', 'партии', 'партий');
+    const dateStr = formatJointDate(jointGames.last_played_at);
+    const byType = Array.isArray(jointGames.games_by_type) ? jointGames.games_by_type : [];
+    const chipsHtml = byType.map(g => {
+        const gameConfig = Array.isArray(window.AVAILABLE_GAMES)
+            ? window.AVAILABLE_GAMES.find(item => item.id === g.game_type)
+            : null;
+        const title = escapeProfileHtml(gameConfig?.name || g.game_type);
+        const icon = gameConfig?.icon || '🎮';
+        const cnt = Number(g.games_count) || 0;
+        return `
+            <span class="user-profile-joint-chip">
+                <span class="me-1">${icon}</span>${title}<span class="user-profile-joint-chip-count">${cnt}</span>
+            </span>
+        `;
+    }).join('');
+
+    return `
+        <div class="user-profile-joint-card mb-3">
+            <div class="user-profile-joint-header">
+                <div class="user-profile-joint-title">
+                    <i class="bi bi-controller text-primary"></i>
+                    <span>Совместные игры</span>
+                </div>
+                <span class="user-profile-joint-count">${total} ${word}</span>
+            </div>
+            <div class="user-profile-joint-meta">
+                <span>Последняя игра: ${dateStr}</span>
+            </div>
+            ${chipsHtml ? `<div class="user-profile-joint-chips">${chipsHtml}</div>` : ''}
+        </div>
+    `;
+}
+
+function getRussianPlural(num, one, two, five) {
+    const n = Math.abs(num) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return five;
+    if (n1 > 1 && n1 < 5) return two;
+    if (n1 === 1) return one;
+    return five;
+}
+
+function formatJointDate(dateStr) {
+    if (!dateStr) return 'недавно';
+    try {
+        const d = new Date(String(dateStr).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return String(dateStr);
+        const currentYear = new Date().getFullYear();
+        const options = { day: 'numeric', month: 'short' };
+        if (d.getFullYear() !== currentYear) {
+            options.year = 'numeric';
+        }
+        return d.toLocaleDateString('ru-RU', options);
+    } catch {
+        return String(dateStr);
     }
 }
 
@@ -1557,6 +1633,7 @@ async function loadFriendsList() {
             container.innerHTML = '';
             const friends = res.friends || [];
             currentFriendsList = friends;
+            window.currentFriendsList = friends;
             renderFriendList(friends);
             const inCount = res.requests ? res.requests.length : 0;
             const outCount = res.outgoing_requests ? res.outgoing_requests.length : 0;
@@ -1680,13 +1757,61 @@ async function cancelFriendRequest(id, event) {
     }
 }
 
+const friendInviteInFlight = new Set();
+
+async function doSendFriendRoomInvite(roomId, friendId, friendName) {
+    const friendKey = Number(friendId);
+    if (!roomId || !friendKey) return false;
+    if (friendInviteInFlight.has(friendKey)) return false;
+    friendInviteInFlight.add(friendKey);
+
+    try {
+        const res = await window.apiRequest({
+            action: 'invite_friends',
+            room_id: roomId,
+            friends: [friendKey]
+        });
+        if (res.status === 'ok') {
+            const successMsg = `Приглашение отправлено игроку ${friendName}!`;
+            if (window.showAlert) window.showAlert('Приглашение отправлено', successMsg, 'success');
+            else if (window.showToast) window.showToast(successMsg, 'success');
+            return true;
+        } else {
+            const errMsg = res.message || 'Не удалось отправить приглашение';
+            if (window.showAlert) window.showAlert('Ошибка', errMsg, 'error');
+            else if (window.showToast) window.showToast(errMsg, 'error');
+            return false;
+        }
+    } catch (err) {
+        console.error('Invite friend error:', err);
+        if (window.showAlert) window.showAlert('Ошибка', 'Не удалось отправить приглашение', 'error');
+        return false;
+    } finally {
+        friendInviteInFlight.delete(friendKey);
+    }
+}
+
 async function inviteFriendToPlay(friendId, event) {
     if (event) {
         event.stopPropagation();
         event.preventDefault();
     }
-    const friend = (currentFriendsList || []).find(f => Number(f.id) === Number(friendId));
-    const friendName = friend ? getSafeUserDisplayName(friend) : 'друга';
+    const friendKey = Number(friendId);
+    if (!friendKey || friendInviteInFlight.has(friendKey)) return;
+
+    let friendName = 'друга';
+    const pool = (Array.isArray(currentFriendsList) && currentFriendsList.length > 0)
+        ? currentFriendsList
+        : (Array.isArray(window.currentFriendsList) ? window.currentFriendsList : []);
+    const friend = pool.find(f => Number(f.id) === friendKey);
+    if (friend) {
+        friendName = getSafeUserDisplayName(friend);
+    } else {
+        const profileNameEl = document.querySelector('.user-profile-name');
+        if (profileNameEl && profileNameEl.textContent.trim()) {
+            friendName = profileNameEl.textContent.trim();
+        }
+    }
 
     const hasActiveRoom = Boolean(window.currentRoomId && window.currentRoomCode);
 
@@ -1694,22 +1819,7 @@ async function inviteFriendToPlay(friendId, event) {
         const confirmTitle = 'Позвать в игру';
         const confirmMsg = `Позвать ${friendName} в текущую комнату #${window.currentRoomCode}?`;
         const doInvite = async () => {
-            try {
-                const res = await window.apiRequest({
-                    action: 'invite_friends',
-                    room_id: window.currentRoomId,
-                    friends: [friendId]
-                });
-                if (res.status === 'ok') {
-                    if (window.showAlert) window.showAlert('Приглашение', 'Приглашение отправлено!', 'success');
-                    else if (window.showToast) window.showToast('Приглашение отправлено!', 'success');
-                } else {
-                    if (window.showAlert) window.showAlert('Ошибка', res.message || 'Не удалось отправить приглашение', 'error');
-                }
-            } catch (err) {
-                console.error('Invite friend error:', err);
-                if (window.showAlert) window.showAlert('Ошибка', 'Не удалось отправить приглашение', 'error');
-            }
+            await doSendFriendRoomInvite(window.currentRoomId, friendKey, friendName);
         };
 
         if (typeof window.showConfirmation === 'function') {
@@ -1721,6 +1831,13 @@ async function inviteFriendToPlay(friendId, event) {
         const promptTitle = 'Создать комнату';
         const promptMsg = `У вас нет активной комнаты. Создать новую комнату, чтобы позвать ${friendName}?`;
         const goToCreate = () => {
+            window.pendingInviteFriendContext = {
+                friendId: friendKey,
+                friendName: friendName,
+                roomCreated: false,
+                createdAt: Date.now()
+            };
+
             if (typeof window.closeUserProfileModal === 'function') {
                 window.closeUserProfileModal();
             }
@@ -1747,6 +1864,33 @@ async function inviteFriendToPlay(friendId, event) {
             goToCreate();
         }
     }
+}
+
+function handlePendingFriendInviteOnRoomCreated() {
+    const pending = window.pendingInviteFriendContext;
+    if (!pending || !pending.friendId) return;
+
+    // Mark as handled so modal dismissal cleanup won't drop it
+    pending.roomCreated = true;
+    window.pendingInviteFriendContext = null;
+
+    const roomId = window.currentRoomId;
+    const roomCode = window.currentRoomCode || roomId;
+    const friendId = pending.friendId;
+    const friendName = pending.friendName || 'друга';
+
+    if (!roomId) return;
+
+    setTimeout(() => {
+        const confirmMsg = `Комната #${roomCode} создана! Отправить приглашение игроку ${friendName}?`;
+        if (typeof window.showConfirmation === 'function') {
+            window.showConfirmation('Пригласить в игру', confirmMsg, async () => {
+                await doSendFriendRoomInvite(roomId, friendId, friendName);
+            }, { confirmText: 'Отправить' });
+        } else {
+            doSendFriendRoomInvite(roomId, friendId, friendName);
+        }
+    }, 450);
 }
 
 async function loadFriendRequests() {
@@ -2345,6 +2489,7 @@ window.SocialManager = {
     switchRequestsSubTab,
     cancelFriendRequest,
     inviteFriendToPlay,
+    handlePendingFriendInviteOnRoomCreated,
     updateFriendBadges,
     refreshFriendBadges,
     getCachedUserStats: () => cachedUserStats,
@@ -2411,6 +2556,7 @@ window.loadFriendRequests = loadFriendRequests;
 window.switchRequestsSubTab = switchRequestsSubTab;
 window.cancelFriendRequest = cancelFriendRequest;
 window.inviteFriendToPlay = inviteFriendToPlay;
+window.handlePendingFriendInviteOnRoomCreated = handlePendingFriendInviteOnRoomCreated;
 window.switchFriendsTab = switchFriendsTab;
 window.updateFriendBadges = updateFriendBadges;
 window.refreshFriendBadges = refreshFriendBadges;

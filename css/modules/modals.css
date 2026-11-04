@@ -1343,6 +1343,86 @@ body:has(#userProfileModal.active) .modal-backdrop {
     color: var(--text-muted);
 }
 
+/* Joint Games Card in Public Profile */
+.user-profile-joint-card {
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--text-main) 4%, var(--bg-card));
+    border: 1px solid var(--border-main);
+    padding: 11px 14px;
+    text-align: left;
+}
+
+.user-profile-joint-card.is-empty {
+    padding: 9px 14px;
+}
+
+.user-profile-joint-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.user-profile-joint-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.user-profile-joint-count {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+    color: var(--primary-color);
+}
+
+.user-profile-joint-meta {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.user-profile-joint-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.user-profile-joint-chip {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--text-main) 6%, transparent);
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+}
+
+.user-profile-joint-chip-count {
+    margin-left: 5px;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.user-profile-joint-empty-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 
 
 /* Custom Overlay Modal (Stats, Alerts, Confirmations) */

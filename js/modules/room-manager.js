@@ -106,6 +106,9 @@ async function createRoom() {
                 }
             }
             if (typeof window.checkState === 'function') await window.checkState();
+            if (typeof window.handlePendingFriendInviteOnRoomCreated === 'function') {
+                window.handlePendingFriendInviteOnRoomCreated();
+            }
         }
     } finally {
         setPollingSuspended(false);
@@ -116,6 +119,10 @@ async function createRoom() {
 function handleCreateRoomModalClosed() {
     const replayFlow = window.pendingReplayFlow;
     window.pendingReplayFlow = null;
+
+    if (window.pendingInviteFriendContext && !window.pendingInviteFriendContext.roomCreated) {
+        window.pendingInviteFriendContext = null;
+    }
 
     resetCreateRoomModalTitle();
     resetCreateRoomReplayHint();

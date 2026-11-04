@@ -15,6 +15,8 @@ class TelegramLogger {
 function sendError($message) { throw new Error($message); }
 function createNotification($pdo, $recipient, $type, $actor) { $pdo->notifications[]=[$recipient,$type,$actor]; }
 function check_achievements($pdo, $userId) { $pdo->achievements[]=$userId; }
+if (!function_exists('calculateLevel')) { function calculateLevel($xp) { return 1; } }
+if (!function_exists('normalize_user_public_fields')) { function normalize_user_public_fields($u) { return $u; } }
 require_once __DIR__.'/../server/actions/social.php';
 function friendshipCheck($condition,$message) { if (!$condition) throw new RuntimeException($message); }
 class FriendshipTestStmt {
@@ -22,11 +24,13 @@ class FriendshipTestStmt {
     public function __construct($pdo,$sql) { $this->pdo=$pdo; $this->sql=$sql; }
     public function execute($params) { $this->rows=$this->pdo->run($this->sql,$params); }
     public function fetch() { return $this->rows[0] ?? false; }
+    public function fetchAll() { return $this->rows; }
 }
 class FriendshipTestPdo {
     public array $friendship=[];
     public array $notifications=[];
     public array $achievements=[];
+    public array $jointGames=[];
     public function prepare($sql) { return new FriendshipTestStmt($this,$sql); }
     public function run($sql,$params) {
         if ($sql==='SELECT id FROM users WHERE id = ?') return [['id'=>$params[0]]];
@@ -41,6 +45,18 @@ class FriendshipTestPdo {
         if ($sql==="DELETE FROM friendships WHERE id = ?") { $this->friendship=[]; return []; }
         if (str_starts_with($sql,"DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND actor_user_id = ?")) { $this->notifications=[]; return []; }
         if ($sql==='SELECT telegram_id, first_name FROM users WHERE id = ?') return [['telegram_id'=>1000+$params[0],'first_name'=>'Test']];
+        if (str_starts_with($sql, 'SELECT id, first_name, custom_name, photo_url, custom_avatar, is_tester, hide_profile_badge FROM users WHERE id = ?')) {
+            return [['id'=>$params[0],'first_name'=>'TargetUser','custom_name'=>null,'photo_url'=>null,'custom_avatar'=>null,'is_tester'=>0,'hide_profile_badge'=>0]];
+        }
+        if (str_starts_with($sql, 'SELECT total_wins, total_games_played, rating, total_points_earned FROM user_statistics WHERE user_id = ?')) {
+            return [['total_wins'=>10,'total_games_played'=>25,'rating'=>1200,'total_points_earned'=>500]];
+        }
+        if (str_contains($sql, 'FROM achievements a')) {
+            return [];
+        }
+        if (str_contains($sql, 'FROM game_history gh') && str_contains($sql, 'JOIN game_history_players p1')) {
+            return $this->jointGames;
+        }
         throw new LogicException('Unexpected test SQL: ' . $sql);
     }
 }
@@ -199,5 +215,37 @@ try {
         friendshipCheck(str_contains($e->getMessage(), 'Already friends'), 'Already friends rejected');
     }
 
-    echo "PASS friendship notifications, cancel, rejection, and anti-spam validation\n";
+    // Joint games in public profile: counts, breakdown, and isolation
+    $profilePdo = new FriendshipTestPdo();
+    $profilePdo->jointGames = [
+        ['game_type' => 'durak', 'games_count' => 2, 'last_played_at' => '2026-11-04 12:00:00'],
+        ['game_type' => 'bunker', 'games_count' => 1, 'last_played_at' => '2026-11-03 10:00:00'],
+    ];
+    ob_start();
+    action_get_public_profile($profilePdo, ['id' => 1, 'first_name' => 'Me'], ['user_id' => 2]);
+    $profileResult = json_decode(ob_get_clean(), true);
+    friendshipCheck($profileResult['status'] === 'ok', 'Public profile retrieved');
+    friendshipCheck($profileResult['joint_games']['total_games'] === 3, 'Total joint games count is 3');
+    friendshipCheck($profileResult['joint_games']['last_played_at'] === '2026-11-04 12:00:00', 'Last played date is most recent');
+    friendshipCheck(count($profileResult['joint_games']['games_by_type']) === 2, 'Two distinct games in joint breakdown');
+
+    // Joint games empty state when 0 games played
+    $emptyJointPdo = new FriendshipTestPdo();
+    $emptyJointPdo->jointGames = [];
+    ob_start();
+    action_get_public_profile($emptyJointPdo, ['id' => 1, 'first_name' => 'Me'], ['user_id' => 4]);
+    $emptyResult = json_decode(ob_get_clean(), true);
+    friendshipCheck($emptyResult['joint_games']['total_games'] === 0, 'Zero joint games for new user');
+    friendshipCheck($emptyResult['joint_games']['last_played_at'] === null, 'No last played date when 0 games');
+    friendshipCheck($emptyResult['joint_games']['games_by_type'] === [], 'Empty games list when 0 games');
+
+    // Self profile has friend_status = self and zero joint games
+    $selfProfilePdo = new FriendshipTestPdo();
+    ob_start();
+    action_get_public_profile($selfProfilePdo, ['id' => 1, 'first_name' => 'Me'], ['user_id' => 1]);
+    $selfResult = json_decode(ob_get_clean(), true);
+    friendshipCheck($selfResult['friend_status'] === 'self', 'Self status detected');
+    friendshipCheck($selfResult['joint_games']['total_games'] === 0, 'Self joint games is 0');
+
+    echo "PASS friendship notifications, cancel, rejection, anti-spam, and joint games validation\n";
 } finally { ini_set('error_log',$previousLog); unlink($logFile); }
