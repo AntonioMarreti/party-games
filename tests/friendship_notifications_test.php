@@ -38,8 +38,10 @@ class FriendshipTestPdo {
             return $this->friendship['user_id']===$params[0] && $this->friendship['friend_id']===$params[1] && $this->friendship['status']==='pending'?[['id'=>7]]:[];
         }
         if ($sql==="UPDATE friendships SET status = 'accepted' WHERE id = ?") { $this->friendship['status']='accepted'; return []; }
+        if ($sql==="DELETE FROM friendships WHERE id = ?") { $this->friendship=[]; return []; }
+        if (str_starts_with($sql,"DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND actor_user_id = ?")) { $this->notifications=[]; return []; }
         if ($sql==='SELECT telegram_id, first_name FROM users WHERE id = ?') return [['telegram_id'=>1000+$params[0],'first_name'=>'Test']];
-        throw new LogicException('Unexpected test SQL');
+        throw new LogicException('Unexpected test SQL: ' . $sql);
     }
 }
 function friendshipRun($event,$responses,$nameField) {
@@ -111,5 +113,29 @@ try {
     }
     $logs=file_get_contents($logFile);
     friendshipCheck(str_contains($logs,'ambiguous') && str_contains($logs,'exception') && !str_contains($logs,'secret-marker') && !str_contains($logs,$name),'Safe failure logging');
-    echo "PASS friendship notifications: custom emoji, Web App CTA, fallback, ambiguity, escaping, action/notification/achievement semantics\n";
+
+    // Verify action_reject_friend
+    $rejectPdo = new FriendshipTestPdo();
+    $rejectPdo->friendship = ['id'=>7,'user_id'=>2,'friend_id'=>1,'status'=>'pending'];
+    $rejectPdo->notifications = [[1,'friend_request',2]];
+    ob_start();
+    try {
+        action_reject_friend($rejectPdo, ['id'=>1,'first_name'=>'Recipient'], ['friend_id'=>2]);
+        $rejectRes = json_decode(ob_get_contents(), true, 512, JSON_THROW_ON_ERROR);
+    } finally { ob_end_clean(); }
+    friendshipCheck($rejectRes === ['status'=>'ok'], 'Reject action returns ok');
+    friendshipCheck($rejectPdo->friendship === [], 'Friendship record deleted on rejection');
+    friendshipCheck($rejectPdo->notifications === [], 'Notification deleted on rejection');
+
+    // Reject fails if caller is not the recipient
+    $wrongPdo = new FriendshipTestPdo();
+    $wrongPdo->friendship = ['id'=>7,'user_id'=>2,'friend_id'=>1,'status'=>'pending'];
+    try {
+        action_reject_friend($wrongPdo, ['id'=>2,'first_name'=>'Requester'], ['friend_id'=>1]);
+        throw new LogicException('Requester should not be able to reject');
+    } catch (Error $e) {
+        friendshipCheck(str_contains($e->getMessage(), 'Заявка не найдена'), 'Only recipient can reject');
+    }
+
+    echo "PASS friendship notifications and rejection: custom emoji, Web App CTA, fallback, ambiguity, escaping, action/notification/achievement semantics, reject validation\n";
 } finally { ini_set('error_log',$previousLog); unlink($logFile); }

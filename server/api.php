@@ -291,6 +291,7 @@ $routes = [
     'search_users' => 'actions/social.php', // NEW
     'add_friend' => 'actions/social.php',
     'accept_friend' => 'actions/social.php',
+    'reject_friend' => 'actions/social.php',
     'remove_friend' => 'actions/social.php',
     'get_friends' => 'actions/social.php',
     'get_public_profile' => 'actions/social.php', // NEW

@@ -1361,24 +1361,54 @@ function renderPlayerList(players, containerId) {
             botBadge = `<div class="player-bot-badge player-bot-badge--${difficulty}">${difficultyLabelMap[difficulty] || 'AI'}</div>`;
         }
 
+        let kickBtn = '';
+        if (amIHost && p.is_host != 1) {
+            const isBot = p.is_bot == 1;
+            const kickAction = isBot
+                ? `event.stopPropagation(); if (typeof window.removeBot === 'function') window.removeBot(${p.id});`
+                : `event.stopPropagation(); if (typeof window.kickPlayer === 'function') window.kickPlayer(${p.id}, '${window.safeHTML(p.first_name)}');`;
+            const kickTitle = isBot ? 'Удалить бота' : 'Исключить игрока';
+            kickBtn = `
+                <button type="button" class="btn-unstyled host-kick-btn"
+                    onclick="${kickAction}"
+                    title="${kickTitle}" aria-label="${kickTitle}">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+        }
+
         div.innerHTML = `
             <div class="avatar-slot position-relative d-inline-block">
                 ${avatarHtml}
                 ${crown}
+                ${kickBtn}
             </div>
             <div class="player-name">${window.safeHTML(p.custom_name) || window.safeHTML(p.first_name)}</div>
             ${botBadge}
         `;
 
-        if (amIHost && p.is_host != 1) {
+        if (p.is_bot != 1) {
             div.style.cursor = 'pointer';
             div.setAttribute('role', 'button');
             div.setAttribute('tabindex', '0');
-            if (p.is_bot == 1) {
-                if (typeof window.removeBot === 'function') div.onclick = () => window.removeBot(p.id);
-            } else {
-                if (typeof window.kickPlayer === 'function') div.onclick = () => window.kickPlayer(p.id, p.first_name);
-            }
+            div.onclick = () => {
+                if (typeof window.openUserProfile === 'function') {
+                    window.openUserProfile(p.id);
+                }
+            };
+            div.onkeydown = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    div.click();
+                }
+            };
+        } else if (amIHost) {
+            div.style.cursor = 'pointer';
+            div.setAttribute('role', 'button');
+            div.setAttribute('tabindex', '0');
+            div.onclick = () => {
+                if (typeof window.removeBot === 'function') window.removeBot(p.id);
+            };
             div.onkeydown = (event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();

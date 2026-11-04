@@ -992,7 +992,12 @@ async function openUserProfile(userId) {
         } else if (fs === 'pending_out') {
             actionBtn = `<button class="btn btn-light rounded-pill px-4 border" disabled>Ожидание</button>`;
         } else if (fs === 'pending_in') {
-            actionBtn = `<button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="acceptFriend(${p.id}, event)">Принять</button>`;
+            actionBtn = `
+                <div class="d-flex justify-content-center gap-2">
+                    <button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="acceptFriend(${p.id}, event)">Принять</button>
+                    <button class="btn btn-outline-danger rounded-pill px-3 fw-bold" onclick="rejectFriend(${p.id}, event)">Отклонить</button>
+                </div>
+            `;
         } else if (fs === 'accepted') {
             actionBtn = `<button class="btn btn-link text-danger btn-sm text-decoration-none" onclick="removeFriend(${p.id}, event)">Удалить друга</button>`;
         }
@@ -1061,34 +1066,42 @@ async function loadFriends() {
     }
 }
 
-function renderFriends(friends, requests) {
+function updateFriendBadges(count) {
+    const safeCount = Number(count) || 0;
+    const badgeIds = ['friends-req-count', 'friends-req-badge', 'friends-count-badge', 'home-friends-badge'];
+    badgeIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = safeCount;
+            el.style.display = safeCount > 0 ? (id === 'home-friends-badge' ? 'inline-flex' : 'inline-block') : 'none';
+        }
+    });
+}
+
+function renderFriends(friends, requests = []) {
+    updateFriendBadges(requests.length);
     const reqContainer = document.getElementById('friends-req-container');
-    const badge = document.getElementById('friends-req-badge');
 
     if (requests.length > 0) {
-        if (badge) {
-            badge.style.display = 'inline-block';
-            badge.innerText = requests.length;
-        }
         if (reqContainer) {
             reqContainer.innerHTML = '';
             requests.forEach(req => {
                 const div = document.createElement('div');
                 div.className = 'd-flex align-items-center justify-content-between p-2 mb-2 bg-light rounded-4';
                 div.innerHTML = `
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2" style="cursor:pointer;" onclick="openUserProfile(${req.id})">
                         ${typeof window.renderAvatar === 'function' ? window.renderAvatar(req, 'sm') : ''}
                         <div class="fw-bold">${getSafeUserDisplayName(req)}</div>
                     </div>
-                    <div>
-                         <button class="btn btn-sm btn-success rounded-circle" onclick="acceptFriend(${req.id})"><i class="bi bi-check-lg"></i></button>
+                    <div class="d-flex align-items-center gap-1">
+                         <button class="btn btn-sm btn-success rounded-circle" onclick="acceptFriend(${req.id}, event)" title="Принять"><i class="bi bi-check-lg"></i></button>
+                         <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="rejectFriend(${req.id}, event)" title="Отклонить"><i class="bi bi-x-lg"></i></button>
                     </div>
                 `;
                 reqContainer.appendChild(div);
             });
         }
     } else {
-        if (badge) badge.style.display = 'none';
         if (reqContainer) reqContainer.innerHTML = '<p class="text-center text-muted mt-4">Нет новых заявок</p>';
     }
 
@@ -1096,21 +1109,30 @@ function renderFriends(friends, requests) {
     if (listContainer) {
         listContainer.innerHTML = '';
         if (friends.length === 0) {
-            listContainer.innerHTML = '<p class="text-center text-muted mt-3">У вас пока нет друзей.</p>';
+            listContainer.innerHTML = `
+                <div class="friend-empty-state text-center py-4">
+                    <i class="bi bi-people h1 d-block mb-2 text-muted"></i>
+                    <div class="fw-bold mb-1">Пока нет друзей</div>
+                    <p class="text-muted small mb-3">Найдите знакомых по имени или Telegram username</p>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="switchFriendsTab('find')">
+                        <i class="bi bi-search me-1"></i>Найти игроков
+                    </button>
+                </div>
+            `;
             return;
         }
         friends.forEach(f => {
             const div = document.createElement('div');
             div.className = 'd-flex align-items-center justify-content-between p-2 mb-2 border-bottom';
             div.innerHTML = `
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2" style="cursor:pointer;" onclick="openUserProfile(${f.id})">
                      ${typeof window.renderAvatar === 'function' ? window.renderAvatar(f, 'md') : ''}
                      <div>
                         <div class="fw-bold">${getSafeUserDisplayName(f)}</div>
                         <div style="font-size:10px; color: #888;">ID: ${f.id}</div>
                      </div>
                 </div>
-                <button class="btn btn-sm text-danger" onclick="removeFriend(${f.id})"><i class="bi bi-x-lg"></i></button>
+                <button class="btn btn-sm text-danger" onclick="removeFriend(${f.id}, event)" title="Удалить друга"><i class="bi bi-x-lg"></i></button>
             `;
             listContainer.appendChild(div);
         });
@@ -1138,7 +1160,16 @@ function renderFriendList(friends, query = '') {
     listContainer.innerHTML = '';
 
     if (!currentFriendsList.length && !query) {
-        listContainer.innerHTML = '<div class="friend-empty-state"><i class="bi bi-people h1 d-block mb-2"></i>Пока нет друзей</div>';
+        listContainer.innerHTML = `
+            <div class="friend-empty-state text-center py-4">
+                <i class="bi bi-people h1 d-block mb-2 text-muted"></i>
+                <div class="fw-bold mb-1">Пока нет друзей</div>
+                <p class="text-muted small mb-3">Найдите знакомых по имени или Telegram username</p>
+                <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="switchFriendsTab('find')">
+                    <i class="bi bi-search me-1"></i>Найти игроков
+                </button>
+            </div>
+        `;
         return;
     }
 
@@ -1181,28 +1212,7 @@ function filterFriendsAction() {
 }
 
 function toggleFriendAddSearch() {
-    const block = document.getElementById('friend-add-search-block');
-    const btn = document.getElementById('friend-add-toggle-btn');
-    const wrapper = document.querySelector('.friend-add-card');
-    if (!block) return;
-    const isHidden = block.style.display === 'none' || block.style.display === '';
-    block.style.display = isHidden ? 'block' : 'none';
-    if (btn) {
-        btn.setAttribute('aria-expanded', String(isHidden));
-        btn.classList.toggle('open', isHidden);
-        const chevron = btn.querySelector('.friend-add-action-chevron');
-        if (chevron) chevron.className = `friend-add-action-chevron bi ${isHidden ? 'bi-chevron-up' : 'bi-chevron-down'}`;
-    }
-    if (wrapper) {
-        wrapper.classList.toggle('open', isHidden);
-    }
-    if (!isHidden) {
-        const results = document.getElementById('friend-add-search-results');
-        if (results) results.style.display = 'none';
-    } else {
-        const input = document.getElementById('friend-add-search-input');
-        if (input) input.focus();
-    }
+    switchFriendsTab('find');
 }
 
 function debounceSearchUsersToAdd() {
@@ -1235,13 +1245,24 @@ async function searchUsersToAddAction() {
             res.users.forEach(u => {
                 const div = document.createElement('div');
                 div.className = 'friend-user-row friend-add-result-row';
+                div.style.cursor = 'pointer';
+                div.setAttribute('role', 'button');
+                div.setAttribute('tabindex', '0');
+                div.onclick = () => openUserProfile(u.id);
+                div.onkeydown = (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openUserProfile(u.id);
+                    }
+                };
                 div.innerHTML = `
                     <div class="friend-user-avatar">${typeof window.renderAvatar === 'function' ? window.renderAvatar(u, 'sm') : ''}</div>
                     <div class="friend-user-main">
                         <div class="friend-user-name">${getSafeUserDisplayName(u)}</div>
+                        <div class="friend-user-meta">Нажмите для просмотра профиля</div>
                     </div>
                     <div class="friend-user-action">
-                        <button class="btn-unstyled friend-action-add" onclick="addFriend(${u.id})" aria-label="Добавить друга">
+                        <button id="friend-search-add-${u.id}" class="btn-unstyled friend-action-add" onclick="addFriend(${u.id}, event)" aria-label="Добавить друга" title="Добавить в друзья">
                             <i class="bi bi-person-plus"></i>
                         </button>
                     </div>
@@ -1268,10 +1289,14 @@ async function addFriend(id, event) {
             profileBtn.className = 'btn btn-outline-secondary rounded-pill px-4 text-muted';
             profileBtn.innerHTML = '✓ Заявка отправлена';
         }
-        const searchInput = document.getElementById('friend-add-search-input');
-        if (searchInput) searchInput.value = '';
-        const searchResults = document.getElementById('friend-add-search-results');
-        if (searchResults) searchResults.style.display = 'none';
+        const searchBtn = document.getElementById(`friend-search-add-${id}`);
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            searchBtn.className = 'btn-unstyled friend-action-add opacity-50';
+            searchBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+            searchBtn.title = 'Заявка отправлена';
+        }
+        loadFriends();
     } else {
         if (window.showAlert) window.showAlert('Внимание', res.message, 'warning');
     }
@@ -1287,12 +1312,40 @@ async function acceptFriend(id, event) {
         const res = await window.apiRequest({ action: 'accept_friend', friend_id: id });
         if (res.status === 'ok') {
             loadFriends();
+            loadFriendsList();
+            loadFriendRequests();
             if (window.showAlert) window.showAlert('Ура!', 'Теперь вы друзья! 🎉', 'success');
-            openUserProfile(id);
+            const modalEl = document.getElementById('userProfileModal');
+            if (modalEl && modalEl.classList.contains('show')) {
+                openUserProfile(id);
+            }
         } else {
             if (window.showAlert) window.showAlert('Ошибка', res.message, 'error');
         }
     }, { confirmText: 'Принять' });
+}
+
+async function rejectFriend(id, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    if (typeof window.showConfirmation !== 'function') return;
+    window.showConfirmation('Заявка', 'Отклонить заявку в друзья?', async () => {
+        const res = await window.apiRequest({ action: 'reject_friend', friend_id: id });
+        if (res.status === 'ok') {
+            loadFriends();
+            loadFriendsList();
+            loadFriendRequests();
+            if (window.showAlert) window.showAlert('Готово', 'Заявка отклонена', 'info');
+            const modalEl = document.getElementById('userProfileModal');
+            if (modalEl && modalEl.classList.contains('show')) {
+                openUserProfile(id);
+            }
+        } else {
+            if (window.showAlert) window.showAlert('Ошибка', res.message, 'error');
+        }
+    }, { isDanger: true, confirmText: 'Отклонить' });
 }
 
 async function removeFriend(id, event) {
@@ -1305,8 +1358,12 @@ async function removeFriend(id, event) {
         const res = await window.apiRequest({ action: 'remove_friend', friend_id: id });
         if (res.status === 'ok') {
             loadFriends();
+            loadFriendsList();
             if (window.showAlert) window.showAlert('Готово', 'Пользователь удален из друзей', 'success');
-            openUserProfile(id);
+            const modalEl = document.getElementById('userProfileModal');
+            if (modalEl && modalEl.classList.contains('show')) {
+                openUserProfile(id);
+            }
         } else {
             if (window.showAlert) window.showAlert('Ошибка', res.message, 'error');
         }
@@ -1369,14 +1426,17 @@ async function loadLeaderboardList(type = 'global') {
 
 // === FRIENDS SCREEN (NEW UI) ===
 
-function openFriendsScreen() {
+let previousTabBeforeFriends = 'home';
+
+function openFriendsScreen(initialTab = 'my') {
+    previousTabBeforeFriends = window.currentTab || 'home';
     if (window.showScreen) window.showScreen('friends');
-    loadFriendsList();
+    switchFriendsTab(initialTab);
 }
 
 function closeFriendsScreen() {
     if (window.showScreen) window.showScreen('lobby');
-    if (window.switchTab) window.switchTab('profile');
+    if (window.switchTab) window.switchTab(previousTabBeforeFriends || 'home');
 }
 
 async function loadFriendsList() {
@@ -1391,6 +1451,7 @@ async function loadFriendsList() {
             const friends = res.friends || [];
             currentFriendsList = friends;
             renderFriendList(friends);
+            updateFriendBadges(res.requests ? res.requests.length : 0);
         } else {
             container.innerHTML = '<p class="text-center text-danger">Ошибка: ' + (res.message || 'Unknown') + '</p>';
         }
@@ -1408,6 +1469,7 @@ async function loadFriendRequests() {
     if (res.status === 'ok') {
         container.innerHTML = '';
         const requests = res.requests || [];
+        updateFriendBadges(requests.length);
         if (requests.length === 0) {
             container.innerHTML = '<p class="text-center text-muted mt-2">Нет новых заявок</p>';
             return;
@@ -1422,9 +1484,12 @@ async function loadFriendRequests() {
                     <div class="friend-user-name">${getSafeUserDisplayName(req)}</div>
                     <div class="friend-user-meta">Хочет добавить вас</div>
                 </div>
-                <div class="friend-user-action">
-                    <button class="btn-unstyled friend-action-accept" onclick="acceptFriend(${req.id}, event)" aria-label="Принять заявку">
+                <div class="friend-user-action d-flex align-items-center gap-2">
+                    <button class="btn-unstyled friend-action-accept" onclick="acceptFriend(${req.id}, event)" aria-label="Принять заявку" title="Принять">
                         <i class="bi bi-check-lg"></i>
+                    </button>
+                    <button class="btn-unstyled friend-action-danger" onclick="rejectFriend(${req.id}, event)" aria-label="Отклонить заявку" title="Отклонить">
+                        <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             `;
@@ -1919,6 +1984,13 @@ function switchFriendsTab(tabName) {
         const tab = document.getElementById('tab-friends-my');
         if (tab) tab.style.display = 'block';
         if (window.loadFriendsList) window.loadFriendsList();
+    } else if (tabName === 'find') {
+        const btn = document.getElementById('btn-friends-find');
+        if (btn) btn.classList.add('active');
+        const tab = document.getElementById('tab-friends-find');
+        if (tab) tab.style.display = 'block';
+        const input = document.getElementById('friend-add-search-input');
+        if (input) setTimeout(() => input.focus(), 80);
     } else {
         const btn = document.getElementById('btn-friends-requests');
         if (btn) btn.classList.add('active');
@@ -1926,6 +1998,15 @@ function switchFriendsTab(tabName) {
         if (tab) tab.style.display = 'block';
         if (window.loadFriendRequests) window.loadFriendRequests();
     }
+}
+
+function refreshFriendBadges() {
+    if (!window.globalUser || typeof window.apiRequest !== 'function') return;
+    window.apiRequest({ action: 'get_friends' }).then(res => {
+        if (res && res.status === 'ok') {
+            updateFriendBadges(res.requests ? res.requests.length : 0);
+        }
+    }).catch(() => {});
 }
 
 // === EXPORTS ===
@@ -1939,6 +2020,7 @@ window.SocialManager = {
     searchFriendsAction,
     addFriend,
     acceptFriend,
+    rejectFriend,
     removeFriend,
     openLeaderboardScreen,
     loadLeaderboardList,
@@ -1946,7 +2028,8 @@ window.SocialManager = {
     closeFriendsScreen,
     loadFriendsList,
     loadFriendRequests,
-    loadFriendRequests,
+    updateFriendBadges,
+    refreshFriendBadges,
     getCachedUserStats: () => cachedUserStats,
     loadProfileDailyTasks,
     toggleProfileDailyTasks,
@@ -1999,6 +2082,7 @@ window.loadFriends = loadFriends;
 window.searchFriendsAction = searchFriendsAction;
 window.addFriend = addFriend;
 window.acceptFriend = acceptFriend;
+window.rejectFriend = rejectFriend;
 window.removeFriend = removeFriend;
 window.openLeaderboardScreen = openLeaderboardScreen;
 window.loadLeaderboardList = loadLeaderboardList;
@@ -2008,14 +2092,18 @@ window.closeFriendsScreen = closeFriendsScreen;
 window.loadFriendsList = loadFriendsList;
 window.loadFriendRequests = loadFriendRequests;
 window.switchFriendsTab = switchFriendsTab;
+window.updateFriendBadges = updateFriendBadges;
+window.refreshFriendBadges = refreshFriendBadges;
 window.toggleProfileBadgeSetting = toggleProfileBadgeSetting;
 
 window.addEventListener('tabChanged', (event) => {
-    if (event.detail && event.detail.tabId === 'profile') {
-        loadMyProfileStats();
+    if (event.detail && (event.detail.tabId === 'profile' || event.detail.tabId === 'home')) {
+        refreshFriendBadges();
+        if (event.detail.tabId === 'profile') {
+            loadMyProfileStats();
+        }
     }
 });
-
 
 // Profile Aliases
 window.updateUserInfo = renderCurrentUser; // Alias for compat

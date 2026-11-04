@@ -295,6 +295,46 @@ function action_accept_friend($pdo, $user, $data) {
     }
 }
 
+function action_reject_friend($pdo, $user, $data) {
+    $requesterId = (int)($data['friend_id'] ?? 0);
+    if (!$requesterId || $requesterId === (int)$user['id']) sendError('Invalid ID');
+
+    try {
+        // Find the pending request where current user is the recipient (friend_id = user['id'])
+        $stmt = $pdo->prepare("SELECT id FROM friendships WHERE user_id = ? AND friend_id = ? AND status = 'pending'");
+        $stmt->execute([$requesterId, $user['id']]);
+        $request = $stmt->fetch();
+
+        if (!$request) {
+            sendError('Заявка не найдена или уже обработана');
+        }
+
+        // Delete the pending request
+        $pdo->prepare("DELETE FROM friendships WHERE id = ?")->execute([$request['id']]);
+
+        // Clean up corresponding in-app notification if present
+        try {
+            $pdo->prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND actor_user_id = ?")
+                ->execute([$user['id'], $requesterId]);
+        } catch (Exception $e) {
+            // Ignore notification table errors
+        }
+
+        echo json_encode(['status' => 'ok']);
+    } catch (Exception $e) {
+        TelegramLogger::logError('database', [
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+            'stack' => $e->getTraceAsString()
+        ], [
+            'user_id' => $user['id'],
+            'action' => 'reject_friend',
+            'requester_id' => $requesterId
+        ]);
+        sendError('Database Error');
+    }
+}
+
 function action_remove_friend($pdo, $user, $data) {
     $targetId = (int)($data['friend_id'] ?? 0);
     if (!$targetId) sendError('Invalid ID');

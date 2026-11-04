@@ -5,11 +5,18 @@
             <div>
                 <div class="header-title">Во что поиграем?</div>
             </div>
-            <button type="button" id="home-daily-tasks-button" class="btn-unstyled home-daily-tasks-button"
-                onclick="openDailyTasksEntry()" aria-label="Ежедневные задания">
-                <i class="bi bi-calendar2-check" aria-hidden="true"></i>
-                <i class="bi bi-stars" aria-hidden="true"></i>
-            </button>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" id="home-friends-button" class="btn-unstyled home-header-icon-button"
+                    onclick="openFriendsScreen()" aria-label="Друзья" title="Друзья">
+                    <i class="bi bi-people-fill" aria-hidden="true"></i>
+                    <span id="home-friends-badge" class="home-icon-badge" style="display:none;">0</span>
+                </button>
+                <button type="button" id="home-daily-tasks-button" class="btn-unstyled home-daily-tasks-button"
+                    onclick="openDailyTasksEntry()" aria-label="Ежедневные задания">
+                    <i class="bi bi-calendar2-check" aria-hidden="true"></i>
+                    <i class="bi bi-stars" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
         <p class="home-hero-text mb-0">
             Создайте комнату, позовите друзей и начните за минуту.
