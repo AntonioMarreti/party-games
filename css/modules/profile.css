@@ -389,48 +389,55 @@ body.dark-mode .stat-label {
 }
 
 #screen-friends .friend-search-input-wrap {
-    --friend-search-icon-left: 15px;
-    --friend-search-icon-size: 18px;
-    --friend-search-text-left: 50px;
     position: relative;
+    width: 100%;
 }
 
-#screen-friends .friend-search-input-wrap-add {
-    --friend-search-icon-left: 14px;
-    --friend-search-icon-size: 20px;
+#screen-friends .friend-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    font-size: 16px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
 }
 
 #screen-friends .friend-search-field {
     box-sizing: border-box;
     display: block;
+    width: 100%;
+    height: 44px;
+    min-height: 44px;
+    padding: 10px 16px 10px 42px;
     border: 1px solid var(--divider);
     border-radius: 999px;
     background: var(--bg-secondary);
-    padding: 10px 14px 10px var(--friend-search-text-left);
-    height: 44px;
-    min-height: 44px;
-    width: 100%;
     color: var(--text-main);
-    outline: none;
     font-size: 15px;
-    font-weight: 650;
+    font-weight: 500;
     line-height: 1.25;
+    outline: none;
+    -webkit-appearance: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 #screen-friends .friend-search-field::placeholder {
     color: var(--text-muted);
     opacity: 1;
+    font-weight: 400;
 }
 
 #screen-friends .friend-search-field:focus {
     border-color: color-mix(in srgb, var(--primary-color), transparent 42%);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color), transparent 86%);
-}
-
-#screen-friends .friend-search-input-wrap-add > #friend-add-search-input.friend-search-field {
-    box-sizing: border-box;
-    padding-left: 48px;
-    padding-right: 16px;
 }
 
 #screen-friends .friend-search-button {
@@ -453,75 +460,9 @@ body.dark-mode .stat-label {
     color: var(--text-main);
 }
 
-#screen-friends .friend-search-icon {
-    position: absolute;
-    left: var(--friend-search-icon-left);
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--friend-search-icon-size);
-    height: var(--friend-search-icon-size);
-    color: var(--text-muted);
-    font-size: var(--friend-search-icon-size);
-    line-height: 1;
-    pointer-events: none;
-    z-index: 1;
-}
-
 #screen-friends .friends-view-wrapper {
+    padding-top: calc(16px + var(--app-safe-top, env(safe-area-inset-top, 0px))) !important;
     padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px));
-}
-
-#screen-friends .friend-find-shortcut {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 18px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-glass, rgba(0, 0, 0, 0.08));
-    box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, 0.05));
-    text-align: left;
-    cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease;
-}
-
-#screen-friends .friend-find-shortcut:active {
-    transform: scale(0.98);
-}
-
-#screen-friends .friend-find-shortcut-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--primary-color), transparent 88%);
-    color: var(--primary-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-}
-
-#screen-friends .friend-find-shortcut-copy {
-    display: flex;
-    flex-direction: column;
-}
-
-#screen-friends .friend-find-shortcut-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-main);
-    line-height: 1.25;
-}
-
-#screen-friends .friend-find-shortcut-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
 }
 
 #screen-friends .friend-add-card {

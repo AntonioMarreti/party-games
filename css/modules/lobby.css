@@ -77,8 +77,7 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
     letter-spacing: normal;
 }
 
-.home-daily-tasks-button,
-.home-header-icon-button {
+.home-daily-tasks-button {
     width: 44px;
     height: 44px;
     min-width: 44px;
@@ -97,10 +96,55 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
     transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
-.home-daily-tasks-button .bi-calendar2-check,
-.home-header-icon-button i {
+.home-header-icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    padding: 0;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-header-icon-button::before {
+    content: '';
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    pointer-events: none;
+}
+
+.home-header-icon-button:active::before {
+    transform: scale(0.92);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.home-daily-tasks-button .bi-calendar2-check {
     font-size: 21px;
     line-height: 1;
+}
+
+.home-header-icon-button i {
+    position: relative;
+    z-index: 1;
+    font-size: 16px;
+    line-height: 1;
+    color: inherit;
 }
 
 .home-daily-tasks-button .bi-stars {
@@ -113,35 +157,38 @@ body.tg-platform-mac #tab-home .header-bg.home-hero {
 
 .home-header-icon-button .home-icon-badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 18px;
-    height: 18px;
+    top: 1px;
+    right: 1px;
+    z-index: 2;
+    min-width: 17px;
+    height: 17px;
     padding: 0 4px;
     border-radius: 9px;
     background: var(--status-error, #ef4444);
     color: #fff;
     font-size: 10px;
     font-weight: 700;
-    line-height: 18px;
+    line-height: 17px;
     text-align: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
     border: 1.5px solid var(--bg-card, #ffffff);
 }
 
-.home-daily-tasks-button:active,
-.home-header-icon-button:active {
+.home-daily-tasks-button:active {
     transform: scale(0.96);
     background: rgba(255, 255, 255, 0.2) !important;
     border-color: rgba(255, 255, 255, 0.38) !important;
 }
 
-.thermal-safe .home-daily-tasks-button,
-.thermal-safe .home-header-icon-button {
+.thermal-safe .home-daily-tasks-button {
     background: rgba(255, 255, 255, 0.18) !important;
     color: var(--app-accent-text) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+}
+
+.thermal-safe .home-header-icon-button::before {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .thermal-safe .home-hero-text {

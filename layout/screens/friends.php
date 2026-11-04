@@ -1,7 +1,7 @@
 <!-- Screen: Friends -->
 <div id="screen-friends" class="screen">
     <div class="friends-view-wrapper">
-        <div class="d-flex align-items-center mb-4">
+        <div class="d-flex align-items-center mb-3">
             <button class="btn-back me-3" onclick="closeFriendsScreen()"
                 style="color: var(--primary-color) !important; background: var(--bg-card); border: 1px solid var(--primary-color);">
                 <i class="bi bi-chevron-left"></i>
@@ -29,7 +29,7 @@
             <!-- My Friends Tab -->
             <div id="tab-friends-my" class="friends-tab-pane active w-100" style="display: block;">
                 <div class="friend-search-shell mb-3">
-                    <div class="friend-search-input-wrap friend-search-input-wrap-filter">
+                    <div class="friend-search-input-wrap">
                         <span class="friend-search-icon bi bi-search"></span>
                         <input type="text" id="friends-search-input" class="friend-search-field"
                             placeholder="Фильтр по друзьям"
@@ -37,15 +37,6 @@
                             oninput="debounceFilterFriends()">
                     </div>
                 </div>
-
-                <button type="button" class="btn-unstyled friend-find-shortcut mb-3" onclick="switchFriendsTab('find')">
-                    <span class="friend-find-shortcut-icon"><i class="bi bi-person-plus-fill"></i></span>
-                    <span class="friend-find-shortcut-copy">
-                        <span class="friend-find-shortcut-title">Найти новых игроков</span>
-                        <span class="friend-find-shortcut-sub">Поиск по имени или @username</span>
-                    </span>
-                    <i class="bi bi-chevron-right ms-auto"></i>
-                </button>
 
                 <div class="friend-section-label mb-2">Список друзей</div>
                 <!-- Friends List -->
@@ -58,8 +49,8 @@
 
             <!-- Find Friends Tab -->
             <div id="tab-friends-find" class="friends-tab-pane w-100" style="display: none;">
-                <div class="friend-search-shell mb-2">
-                    <div class="friend-search-input-wrap friend-search-input-wrap-add">
+                <div class="friend-search-shell mb-3">
+                    <div class="friend-search-input-wrap">
                         <span class="friend-search-icon bi bi-search"></span>
                         <input type="text" id="friend-add-search-input" class="friend-search-field"
                             placeholder="Введите @username или имя"

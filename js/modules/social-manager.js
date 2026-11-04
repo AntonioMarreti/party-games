@@ -1989,8 +1989,6 @@ function switchFriendsTab(tabName) {
         if (btn) btn.classList.add('active');
         const tab = document.getElementById('tab-friends-find');
         if (tab) tab.style.display = 'block';
-        const input = document.getElementById('friend-add-search-input');
-        if (input) setTimeout(() => input.focus(), 80);
     } else {
         const btn = document.getElementById('btn-friends-requests');
         if (btn) btn.classList.add('active');
