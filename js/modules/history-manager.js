@@ -592,10 +592,63 @@ function showGameDetailsModal(item) {
     }
 }
 
+let suspendedHistoryDetailsState = null;
+
+function suspendHistoryDetailsForProfile() {
+    const sheet = document.getElementById('history-details-sheet');
+    if (!sheet || !sheet.classList.contains('active')) {
+        return false;
+    }
+    const dialog = sheet.querySelector('.history-details-sheet') || sheet;
+    suspendedHistoryDetailsState = {
+        historyId: sheet.dataset.currentHistoryId || null,
+        scrollTop: dialog ? dialog.scrollTop : 0
+    };
+    sheet.classList.remove('active');
+    sheet.classList.add('suspended-for-profile');
+    sheet.style.display = 'none';
+    sheet.setAttribute('aria-hidden', 'true');
+    removeHistorySheetBackButton();
+    return true;
+}
+
+function restoreHistoryDetailsFromProfile() {
+    if (!suspendedHistoryDetailsState) return false;
+    const sheet = document.getElementById('history-details-sheet');
+    if (!sheet) {
+        suspendedHistoryDetailsState = null;
+        return false;
+    }
+    const savedState = suspendedHistoryDetailsState;
+    suspendedHistoryDetailsState = null;
+
+    sheet.classList.remove('suspended-for-profile');
+    sheet.classList.add('active');
+    sheet.style.display = 'flex';
+    sheet.removeAttribute('aria-hidden');
+    document.body.classList.add('history-details-open');
+
+    const dialog = sheet.querySelector('.history-details-sheet') || sheet;
+    if (dialog && typeof savedState.scrollTop === 'number') {
+        requestAnimationFrame(() => {
+            dialog.scrollTop = savedState.scrollTop;
+        });
+    }
+
+    setupHistorySheetBackButton();
+    return true;
+}
+
+function hasSuspendedHistoryDetails() {
+    return Boolean(suspendedHistoryDetailsState);
+}
+
 function closeHistoryDetails() {
+    suspendedHistoryDetailsState = null;
     const sheet = document.getElementById('history-details-sheet');
     if (sheet) {
         sheet.classList.remove('active');
+        sheet.classList.remove('suspended-for-profile');
         sheet.setAttribute('aria-hidden', 'true');
         sheet.style.display = 'none';
         delete sheet.dataset.currentHistoryId;
@@ -629,7 +682,10 @@ window.HistoryManager = {
     renderHistoryList,
     showGameDetailsModal,
     showGameDetailsModalById,
-    replayHistoryGameFromSheet
+    replayHistoryGameFromSheet,
+    suspendHistoryDetailsForProfile,
+    restoreHistoryDetailsFromProfile,
+    hasSuspendedHistoryDetails
 };
 
 window.openGameHistory = openGameHistory;
@@ -642,6 +698,9 @@ window.showGameDetailsModal = showGameDetailsModal;
 window.showGameDetailsModalById = showGameDetailsModalById;
 window.closeHistoryDetails = closeHistoryDetails;
 window.replayHistoryGameFromSheet = replayHistoryGameFromSheet;
+window.suspendHistoryDetailsForProfile = suspendHistoryDetailsForProfile;
+window.restoreHistoryDetailsFromProfile = restoreHistoryDetailsFromProfile;
+window.hasSuspendedHistoryDetails = hasSuspendedHistoryDetails;
 
 window.addEventListener('screenChanged', (event) => {
     cleanupHistoryDetailsForScreen(event?.detail?.screenId || '');

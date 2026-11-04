@@ -372,15 +372,18 @@
 </div>
 
 <!-- 11. Public Profile Modal -->
-<div class="modal fade" id="userProfileModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-            <div class="modal-header border-0 pb-0">
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="userProfileModal" tabindex="-1" aria-modal="true" role="dialog" aria-labelledby="user-profile-modal-title">
+    <div class="modal-dialog modal-dialog-centered user-profile-dialog">
+        <div class="modal-content user-profile-modal-content">
+            <div class="modal-header user-profile-modal-header">
+                <div class="user-profile-header-title" id="user-profile-modal-title">Профиль игрока</div>
+                <button type="button" class="user-profile-close-btn" data-bs-dismiss="modal" aria-label="Закрыть профиль" onclick="closeUserProfileModal()">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
             </div>
-            <div class="modal-body text-center pt-0 pb-4">
+            <div class="modal-body user-profile-modal-body text-center">
                 <div id="public-profile-content">
-                    <div class="spinner-border text-primary"></div>
+                    <div class="spinner-border text-primary my-4"></div>
                 </div>
             </div>
         </div>

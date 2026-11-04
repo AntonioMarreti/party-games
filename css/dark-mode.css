@@ -230,3 +230,31 @@ body.tg-dark-theme .app-toast {
     background: var(--bg-card);
     border-color: rgba(255, 255, 255, 0.08);
 }
+
+/* Public User Profile Modal */
+body.dark-mode #userProfileModal .modal-content.user-profile-modal-content,
+body.tg-dark-theme #userProfileModal .modal-content.user-profile-modal-content {
+    background: var(--bg-card) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark-mode .user-profile-modal-header,
+body.tg-dark-theme .user-profile-modal-header {
+    background: var(--bg-card) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-mode .user-profile-close-btn,
+body.tg-dark-theme .user-profile-close-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: var(--text-main) !important;
+}
+
+body.dark-mode .user-profile-level-card,
+body.tg-dark-theme .user-profile-level-card,
+body.dark-mode .user-profile-stat-box,
+body.tg-dark-theme .user-profile-stat-box {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}

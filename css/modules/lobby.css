@@ -830,7 +830,9 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
 }
 
 #history-details-sheet:not(.active),
-.history-details-overlay:not(.active) {
+.history-details-overlay:not(.active),
+#history-details-sheet.suspended-for-profile,
+.history-details-overlay.suspended-for-profile {
     display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;

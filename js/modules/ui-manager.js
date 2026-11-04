@@ -318,6 +318,10 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
+    if (modalId === 'userProfileModal' && typeof window.closeUserProfileModal === 'function') {
+        window.closeUserProfileModal();
+        return;
+    }
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');

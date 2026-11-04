@@ -1058,13 +1058,268 @@ body.tg-dark-theme #inviteFriendsModal .invite-cancel-btn {
     z-index: 10050 !important;
 }
 
-/* Ensure public profile modal appears above history details overlay (10080) */
+/* === 11. Public User Profile Modal (Safe-Area & Scroll Polished) === */
 #userProfileModal {
     z-index: 10100 !important;
+    padding: 0 !important;
+    overscroll-behavior: contain;
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 
-body:has(#userProfileModal.show) .modal-backdrop {
+#userProfileModal.show,
+#userProfileModal.active {
+    display: flex !important;
+}
+
+body:has(#userProfileModal.show) .modal-backdrop,
+body:has(#userProfileModal.active) .modal-backdrop {
     z-index: 10095 !important;
+}
+
+#userProfileModal .modal-dialog.user-profile-dialog {
+    margin: auto !important;
+    max-width: 440px !important;
+    width: calc(100% - 24px) !important;
+    height: auto !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 20px) - 24px) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#userProfileModal .modal-content.user-profile-modal-content {
+    background: var(--bg-card, var(--bg-secondary)) !important;
+    border-radius: 26px !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 54px) - max(env(safe-area-inset-bottom, 0px), 20px) - 24px) !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28) !important;
+    border: 1px solid var(--border-main) !important;
+    width: 100%;
+    pointer-events: auto;
+}
+
+.user-profile-modal-header {
+    padding: 14px 18px 12px 18px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-main) !important;
+    background: var(--bg-card, var(--bg-secondary));
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.user-profile-header-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+
+.user-profile-close-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% !important;
+    background: color-mix(in srgb, var(--text-main) 8%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent) !important;
+    color: var(--text-main) !important;
+    font-size: 14px;
+    opacity: 0.8;
+    transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+@media (hover: hover) {
+    .user-profile-close-btn:hover {
+        opacity: 1;
+        background: color-mix(in srgb, var(--text-main) 14%, transparent) !important;
+    }
+}
+
+.user-profile-close-btn:active {
+    transform: scale(0.94);
+    opacity: 1;
+}
+
+.user-profile-modal-body {
+    flex: 1;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 16px 18px 24px 18px !important;
+    min-height: 0;
+}
+
+/* User Identity Header */
+.user-profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+}
+
+.user-profile-identity-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.user-profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.user-profile-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-profile-badge-tester {
+    font-size: 10px;
+    font-weight: 800;
+    background: var(--primary-color);
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.user-profile-id-pill {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--text-main) 6%, transparent);
+    padding: 2px 8px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-top: 4px;
+    line-height: 1.2;
+}
+
+/* Level & Progress Card */
+.user-profile-level-card {
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--text-main) 4%, var(--bg-card));
+    border: 1px solid var(--border-main);
+    padding: 10px 14px;
+    text-align: left;
+}
+
+.user-profile-level-badge {
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--primary-color);
+}
+
+.user-profile-xp-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.user-profile-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-main) 8%, transparent);
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+/* Stat Box */
+.user-profile-stat-box {
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--text-main) 4%, var(--bg-card));
+    border: 1px solid var(--border-main);
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.user-profile-stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    line-height: 1;
+}
+
+.user-profile-stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-top: 4px;
+    line-height: 1.2;
+}
+
+/* Actions Container */
+.user-profile-actions {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.user-profile-actions .btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.user-profile-actions .btn:active {
+    transform: scale(0.96);
+}
+
+/* Achievements Header */
+.user-profile-achievements-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+}
+
+.user-profile-achievements-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.user-profile-achievements-count {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-main) 8%, transparent);
+    color: var(--text-muted);
 }
 
 

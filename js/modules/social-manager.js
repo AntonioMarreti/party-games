@@ -966,8 +966,89 @@ async function fetchUserStats() {
     }
 }
 
+let profileBackButtonHandler = null;
+
+function setupProfileBackButton() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg?.BackButton) return;
+    if (profileBackButtonHandler && typeof tg.BackButton.offClick === 'function') {
+        tg.BackButton.offClick(profileBackButtonHandler);
+    }
+    profileBackButtonHandler = () => {
+        closeUserProfileModal();
+    };
+    if (typeof tg.BackButton.show === 'function') {
+        tg.BackButton.show();
+    }
+    if (typeof tg.BackButton.onClick === 'function') {
+        tg.BackButton.onClick(profileBackButtonHandler);
+    }
+}
+
+function removeProfileBackButton() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg?.BackButton) return;
+    if (profileBackButtonHandler && typeof tg.BackButton.offClick === 'function') {
+        tg.BackButton.offClick(profileBackButtonHandler);
+    }
+    profileBackButtonHandler = null;
+}
+
+let isClosingUserProfile = false;
+function closeUserProfileModal() {
+    if (isClosingUserProfile) return;
+    isClosingUserProfile = true;
+    try {
+        removeProfileBackButton();
+
+        const modal = document.getElementById('userProfileModal');
+        if (modal) {
+            if (window.bootstrap?.Modal) {
+                const instance = window.bootstrap.Modal.getInstance(modal);
+                if (instance) {
+                    instance.hide();
+                }
+            }
+            modal.classList.remove('active');
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        if (typeof window.syncModalOpenState === 'function') {
+            window.syncModalOpenState();
+        }
+
+        if (typeof window.hasSuspendedHistoryDetails === 'function' && window.hasSuspendedHistoryDetails()) {
+            if (typeof window.restoreHistoryDetailsFromProfile === 'function') {
+                window.restoreHistoryDetailsFromProfile();
+            }
+        } else {
+            const tg = window.Telegram?.WebApp;
+            if (tg?.BackButton && typeof tg.BackButton.hide === 'function') {
+                const currentScreen = document.querySelector('.screen.active')?.id;
+                if (currentScreen === 'screen-main' || currentScreen === 'screen-lobby') {
+                    tg.BackButton.hide();
+                }
+            }
+        }
+    } finally {
+        setTimeout(() => {
+            isClosingUserProfile = false;
+        }, 50);
+    }
+}
+
 async function openUserProfile(userId) {
+    if (typeof window.suspendHistoryDetailsForProfile === 'function') {
+        window.suspendHistoryDetailsForProfile();
+    }
+    setupProfileBackButton();
+
     if (window.showModal) window.showModal('userProfileModal');
+
+    const modalBody = document.querySelector('.user-profile-modal-body');
+    if (modalBody) modalBody.scrollTop = 0;
 
     const container = document.getElementById('public-profile-content');
     if (container) container.innerHTML = '<div class="spinner-border text-primary my-4"></div>';
@@ -990,65 +1071,73 @@ async function openUserProfile(userId) {
         if (fs === 'none') {
             actionBtn = `<button id="friend-action-btn-${p.id}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="addFriend(${p.id}, event)"><i class="bi bi-person-plus me-2"></i>Добавить</button>`;
         } else if (fs === 'pending_out') {
-            actionBtn = `<button class="btn btn-light rounded-pill px-4 border" disabled>Ожидание</button>`;
+            actionBtn = `<button class="btn btn-light rounded-pill px-4 border" disabled><i class="bi bi-clock me-1"></i>Ожидание</button>`;
         } else if (fs === 'pending_in') {
             actionBtn = `
                 <div class="d-flex justify-content-center gap-2">
-                    <button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="acceptFriend(${p.id}, event)">Принять</button>
+                    <button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="acceptFriend(${p.id}, event)"><i class="bi bi-check2 me-1"></i>Принять</button>
                     <button class="btn btn-outline-danger rounded-pill px-3 fw-bold" onclick="rejectFriend(${p.id}, event)">Отклонить</button>
                 </div>
             `;
         } else if (fs === 'accepted') {
-            actionBtn = `<button class="btn btn-link text-danger btn-sm text-decoration-none" onclick="removeFriend(${p.id}, event)">Удалить друга</button>`;
+            actionBtn = `<button class="btn btn-link text-danger btn-sm text-decoration-none" onclick="removeFriend(${p.id}, event)"><i class="bi bi-person-dash me-1"></i>Удалить друга</button>`;
         }
+
+        const achievementsList = Array.isArray(res.achievements) ? res.achievements : [];
+        const achievementsCount = achievementsList.length;
 
         if (container) {
             container.innerHTML = `
-                <div class="d-flex align-items-center gap-3 mb-4 text-start">
-                     ${typeof window.renderAvatar === 'function' ? window.renderAvatar(p, 'xl') : ''}
-                     <div>
-                        <h4 class="fw-bold mb-0">${getSafeUserDisplayName(p)}</h4>
-                        <div class="text-muted small">ID: ${p.id}</div>
-                     </div>
+                <div class="user-profile-identity mb-3">
+                    ${typeof window.renderAvatar === 'function' ? window.renderAvatar(p, 'xl') : ''}
+                    <div class="user-profile-identity-info">
+                        <div class="user-profile-name-row">
+                            <div class="user-profile-name" title="${getSafeUserDisplayName(p)}">${getSafeUserDisplayName(p)}</div>
+                            ${p.is_tester ? '<span class="user-profile-badge-tester" title="Тестировщик">★</span>' : ''}
+                        </div>
+                        <div class="user-profile-id-pill">ID: ${p.id}</div>
+                    </div>
                 </div>
 
-                <div class="p-2 bg-light rounded-4 border mb-3 text-start">
-                    <div class="d-flex justify-content-between align-items-end mb-1">
-                        <div class="fw-bold text-primary" style="font-size: 14px;">${level} LVL</div>
-                        <div class="text-muted" style="font-size: 10px;">${xp} / ${nextThreshold} XP</div>
+                <div class="user-profile-level-card mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="user-profile-level-badge">${level} LVL</div>
+                        <div class="user-profile-xp-text">${xp} / ${nextThreshold} XP</div>
                     </div>
-                    <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(0,0,0,0.05);">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${progressPct}%; border-radius: 3px;"></div>
+                    <div class="progress user-profile-progress">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${progressPct}%;" aria-valuenow="${progressPct}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
-                
-                <div class="row g-2 mb-4">
+
+                <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <div class="p-2 bg-light rounded-4 text-center border">
-                            <div class="text-muted" style="font-size: 9px; text-transform: uppercase;">Игр</div>
-                            <div class="fw-bold fs-6">${p.total_games_played}</div>
+                        <div class="user-profile-stat-box">
+                            <div class="user-profile-stat-label">Игр</div>
+                            <div class="user-profile-stat-value">${p.total_games_played || 0}</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 bg-light rounded-4 text-center border">
-                            <div class="text-muted" style="font-size: 9px; text-transform: uppercase;">Побед</div>
-                            <div class="fw-bold fs-6 text-success">${p.total_wins}</div>
+                        <div class="user-profile-stat-box">
+                            <div class="user-profile-stat-label">Побед</div>
+                            <div class="user-profile-stat-value text-success">${p.total_wins || 0}</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="achievements-section text-center mb-4">
-                     <h6 class="fw-bold mb-3" style="font-size: 13px; text-transform: uppercase; color: #666;">Достижения</h6>
-                     ${typeof window.renderAchievements === 'function' ? window.renderAchievements(res.achievements) : ''}
-                </div>
+                ${actionBtn ? `<div class="user-profile-actions mb-4">${actionBtn}</div>` : ''}
 
-                <div class="mt-2">
-                    ${actionBtn}
+                <div class="achievements-section text-start">
+                    <div class="user-profile-achievements-header mb-2">
+                        <h6 class="user-profile-achievements-title">Достижения</h6>
+                        <span class="user-profile-achievements-count">${achievementsCount}</span>
+                    </div>
+                    ${typeof window.renderAchievements === 'function' ? window.renderAchievements(achievementsList) : ''}
                 </div>
             `;
+            if (modalBody) modalBody.scrollTop = 0;
         }
     } else {
-        if (container) container.innerHTML = '<p class="text-danger">Ошибка загрузки</p>';
+        if (container) container.innerHTML = '<p class="text-danger py-4">Ошибка загрузки</p>';
     }
 }
 
@@ -2013,6 +2102,7 @@ window.SocialManager = {
     openDetailedStatsModal,
     fetchUserStats,
     openUserProfile,
+    closeUserProfileModal,
     openFriendsModal,
     loadFriends,
     searchFriendsAction,
@@ -2113,11 +2203,20 @@ window.applyAIResult = applyAIResult;
 window.renderAchievements = renderAchievements;
 window.saveProfile = saveProfile;
 window.closeProfileEditor = closeProfileEditor;
+window.closeUserProfileModal = closeUserProfileModal;
 window.selectEmoji = selectEmoji;
 window.selectColor = selectColor;
-// Close friend profile modal on backdrop click
+
+// Close user profile modal on backdrop click
 document.addEventListener('click', (e) => {
     if (e.target && e.target.id === 'userProfileModal') {
-        if (window.closeModal) window.closeModal('userProfileModal');
+        closeUserProfileModal();
     }
 });
+
+const userProfileModalEl = document.getElementById('userProfileModal');
+if (userProfileModalEl) {
+    userProfileModalEl.addEventListener('hidden.bs.modal', () => {
+        closeUserProfileModal();
+    });
+}
