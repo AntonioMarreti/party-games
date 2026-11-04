@@ -538,6 +538,8 @@ function showGameDetailsModal(item) {
             sheet.dataset.currentHistoryId = String(item.id || '');
             document.body.classList.add('history-details-open');
             sheet.style.display = 'flex';
+            const dialog = sheet.querySelector('.history-details-sheet');
+            if (dialog) dialog.scrollTop = 0;
             void sheet.offsetWidth;
             sheet.classList.add('active');
             sheet.setAttribute('aria-hidden', 'false');

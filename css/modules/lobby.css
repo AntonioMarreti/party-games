@@ -798,15 +798,17 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     font-size: 11px;
     font-weight: 700;
 }
-    font-size: 11px;
-    font-weight: 900;
-    line-height: 1;
-    white-space: nowrap;
-}
 
+#history-details-sheet,
 .history-details-overlay {
-    position: fixed;
-    inset: 0;
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     display: none;
     align-items: flex-end;
     justify-content: center;
@@ -815,26 +817,32 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.18s ease;
-    z-index: 10080;
+    z-index: 10080 !important;
     isolation: isolate;
+    touch-action: none;
 }
 
+#history-details-sheet.active,
 .history-details-overlay.active {
-    display: flex;
-    opacity: 1;
-    pointer-events: auto;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
+#history-details-sheet:not(.active),
 .history-details-overlay:not(.active) {
     display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;
 }
 
-.history-details-sheet {
+#history-details-sheet .history-details-sheet,
+.history-details-overlay .history-details-sheet {
     width: min(100%, 420px);
     max-height: 82vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
     border-radius: 28px 28px 0 0;
     background: #fff !important;
@@ -850,6 +858,7 @@ body.tg-dark-theme.thermal-safe #tab-home .home-flow .home-section-link {
     visibility: hidden;
 }
 
+#history-details-sheet.active .history-details-sheet,
 .history-details-overlay.active .history-details-sheet {
     transform: translateY(0);
     pointer-events: auto;
@@ -1162,6 +1171,10 @@ body.history-details-open:has(#history-details-sheet.active) .bottom-nav {
     display: none !important;
 }
 
+body.history-details-open:has(#history-details-sheet.active) #screen-history {
+    overflow: hidden !important;
+}
+
 .thermal-safe .history-state-card,
 .thermal-safe .history-game-card {
     background: var(--bg-secondary) !important;
@@ -1185,6 +1198,7 @@ body.history-details-open:has(#history-details-sheet.active) .bottom-nav {
     background: #fff !important;
 }
 
+.thermal-safe #history-details-sheet,
 .thermal-safe .history-details-overlay {
     background: rgba(0, 0, 0, 0.45) !important;
 }
